@@ -1,0 +1,77 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing is supplied by protected CI environment variables only.
+def envStoreFile = System.getenv('MEETWAVE_KEYSTORE')
+def envStorePass = System.getenv('MEETWAVE_STORE_PASSWORD')
+def envKeyAlias  = System.getenv('MEETWAVE_KEY_ALIAS')
+def envKeyPass   = System.getenv('MEETWAVE_KEY_PASSWORD')
+def hasReleaseSigning = envStoreFile != null && file(envStoreFile).exists() &&
+        envStorePass != null && envKeyAlias != null && envKeyPass != null
+
+// All installed clients open the production MeetWave deployment by default.
+def serverUrl = System.getenv('MEETWAVE_SERVER_URL') ?:
+        'https://meetwave-video-conferencing.onrender.com'
+
+// Use a higher version code for every CI build.
+def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?:
+        System.getenv('MEETWAVE_BUILD_NUMBER') ?: '2').toInteger()
+def meetWaveVersionCode = Math.max(2, runNumber + 1)
+def meetWaveVersionName = "1.0.${meetWaveVersionCode}"
+
+android {
+    namespace 'com.meetwave.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.meetwave.app'
+        minSdk 21
+        targetSdk 34
+        versionCode meetWaveVersionCode
+        versionName meetWaveVersionName
+        buildConfigField 'String', 'MEETWAVE_SERVER_URL', "\"${serverUrl}\""
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(envStoreFile)
+                storePassword envStorePass
+                keyAlias envKeyAlias
+                keyPassword envKeyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            debuggable false
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/*.kotlin_module']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.8.0'
+}

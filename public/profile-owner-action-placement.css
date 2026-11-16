@@ -1,0 +1,234 @@
+/* Owner actions follow the Facebook personal-profile control order:
+   Add to story, Edit profile, then the down-chevron menu at the right.
+   Desktop keeps them beside the identity; tablet and phone get their own row. */
+
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:8px!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-add-story{
+  order:1!important;
+  flex:0 0 auto!important;
+  min-height:40px!important;
+  padding:8px 13px!important;
+  border:1px solid #0866ff!important;
+  border-radius:8px!important;
+  background:#0866ff!important;
+  color:#fff!important;
+  white-space:nowrap!important;
+}
+
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #edit-profile{
+  order:2!important;
+  flex:0 0 auto!important;
+  min-height:40px!important;
+  padding:8px 13px!important;
+  border:1px solid #e4e6eb!important;
+  border-radius:8px!important;
+  background:#e4e6eb!important;
+  color:#1c1e21!important;
+  white-space:nowrap!important;
+}
+
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-people-toggle{
+  order:3!important;
+  display:inline-grid!important;
+  flex:0 0 42px!important;
+  place-items:center!important;
+  width:42px!important;
+  min-width:42px!important;
+  height:40px!important;
+  margin:0!important;
+  padding:0!important;
+  border:1px solid #e4e6eb!important;
+  border-radius:8px!important;
+  background:#e4e6eb!important;
+  color:#1c1e21!important;
+}
+
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-people-toggle svg{
+  display:block!important;
+  width:19px!important;
+  height:19px!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:2.2!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+  transform:rotate(0deg);
+  transition:transform .18s ease;
+}
+
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-people-toggle[aria-expanded="true"] svg{
+  transform:rotate(180deg);
+}
+
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-add-story:hover{
+  background:#075ce5!important;
+  border-color:#075ce5!important;
+}
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #edit-profile:hover,
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-people-toggle:hover{
+  background:#d8dadf!important;
+  border-color:#d8dadf!important;
+}
+
+/* Wide web: portrait | identity | actions, all in the same profile row. */
+@media(min-width:1025px){
+  .minglora-profile-page .profile-header-card .profile-info,
+  .minglora-profile-page .profile-header-card--owner .profile-info,
+  .minglora-profile-page .profile-header-card--viewer .profile-info{
+    grid-template-columns:var(--minglora-profile-avatar-size) minmax(160px,1fr) auto!important;
+    grid-template-rows:auto auto auto auto!important;
+    column-gap:20px!important;
+    row-gap:12px!important;
+  }
+
+  .minglora-profile-page .profile-header-card .profile-thought-slot{
+    grid-column:1!important;
+    grid-row:1!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-thought-slot+.profile-avatar-edit-wrap{
+    grid-column:1!important;
+    grid-row:2!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-thought-slot~.profile-info-main{
+    grid-column:2!important;
+    grid-row:2!important;
+  }
+
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions{
+    grid-column:3!important;
+    grid-row:2!important;
+    align-self:center!important;
+    justify-self:end!important;
+    width:auto!important;
+    max-width:100%!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-thought-slot~.profile-owner-actions{
+    grid-column:3!important;
+    grid-row:2!important;
+  }
+
+  .minglora-profile-page .profile-header-card--viewer .profile-actions{
+    grid-column:3!important;
+    grid-row:1!important;
+    align-self:center!important;
+    justify-self:end!important;
+    width:auto!important;
+    max-width:100%!important;
+    flex-flow:row wrap!important;
+    justify-content:flex-end!important;
+  }
+
+  .minglora-profile-page .profile-header-card .profile-counts,
+  .minglora-profile-page .profile-header-card .profile-thought-slot~.profile-counts{
+    grid-column:1/-1!important;
+    grid-row:3!important;
+  }
+  .minglora-profile-page .profile-header-card--admin .profile-info--admin>.profile-admin-tools{
+    grid-column:1/-1!important;
+    grid-row:3!important;
+  }
+  .minglora-profile-page .profile-header-card--admin .profile-info--admin .profile-counts{
+    grid-row:4!important;
+  }
+}
+
+/* Tablet web: preserve a readable identity width, then place controls below it. */
+@media(min-width:761px) and (max-width:1024px){
+  .minglora-profile-page .profile-header-card .profile-info,
+  .minglora-profile-page .profile-header-card--owner .profile-info,
+  .minglora-profile-page .profile-header-card--viewer .profile-info{
+    grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions{
+    grid-column:2!important;
+    grid-row:3!important;
+    justify-self:start!important;
+    justify-content:flex-start!important;
+    width:100%!important;
+    flex-flow:row wrap!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-thought-slot~.profile-owner-actions{
+    grid-column:2!important;
+    grid-row:3!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-counts,
+  .minglora-profile-page .profile-header-card .profile-thought-slot~.profile-counts{
+    grid-column:1/-1!important;
+    grid-row:4!important;
+  }
+  .minglora-profile-page .profile-header-card--admin .profile-info--admin>.profile-admin-tools{
+    grid-column:1/-1!important;
+    grid-row:4!important;
+  }
+  .minglora-profile-page .profile-header-card--admin .profile-info--admin .profile-counts{
+    grid-row:5!important;
+  }
+}
+
+/* Phone app and narrow mobile web: full-width action row after the portrait/name. */
+@media(max-width:760px){
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions{
+    grid-column:1/-1!important;
+    grid-row:3!important;
+    justify-self:stretch!important;
+    justify-content:flex-start!important;
+    flex-flow:row nowrap!important;
+    gap:7px!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow:visible!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-thought-slot~.profile-owner-actions{
+    grid-column:1/-1!important;
+    grid-row:3!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-add-story,
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions #edit-profile{
+    min-width:0!important;
+    min-height:38px!important;
+    padding:7px 10px!important;
+    font-size:clamp(10px,2.9vw,12px)!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-people-toggle{
+    flex-basis:38px!important;
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+  }
+}
+
+@media(max-width:390px){
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions{
+    gap:6px!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-add-story,
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions #edit-profile{
+    min-height:36px!important;
+    padding:6px 8px!important;
+    font-size:10px!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-people-toggle{
+    flex-basis:36px!important;
+    width:36px!important;
+    min-width:36px!important;
+    height:36px!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions #profile-people-toggle svg{
+    transition:none!important;
+  }
+}

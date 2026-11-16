@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "name": "Minglora LIVE Gift Category Icons",
+  "style": "Original Minglora vector category illustrations",
+  "view_box": "0 0 24 24",
+  "rendering": "Same-origin SVG symbol files embedded through SVG use",
+  "color": "currentColor inherited from the existing category chip",
+  "component": "public/app.js liveGiftCategoryIcon",
+  "categories": [
+    {
+      "id": "all",
+      "label": "All categories",
+      "file": "/assets/icons/live-gift-categories/all.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "flowers",
+      "label": "Flowers",
+      "file": "/assets/icons/live-gift-categories/flowers.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "hearts",
+      "label": "Love & hearts",
+      "file": "/assets/icons/live-gift-categories/hearts.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "animals",
+      "label": "Animals & creatures",
+      "file": "/assets/icons/live-gift-categories/animals.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "vehicles",
+      "label": "Vehicles",
+      "file": "/assets/icons/live-gift-categories/vehicles.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "music",
+      "label": "Music",
+      "file": "/assets/icons/live-gift-categories/music.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "sports",
+      "label": "Sports",
+      "file": "/assets/icons/live-gift-categories/sports.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "food_drink",
+      "label": "Food & drinks",
+      "file": "/assets/icons/live-gift-categories/food_drink.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "fashion_beauty",
+      "label": "Fashion & beauty",
+      "file": "/assets/icons/live-gift-categories/fashion_beauty.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "luxury",
+      "label": "Luxury",
+      "file": "/assets/icons/live-gift-categories/luxury.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "celebrations",
+      "label": "Celebrations",
+      "file": "/assets/icons/live-gift-categories/celebrations.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "fantasy",
+      "label": "Fantasy & cosmic",
+      "file": "/assets/icons/live-gift-categories/fantasy.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "nature",
+      "label": "Nature",
+      "file": "/assets/icons/live-gift-categories/nature.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "travel",
+      "label": "Travel",
+      "file": "/assets/icons/live-gift-categories/travel.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "games",
+      "label": "Games",
+      "file": "/assets/icons/live-gift-categories/games.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "community",
+      "label": "Community",
+      "file": "/assets/icons/live-gift-categories/community.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "symbols",
+      "label": "Symbols",
+      "file": "/assets/icons/live-gift-categories/symbols.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "everyday",
+      "label": "Everyday",
+      "file": "/assets/icons/live-gift-categories/everyday.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "reactions",
+      "label": "Reactions",
+      "file": "/assets/icons/live-gift-categories/reactions.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "seasonal",
+      "label": "Seasonal",
+      "file": "/assets/icons/live-gift-categories/seasonal.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "jamaican_culture",
+      "label": "Jamaican culture",
+      "file": "/assets/icons/live-gift-categories/jamaican_culture.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora full-colour Jamaican flag saltire artwork with a theme-inheriting outline and accessible category label",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "other",
+      "label": "More gifts",
+      "file": "/assets/icons/live-gift-categories/other.svg",
+      "format": "SVG",
+      "canvas": "24x24 viewBox",
+      "source": "Original Minglora category illustration authored for this feature",
+      "review_status": "design-review-pending"
+    }
+  ]
+}

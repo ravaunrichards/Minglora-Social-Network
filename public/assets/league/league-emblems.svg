@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="gold-metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff7bf"/><stop offset=".28" stop-color="#f4d36d"/><stop offset=".62" stop-color="#c88a21"/><stop offset="1" stop-color="#75450c"/>
+    </linearGradient>
+    <linearGradient id="silver-metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff"/><stop offset=".32" stop-color="#dce8f7"/><stop offset=".68" stop-color="#8299b8"/><stop offset="1" stop-color="#405977"/>
+    </linearGradient>
+    <linearGradient id="copper-metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe4c9"/><stop offset=".3" stop-color="#e7a16a"/><stop offset=".68" stop-color="#a85b30"/><stop offset="1" stop-color="#66321d"/>
+    </linearGradient>
+    <linearGradient id="rose-metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7e7ea"/><stop offset=".3" stop-color="#d8b0b8"/><stop offset=".7" stop-color="#906773"/><stop offset="1" stop-color="#503b48"/>
+    </linearGradient>
+    <linearGradient id="gem-blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c9f6ff"/><stop offset=".45" stop-color="#4c9edc"/><stop offset="1" stop-color="#173b80"/>
+    </linearGradient>
+    <linearGradient id="gem-violet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4d8ff"/><stop offset=".5" stop-color="#9864d7"/><stop offset="1" stop-color="#44246f"/>
+    </linearGradient>
+    <linearGradient id="rank-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2ab"/><stop offset=".5" stop-color="#e0a52b"/><stop offset="1" stop-color="#8b5714"/>
+    </linearGradient>
+    <linearGradient id="rank-silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#b5c6dc"/><stop offset="1" stop-color="#657b9b"/>
+    </linearGradient>
+    <linearGradient id="rank-copper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe0c1"/><stop offset=".5" stop-color="#c88455"/><stop offset="1" stop-color="#754126"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="blur"/>
+      <feOffset dy="2.5" result="offset"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".28"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <symbol id="division-a" viewBox="0 0 128 128">
+    <g filter="url(#soft-shadow)">
+      <path d="M37 82 21 119 54 108 64 124 75 108 107 119 91 82Z" fill="#b98222" stroke="#fff0a5" stroke-width="2"/>
+      <path d="m43 84-9 23 21-8 9 16 9-16 21 8-9-23Z" fill="#f9d976"/>
+      <path d="M64 5 76 20 95 18 99 37 116 48 106 65 110 85 91 91 81 108 64 99 47 108 37 91 18 85 22 65 12 48 29 37 33 18 52 20Z" fill="url(#gold-metal)" stroke="#fff3bd" stroke-width="3"/>
+      <path d="M64 14 73 27 90 25 93 42 107 51 99 66 102 82 86 87 77 101 64 94 51 101 42 87 26 82 29 66 21 51 35 42 38 25 55 27Z" fill="#8b5b13" opacity=".5"/>
+      <path d="M64 15 74 29 92 27 87 45 105 53 91 66 100 84 79 84 64 99 49 84 28 84 37 66 23 53 41 45 36 27 54 29Z" fill="url(#gold-metal)" stroke="#fff8d6" stroke-width="1.8"/>
+      <path d="m64 29 13 17-13 36-13-36Z" fill="#fff4c0" opacity=".42"/>
+      <path d="m51 46 13 36 13-36" fill="none" stroke="#80520f" stroke-width="2" opacity=".6"/>
+      <path d="m41 34 13-8 10 13 10-13 13 8" fill="none" stroke="#fff9db" stroke-width="3" stroke-linecap="round"/>
+      <text x="64" y="76" text-anchor="middle" font-family="Arial,sans-serif" font-size="43" font-weight="900" fill="#fff7d4" stroke="#875313" stroke-width="1.8" paint-order="stroke">A</text>
+    </g>
+  </symbol>
+
+  <symbol id="division-b" viewBox="0 0 128 128">
+    <g filter="url(#soft-shadow)">
+      <path d="M37 82 21 119 54 108 64 124 75 108 107 119 91 82Z" fill="#7187a5" stroke="#eef6ff" stroke-width="2"/>
+      <path d="m43 84-9 23 21-8 9 16 9-16 21 8-9-23Z" fill="#cbdaf0"/>
+      <path d="M64 5 76 20 95 18 99 37 116 48 106 65 110 85 91 91 81 108 64 99 47 108 37 91 18 85 22 65 12 48 29 37 33 18 52 20Z" fill="url(#silver-metal)" stroke="#f6fbff" stroke-width="3"/>
+      <path d="M64 15 74 29 92 27 87 45 105 53 91 66 100 84 79 84 64 99 49 84 28 84 37 66 23 53 41 45 36 27 54 29Z" fill="#9bb1cd" stroke="#f8fbff" stroke-width="2"/>
+      <path d="m64 29 13 17-13 36-13-36Z" fill="#eaf5ff" opacity=".6"/>
+      <path d="m51 46 13 36 13-36" fill="none" stroke="#425e82" stroke-width="2" opacity=".55"/>
+      <path d="m41 34 13-8 10 13 10-13 13 8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <text x="64" y="76" text-anchor="middle" font-family="Arial,sans-serif" font-size="43" font-weight="900" fill="#fff" stroke="#516a8d" stroke-width="1.8" paint-order="stroke">B</text>
+    </g>
+  </symbol>
+
+  <symbol id="division-c" viewBox="0 0 128 128">
+    <g filter="url(#soft-shadow)">
+      <path d="M37 82 21 119 54 108 64 124 75 108 107 119 91 82Z" fill="#9d5c37" stroke="#ffe2c7" stroke-width="2"/>
+      <path d="m43 84-9 23 21-8 9 16 9-16 21 8-9-23Z" fill="#f1bc8c"/>
+      <path d="M64 5 76 20 95 18 99 37 116 48 106 65 110 85 91 91 81 108 64 99 47 108 37 91 18 85 22 65 12 48 29 37 33 18 52 20Z" fill="url(#copper-metal)" stroke="#fff0df" stroke-width="3"/>
+      <path d="M64 15 74 29 92 27 87 45 105 53 91 66 100 84 79 84 64 99 49 84 28 84 37 66 23 53 41 45 36 27 54 29Z" fill="#c47b4c" stroke="#fff0df" stroke-width="2"/>
+      <path d="m64 29 13 17-13 36-13-36Z" fill="#fff1e2" opacity=".5"/>
+      <path d="m51 46 13 36 13-36" fill="none" stroke="#763a20" stroke-width="2" opacity=".55"/>
+      <path d="m41 34 13-8 10 13 10-13 13 8" fill="none" stroke="#fff5e8" stroke-width="3" stroke-linecap="round"/>
+      <text x="64" y="76" text-anchor="middle" font-family="Arial,sans-serif" font-size="43" font-weight="900" fill="#fff3e7" stroke="#854725" stroke-width="1.8" paint-order="stroke">C</text>
+    </g>
+  </symbol>
+
+  <symbol id="division-d" viewBox="0 0 128 128">
+    <g filter="url(#soft-shadow)">
+      <path d="M37 82 21 119 54 108 64 124 75 108 107 119 91 82Z" fill="#795765" stroke="#f6e6e9" stroke-width="2"/>
+      <path d="m43 84-9 23 21-8 9 16 9-16 21 8-9-23Z" fill="#d8b5bf"/>
+      <path d="M64 5 76 20 95 18 99 37 116 48 106 65 110 85 91 91 81 108 64 99 47 108 37 91 18 85 22 65 12 48 29 37 33 18 52 20Z" fill="url(#rose-metal)" stroke="#fff0f2" stroke-width="3"/>
+      <path d="M64 15 74 29 92 27 87 45 105 53 91 66 100 84 79 84 64 99 49 84 28 84 37 66 23 53 41 45 36 27 54 29Z" fill="#a98390" stroke="#f9edf0" stroke-width="2"/>
+      <path d="m64 29 13 17-13 36-13-36Z" fill="#fff3f4" opacity=".45"/>
+      <path d="m51 46 13 36 13-36" fill="none" stroke="#634451" stroke-width="2" opacity=".6"/>
+      <path d="m41 34 13-8 10 13 10-13 13 8" fill="none" stroke="#fff6f7" stroke-width="3" stroke-linecap="round"/>
+      <text x="64" y="76" text-anchor="middle" font-family="Arial,sans-serif" font-size="43" font-weight="900" fill="#fff4f6" stroke="#654a58" stroke-width="1.8" paint-order="stroke">D</text>
+    </g>
+  </symbol>
+
+  <symbol id="fragment-a" viewBox="0 0 128 128"><path d="M64 12 104 34 99 88 64 113 29 88 24 34Z" fill="url(#gold-metal)" stroke="#fff6c9" stroke-width="7"/><path d="m64 25 24 13-24 56-24-56Z" fill="#fff7c4" opacity=".55"/><path d="m40 38 24 56 24-56" fill="none" stroke="#936013" stroke-width="4" opacity=".5"/></symbol>
+  <symbol id="fragment-b" viewBox="0 0 128 128"><path d="M64 12 104 34 99 88 64 113 29 88 24 34Z" fill="url(#silver-metal)" stroke="#f4f9ff" stroke-width="7"/><path d="m64 25 24 13-24 56-24-56Z" fill="#fff" opacity=".65"/><path d="m40 38 24 56 24-56" fill="none" stroke="#506a8e" stroke-width="4" opacity=".5"/></symbol>
+  <symbol id="fragment-c" viewBox="0 0 128 128"><path d="M64 12 104 34 99 88 64 113 29 88 24 34Z" fill="url(#copper-metal)" stroke="#fff0e0" stroke-width="7"/><path d="m64 25 24 13-24 56-24-56Z" fill="#fff4e8" opacity=".56"/><path d="m40 38 24 56 24-56" fill="none" stroke="#814725" stroke-width="4" opacity=".5"/></symbol>
+  <symbol id="fragment-d" viewBox="0 0 128 128"><path d="M64 12 104 34 99 88 64 113 29 88 24 34Z" fill="url(#rose-metal)" stroke="#fff1f4" stroke-width="7"/><path d="m64 25 24 13-24 56-24-56Z" fill="#fff6f7" opacity=".55"/><path d="m40 38 24 56 24-56" fill="none" stroke="#634553" stroke-width="4" opacity=".5"/></symbol>
+
+  <symbol id="rank-1" viewBox="0 0 128 128">
+    <path d="M5 57 28 43 46 54 64 42 82 54 100 43 123 57 106 82 88 76 64 91 40 76 22 82Z" fill="url(#rank-gold)" stroke="#fff1b2" stroke-width="3"/>
+    <path d="m15 60 18-8 14 11 17-10 17 10 14-11 18 8-14 13-18-4-17 13-17-13-18 4Z" fill="#fff2ad" opacity=".6"/>
+    <circle cx="64" cy="68" r="30" fill="url(#rank-gold)" stroke="#fff6d0" stroke-width="4"/>
+    <circle cx="64" cy="68" r="23" fill="#845313" stroke="#fff0b0" stroke-width="2"/>
+    <text x="64" y="81" text-anchor="middle" font-family="Arial,sans-serif" font-size="39" font-weight="900" fill="#fff6d3" stroke="#80500f" stroke-width="1" paint-order="stroke">1</text>
+    <path d="m64 5 7 12 14 2-10 10 2 14-13-7-13 7 2-14-10-10 14-2Z" fill="url(#rank-gold)" stroke="#fff3c0" stroke-width="2"/>
+  </symbol>
+  <symbol id="rank-2" viewBox="0 0 128 128">
+    <path d="M5 57 28 43 46 54 64 42 82 54 100 43 123 57 106 82 88 76 64 91 40 76 22 82Z" fill="url(#rank-silver)" stroke="#fff" stroke-width="3"/>
+    <path d="m15 60 18-8 14 11 17-10 17 10 14-11 18 8-14 13-18-4-17 13-17-13-18 4Z" fill="#fff" opacity=".7"/>
+    <circle cx="64" cy="68" r="30" fill="url(#rank-silver)" stroke="#fff" stroke-width="4"/>
+    <circle cx="64" cy="68" r="23" fill="#536b8a" stroke="#e8f2ff" stroke-width="2"/>
+    <text x="64" y="81" text-anchor="middle" font-family="Arial,sans-serif" font-size="39" font-weight="900" fill="#fff" stroke="#47617f" stroke-width="1" paint-order="stroke">2</text>
+    <path d="m64 5 7 12 14 2-10 10 2 14-13-7-13 7 2-14-10-10 14-2Z" fill="url(#rank-silver)" stroke="#fff" stroke-width="2"/>
+  </symbol>
+  <symbol id="rank-3" viewBox="0 0 128 128">
+    <path d="M5 57 28 43 46 54 64 42 82 54 100 43 123 57 106 82 88 76 64 91 40 76 22 82Z" fill="url(#rank-copper)" stroke="#fff0df" stroke-width="3"/>
+    <path d="m15 60 18-8 14 11 17-10 17 10 14-11 18 8-14 13-18-4-17 13-17-13-18 4Z" fill="#fff0df" opacity=".65"/>
+    <circle cx="64" cy="68" r="30" fill="url(#rank-copper)" stroke="#fff1e1" stroke-width="4"/>
+    <circle cx="64" cy="68" r="23" fill="#78472e" stroke="#ffe7d2" stroke-width="2"/>
+    <text x="64" y="81" text-anchor="middle" font-family="Arial,sans-serif" font-size="39" font-weight="900" fill="#fff2e4" stroke="#75452c" stroke-width="1" paint-order="stroke">3</text>
+    <path d="m64 5 7 12 14 2-10 10 2 14-13-7-13 7 2-14-10-10 14-2Z" fill="url(#rank-copper)" stroke="#fff0df" stroke-width="2"/>
+  </symbol>
+
+  <symbol id="award-top-ten" viewBox="0 0 128 128">
+    <path d="M64 8 103 31 98 79 64 104 30 79 25 31Z" fill="url(#gold-metal)" stroke="#fff1bb" stroke-width="5"/>
+    <circle cx="64" cy="54" r="28" fill="#956014" stroke="#fff0ad" stroke-width="4"/>
+    <path d="m64 32 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2Z" fill="#fff4bd"/>
+    <text x="64" y="94" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="900" fill="#fff">10</text>
+  </symbol>
+  <symbol id="award-top-twenty" viewBox="0 0 128 128">
+    <path d="M64 8 103 31 98 79 64 104 30 79 25 31Z" fill="url(#silver-metal)" stroke="#f5f9ff" stroke-width="5"/>
+    <circle cx="64" cy="54" r="28" fill="#58708f" stroke="#eff6ff" stroke-width="4"/>
+    <path d="m64 32 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2Z" fill="#fff"/>
+    <text x="64" y="94" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="900" fill="#fff">20</text>
+  </symbol>
+
+  <symbol id="powerup-momentum" viewBox="0 0 128 128">
+    <circle cx="64" cy="64" r="53" fill="url(#gem-blue)" stroke="#dff9ff" stroke-width="4"/>
+    <path d="M72 12 39 69h22l-5 47 35-62H68Z" fill="#fff8c8" stroke="#194b88" stroke-width="3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="powerup-multiplier" viewBox="0 0 128 128">
+    <circle cx="64" cy="64" r="53" fill="url(#gold-metal)" stroke="#fff3bd" stroke-width="4"/>
+    <path d="m30 40 68 48M98 40 30 88" stroke="#fff8d4" stroke-width="12" stroke-linecap="round"/>
+    <text x="64" y="76" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="900" fill="#70440e" stroke="#fff0b8" stroke-width="1" paint-order="stroke">2×</text>
+  </symbol>
+  <symbol id="powerup-shield" viewBox="0 0 128 128">
+    <path d="M64 8 108 26v34c0 28-19 47-44 60C39 107 20 88 20 60V26Z" fill="url(#silver-metal)" stroke="#f5faff" stroke-width="5"/>
+    <path d="M64 21 95 34v26c0 20-12 34-31 46C45 94 33 80 33 60V34Z" fill="#456b99" stroke="#fff" stroke-width="3"/>
+    <path d="m45 62 13 13 27-30" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="powerup-time" viewBox="0 0 128 128">
+    <circle cx="64" cy="64" r="53" fill="url(#copper-metal)" stroke="#fff0e0" stroke-width="5"/>
+    <circle cx="64" cy="64" r="39" fill="#fff1e1" stroke="#8a4c2a" stroke-width="5"/>
+    <path d="M64 36v30l21 13" fill="none" stroke="#764322" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="64" cy="64" r="5" fill="#764322"/>
+  </symbol>
+</svg>

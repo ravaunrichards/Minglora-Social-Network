@@ -1,0 +1,372 @@
+/* Independent account-auth handler.
+ * Captures login and registration before app.js target listeners so both flows
+ * remain usable even if the large social-network bundle fails during startup. */
+(() => {
+  const LOGIN_FORM_SELECTOR = '#login-form';
+  const REGISTER_FORM_SELECTOR = '#register-form';
+  const jsonRequest = async (path, payload) => {
+    let response;
+    try {
+      response = await fetch('/api' + path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch {
+      throw new Error(navigator.onLine === false
+        ? 'You appear to be offline. Reconnect and try again.'
+        : 'Minglora could not reach the sign-in service. Check your connection and try again.');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const fallback = path === '/auth/register'
+        ? 'Minglora could not create your account (HTTP ' + response.status + ').'
+        : 'Sign-in failed (HTTP ' + response.status + ').';
+      const error = new Error(data.error || fallback);
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  };
+
+  const showError = message => {
+    const target = document.querySelector('#login-error');
+    if (target) target.textContent = message;
+  };
+
+  const reloadIntoSession = (mfaEnrollmentRequired = false) => {
+    // Fallback only when the main application bundle is unavailable.
+    const destination = new URL(window.location.href);
+    if (mfaEnrollmentRequired) destination.searchParams.set('mfa-setup', 'required');
+    window.location.replace(destination.pathname + destination.search);
+  };
+
+  const enterMingloraSession = async (user, mfaEnrollmentRequired = false) => {
+    if (!user || !user.id) throw new Error('Minglora did not create a sign-in session. Please try again.');
+    if (mfaEnrollmentRequired) {
+      const destination = new URL(window.location.href);
+      destination.searchParams.set('mfa-setup', 'required');
+      window.history.replaceState(null, '', destination.pathname + destination.search);
+    }
+    // The main app exposes this function after its deferred bundle loads.
+    // Enter in place so a full document reload cannot race the new HttpOnly cookie.
+    if (typeof window.enterMingloraApp === 'function') {
+      await window.enterMingloraApp(user);
+      return;
+    }
+    reloadIntoSession(mfaEnrollmentRequired);
+  };
+
+  const showRegistrationError = message => {
+    const target = document.querySelector('#register-error');
+    if (target) target.textContent = message;
+  };
+
+  const requestMfa = challengeId => new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-backdrop';
+    overlay.innerHTML =
+      '<section class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-recovery-mfa-title">' +
+        '<div class="modal-head"><h2 id="auth-recovery-mfa-title">Verify it is you</h2>' +
+        '<button class="modal-close" type="button" aria-label="Close">×</button></div>' +
+        '<form class="modal-body" id="auth-recovery-mfa-form">' +
+          '<p>Enter the current code from your authenticator app to finish signing in.</p>' +
+          '<label for="auth-recovery-mfa-code">Authenticator code</label>' +
+          '<input id="auth-recovery-mfa-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" minlength="6" maxlength="8" required>' +
+          '<p class="auth-error" id="auth-recovery-mfa-error" role="alert"></p>' +
+          '<button type="submit" class="primary full">Verify and sign in</button>' +
+        '</form>' +
+      '</section>';
+    const finish = value => { overlay.remove(); resolve(value); };
+    overlay.querySelector('.modal-close').addEventListener('click', () => finish(false));
+    overlay.querySelector('form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const button = form.querySelector('button[type="submit"]');
+      const error = form.querySelector('#auth-recovery-mfa-error');
+      const code = String(new FormData(form).get('code') || '').replace(/\s/g, '');
+      button.disabled = true;
+      error.textContent = '';
+      try {
+        const result = await jsonRequest('/auth/mfa/login', { challengeId, code });
+        if (!result.user || !result.user.id) throw new Error('Minglora verified the code but did not return an active member session.');
+        finish(result);
+      } catch (cause) {
+        error.textContent = cause.message || 'Your sign-in verification could not be completed.';
+        button.disabled = false;
+      }
+    });
+    document.body.append(overlay);
+    overlay.querySelector('#auth-recovery-mfa-code').focus();
+  });
+
+  async function submitLogin(form) {
+    const button = form.querySelector('button[type="submit"]');
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Signing in…';
+    showError('');
+    try {
+      const values = new FormData(form);
+      const result = await jsonRequest('/auth/login', {
+        email: String(values.get('email') || '').trim(),
+        password: String(values.get('password') || '')
+      });
+      if (result.mfaRequired) {
+        const verified = await requestMfa(result.challengeId);
+        if (!verified) {
+          showError('Sign-in verification was closed. Enter your details and try again.');
+          return;
+        }
+        await enterMingloraSession(verified.user);
+        return;
+      }
+      if (!result.user || !result.user.id) {
+        throw new Error('Minglora did not create a sign-in session. Please try again.');
+      }
+      button.textContent = result.mfaEnrollmentRequired ? 'Opening security setup…' : 'Opening Minglora…';
+      await enterMingloraSession(result.user, result.mfaEnrollmentRequired === true);
+    } catch (cause) {
+      showError(cause.message || 'Minglora could not sign you in. Please try again.');
+    } finally {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.textContent = 'Log in';
+    }
+  }
+
+
+  async function submitRegistration(form) {
+    const button = form.querySelector('button[type="submit"]');
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Creating account…';
+    showRegistrationError('');
+    try {
+      const values = new FormData(form);
+      const result = await jsonRequest('/auth/register', {
+        name: String(values.get('name') || '').trim(),
+        username: String(values.get('username') || '').trim(),
+        email: String(values.get('email') || '').trim(),
+        phoneNumber: String(values.get('phoneNumber') || '').trim(),
+        password: String(values.get('password') || '')
+      });
+      if (result.confirmationRequired) {
+        throw new Error('Minglora returned an unexpected email-confirmation requirement. Your account has not been signed in; please try again.');
+      }
+      if (!result.user || !result.user.id) {
+        throw new Error('Minglora did not finish creating your account. Please try again.');
+      }
+      button.textContent = 'Opening Minglora…';
+      await enterMingloraSession(result.user);
+    } catch (cause) {
+      showRegistrationError(cause.message || 'Minglora could not create your account. Please try again.');
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.textContent = 'Create account';
+    }
+  }
+
+  // Handle a physical/tap click directly as well as Enter-key form submission.
+  // Prevent the browser's implicit submit from racing the click handler.
+  document.addEventListener('click', event => {
+    const target = event.target;
+    const button = target && typeof target.closest === 'function'
+      ? target.closest('button[type="submit"]')
+      : null;
+    const form = button?.form;
+    if (!form || (!form.matches(LOGIN_FORM_SELECTOR) && !form.matches(REGISTER_FORM_SELECTOR))) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!form.reportValidity()) return;
+    if (form.matches(LOGIN_FORM_SELECTOR)) void submitLogin(form);
+    else void submitRegistration(form);
+  }, true);
+
+  // Capture phase also handles Enter-key submission before app.js listeners.
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    const isLogin = form.matches(LOGIN_FORM_SELECTOR);
+    const isRegistration = form.matches(REGISTER_FORM_SELECTOR);
+    if (!isLogin && !isRegistration) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (isLogin) void submitLogin(form);
+    else void submitRegistration(form);
+  }, true);
+
+  // Give visible feedback when native email/password constraints prevent submit.
+  document.addEventListener('invalid', event => {
+    const form = event.target?.form;
+    if (!form || !form.matches(LOGIN_FORM_SELECTOR)) return;
+    const input = event.target;
+    if (input?.name === 'email') showError('Enter the email address registered with Minglora.');
+    else if (input?.name === 'password') showError('Enter your Minglora password.');
+  }, true);
+
+  const oauthErrorMessages = {
+    provider_unavailable: 'Social sign-in is temporarily unavailable. Use your email and password or try again later.',
+    provider_not_enabled: 'That social sign-in method is not enabled in Minglora yet.',
+    invalid_or_expired: 'Your social sign-in session expired or could not be verified. Please try again.',
+    provider_cancelled: 'Social sign-in was cancelled. You can try again.',
+    account_restricted: 'This Minglora account is restricted. Contact support to appeal.',
+    callback_failed: 'Minglora could not complete social sign-in. Please try again.'
+  };
+  const pageUrl = new URL(window.location.href);
+  const oauthError = pageUrl.searchParams.get('oauth_error');
+  if (oauthError) {
+    showError(oauthErrorMessages[oauthError] || oauthErrorMessages.callback_failed);
+    pageUrl.searchParams.delete('oauth_error');
+    window.history.replaceState(null, '', pageUrl.pathname + pageUrl.search + pageUrl.hash);
+  }
+
+  const providerSection = document.querySelector('#auth-social-signin');
+  const providerList = document.querySelector('#auth-social-providers');
+  const providerNote = document.querySelector('#auth-social-note');
+  const loadSocialProviders = async () => {
+    if (!providerSection || !providerList) return;
+    try {
+      const response = await fetch('/api/auth/providers', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !Array.isArray(data.providers)) return;
+      const providers = data.providers.filter(provider =>
+        provider &&
+        /^[a-z0-9_]+$/.test(String(provider.id || '')) &&
+        String(provider.href || '') === '/auth/oauth/' + String(provider.id) &&
+        String(provider.label || '').length <= 60
+      );
+      if (!providers.length) return;
+      providerList.replaceChildren();
+      providers.forEach(provider => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'auth-social-provider';
+        button.dataset.oauthHref = provider.href;
+        button.setAttribute('aria-label', 'Continue with ' + provider.label);
+        const mark = document.createElement('span');
+        mark.className = 'auth-social-provider-mark';
+        mark.setAttribute('aria-hidden', 'true');
+        mark.textContent = provider.label.slice(0, 1);
+        const label = document.createElement('span');
+        label.className = 'auth-social-provider-label';
+        label.textContent = provider.label;
+        button.append(mark, label);
+        button.addEventListener('click', () => {
+          if (String(button.dataset.oauthHref || '') !== '/auth/oauth/' + String(provider.id)) return;
+          button.disabled = true;
+          button.setAttribute('aria-busy', 'true');
+          if (providerNote) providerNote.textContent = 'Connecting securely to ' + provider.label + '…';
+          window.location.assign(button.dataset.oauthHref);
+        });
+        providerList.append(button);
+      });
+      providerSection.hidden = providerList.childElementCount === 0;
+    } catch {
+      // Password, registration and email-link sign-in remain available when
+      // the social-provider status endpoint is temporarily unreachable.
+    }
+  };
+  void loadSocialProviders();
+
+  const pendingOAuthMfa = pageUrl.searchParams.get('oauth-mfa');
+  if (pendingOAuthMfa && /^[a-zA-Z0-9_-]{8,128}$/.test(pendingOAuthMfa)) {
+    pageUrl.searchParams.delete('oauth-mfa');
+    window.history.replaceState(null, '', pageUrl.pathname + pageUrl.search + pageUrl.hash);
+    void (async () => {
+      const verified = await requestMfa(pendingOAuthMfa);
+      if (!verified) {
+        showError('Sign-in verification was closed. Start social sign-in again.');
+        return;
+      }
+      try {
+        await enterMingloraSession(verified.user);
+      } catch (error) {
+        showError(error.message || 'Minglora could not finish your social sign-in.');
+      }
+    })();
+  }
+})();
+
+
+/* Defer Supabase's single-use confirmation URL until a person clicks.
+ * Email-security scanners commonly pre-open links; opening the actual
+ * Supabase /verify URL consumes the one-time token before the user arrives. */
+(() => {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const wrappedUrl = params.get('auth_confirmation');
+  if (!wrappedUrl) return;
+
+  // Keep the one-time URL out of browser history before rendering the handoff.
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  let confirmation;
+  try {
+    confirmation = new URL(wrappedUrl);
+    const validTypes = new Set(['magiclink', 'recovery', 'signup', 'invite', 'email_change', 'email']);
+    const type = confirmation.searchParams.get('type');
+    const redirectValue = confirmation.searchParams.get('redirect_to');
+    const redirect = redirectValue ? new URL(redirectValue) : null;
+    const validRedirect = redirect &&
+      redirect.origin === window.location.origin &&
+      redirect.pathname === '/' &&
+      ['', '?password-recovery=1'].includes(redirect.search) &&
+      !redirect.hash && !redirect.username && !redirect.password;
+
+    if (
+      confirmation.protocol !== 'https:' ||
+      confirmation.hostname !== 'gzycobgbasnqqhnympkr.supabase.co' ||
+      confirmation.pathname !== '/auth/v1/verify' ||
+      !confirmation.searchParams.get('token') ||
+      !validTypes.has(type) ||
+      !validRedirect
+    ) {
+      throw new Error('invalid-confirmation-url');
+    }
+  } catch {
+    const error = document.querySelector('#login-error');
+    if (error) error.textContent = 'This Minglora email link is invalid. Request a fresh link and try again.';
+    return;
+  }
+
+  const type = confirmation.searchParams.get('type');
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-backdrop';
+  overlay.innerHTML =
+    '<section class="modal" role="dialog" aria-modal="true" aria-labelledby="email-confirmation-title">' +
+      '<div class="modal-head"><h2 id="email-confirmation-title">Continue to Minglora</h2></div>' +
+      '<div class="modal-body">' +
+        '<p id="email-confirmation-description">Your secure email link is ready. Press Continue to complete verification.</p>' +
+        '<p class="auth-error" id="email-confirmation-error" role="alert"></p>' +
+        '<button class="primary full" id="email-confirmation-continue" type="button">Continue securely</button>' +
+      '</div>' +
+    '</section>';
+
+  const description = overlay.querySelector('#email-confirmation-description');
+  if (type === 'recovery') {
+    description.textContent = 'Continue to verify your password reset request.';
+  } else if (type === 'magiclink') {
+    description.textContent = 'Continue to verify your Minglora sign-in request.';
+  } else if (type === 'signup') {
+    description.textContent = 'Continue to confirm your Minglora email address.';
+  }
+
+  const button = overlay.querySelector('#email-confirmation-continue');
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    button.textContent = 'Opening secure verification…';
+    window.location.assign(confirmation.href);
+  });
+
+  document.body.append(overlay);
+  button.focus();
+})();

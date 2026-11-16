@@ -1,0 +1,51 @@
+plugins {
+    id "com.android.application"
+}
+def mingloraVersionCode = providers.gradleProperty("mingloraVersionCode").getOrElse("1").toInteger()
+def mingloraVersionName = providers.gradleProperty("mingloraVersionName").getOrElse("1.0.0")
+def keystorePath = System.getenv("ANDROID_KEYSTORE_FILE")
+def keystoreAlias = System.getenv("ANDROID_KEY_ALIAS")
+def keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+def releaseSigningConfigured = [keystorePath, keystoreAlias, keystorePassword, keyPassword].every { value -> value != null && !value.trim().isEmpty() }
+
+android {
+    namespace "com.minglora.social"
+    compileSdk 36
+    defaultConfig {
+        applicationId "com.minglora.social"
+        minSdk 23
+        targetSdk 36
+        versionCode mingloraVersionCode
+        versionName mingloraVersionName
+        buildConfigField "String", "MINGLORA_BASE_URL", "\"https://minglora-social-network.onrender.com/\""
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias keystoreAlias
+                keyPassword keyPassword
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            buildConfigField "boolean", "MINGLORA_CHECK_UPDATES", "false"
+        }
+        release {
+            minifyEnabled false
+            if (releaseSigningConfigured) signingConfig signingConfigs.release
+            buildConfigField "boolean", "MINGLORA_CHECK_UPDATES", "true"
+        }
+    }
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
+    }
+}

@@ -1,0 +1,725 @@
+/* Minglora LIVE room — compact MeetWave three-layer layout.
+   Scoped to an active broadcast so every other Minglora page keeps its layout. */
+body:has(#live-player-shell){
+  --minglora-live-header:66px;
+  display:flex!important;
+  flex-direction:column!important;
+  width:100%!important;
+  height:100dvh!important;
+  min-height:0!important;
+  max-height:100dvh!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+body:has(#live-player-shell) .topbar{
+  position:relative!important;
+  inset:auto!important;
+  z-index:20!important;
+  flex:0 0 var(--minglora-live-header)!important;
+  width:100%!important;
+  height:var(--minglora-live-header)!important;
+  min-height:var(--minglora-live-header)!important;
+  max-height:var(--minglora-live-header)!important;
+  overflow:hidden!important;
+  flex-wrap:nowrap!important;
+}
+body:has(#live-player-shell) .layout{
+  display:block!important;
+  flex:1 1 0!important;
+  width:100%!important;
+  max-width:none!important;
+  height:calc(100dvh - var(--minglora-live-header))!important;
+  min-height:0!important;
+  max-height:calc(100dvh - var(--minglora-live-header))!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .left-rail,
+body:has(#live-player-shell) .right-rail,
+body:has(#live-player-shell) .mobile-nav{display:none!important}
+body:has(#live-player-shell) .main-content{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) #live-player-shell{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:0!important;
+  isolation:isolate;
+}
+body:has(#live-player-shell) #live-player-shell>.live-player-header{
+  display:flex!important;
+  flex:0 0 42px!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+  gap:8px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:42px!important;
+  max-height:42px!important;
+  padding:4px 10px!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-player-header>div{
+  display:flex!important;
+  flex:1 1 auto!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-player-header>div strong{
+  display:block!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:12px!important;
+}
+body:has(#live-player-shell) .live-viewer-count{
+  flex:0 0 auto!important;
+  font-size:10px!important;
+}
+body:has(#live-player-shell) .gp-live-entry-banner{display:none!important}
+body:has(#live-player-shell) .live-session-meta{
+  display:flex!important;
+  flex:0 0 25px!important;
+  align-items:center!important;
+  gap:5px!important;
+  min-width:0!important;
+  min-height:25px!important;
+  max-height:25px!important;
+  margin:0!important;
+  padding:2px 9px!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-session-meta>*{
+  flex:0 0 auto!important;
+  margin:0!important;
+  font-size:9px!important;
+  line-height:1.15!important;
+}
+body:has(#live-player-shell) .live-session-meta .live-session-about,
+body:has(#live-player-shell) .live-session-meta .live-client-cta{display:none!important}
+body:has(#live-player-shell) .live-player-layout{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(250px,310px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  flex:1 1 0!important;
+  gap:0!important;
+  width:100%!important;
+  height:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-video-column{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+  align-items:stretch!important;
+  gap:5px!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  padding:6px 8px!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar{
+  display:flex!important;
+  position:relative!important;
+  inset:auto!important;
+  flex:0 0 35px!important;
+  align-items:center!important;
+  min-width:0!important;
+  min-height:35px!important;
+  max-height:35px!important;
+  margin:0!important;
+  padding:0 2px!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-profile{
+  min-height:32px!important;
+  gap:6px!important;
+  padding:2px 5px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-profile img{
+  width:27px!important;
+  height:27px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-profile strong{font-size:10px!important}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-profile small{font-size:8px!important}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-like-count{
+  display:flex!important;
+  align-items:center!important;
+  gap:4px!important;
+  font-size:9px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-heart-like{
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+}
+body:has(#live-player-shell) #live-video-stage{
+  position:relative!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto!important;
+  margin:0!important;
+  padding:5px!important;
+  overflow:hidden!important;
+  border-radius:12px!important;
+  transform:none!important;
+}
+body:has(#live-player-shell) #live-guest-layout.live-guest-layout{
+  box-sizing:border-box!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(0,1fr)!important;
+  align-content:stretch!important;
+  align-items:stretch!important;
+  gap:5px!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:100%!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-guest-layout-heading{
+  display:flex!important;
+  grid-column:1/-1!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:22px!important;
+  padding:1px 4px!important;
+  overflow:hidden!important;
+  font-size:9px!important;
+  white-space:nowrap!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-guest-layout-heading small{
+  font-size:8px!important;
+  white-space:nowrap!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-guest-seat{
+  display:flex!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  padding:3px!important;
+  overflow:hidden!important;
+  border-radius:9px!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-guest-seat-avatar{
+  width:clamp(23px,4vw,42px)!important;
+  height:clamp(23px,4vw,42px)!important;
+  min-width:0!important;
+  min-height:0!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-guest-seat-tag{
+  top:3px!important;
+  left:3px!important;
+  max-width:calc(100% - 6px)!important;
+  padding:2px 4px!important;
+  font-size:7px!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-guest-seat-meta{
+  right:3px!important;
+  bottom:3px!important;
+  left:3px!important;
+  max-width:calc(100% - 6px)!important;
+  padding:3px 4px!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-guest-seat-meta strong{font-size:8px!important}
+body:has(#live-player-shell) #live-guest-layout .live-guest-seat-meta small{font-size:7px!important}
+body:has(#live-player-shell) #live-video-stage .live-video-tile,
+body:has(#live-player-shell) #live-video-stage .live-video-element,
+body:has(#live-player-shell) #live-screen-share-stage video{
+  min-width:0!important;
+  min-height:0!important;
+  max-width:100%!important;
+}
+body:has(#live-player-shell) #live-video-stage .live-video-element{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+}
+body:has(#live-player-shell) #live-guest-layout .live-device-names-hidden .live-guest-seat-meta,
+body:has(#live-player-shell) #live-guest-layout .live-device-names-hidden .live-guest-seat-tag{display:none!important}
+body:has(#live-player-shell) .live-device-names-hidden .live-video-name,
+body:has(#live-player-shell) .live-device-names-hidden .live-screen-share-name{display:none!important}
+body:has(#live-player-shell) #live-audio-root{display:none!important}
+body:has(#live-player-shell) .live-player-controls.live-icon-controls{
+  position:relative!important;
+  inset:auto!important;
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  grid-auto-rows:43px!important;
+  align-content:center!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  gap:3px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:89px!important;
+  margin:0!important;
+  padding:3px!important;
+  overflow:hidden!important;
+  border:1px solid rgba(255,255,255,.13)!important;
+  border-radius:11px!important;
+  background:#0c111c!important;
+}
+body:has(#live-player-shell) .live-player-controls .live-control-button{
+  display:flex!important;
+  flex-direction:column!important;
+  flex:initial!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:2px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:42px!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:1px!important;
+  border:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body:has(#live-player-shell) .live-player-controls .live-control-icon{
+  display:grid!important;
+  place-items:center!important;
+  width:27px!important;
+  height:27px!important;
+  flex:0 0 27px!important;
+}
+body:has(#live-player-shell) .live-player-controls .live-control-icon svg{
+  width:18px!important;
+  height:18px!important;
+}
+body:has(#live-player-shell) .live-player-controls .live-control-caption{
+  display:block!important;
+  max-width:100%!important;
+  font-size:7px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+body:has(#live-player-shell) .live-player-controls .live-control-button.is-danger .live-control-icon{
+  background:linear-gradient(155deg,#f24b62,#c92340)!important;
+}
+body:has(#live-player-shell) .live-fullscreen-chat-slot{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:100%!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border-left:1px solid rgba(255,255,255,.12)!important;
+  background:#101722!important;
+}
+body:has(#live-player-shell) .live-fullscreen-side-head{
+  display:flex!important;
+  flex:0 0 43px!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:5px!important;
+  min-width:0!important;
+  min-height:43px!important;
+  max-height:43px!important;
+  padding:4px 7px!important;
+  overflow:hidden!important;
+  border-bottom:1px solid rgba(255,255,255,.12)!important;
+}
+body:has(#live-player-shell) .live-fullscreen-side-head>strong{
+  flex:0 0 auto!important;
+  font-size:9px!important;
+  letter-spacing:.06em!important;
+}
+body:has(#live-player-shell) .live-fullscreen-side-tabs{
+  display:flex!important;
+  flex:0 1 auto!important;
+  align-items:center!important;
+  gap:3px!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-fullscreen-side-tabs button{
+  min-width:0!important;
+  min-height:28px!important;
+  padding:5px 7px!important;
+  border:1px solid rgba(255,255,255,.15)!important;
+  border-radius:8px!important;
+  color:#eaf0f8!important;
+  background:rgba(255,255,255,.06)!important;
+  font-size:9px!important;
+  white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-fullscreen-side-tabs button.active{
+  border-color:rgba(105,229,201,.75)!important;
+  background:rgba(65,189,169,.16)!important;
+}
+body:has(#live-player-shell) .live-chat-overlay,
+body:has(#live-player-shell) .live-chat-disabled-note{
+  display:flex!important;
+  flex:1 1 0!important;
+  flex-direction:column!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:7px!important;
+  overflow:hidden!important;
+  background:transparent!important;
+}
+body:has(#live-player-shell) .live-chat-overlay .live-chat-list{
+  display:flex!important;
+  flex:1 1 0!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  max-height:none!important;
+  padding:2px!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  scrollbar-width:thin!important;
+}
+body:has(#live-player-shell) .live-chat-overlay .live-chat-composer-wrap{
+  flex:0 0 auto!important;
+  padding:5px 0 0!important;
+}
+body:has(#live-player-shell) .live-chat-overlay .live-chat-form{
+  display:flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  min-width:0!important;
+  padding:5px!important;
+}
+body:has(#live-player-shell) .live-chat-overlay .live-chat-form input{
+  flex:1 1 auto!important;
+  width:1px!important;
+  min-width:0!important;
+  min-height:34px!important;
+  font-size:11px!important;
+}
+body:has(#live-player-shell) .live-chat-overlay .live-chat-form button{
+  flex:0 0 30px!important;
+  min-width:30px!important;
+  width:30px!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding:3px!important;
+}
+body:has(#live-player-shell) #live-tools-backdrop{
+  position:fixed!important;
+  inset:var(--minglora-live-header) 0 0 auto!important;
+  z-index:10000!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  align-items:stretch!important;
+  width:min(430px,42vw)!important;
+  max-width:100vw!important;
+  height:calc(100dvh - var(--minglora-live-header))!important;
+  max-height:calc(100dvh - var(--minglora-live-header))!important;
+  background:rgba(2,7,16,.68)!important;
+  backdrop-filter:blur(4px)!important;
+  -webkit-backdrop-filter:blur(4px)!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) #live-tools-backdrop.hidden{display:none!important}
+body:has(#live-player-shell) #live-tools-drawer{
+  display:flex!important;
+  flex-direction:column!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  overflow:hidden!important;
+  border:1px solid rgba(255,255,255,.13)!important;
+  border-right:0!important;
+  border-radius:14px 0 0 14px!important;
+  box-shadow:-12px 0 36px rgba(0,0,0,.32)!important;
+  animation:none!important;
+}
+body:has(#live-player-shell) .live-tools-header{flex:0 0 auto!important;padding:10px 12px!important}
+body:has(#live-player-shell) .live-tools-header h2{font-size:14px!important}
+body:has(#live-player-shell) .live-tools-header small{font-size:9px!important}
+body:has(#live-player-shell) .live-tools-shortcuts{
+  display:flex!important;
+  flex:0 0 auto!important;
+  flex-wrap:wrap!important;
+  gap:4px!important;
+  max-height:76px!important;
+  padding:6px!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+body:has(#live-player-shell) .live-tools-shortcuts button{
+  flex:1 1 62px!important;
+  min-width:0!important;
+  min-height:30px!important;
+  padding:5px!important;
+  font-size:9px!important;
+}
+body:has(#live-player-shell) .live-tools-content{
+  display:block!important;
+  flex:1 1 0!important;
+  width:100%!important;
+  height:0!important;
+  min-width:0!important;
+  min-height:0!important;
+  padding:8px!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+}
+body:has(#live-player-shell) .live-tools-content [data-live-tools-panel][hidden]{display:none!important}
+body:has(#live-player-shell) .live-device-settings-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+body:has(#live-player-shell) .live-device-settings-grid label{
+  display:grid;
+  gap:4px;
+  min-width:0;
+  color:#edf3fb;
+  font-size:10px;
+  font-weight:750;
+}
+body:has(#live-player-shell) .live-device-settings-grid select{
+  width:100%;
+  min-width:0;
+  min-height:34px;
+  padding:5px 7px;
+  border:1px solid rgba(175,194,226,.22);
+  border-radius:8px;
+  color:#f5f7fc;
+  background:#121b2b;
+  font:inherit;
+}
+body:has(#live-player-shell) .live-device-setting-toggles{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+body:has(#live-player-shell) .live-device-setting-toggles label{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  color:#e5edf8;
+  font-size:10px;
+}
+body:has(#live-player-shell) .live-device-setting-toggles input{flex:0 0 auto}
+body:has(#live-player-shell) .live-device-settings-status{
+  margin:9px 0 0;
+  color:#aeb9ca;
+  font-size:9px;
+}
+body:has(#live-player-shell) .live-tools-content .live-tools-card,
+body:has(#live-player-shell) .live-tools-content .live-speaker-request-panel,
+body:has(#live-player-shell) .live-tools-content .live-reward-panel,
+body:has(#live-player-shell) .live-tools-content .live-gift-panel{
+  min-width:0!important;
+  padding:10px!important;
+  overflow:visible!important;
+}
+body:has(#live-player-shell) .live-audio-stage{
+  display:grid!important;
+  grid-template-rows:55px minmax(0,1fr) 22px!important;
+  min-height:0!important;
+  height:100%!important;
+  padding:5px!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-scene{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-orb{
+  width:38px!important;
+  height:38px!important;
+  flex:0 0 38px!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-orb img{width:28px!important;height:28px!important}
+body:has(#live-player-shell) .live-audio-stage .live-audio-scene h2{
+  margin:0!important;
+  font-size:10px!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-audio-scene p,
+body:has(#live-player-shell) .live-audio-stage .live-audio-live-label,
+body:has(#live-player-shell) .live-audio-stage .live-audio-waveform{display:none!important}
+body:has(#live-player-shell) .live-audio-stage .audio-guest-layout{
+  display:grid!important;
+  height:100%!important;
+  min-height:0!important;
+  padding:0!important;
+  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) .live-audio-stage .live-speaker-list{
+  min-height:0!important;
+  max-height:22px!important;
+  padding:2px!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-profile-preview{z-index:10001!important}
+body:has(#live-player-shell) .live-tools-backdrop[aria-hidden="true"]{pointer-events:none!important}
+body:has(#live-player-shell) .live-tools-backdrop[aria-hidden="false"]{pointer-events:auto!important}
+body:has(#live-player-shell) #live-player-shell.live-browser-fullscreen{
+  width:100vw!important;
+  height:100dvh!important;
+}
+@media(max-width:1000px){
+  body:has(#live-player-shell) .live-player-layout{
+    grid-template-columns:minmax(0,1fr) minmax(230px,28vw)!important;
+  }
+}
+@media(max-width:760px){
+  body:has(#live-player-shell){--minglora-live-header:58px}
+  body:has(#live-player-shell) .topbar{padding:0 7px!important}
+  body:has(#live-player-shell) .top-left{flex:1 1 auto!important;min-width:0!important}
+  body:has(#live-player-shell) .search-box{max-width:125px!important;min-width:40px!important}
+  body:has(#live-player-shell) .top-actions{gap:3px!important}
+  body:has(#live-player-shell) .circle-action{width:30px!important;height:30px!important}
+  body:has(#live-player-shell) .profile-menu{display:none!important}
+  body:has(#live-player-shell) .live-player-layout{
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) clamp(135px,25dvh,205px)!important;
+  }
+  body:has(#live-player-shell) .live-fullscreen-chat-slot{
+    border-left:0!important;
+    border-top:1px solid rgba(255,255,255,.12)!important;
+  }
+  body:has(#live-player-shell) .live-fullscreen-side-head{
+    flex-basis:36px!important;
+    min-height:36px!important;
+    max-height:36px!important;
+    padding:3px 6px!important;
+  }
+  body:has(#live-player-shell) .live-fullscreen-side-tabs button{
+    min-height:26px!important;
+    padding:4px 8px!important;
+  }
+  body:has(#live-player-shell) .live-video-column{gap:4px!important;padding:4px!important}
+  body:has(#live-player-shell) .live-video-column>.live-stage-topbar{
+    flex-basis:31px!important;min-height:31px!important;max-height:31px!important;
+  }
+  body:has(#live-player-shell) #live-video-stage{padding:3px!important;border-radius:9px!important}
+  body:has(#live-player-shell) #live-guest-layout.live-guest-layout{
+    grid-template-rows:18px repeat(3,minmax(0,1fr))!important;
+    gap:3px!important;
+  }
+  body:has(#live-player-shell) #live-guest-layout .live-guest-layout-heading{
+    max-height:18px!important;font-size:8px!important;padding:0 2px!important;
+  }
+  body:has(#live-player-shell) #live-guest-layout .live-guest-layout-heading small{font-size:7px!important}
+  body:has(#live-player-shell) #live-guest-layout .live-guest-seat-meta strong{font-size:7px!important}
+  body:has(#live-player-shell) #live-guest-layout .live-guest-seat-meta small{font-size:6px!important}
+  body:has(#live-player-shell) .live-player-controls.live-icon-controls{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-auto-rows:37px!important;
+    max-height:78px!important;
+    gap:2px!important;
+    padding:2px!important;
+  }
+  body:has(#live-player-shell) .live-player-controls .live-control-button{height:36px!important}
+  body:has(#live-player-shell) .live-player-controls .live-control-icon{
+    width:23px!important;height:23px!important;flex-basis:23px!important;
+  }
+  body:has(#live-player-shell) .live-player-controls .live-control-icon svg{width:16px!important;height:16px!important}
+  body:has(#live-player-shell) .live-player-controls .live-control-caption{font-size:6px!important}
+  body:has(#live-player-shell) #live-tools-backdrop{
+    inset:auto 0 0 0!important;
+    width:100%!important;
+    height:min(62dvh,520px)!important;
+    max-height:62dvh!important;
+    align-items:stretch!important;
+  }
+  body:has(#live-player-shell) #live-tools-drawer{
+    border:1px solid rgba(255,255,255,.13)!important;
+    border-bottom:0!important;
+    border-radius:16px 16px 0 0!important;
+  }
+  body:has(#live-player-shell) .live-tools-shortcuts{max-height:66px!important}
+  body:has(#live-player-shell) .live-tools-content{padding-bottom:max(8px,env(safe-area-inset-bottom))!important}
+  body:has(#live-player-shell) .live-audio-stage{
+    grid-template-rows:40px minmax(0,1fr) 18px!important;
+  }
+  body:has(#live-player-shell) .live-audio-stage .live-audio-orb{
+    width:30px!important;height:30px!important;flex-basis:30px!important;
+  }
+  body:has(#live-player-shell) .live-audio-stage .live-audio-orb img{width:23px!important;height:23px!important}
+  body:has(#live-player-shell) .live-audio-stage .audio-guest-layout{
+    grid-template-rows:18px repeat(3,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:390px){
+  body:has(#live-player-shell) .live-player-layout{
+    grid-template-rows:minmax(0,1fr) clamp(125px,23dvh,175px)!important;
+  }
+  body:has(#live-player-shell) .live-video-column{padding:3px!important}
+  body:has(#live-player-shell) #live-guest-layout.live-guest-layout{gap:2px!important}
+  body:has(#live-player-shell) .live-fullscreen-side-head>strong{font-size:8px!important}
+}
+@media(max-height:700px){
+  body:has(#live-player-shell) #live-player-shell>.live-player-header{flex-basis:36px!important;min-height:36px!important;max-height:36px!important}
+  body:has(#live-player-shell) .live-session-meta{flex-basis:20px!important;min-height:20px!important;max-height:20px!important}
+  body:has(#live-player-shell) .live-player-layout{grid-template-rows:minmax(0,1fr) minmax(112px,22dvh)!important}
+  body:has(#live-player-shell) .live-video-column{gap:3px!important;padding:3px!important}
+  body:has(#live-player-shell) .live-video-column>.live-stage-topbar{flex-basis:27px!important;min-height:27px!important;max-height:27px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  body:has(#live-player-shell) .live-tools-drawer{animation:none!important}
+}

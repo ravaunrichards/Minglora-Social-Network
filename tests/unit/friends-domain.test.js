@@ -1,0 +1,107 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  getActiveFollowEdges,
+  getMutualFollowIds,
+  isSocialAccountEligible,
+  isRelationshipBlocked,
+  normalizeFriendPreferences,
+  validateFriendPreferencePatch
+} from '../../backend/modules/relationships/friends.js';
+
+test('friend roster is derived only from reciprocal follows', () => {
+  const follows = [
+    { followerId: 'me', followedId: 'a' },
+    { followerId: 'a', followedId: 'me' },
+    { followerId: 'me', followedId: 'b' },
+    { followerId: 'c', followedId: 'me' },
+    { followerId: 'me', followedId: 'me' },
+    { followerId: 'a', followedId: 'me' }
+  ];
+  assert.deepEqual(getMutualFollowIds(follows, 'me'), ['a']);
+});
+
+test('a block in either direction removes the connection from the friend roster', () => {
+  const follows = [
+    { followerId: 'me', followedId: 'a' },
+    { followerId: 'a', followedId: 'me' },
+    { followerId: 'me', followedId: 'b' },
+    { followerId: 'b', followedId: 'me' }
+  ];
+  const blocks = [{ blockerId: 'b', blockedId: 'me' }];
+  assert.equal(isRelationshipBlocked(blocks, 'me', 'b'), true);
+  assert.deepEqual(getMutualFollowIds(follows, 'me', blocks), ['a']);
+});
+
+test('friend preferences default without altering relationship state', () => {
+  assert.deepEqual(normalizeFriendPreferences(), {
+    isFavorite: false,
+    isCloseFriend: false,
+    isRestricted: false,
+    isMutedPosts: false,
+    isMutedStories: false,
+    snoozedUntil: null
+  });
+});
+
+test('friend preference patches accept supported flags and a bounded snooze', () => {
+  const now = Date.parse('2026-11-06T20:00:00.000Z');
+  const valid = validateFriendPreferencePatch({
+    isFavorite: true,
+    isRestricted: true,
+    snoozedUntil: '2026-11-13T20:00:00.000Z'
+  }, now);
+  assert.equal(valid.valid, true);
+  assert.equal(valid.value.isFavorite, true);
+  assert.equal(valid.value.isRestricted, true);
+  assert.equal(valid.value.snoozedUntil, '2026-11-13T20:00:00.000Z');
+});
+
+test('friend preference patches reject unknown, mistyped, and excessive snooze values', () => {
+  const now = Date.parse('2026-11-06T20:00:00.000Z');
+  assert.equal(validateFriendPreferencePatch({ friend: true }, now).valid, false);
+  assert.equal(validateFriendPreferencePatch({ isFavorite: 'yes' }, now).valid, false);
+  assert.equal(validateFriendPreferencePatch({ snoozedUntil: '2027-01-01T00:00:00.000Z' }, now).valid, false);
+});
+
+test('Restricted is a supported friend preference and does not change reciprocal-follow membership', () => {
+  const follows = [
+    { followerId: 'me', followedId: 'a' },
+    { followerId: 'a', followedId: 'me' }
+  ];
+  const patch = validateFriendPreferencePatch({ isRestricted: true });
+  assert.equal(patch.valid, true);
+  assert.equal(patch.value.isRestricted, true);
+  assert.deepEqual(getMutualFollowIds(follows, 'me'), ['a']);
+});
+
+test('restricted accounts are not eligible for social activity; expired bans recover', () => {
+  const now = Date.parse('2026-11-11T00:00:00.000Z');
+  assert.equal(isSocialAccountEligible({ id: 'active', status: 'active' }, now), true);
+  assert.equal(isSocialAccountEligible({ id: 'banned', status: 'banned', bannedUntil: '2026-11-12T00:00:00.000Z' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'permanent', status: 'banned', bannedUntil: null }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'invalid', status: 'banned', bannedUntil: 'not-a-date' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'expired', status: 'banned', bannedUntil: '2026-11-10T00:00:00.000Z' }, now), true);
+  assert.equal(isSocialAccountEligible({ id: 'suspended', status: 'suspended' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'deactivated', status: 'deactivated' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'deleted', status: 'deleted' }, now), false);
+});
+
+test('active follow edges omit banned, suspended, deactivated, and unknown accounts without deleting stored records', () => {
+  const accounts = [
+    { id: 'alice', status: 'active' },
+    { id: 'bob', status: 'banned', bannedUntil: '2026-11-12T00:00:00.000Z' },
+    { id: 'carol', status: 'suspended' },
+    { id: 'dave', status: 'active' }
+  ];
+  const follows = [
+    { followerId: 'alice', followedId: 'dave' },
+    { followerId: 'bob', followedId: 'alice' },
+    { followerId: 'alice', followedId: 'bob' },
+    { followerId: 'carol', followedId: 'dave' },
+    { followerId: 'dave', followedId: 'missing' }
+  ];
+  const active = getActiveFollowEdges(follows, accounts, Date.parse('2026-11-11T00:00:00.000Z'));
+  assert.deepEqual(active, [follows[0]]);
+  assert.equal(follows.length, 5);
+});

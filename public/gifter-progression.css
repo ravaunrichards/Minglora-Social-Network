@@ -1,0 +1,592 @@
+.gp-page{display:grid;gap:18px;min-width:0}
+.gp-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:4px 2px}
+.gp-heading h1{font-size:clamp(1.6rem,3vw,2.15rem);line-height:1.1;margin:5px 0 7px;color:var(--text,#172033)}
+.gp-heading p{margin:0;color:var(--muted,#667085);max-width:650px}
+.gp-eyebrow{display:block;font-size:.68rem;font-weight:800;letter-spacing:.14em;color:var(--accent,#1769e0)}
+.gp-back-link{border:1px solid var(--border,#dce2ec);background:var(--surface,#fff);border-radius:999px;padding:10px 15px;color:var(--text,#172033);font-weight:700;white-space:nowrap;cursor:pointer}
+.gp-heading-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.gp-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:center;overflow:hidden}
+.gp-hero-art{display:flex;align-items:center;justify-content:center;min-height:190px;border-radius:18px;background:linear-gradient(135deg,#eef4ff,#f8f2ff);padding:15px}
+.gp-reference-art{display:block;width:100%;height:auto;max-height:none;object-fit:contain}
+.gp-hero-summary{min-width:0}
+.gp-current-badge-row{display:flex;align-items:center;gap:16px;margin:12px 0 18px}
+.gp-current-badge-row h2{font-size:1.35rem;margin:0 0 4px}
+.gp-current-badge-row p{margin:0 0 8px;color:var(--muted,#667085);overflow-wrap:anywhere}
+.gp-rank-chip{display:inline-flex;padding:5px 10px;border-radius:999px;background:var(--soft,#edf3ff);color:var(--accent,#1769e0);font-size:.78rem;font-weight:750}
+.gp-badge{position:relative;display:inline-flex;flex:0 0 auto;flex-direction:column;align-items:center;justify-content:center;width:92px;height:92px;border-radius:28px;background:linear-gradient(145deg,#f7d77b,#ba7a24);color:#34210a;box-shadow:inset 0 2px 7px #fff9,0 7px 18px #263b6522;transform:rotate(-4deg)}
+.gp-badge strong{font-size:1.65rem;line-height:1.1}
+.gp-badge small{font-size:.55rem;font-weight:900;letter-spacing:.15em}
+.gp-badge-crown{font-size:1.05rem;line-height:1}
+.gp-badge--small{width:48px;height:48px;border-radius:15px;transform:none}
+.gp-badge--small strong{font-size:.95rem}
+.gp-badge--small small{font-size:.38rem}
+.gp-tier-1{background:linear-gradient(145deg,#dfe8ee,#7d98aa);color:#142a3a}
+.gp-tier-2{background:linear-gradient(145deg,#e8ba8b,#a75d2c);color:#3e1e0d}
+.gp-tier-3{background:linear-gradient(145deg,#eef2f8,#98a9bf);color:#263448}
+.gp-tier-4{background:linear-gradient(145deg,#ffe59a,#bf7a19);color:#422500}
+.gp-tier-5{background:linear-gradient(145deg,#d8d5ff,#8178d9);color:#20195d}
+.gp-tier-6{background:linear-gradient(145deg,#a9e9ff,#328bc1);color:#062b45}
+.gp-tier-7{background:linear-gradient(145deg,#ffd1eb,#c14f9b);color:#4b1237}
+.gp-tier-8{background:linear-gradient(145deg,#e3c6ff,#8f52c4);color:#35104d}
+.gp-tier-9{background:linear-gradient(145deg,#c4f3ea,#4e9eab);color:#073c43}
+.gp-tier-10{background:linear-gradient(145deg,#fff0b6,#c79b32);color:#4d3400}
+.gp-progress-heading{display:flex;justify-content:space-between;gap:12px;font-size:.9rem;margin-top:12px}
+.gp-progress-heading span{font-variant-numeric:tabular-nums;color:var(--muted,#667085)}
+.gp-progress-track{height:12px;border-radius:99px;background:#e8edf5;overflow:hidden;margin-top:8px}
+.gp-progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4e83ec,#9d6ce7);transition:width .25s ease}
+.gp-progress-foot{margin:7px 0 0;color:var(--muted,#667085);font-size:.83rem}
+.gp-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.gp-stat-card{padding:16px;border:1px solid var(--border,#e2e7ef);border-radius:16px;background:var(--surface,#fff);min-width:0}
+.gp-stat-card span,.gp-stat-card small{display:block;color:var(--muted,#667085);font-size:.78rem}
+.gp-stat-card strong{display:block;font-size:1.55rem;line-height:1.25;margin:6px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.gp-section{min-width:0}
+.gp-section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px}
+.gp-section-heading h2{font-size:1.22rem;margin:5px 0}
+.gp-section-heading p{font-size:.86rem;color:var(--muted,#667085);margin:0}
+.gp-level-count{padding:7px 11px;border-radius:999px;background:var(--soft,#edf3ff);color:var(--accent,#1769e0);font-weight:800;white-space:nowrap}
+.gp-selected-level{border-radius:16px;background:var(--soft,#f3f6fb);padding:15px;margin-bottom:15px;min-height:105px}
+.gp-selected-badge{display:flex;align-items:center;gap:16px}
+.gp-selected-badge h3{font-size:1.05rem;margin:4px 0}
+.gp-selected-badge p{margin:0 0 4px;color:var(--muted,#667085)}
+.gp-selected-badge small,.gp-selected-note{color:var(--muted,#667085);font-size:.8rem}
+.gp-selected-note{margin:10px 0 0}
+.gp-level-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.gp-level-card{display:flex;align-items:center;gap:9px;text-align:left;min-width:0;padding:9px;border:1px solid var(--border,#e2e7ef);border-radius:13px;background:var(--surface,#fff);color:var(--text,#172033);cursor:pointer}
+.gp-level-card:hover,.gp-level-card[aria-pressed=true]{border-color:var(--accent,#1769e0);box-shadow:0 0 0 2px #1769e018}
+.gp-level-card.is-locked{opacity:.58}
+.gp-level-card.is-current{background:var(--soft,#edf3ff);opacity:1}
+.gp-level-card-copy{display:grid;gap:3px;min-width:0}
+.gp-level-card-copy strong{font-size:.78rem}
+.gp-level-card-copy small{font-size:.68rem;color:var(--muted,#667085);font-variant-numeric:tabular-nums}
+.gp-level-state{margin-left:auto;color:var(--accent,#1769e0);font-weight:900;font-size:.85rem}
+.gp-level25{display:flex;align-items:center;gap:16px;border:1px solid #d4a64a;background:linear-gradient(120deg,#fff8e5,#fff 70%)}.gp-level25-emblem{width:72px;height:72px;display:grid;place-items:center;flex:0 0 auto;border-radius:22px;background:linear-gradient(145deg,#ffe7a0,#bd8127);color:#4b2a00;font-size:1.8rem;font-weight:950;box-shadow:inset 0 2px 5px #fff9,0 5px 14px #6b4b1b24}.gp-level25-copy h2{margin:4px 0;font-size:1.12rem}.gp-level25-copy p{margin:0 0 6px;color:var(--muted,#667085);font-size:.86rem}.gp-level25-copy strong{font-size:.82rem;color:#8a5b09}@media(max-width:650px){.gp-level25{align-items:flex-start;padding:14px!important}.gp-level25-emblem{width:58px;height:58px;border-radius:18px;font-size:1.45rem}}
+.gp-lower-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.gp-history-list,.gp-leaderboard-list{display:grid;gap:0}
+.gp-history-row,.gp-leader-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border,#e2e7ef);min-width:0}
+.gp-history-row:last-child,.gp-leader-row:last-child{border-bottom:0}
+.gp-history-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--soft,#edf3ff);flex:0 0 auto}
+.gp-history-copy,.gp-leader-copy{display:grid;gap:3px;min-width:0;flex:1}
+.gp-history-copy strong,.gp-leader-copy strong{font-size:.86rem;overflow-wrap:anywhere}
+.gp-history-copy small,.gp-leader-copy small{font-size:.72rem;color:var(--muted,#667085);overflow-wrap:anywhere}
+.gp-history-xp,.gp-leader-xp{font-size:.82rem;white-space:nowrap;color:var(--accent,#1769e0);font-variant-numeric:tabular-nums}
+.gp-rank-number{width:25px;text-align:center;font-weight:900;color:var(--muted,#667085);flex:0 0 auto}
+.gp-leader-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#dbeafe,#ede9fe);color:#35478a;font-weight:900;flex:0 0 auto}
+.gp-leader-row.is-you{background:var(--soft,#f4f7ff);border-radius:10px;padding-left:8px;padding-right:8px}
+.gp-empty{display:grid;justify-items:center;text-align:center;gap:7px;padding:28px 14px;color:var(--muted,#667085)}
+.gp-empty>span{font-size:1.8rem}
+.gp-empty strong{color:var(--text,#172033)}
+.gp-empty p{font-size:.83rem;margin:0;max-width:340px}
+.gp-rules{display:grid;gap:14px}
+.gp-rules h2{font-size:1.15rem;margin:4px 0}
+.gp-rule-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.gp-rule-grid article{padding:13px;border:1px solid var(--border,#e2e7ef);border-radius:13px}
+.gp-rule-grid strong{font-size:.85rem}
+.gp-rule-grid p{font-size:.8rem;color:var(--muted,#667085);margin:6px 0 0}
+.gp-rule-note{font-size:.78rem;color:var(--muted,#667085);margin:0}
+.gp-loading{padding:24px}
+.gp-loading p{color:var(--muted,#667085);margin-bottom:0}
+@media(max-width:900px){.gp-hero{grid-template-columns:minmax(0,1fr)}.gp-level-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.gp-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.gp-page{gap:13px}.gp-heading{align-items:flex-start;flex-direction:column}.gp-back-link{align-self:flex-start}.gp-heading-actions{align-self:flex-start;justify-content:flex-start}.gp-hero{grid-template-columns:1fr;gap:15px}.gp-hero-art{min-height:130px;padding:10px}.gp-reference-art{max-height:none}.gp-hero-summary{padding:2px}.gp-current-badge-row{gap:12px}.gp-stats-grid{gap:8px}.gp-stat-card{padding:12px}.gp-stat-card strong{font-size:1.3rem}.gp-level-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.gp-level-card{padding:7px;gap:7px}.gp-lower-grid{grid-template-columns:1fr;gap:12px}.gp-rule-grid{grid-template-columns:1fr}.gp-section{padding:15px!important}.gp-selected-level{padding:12px}.gp-badge{width:78px;height:78px;border-radius:24px}.gp-badge--small{width:43px;height:43px;border-radius:13px}.gp-badge--small strong{font-size:.88rem}}
+
+/* Public member badge and Level 25 LIVE arrival recognition */
+.gp-inline-badge{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;margin:0 0 0 6px;padding:4px 7px;border:1px solid #b88b38;border-radius:999px;font-size:.65rem;font-weight:900;line-height:1;white-space:nowrap;box-shadow:inset 0 1px 0 #fff9,0 2px 6px #44300d1c}
+.gp-inline-badge>span{font-size:.72rem;line-height:1}
+.gp-inline-badge strong{font-size:.68rem;line-height:1}
+.gp-inline-badge small{font-size:.48rem;font-weight:950;letter-spacing:.08em;line-height:1}
+.gp-live-entry-badge{display:inline-flex;align-items:center;vertical-align:middle;margin-left:5px;padding:4px 7px;border:1px solid #c99b3a;border-radius:999px;background:linear-gradient(135deg,#fff6cf,#e8bd59);color:#67420b;font-size:.58rem;font-weight:950;letter-spacing:.07em;line-height:1;white-space:nowrap;box-shadow:0 2px 8px #a977252b}
+.gp-live-entry-banner{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 16px;border:1px solid #c99b3a;border-radius:16px;background:linear-gradient(110deg,#fff5d0,#fff 60%,#f5e3b0);color:#553809;box-shadow:0 8px 24px #76521918;animation:gp-live-entry-arrive .65s cubic-bezier(.2,.8,.2,1) both}
+.gp-live-entry-seal{display:grid;place-items:center;width:48px;height:48px;flex:0 0 auto;border-radius:15px;background:linear-gradient(145deg,#fff0aa,#c78a25);color:#553809;font-size:1rem;font-weight:950;box-shadow:inset 0 2px 5px #fff9,0 3px 9px #6b4b1b26}
+.gp-live-entry-copy{display:grid;gap:3px;min-width:0;flex:1}
+.gp-live-entry-copy strong{font-size:.88rem;overflow-wrap:anywhere}
+.gp-live-entry-copy small{font-size:.74rem;color:#795718}
+.gp-live-entry-wordmark{font-size:.63rem;font-weight:950;letter-spacing:.12em;white-space:nowrap;color:#8a5c12}
+@keyframes gp-live-entry-arrive{0%{opacity:0;transform:translateY(-7px) scale(.985)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:650px){.gp-live-entry-banner{gap:9px;padding:10px 11px;border-radius:13px}.gp-live-entry-seal{width:40px;height:40px;border-radius:12px;font-size:.9rem}.gp-live-entry-wordmark{display:none}.gp-inline-badge{padding:3px 5px;margin-left:4px}}
+@media(prefers-reduced-motion:reduce){.gp-live-entry-banner{animation:none}}
+
+
+/* Special Milestone LV 25 badge alignment — responsive, without changing milestone content */
+.gp-level25{display:flex;align-items:center;gap:clamp(12px,2vw,18px);min-width:0;box-sizing:border-box;overflow:hidden}
+.gp-level25-emblem{display:flex;align-items:center;justify-content:center;flex:0 0 clamp(58px,8vw,72px);width:clamp(58px,8vw,72px);height:clamp(58px,8vw,72px);box-sizing:border-box;margin:0;line-height:1;text-align:center;white-space:nowrap;}
+.gp-level25-copy{flex:1 1 auto;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.gp-level25-copy .gp-eyebrow{display:block;line-height:1.25;margin:0 0 3px}
+.gp-level25-copy h2,.gp-level25-copy p,.gp-level25-copy strong{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:650px){.gp-level25{align-items:center!important;gap:12px;padding:14px!important}.gp-level25-emblem{flex-basis:56px;width:56px;height:56px;border-radius:16px;font-size:1.25rem}.gp-level25-copy h2{font-size:1rem;line-height:1.25}.gp-level25-copy p{font-size:.82rem;line-height:1.4}}
+@media(max-width:360px){.gp-level25{gap:9px;padding:11px!important}.gp-level25-emblem{flex-basis:50px;width:50px;height:50px;font-size:1.1rem}.gp-level25-copy h2{font-size:.92rem}}
+
+
+/* Minglora original faceted 3D gifter badge system */
+.gp-tier-1{--gp-gem-light:#e7f7ff;--gp-gem-mid:#76b8dc;--gp-gem-dark:#285b83;--gp-gem-edge:#f8fdff;--gp-gem-glow:rgba(76,170,226,.34)}
+.gp-tier-2{--gp-gem-light:#ffe0b2;--gp-gem-mid:#c17a3b;--gp-gem-dark:#6d351d;--gp-gem-edge:#fff0d9;--gp-gem-glow:rgba(209,127,59,.34)}
+.gp-tier-3{--gp-gem-light:#f6fbff;--gp-gem-mid:#9fb2c8;--gp-gem-dark:#465e7c;--gp-gem-edge:#fff;--gp-gem-glow:rgba(153,184,218,.34)}
+.gp-tier-4{--gp-gem-light:#fff2b0;--gp-gem-mid:#e3a928;--gp-gem-dark:#7f4b0c;--gp-gem-edge:#fff9df;--gp-gem-glow:rgba(245,188,66,.36)}
+.gp-tier-5{--gp-gem-light:#f5eaff;--gp-gem-mid:#a88bd8;--gp-gem-dark:#55428e;--gp-gem-edge:#fff7ff;--gp-gem-glow:rgba(168,137,226,.34)}
+.gp-tier-6{--gp-gem-light:#e0fcff;--gp-gem-mid:#62c6ed;--gp-gem-dark:#1d5f9d;--gp-gem-edge:#f4ffff;--gp-gem-glow:rgba(69,195,238,.38)}
+.gp-tier-7{--gp-gem-light:#ffd6ee;--gp-gem-mid:#d15c9a;--gp-gem-dark:#70234e;--gp-gem-edge:#fff2fa;--gp-gem-glow:rgba(225,90,164,.36)}
+.gp-tier-8{--gp-gem-light:#eadbff;--gp-gem-mid:#9867db;--gp-gem-dark:#49227d;--gp-gem-edge:#fbf3ff;--gp-gem-glow:rgba(151,97,222,.4)}
+.gp-tier-9{--gp-gem-light:#d9fff2;--gp-gem-mid:#4bbf9c;--gp-gem-dark:#176252;--gp-gem-edge:#f1fff9;--gp-gem-glow:rgba(62,198,158,.38)}
+.gp-tier-10{--gp-gem-light:#ffe8c9;--gp-gem-mid:#e1a9ed;--gp-gem-dark:#7c328d;--gp-gem-edge:#fff9ee;--gp-gem-glow:rgba(236,151,219,.44)}
+.gp-badge{position:relative;display:inline-flex;flex:0 0 auto;flex-direction:column;align-items:center;justify-content:flex-start;width:104px;height:112px;padding:0;background:transparent;color:var(--gp-gem-dark);border-radius:0;box-shadow:none;transform:none;isolation:isolate;}
+.gp-badge::before{content:"";position:absolute;top:8px;left:50%;width:68px;height:68px;transform:translateX(-50%);border-radius:50%;background:var(--gp-gem-glow);filter:blur(13px);opacity:.78;z-index:-1;animation:gp-gem-aura 3.8s ease-in-out infinite;}
+.gp-gem-stage{position:absolute;top:0;left:50%;width:84px;height:82px;transform:translateX(-50%);display:grid;place-items:center;perspective:420px;}
+.gp-gem-orbit{position:absolute;width:76px;height:34px;border:1.5px solid var(--gp-gem-edge);border-left-color:transparent;border-right-color:var(--gp-gem-mid);border-radius:50%;opacity:.65;transform:rotateX(67deg) rotateZ(-18deg);animation:gp-gem-orbit 8s linear infinite;}
+.gp-gem-svg{position:relative;display:block;width:76px;height:76px;overflow:visible;transform-style:preserve-3d;filter:drop-shadow(0 6px 5px rgba(12,20,40,.28));animation:gp-gem-float 4.8s ease-in-out infinite;}
+.gp-gem-drop{fill:var(--gp-gem-dark);opacity:.72;transform:translateY(3px)}
+.gp-gem-body{stroke:var(--gp-gem-edge)}
+.gp-gem-facet--top{fill:#fff;opacity:.34}
+.gp-gem-facet--bottom{fill:var(--gp-gem-dark);opacity:.34}
+.gp-gem-cut-lines{fill:none;stroke:rgba(255,255,255,.62);stroke-width:1.35;stroke-linejoin:round;opacity:.78}
+.gp-gem-flash{fill:#fff;opacity:.66;filter:blur(.25px);animation:gp-gem-flash 3.6s ease-in-out infinite;}
+.gp-gem-base{fill:none;stroke:var(--gp-gem-dark);stroke-width:2.5;stroke-linecap:round;opacity:.6}
+.gp-gem-sparkle{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff,0 0 14px var(--gp-gem-mid);animation:gp-gem-spark 2.8s ease-in-out infinite;}
+.gp-gem-sparkle--one{top:18px;right:10px}.gp-gem-sparkle--two{left:9px;bottom:21px;width:4px;height:4px;animation-delay:1.1s}
+.gp-badge-level{position:absolute;left:50%;bottom:10px;z-index:2;display:inline-flex;align-items:center;gap:3px;transform:translateX(-50%);padding:4px 9px;border:1px solid var(--gp-gem-edge);border-radius:999px;background:linear-gradient(145deg,var(--gp-gem-dark),#17253c);color:#fff;font-size:.62rem;font-weight:850;line-height:1;white-space:nowrap;box-shadow:0 3px 8px rgba(12,20,40,.24),inset 0 1px 1px rgba(255,255,255,.35);}
+.gp-badge-level b{font-size:.75rem;font-weight:950;}
+.gp-badge-caption{position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);font-size:.42rem;line-height:1;font-weight:950;letter-spacing:.18em;color:var(--gp-gem-dark);white-space:nowrap;text-shadow:0 1px 0 rgba(255,255,255,.85);}
+.gp-badge--small{width:50px;height:50px;min-width:50px;}
+.gp-badge--small::before{top:8px;width:32px;height:32px;filter:blur(8px);}
+.gp-badge--small .gp-gem-stage{width:50px;height:50px;top:0;}
+.gp-badge--small .gp-gem-svg{width:48px;height:48px;animation-duration:7.5s;}
+.gp-badge--small .gp-gem-orbit{width:43px;height:19px;}
+.gp-badge--small .gp-gem-sparkle{width:3px;height:3px;}
+.gp-badge--small .gp-badge-level,.gp-badge--small .gp-badge-caption{display:none;}
+.gp-inline-badge{display:inline-flex;align-items:center;justify-content:center;gap:3px;vertical-align:middle;margin:0 0 0 5px;padding:1px 6px 1px 2px;min-width:28px;height:23px;box-sizing:border-box;border:1px solid var(--gp-gem-edge);border-radius:999px;background:linear-gradient(145deg,var(--gp-gem-light),var(--gp-gem-mid));color:var(--gp-gem-dark);font-size:.62rem;font-weight:950;line-height:1;white-space:nowrap;box-shadow:0 2px 7px rgba(12,20,40,.17),inset 0 1px 1px rgba(255,255,255,.8);}
+.gp-inline-gem{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;}
+.gp-inline-gem-svg{display:block;width:20px;height:20px;overflow:visible;filter:drop-shadow(0 1px 1px rgba(12,20,40,.24));animation:gp-gem-float 5.8s ease-in-out infinite;}
+.gp-inline-gem-svg .gp-gem-drop{opacity:.55}
+.gp-inline-gem-svg .gp-gem-cut-lines{stroke-width:2;}
+.gp-inline-badge strong{font-size:.65rem;font-weight:950;line-height:1;}
+.gp-inline-badge small{display:none}
+.gp-leader-name{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;}
+.gp-leader-name>.gp-badge--small{vertical-align:middle;}
+.gp-badge:hover .gp-gem-svg,.gp-inline-badge:hover .gp-inline-gem-svg{animation-duration:2.1s;}
+@keyframes gp-gem-float{0%,100%{transform:translateY(1px) rotateY(-9deg) rotateX(5deg)}50%{transform:translateY(-4px) rotateY(11deg) rotateX(-4deg)}}
+@keyframes gp-gem-orbit{from{transform:rotateX(67deg) rotateZ(-18deg)}to{transform:rotateX(67deg) rotateZ(342deg)}}
+@keyframes gp-gem-aura{0%,100%{opacity:.48;scale:.92}50%{opacity:.9;scale:1.12}}
+@keyframes gp-gem-flash{0%,65%,100%{opacity:.24}72%{opacity:.9}84%{opacity:.38}}
+@keyframes gp-gem-spark{0%,100%{opacity:.15;scale:.7}50%{opacity:1;scale:1.25}}
+@media(max-width:650px){.gp-badge{width:96px;height:106px}.gp-gem-stage{transform:translateX(-50%) scale(.92);transform-origin:top center}.gp-badge--small{width:46px;height:46px;min-width:46px}.gp-badge--small .gp-gem-stage{transform:translateX(-50%) scale(.92)}.gp-inline-badge{height:22px;gap:2px;padding-right:5px}}
+@media(prefers-reduced-motion:reduce){.gp-badge::before,.gp-gem-orbit,.gp-gem-svg,.gp-gem-flash,.gp-gem-sparkle,.gp-inline-gem-svg{animation:none!important}.gp-gem-svg{transform:none}}
+
+.gp-new-gifter-identity{display:inline-flex;align-items:center;gap:4px;margin:0 0 0 5px;padding:3px 8px;border:1px solid rgba(255,205,103,.9);border-radius:999px;background:linear-gradient(135deg,#fff4ce,#f5c45d 52%,#b87522);color:#4a2b08;font-size:.62rem;font-weight:950;letter-spacing:.06em;line-height:1.2;white-space:nowrap;box-shadow:0 2px 8px rgba(155,101,24,.22),inset 0 1px 0 rgba(255,255,255,.8);vertical-align:middle}
+.gp-new-gifter-identity::before{content:"✦";font-size:.78rem}
+.gp-no-earned-badge{display:flex;min-width:150px;min-height:112px;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:12px;border:1px dashed var(--border,#b8c0cc);border-radius:16px;background:rgba(120,130,145,.06);text-align:center}
+.gp-no-earned-badge>span{font-size:1.5rem}
+.gp-no-earned-badge strong{font-size:.86rem}
+.gp-no-earned-badge small{font-size:.72rem;color:var(--muted,#697586)}
+.gp-new-gifter-notice{margin:.75rem 0 0;padding:8px 11px;border-radius:10px;background:rgba(245,196,93,.14);color:var(--text,#273244);font-size:.82rem}
+.gp-new-gifter-notice strong{color:#a36b18;letter-spacing:.04em}
+
+
+/* Horizontal LV + Coins presentation for all 50 Gifter Levels. */
+.gp-level-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}
+.gp-level-card{min-height:68px;gap:9px}
+.gp-level-card-copy{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex:1 1 auto;min-width:0}
+.gp-level-card-copy strong{flex:0 0 auto;white-space:nowrap}
+.gp-level-card-copy small{white-space:nowrap;text-align:right}
+@media(max-width:650px){.gp-level-grid{grid-template-columns:minmax(0,1fr);gap:8px}.gp-level-card{min-height:64px;padding:8px 10px;gap:10px}.gp-level-card-copy{gap:10px}.gp-level-card-copy strong{font-size:.84rem}.gp-level-card-copy small{font-size:.76rem}}
+
+
+/* Admin-issued level badges remain visually distinct from gift-earned progression. */
+.gp-admin-awarded-marker{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:max-content;max-width:100%;padding:3px 7px;margin:2px 0 0 4px;
+  border:1px solid rgba(190,157,82,.7);border-radius:999px;
+  background:linear-gradient(180deg,#fff7df 0%,#f9e7b7 100%);
+  color:#805a12;font-size:8px;font-weight:900;letter-spacing:.07em;line-height:1.15;
+  vertical-align:middle;white-space:nowrap;
+}
+.gp-level-card.is-admin-awarded{border-color:rgba(190,157,82,.65)}
+.gp-level-card.is-admin-awarded .gp-level-state{color:#8c6718}
+.gp-current-badge-row .gp-admin-awarded-marker{margin-left:4px}
+@media(max-width:560px){.gp-admin-awarded-marker{font-size:7px;padding:2px 6px}}
+
+
+
+/* Original, centered Minglora Gifters Level Up artwork and progression entry. */
+.gift-level-up-banner{
+  display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;align-items:center;
+  width:100%;min-width:0;max-width:100%;box-sizing:border-box;gap:12px;overflow:visible;padding:20px 18px;border:1px solid rgba(116,92,220,.24);
+  border-radius:22px;background:linear-gradient(120deg,rgba(34,25,75,.97),rgba(20,37,79,.96) 55%,rgba(86,37,111,.94));
+  color:#fff;text-align:center;box-shadow:0 12px 34px rgba(25,20,60,.18)
+}
+.gift-level-up-banner>img{display:block;width:min(100%,620px);max-width:100%;max-height:280px;height:auto;margin:0 auto;object-fit:contain;border-radius:14px}
+.gift-level-up-copy{width:min(100%,680px);min-width:0;max-width:100%;box-sizing:border-box;margin:0 auto;text-align:center;overflow-wrap:anywhere}
+.gift-level-up-copy .eyebrow{color:#d9caff}
+.gift-level-up-copy h2{margin:6px 0;font-size:clamp(1.45rem,3vw,2.1rem);font-weight:900}
+.gift-level-up-copy p{margin:0 auto 14px;max-width:620px;color:rgba(255,255,255,.86);line-height:1.5}
+.gift-level-up-copy button{display:inline-flex;justify-content:center;max-width:100%;flex-wrap:wrap;white-space:normal;margin:0 auto}
+.gp-hero-art{display:flex;align-items:center;justify-content:center;min-height:0;border-radius:18px;background:linear-gradient(135deg,#eef4ff,#f8f2ff);padding:14px}
+.gp-hero-art .gp-reference-art{display:block;width:min(100%,900px);height:auto;max-height:none;margin:0 auto;object-fit:contain}
+.gp-load-error{display:grid;gap:10px;text-align:center;justify-items:center;padding:24px}
+.gp-load-error p{max-width:680px;margin:0;color:var(--muted,#667085);overflow-wrap:anywhere}
+.gp-load-actions{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap}
+@media(max-width:650px){
+  .gift-level-up-banner{grid-template-columns:1fr;gap:9px;padding:14px 12px}
+  .gift-level-up-banner>img{max-height:220px}
+  .gift-level-up-copy h2{font-size:1.45rem}
+  .gp-hero-art .gp-reference-art{width:100%;max-height:none}
+}
+
+
+/* Original Gifters Badge Levels artwork: one complete JPG per vertical panel. */
+.gp-current-badge-row{align-items:flex-start}
+.gp-current-status-copy{min-width:0;width:100%}
+.gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;width:100%;min-width:0}
+.gp-art-panel{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;margin:0}
+.gp-art-panel>img{display:block;width:100%;max-width:100%;height:auto;object-fit:contain;object-position:center}
+.gp-art-panel--final{justify-self:center}
+.gp-art-panel--final>img{width:auto;max-width:100%;height:auto;margin-inline:auto}
+.gp-leader-level{display:inline-flex;align-items:center;flex:0 0 auto;margin-left:7px;color:var(--muted,#667085);font-size:.72rem;font-weight:800;white-space:nowrap}
+.gp-level25-copy{width:100%}
+@media(max-width:650px){.gp-art-panel-stack{gap:12px}.gp-art-panel>img{width:100%;height:auto}.gp-art-panel--final>img{width:auto;max-width:100%;height:auto}}
+
+
+/* Refined Gifter artwork sizing: original 720px panels stay centered and uncropped. */
+.gp-art-panel-stack{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  justify-items:center;
+  gap:clamp(10px,1.5vw,16px);
+  width:100%;
+  max-width:820px;
+  min-width:0;
+  margin:0 auto;
+}
+.gp-art-panel{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  width:100%;
+  max-width:760px;
+  min-width:0;
+  margin:0;
+  padding:clamp(6px,1vw,10px);
+  overflow:hidden;
+  border:1px solid var(--border,#e2e7ef);
+  border-radius:16px;
+  background:linear-gradient(180deg,var(--surface,#fff),var(--soft,#f5f7fb));
+  box-shadow:0 5px 18px rgba(25,35,55,.07),inset 0 1px 0 rgba(255,255,255,.7);
+}
+.gp-art-panel>img{
+  display:block;
+  width:100%;
+  max-width:720px;
+  height:auto;
+  margin:0 auto;
+  object-fit:contain;
+  object-position:center;
+  border-radius:9px;
+}
+.gp-art-panel--final{justify-self:center;margin-inline:auto}
+.gp-art-panel--final>img{width:100%;max-width:720px;height:auto}
+
+.gp-level-directory{display:grid;gap:15px;min-width:0}
+.gp-level-directory-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;min-width:0}
+.gp-level-directory-heading h2{margin:5px 0;font-size:1.2rem}
+.gp-level-directory-heading p{margin:0;color:var(--muted,#667085);font-size:.84rem}
+.gp-level-layout-controls{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:4px;border:1px solid var(--border,#e2e7ef);border-radius:999px;background:var(--soft,#f4f6fa)}
+.gp-level-layout-button{min-height:34px;padding:7px 12px;border:1px solid transparent;border-radius:999px;background:transparent;color:var(--muted,#667085);font-size:.78rem;font-weight:800;cursor:pointer}
+.gp-level-layout-button.is-active,.gp-level-layout-button[aria-pressed="true"]{border-color:var(--border,#d8dee8);background:var(--surface,#fff);color:var(--text,#172033);box-shadow:0 2px 7px rgba(20,30,50,.08)}
+.gp-level-index-grid{display:grid;gap:9px;min-width:0}
+.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(4,minmax(0,1fr))}
+.gp-level-index-grid[data-layout="vertical"]{grid-template-columns:minmax(0,1fr)}
+.gp-level-index-item{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:6px;min-width:0;padding:12px;border:1px solid var(--border,#e2e7ef);border-radius:13px;background:var(--surface,#fff)}
+.gp-level-index-level{color:var(--accent,#1769e0);font-size:.72rem;font-weight:900;letter-spacing:.04em}
+.gp-level-index-badge{min-width:0;color:var(--text,#172033);font-size:.86rem;line-height:1.3;overflow-wrap:anywhere}
+.gp-level-index-coins{color:var(--muted,#667085);font-size:.72rem;font-variant-numeric:tabular-nums}
+.gp-level-index-state{width:max-content;max-width:100%;padding:3px 7px;border-radius:999px;background:var(--soft,#f1f3f7);color:var(--muted,#667085);font-size:.64rem;font-weight:850;line-height:1.2}
+.gp-level-index-item.is-current{border-color:var(--accent,#1769e0);background:var(--soft,#edf3ff)}
+.gp-level-index-item.is-current .gp-level-index-state{background:var(--accent,#1769e0);color:#fff}
+.gp-level-index-item.is-unlocked .gp-level-index-state{color:#16734a;background:rgba(22,163,74,.10)}
+.gp-level-index-item.is-admin-awarded .gp-level-index-state{color:#865d12;background:rgba(214,168,69,.15)}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:76px minmax(0,1fr) minmax(120px,auto) auto;align-items:center;gap:12px}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{justify-self:end}
+@media(max-width:1000px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+  .gp-level-directory-heading{align-items:flex-start;flex-direction:column}
+  .gp-level-layout-controls{align-self:flex-start}
+  .gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:64px minmax(0,1fr);gap:6px 10px}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-coins{grid-column:2}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{grid-column:2;justify-self:start}
+  .gp-art-panel{padding:5px;border-radius:12px}
+  .gp-art-panel>img{border-radius:7px}
+}
+@media(max-width:380px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}.gp-level-layout-button{padding-inline:10px}}
+
+
+/* Clean edge treatment for the supplied JPG panels: trim black canvas, not artwork. */
+.gp-art-panel-stack{
+  max-width:760px;
+  gap:clamp(8px,1.2vw,12px);
+}
+.gp-art-panel{
+  width:100%;
+  max-width:720px;
+  padding:0;
+  overflow:hidden;
+  border:1.5px solid rgba(196,216,255,.88);
+  border-radius:15px;
+  background:transparent;
+  box-shadow:none;
+}
+.gp-art-panel>img,
+.gp-art-panel--final>img{
+  display:block;
+  width:100%;
+  max-width:none;
+  height:auto;
+  margin:0;
+  border-radius:inherit;
+  object-fit:contain;
+  object-position:center;
+  transform:scale(1.08,1.05) translateY(-.55%);
+  transform-origin:center;
+}
+/* The first and final source JPGs have a deeper empty top edge than the middle panels. */
+.gp-art-panel:first-child>img,
+.gp-art-panel--final>img{
+  transform:scale(1.08,1.10) translateY(-2.5%);
+}
+@media(max-width:760px){
+  .gp-art-panel{padding:0;border-width:1.25px;border-radius:12px}
+  .gp-art-panel>img,
+  .gp-art-panel--final>img{border-radius:inherit}
+}
+
+
+/* Readable Gifter Level-Up chart across desktop, tablets, and touch screens. */
+.gp-hero-art{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  padding:clamp(10px,2vw,18px);
+}
+.gp-hero-art .gp-reference-art{
+  display:block;
+  width:min(100%,900px);
+  height:auto;
+  max-height:none;
+  margin:0 auto;
+  object-fit:contain;
+}
+.gp-chart-fullsize{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:auto;
+  max-width:100%;
+  min-height:46px;
+  box-sizing:border-box;
+  padding:10px 18px;
+  border:1px solid #9bb8ec;
+  border-radius:999px;
+  background:#fff;
+  color:#183f78;
+  font-size:1rem;
+  font-weight:800;
+  line-height:1.25;
+  text-align:center;
+  text-decoration:none;
+  touch-action:manipulation;
+}
+.gp-chart-fullsize:hover{background:#edf4ff;border-color:#527fc9}
+.gp-chart-fullsize:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+@media(max-width:650px){
+  .gp-hero-art{gap:10px;padding:10px 6px;border-radius:14px}
+  .gp-hero-art .gp-reference-art{width:100%;height:auto;max-height:none;object-fit:contain}
+  .gp-chart-fullsize{width:min(100%,420px);min-height:48px;font-size:1rem;padding:11px 14px}
+}
+
+
+/* Individual original badge artwork: equal display boxes, no cropping or distortion. */
+.gp-level-index-item{grid-template-columns:76px minmax(0,1fr);align-items:center;gap:12px;min-height:100px}
+.gp-level-index-art{display:block;width:76px;height:76px;max-width:100%;aspect-ratio:1/1;object-fit:contain;object-position:center;justify-self:center;align-self:center;filter:drop-shadow(0 3px 5px rgba(15,23,42,.18))}
+/* The uploaded cropped range badges are the source artwork: locked levels stay subdued,
+   while earned/current/admin-awarded levels reveal the original full-bright colours. */
+.gp-level-index-item.is-locked .gp-level-index-art{filter:grayscale(1) saturate(.2) brightness(.68) opacity(.58) drop-shadow(0 2px 4px rgba(15,23,42,.16))}
+.gp-level-index-item.is-unlocked .gp-level-index-art,
+.gp-level-index-item.is-current .gp-level-index-art,
+.gp-level-index-item.is-admin-awarded .gp-level-index-art{filter:drop-shadow(0 2px 4px rgba(15,23,42,.18)) drop-shadow(0 0 7px rgba(255,194,75,.32))}
+
+.gp-level-index-copy{display:grid;gap:5px;min-width:0;align-content:center}
+.gp-level-index-level{font-size:.74rem;line-height:1.2}
+.gp-level-index-badge{font-size:.82rem;line-height:1.25}
+.gp-level-index-coins{line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+.gp-level-index-state{margin-top:1px}
+@media(max-width:980px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.gp-level-directory-heading{align-items:flex-start;flex-direction:column}.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-level-index-item{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:10px}.gp-level-index-art{width:64px;height:64px}}
+@media(max-width:480px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:360px){.gp-level-index-item{grid-template-columns:58px minmax(0,1fr);gap:9px;padding:9px}.gp-level-index-art{width:58px;height:58px}}
+
+
+/* Clear identity rows for the public Gifter progression leaderboard. */
+.gp-leader-copy{display:grid;gap:3px;min-width:0;flex:1}
+.gp-leader-username{display:block;color:var(--muted,#667085);font-size:.7rem;line-height:1.3;overflow-wrap:anywhere}
+.gp-leader-display-name{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;font-size:.86rem;line-height:1.3;overflow-wrap:anywhere}
+.gp-leader-badge{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:100%;vertical-align:middle}
+.gp-leader-badge img{display:block;flex:0 0 23px;width:23px;height:23px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(12,24,48,.22));animation:gp-leader-badge-glow 7s ease-in-out infinite}
+.gp-leader-badge>span{min-width:0;color:#805817;font-size:.65rem;font-weight:850;line-height:1.25;overflow-wrap:anywhere}
+@keyframes gp-leader-badge-glow{0%,100%{filter:drop-shadow(0 1px 2px rgba(12,24,48,.18))}50%{filter:drop-shadow(0 2px 5px rgba(201,153,59,.48))}}
+@media(max-width:650px){.gp-leader-badge img{flex-basis:21px;width:21px;height:21px}.gp-leader-badge>span{font-size:.61rem}}
+@media(prefers-reduced-motion:reduce){.gp-leader-badge img{animation:none}}
+
+
+/* Original Level-Up artwork is visible as a reference; live progression remains server-authoritative. */
+
+/* Show the member's earned TikTok-style level badge beside Gifter Status. */
+.gp-current-badge-row{align-items:center;gap:14px}
+.gp-current-badge-art{display:grid;place-items:center;flex:0 0 112px;width:112px;height:120px;min-width:0;overflow:visible}
+.gp-current-badge-art .gp-current-badge-image{display:block;width:104px;height:112px;max-width:100%;object-fit:contain;filter:drop-shadow(0 4px 9px rgba(15,23,42,.2))}
+.gp-current-status-copy{min-width:0;width:auto;flex:1 1 auto}
+@media(max-width:650px){
+  .gp-current-badge-row{gap:9px}
+  .gp-current-badge-art{flex-basis:92px;width:92px;height:100px}
+  .gp-current-badge-art .gp-badge{width:90px;height:100px;min-width:90px}
+}
+@media(max-width:360px){
+  .gp-current-badge-row{gap:6px}
+  .gp-current-badge-art{flex-basis:82px;width:82px;height:92px}
+  .gp-current-badge-art .gp-badge{width:80px;height:90px;min-width:80px}
+}
+
+
+/* Smooth high-quality resampling for original Gifter PNGs in the level directory and status row.
+   The existing badge size, placement, visibility and effects are intentionally unchanged. */
+.gp-level-index-art,.gp-current-badge-image{image-rendering:auto;image-rendering:smooth}
+
+
+/* Display each original Gifter badge at a readable, undistorted horizontal size. */
+.gp-level-index-item{grid-template-columns:minmax(0,1fr);align-items:start;gap:8px}
+.gp-level-index-art{display:block;width:min(100%,170px);height:auto;aspect-ratio:170 / 76;object-fit:contain;object-position:left center;justify-self:start;align-self:center;filter:drop-shadow(0 3px 5px rgba(15,23,42,.18));image-rendering:auto}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:minmax(0,170px) minmax(0,1fr) minmax(120px,auto) auto;align-items:center;gap:12px}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:170px}
+.gp-leader-badge img{display:block;flex:0 0 40px;width:40px;height:auto;aspect-ratio:170 / 76;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(12,24,48,.22));animation:gp-leader-badge-glow 7s ease-in-out infinite}
+.gp-current-badge-art{display:grid;place-items:center;flex:0 0 170px;width:170px;height:76px;min-width:0;overflow:visible}
+.gp-current-badge-art .gp-current-badge-image{display:block;width:170px;height:auto;max-width:100%;aspect-ratio:170 / 76;object-fit:contain;filter:drop-shadow(0 4px 9px rgba(15,23,42,.2));image-rendering:auto}
+@media(max-width:760px){
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:minmax(0,130px) minmax(0,1fr);gap:7px 12px}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:130px}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-coins,.gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{grid-column:2}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{justify-self:start}
+  .gp-current-badge-art{flex-basis:150px;width:150px;height:auto;min-height:67px}
+  .gp-current-badge-art .gp-current-badge-image{width:150px;height:auto}
+  .gp-leader-badge img{flex-basis:36px;width:36px}
+}
+@media(max-width:480px){
+  .gp-level-index-art{width:min(100%,160px)}
+  .gp-current-badge-row{align-items:flex-start}
+  .gp-current-badge-art{flex-basis:136px;width:136px;min-height:61px}
+  .gp-current-badge-art .gp-current-badge-image{width:136px}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:minmax(0,120px) minmax(0,1fr)}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:120px}
+}
+@media(prefers-reduced-motion:reduce){.gp-leader-badge img{animation:none}}
+
+
+.gp-reference-note{display:block;max-width:100%;margin:8px 2px 0;color:var(--muted,#667085);font-size:.72rem;line-height:1.45;overflow-wrap:anywhere}
+.gp-reference-section{display:grid;gap:14px;min-width:0}
+.gp-master-reference-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);align-items:start;gap:14px;min-width:0}
+.gp-range-reference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px;min-width:0}
+.gp-reference-figure{display:grid;align-content:start;gap:9px;min-width:0;max-width:100%;margin:0;padding:clamp(8px,1.2vw,13px);box-sizing:border-box;border:1px solid var(--border,#e2e7ef);border-radius:14px;background:var(--surface,#fff);box-shadow:0 4px 14px rgba(25,35,55,.06)}
+.gp-reference-figure figcaption{display:grid;gap:3px;min-width:0}
+.gp-reference-figure figcaption strong{color:var(--text,#172033);font-size:.86rem;line-height:1.25;overflow-wrap:anywhere}
+.gp-reference-figure figcaption span{color:var(--muted,#667085);font-size:.7rem;line-height:1.35}
+.gp-reference-figure>a{display:block;max-width:100%;min-width:0}
+.gp-reference-figure img{display:block;width:100%;max-width:100%;height:auto;min-width:0;object-fit:contain;object-position:center;border-radius:8px}
+.gp-master-reference-preview img{max-height:440px;object-fit:contain}
+@media(max-width:760px){
+  .gp-master-reference-grid{grid-template-columns:minmax(0,1fr)}
+  .gp-range-reference-grid{grid-template-columns:minmax(0,1fr)}
+  .gp-reference-figure{padding:8px;border-radius:12px}
+  .gp-reference-figure img{width:100%;height:auto}
+}
+
+
+/* Supplied Gifter badge progression strip: keep the original artwork uncropped. */
+.gp-progression-art-reference{display:grid;gap:12px;min-width:0}
+.gp-progression-art-frame{display:block;min-width:0;max-width:100%;margin:0;padding:clamp(8px,1.2vw,13px);box-sizing:border-box;border:1px solid var(--border,#e2e7ef);border-radius:14px;background:var(--surface,#fff);box-shadow:0 4px 14px rgba(25,35,55,.06)}
+.gp-progression-art-frame img{display:block;width:100%;max-width:100%;height:auto;min-width:0;object-fit:contain;object-position:center;border-radius:8px}
+@media(max-width:760px){.gp-progression-art-frame{padding:8px;border-radius:12px}.gp-progression-art-frame img{width:100%;height:auto}}
+
+
+/* The original strip remains the layout; earned crop badges and one white current-level marker overlay it. */
+.gp-live-progression-track{
+  position:relative;display:block;width:100%;aspect-ratio:1080 / 153;min-width:0;
+  overflow:visible;isolation:isolate;line-height:0;
+}
+.gp-live-progression-track>img:first-child{
+  display:block;width:100%;height:100%;max-width:100%;object-fit:fill;object-position:center;
+  border-radius:8px;
+}
+.gp-progression-level-marker{
+  position:absolute;top:85%;transform:translate(-50%,-50%);
+  display:block;width:1.75%;min-width:5px;max-width:19px;aspect-ratio:1;border-radius:50%;
+  box-sizing:border-box;border:1px solid rgba(36,24,56,.55);
+  background:#fff;z-index:2;pointer-events:none;
+  box-shadow:0 0 0 1px rgba(255,255,255,.38),0 1px 3px rgba(35,21,50,.36);
+  transition:left .35s cubic-bezier(.2,.75,.25,1);
+}
+/* The supplied PNGs contain transparent canvas padding. Size the visible crop pixels to the original tracker-symbol footprint so the earned overlay fully conceals the muted symbol beneath it. */
+.gp-live-progression-track>.gp-progression-range-badge{
+  position:absolute;top:55%;z-index:1;display:block;width:10%;min-width:0;max-width:none;
+  height:auto;aspect-ratio:1;object-fit:contain;object-position:center;
+  transform:translate(-50%,-50%) scale(1.35);border-radius:0;pointer-events:none;
+  filter:brightness(1.48) saturate(1.3) contrast(1.12)
+    drop-shadow(0 0 3px rgba(255,255,255,.88))
+    drop-shadow(0 0 8px rgba(255,218,122,.92))
+    drop-shadow(0 0 15px rgba(163,110,255,.72));
+  animation:gp-progression-milestone-glow 2.4s ease-in-out infinite;
+}
+@keyframes gp-progression-milestone-glow{
+  0%,100%{
+    filter:brightness(1.42) saturate(1.28) contrast(1.1)
+      drop-shadow(0 0 3px rgba(255,255,255,.78))
+      drop-shadow(0 0 7px rgba(255,218,122,.78))
+      drop-shadow(0 0 12px rgba(163,110,255,.6));
+  }
+  50%{
+    filter:brightness(1.7) saturate(1.42) contrast(1.16)
+      drop-shadow(0 0 5px rgba(255,255,255,.98))
+      drop-shadow(0 0 12px rgba(255,218,122,1))
+      drop-shadow(0 0 20px rgba(163,110,255,.86));
+  }
+}
+
+@media(max-width:480px){
+  .gp-progression-art-frame{padding:7px}
+  .gp-live-progression-track>img{border-radius:6px}
+}
+@media(prefers-reduced-motion:reduce){
+  .gp-level-index-item.is-current .gp-level-index-art{animation:none}
+  .gp-live-progression-track>.gp-progression-range-badge{animation:none}
+  .gp-progression-level-marker{transition:none}
+}
+
+/* Keep the original individual badge state hierarchy while using the supplied crop artwork. */
+.gp-level-index-item.is-locked .gp-level-index-art{
+  filter:grayscale(.88) brightness(.62) saturate(.48);opacity:.7;
+}
+.gp-level-index-item.is-unlocked .gp-level-index-art,
+.gp-level-index-item.is-admin-awarded .gp-level-index-art{
+  filter:drop-shadow(0 0 3px rgba(167,125,255,.52)) drop-shadow(0 2px 5px rgba(15,23,42,.2));
+  opacity:1;
+}
+.gp-level-index-item.is-current .gp-level-index-art{
+  filter:drop-shadow(0 0 4px rgba(255,232,171,.9)) drop-shadow(0 0 10px rgba(152,104,255,.85));
+  animation:gp-earned-badge-pulse 2s ease-in-out infinite;
+}
+.gp-level-index-item.is-admin-awarded .gp-level-index-art{
+  filter:drop-shadow(0 0 4px rgba(236,190,93,.75)) drop-shadow(0 2px 5px rgba(15,23,42,.2));
+}
+@keyframes gp-earned-badge-pulse{
+  0%,100%{filter:drop-shadow(0 0 3px rgba(255,232,171,.66)) drop-shadow(0 0 7px rgba(152,104,255,.58))}
+  50%{filter:drop-shadow(0 0 6px rgba(255,242,198,.98)) drop-shadow(0 0 13px rgba(152,104,255,.96))}
+}

@@ -1,0 +1,539 @@
+/* Minglora For You controls.
+   Controls occupy their own grid row, so the feed never scrolls underneath
+   the feed switch, search input, or return-to-home control. */
+body.minglora-for-you-active .minglora-for-you {
+  position: fixed !important;
+  inset: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  background: #05070c !important;
+}
+
+body.minglora-for-you-active .fyp-header {
+  position: relative !important;
+  inset: auto !important;
+  z-index: 30 !important;
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(190px, 320px) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  padding:
+    max(7px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    8px
+    max(12px, env(safe-area-inset-left)) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .12) !important;
+  background: rgba(8, 11, 18, .98) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, .18) !important;
+}
+
+body.minglora-for-you-active .fyp-exit {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 42px !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255, 255, 255, .22) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, .08) !important;
+  color: #fff !important;
+  font-size: 28px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+body.minglora-for-you-active .fyp-feed-switch {
+  position: relative !important;
+  inset: auto !important;
+  left: auto !important;
+  top: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  justify-self: center !important;
+  gap: clamp(3px, .6vw, 8px) !important;
+  width: max-content !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 0 2px !important;
+  transform: none !important;
+  white-space: nowrap !important;
+}
+
+body.minglora-for-you-active .fyp-feed-switch button {
+  min-width: 68px !important;
+  min-height: 42px !important;
+  padding: 8px 8px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, .72) !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  cursor: pointer !important;
+}
+
+body.minglora-for-you-active .fyp-feed-switch button.active {
+  color: #fff !important;
+  background: rgba(255, 255, 255, .09) !important;
+}
+
+body.minglora-for-you-active .fyp-feed-switch button.active:after {
+  bottom: 1px !important;
+  left: 18% !important;
+  right: 18% !important;
+  height: 3px !important;
+  background: #4d9aff !important;
+}
+
+body.minglora-for-you-active .fyp-feed-switch > span {
+  width: 1px !important;
+  height: 20px !important;
+  flex: 0 0 1px !important;
+  background: rgba(255, 255, 255, .24) !important;
+}
+
+body.minglora-for-you-active .fyp-top-search {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 30 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-self: end !important;
+  gap: 6px !important;
+  width: 100% !important;
+  max-width: 340px !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.minglora-for-you-active .fyp-top-search input {
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 40px !important;
+  box-sizing: border-box !important;
+  padding: 0 12px !important;
+  border: 1px solid rgba(255, 255, 255, .2) !important;
+  border-radius: 10px !important;
+  outline: none !important;
+  background: rgba(255, 255, 255, .09) !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+}
+
+body.minglora-for-you-active .fyp-top-search input::placeholder {
+  color: rgba(255, 255, 255, .64) !important;
+}
+
+body.minglora-for-you-active .fyp-top-search input:focus-visible {
+  border-color: #68aaff !important;
+  outline: 2px solid rgba(77, 154, 255, .38) !important;
+  outline-offset: 1px !important;
+}
+
+body.minglora-for-you-active .fyp-top-search button {
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 auto !important;
+  min-width: 58px !important;
+  width: auto !important;
+  height: 40px !important;
+  padding: 0 12px !important;
+  border: 1px solid #347fe0 !important;
+  border-radius: 10px !important;
+  background: #226bd0 !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  cursor: pointer !important;
+}
+
+body.minglora-for-you-active .fyp-top-search button[data-fyp-search-clear] {
+  min-width: 38px !important;
+  width: 38px !important;
+  padding: 0 !important;
+  border-color: rgba(255, 255, 255, .18) !important;
+  background: rgba(255, 255, 255, .08) !important;
+  font-size: 20px !important;
+}
+
+body.minglora-for-you-active .fyp-top-search button[hidden],
+body.minglora-for-you-active .fyp-top-search input[hidden] {
+  display: none !important;
+}
+
+body.minglora-for-you-active .fyp-stream {
+  position: relative !important;
+  inset: auto !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 0 env(safe-area-inset-bottom) !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain !important;
+  scroll-snap-type: y mandatory !important;
+  scrollbar-width: none !important;
+  background: #050505 !important;
+}
+
+body.minglora-for-you-active .fyp-stream::-webkit-scrollbar {
+  display: none !important;
+}
+
+body.minglora-for-you-active .fyp-video-card {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  flex: 0 0 100% !important;
+  scroll-snap-align: start !important;
+  scroll-snap-stop: always !important;
+}
+
+body.minglora-for-you-active .fyp-media-count {
+  top: max(14px, env(safe-area-inset-top)) !important;
+}
+
+body.minglora-for-you-active .fyp-search-loading {
+  min-height: 100% !important;
+}
+
+@media (max-width: 760px) {
+  body.minglora-for-you-active .fyp-header {
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "back scope"
+      "search search" !important;
+    gap: 7px 8px !important;
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      8px
+      max(10px, env(safe-area-inset-left)) !important;
+  }
+
+  body.minglora-for-you-active .fyp-exit {
+    grid-area: back !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+
+  body.minglora-for-you-active .fyp-feed-switch {
+    grid-area: scope !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 2px !important;
+    min-height: 40px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-inline: contain !important;
+    scrollbar-width: none !important;
+    justify-content: space-between !important;
+  }
+
+  body.minglora-for-you-active .fyp-feed-switch::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  body.minglora-for-you-active .fyp-feed-switch button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    padding: 7px 3px !important;
+    font-size: clamp(10px, 3.2vw, 13px) !important;
+    letter-spacing: -.02em !important;
+    white-space: nowrap !important;
+  }
+
+  body.minglora-for-you-active .fyp-top-search {
+    grid-area: search !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body.minglora-for-you-active .fyp-top-search input {
+    height: 40px !important;
+    font-size: 14px !important;
+  }
+
+  body.minglora-for-you-active .fyp-top-search button {
+    min-width: 62px !important;
+    height: 40px !important;
+  }
+
+  body.minglora-for-you-active .fyp-top-search button[data-fyp-search-clear] {
+    min-width: 38px !important;
+    width: 38px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  body.minglora-for-you-active .fyp-feed-switch {
+    gap: 1px !important;
+  }
+
+  body.minglora-for-you-active .fyp-feed-switch button {
+    padding-right: 2px !important;
+    padding-left: 2px !important;
+    font-size: 10.5px !important;
+  }
+
+  body.minglora-for-you-active .fyp-top-search button[data-fyp-search] {
+    min-width: 54px !important;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+  }
+}
+
+
+/* Unified Home / Following feed: verified LIVE broadcasts are first-class feed cards. */
+body.minglora-for-you-active .fyp-header,
+body.minglora-for-you-active .fyp-feed-switch,
+body.minglora-for-you-active .fyp-feed-switch button {
+  pointer-events: auto !important;
+}
+
+body.minglora-for-you-active .fyp-header { z-index: 30 !important; }
+body.minglora-for-you-active .fyp-feed-switch { position: relative !important; z-index: 32 !important; }
+
+body.minglora-for-you-active .fyp-feed-switch button {
+  position: relative !important;
+  z-index: 33 !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: rgba(77, 154, 255, .22) !important;
+}
+
+body.minglora-for-you-active .fyp-stream { z-index: 1 !important; }
+
+body.minglora-for-you-active .fyp-live-card {
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  background: #080d1b !important;
+  color: #fff !important;
+}
+
+body.minglora-for-you-active .fyp-live-backdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(35, 105, 220, .55), transparent 48%),
+    radial-gradient(ellipse at 18% 82%, rgba(125, 40, 180, .28), transparent 42%),
+    linear-gradient(145deg, #091326 0%, #101c36 48%, #070a13 100%) !important;
+}
+
+body.minglora-for-you-active .fyp-live-content {
+  position: relative !important;
+  z-index: 4 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 15px !important;
+  width: min(100%, 560px) !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 36px 24px 56px !important;
+  text-align: center !important;
+  color: #fff !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .35) !important;
+}
+
+body.minglora-for-you-active .fyp-live-now {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 14px !important;
+  border-radius: 30px !important;
+  background: #e7234d !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: .11em !important;
+}
+
+body.minglora-for-you-active .fyp-live-now > span {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, .17) !important;
+}
+
+body.minglora-for-you-active .fyp-live-host-button {
+  display: grid !important;
+  place-items: center !important;
+  width: clamp(100px, 19vw, 150px) !important;
+  height: clamp(100px, 19vw, 150px) !important;
+  padding: 5px !important;
+  border: 3px solid #fff !important;
+  border-radius: 50% !important;
+  background: linear-gradient(145deg, #4c9aff, #873bd7) !important;
+  box-shadow: 0 16px 55px rgba(0, 0, 0, .42) !important;
+  cursor: pointer !important;
+}
+
+body.minglora-for-you-active .fyp-live-host-button img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+body.minglora-for-you-active .fyp-live-eyebrow {
+  margin: 0 !important;
+  color: #9dc7ff !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  letter-spacing: .16em !important;
+}
+
+body.minglora-for-you-active .fyp-live-content h2 {
+  max-width: 100% !important;
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: clamp(24px, 4.6vw, 42px) !important;
+  font-weight: 900 !important;
+  line-height: 1.12 !important;
+  overflow-wrap: anywhere !important;
+}
+
+body.minglora-for-you-active .fyp-live-title {
+  max-width: 90% !important;
+  max-height: 4.2em !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: rgba(255, 255, 255, .88) !important;
+  font-size: clamp(15px, 2.4vw, 20px) !important;
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere !important;
+}
+
+body.minglora-for-you-active .fyp-live-meta {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+  color: rgba(255, 255, 255, .74) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: capitalize !important;
+}
+
+body.minglora-for-you-active .fyp-live-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 4px !important;
+}
+
+body.minglora-for-you-active .fyp-live-watch,
+body.minglora-for-you-active .fyp-live-follow {
+  min-height: 46px !important;
+  padding: 0 22px !important;
+  border: 1px solid #fff !important;
+  border-radius: 24px !important;
+  background: #fff !important;
+  color: #0b1730 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+body.minglora-for-you-active .fyp-live-follow {
+  border-color: rgba(255, 255, 255, .35) !important;
+  background: rgba(255, 255, 255, .1) !important;
+  color: #fff !important;
+}
+
+body.minglora-for-you-active .fyp-live-follow.following {
+  background: rgba(255, 255, 255, .18) !important;
+}
+
+@media (max-width: 520px) {
+  body.minglora-for-you-active .fyp-live-content {
+    gap: 13px !important;
+    padding: 28px 18px 42px !important;
+  }
+
+  body.minglora-for-you-active .fyp-live-title {
+    max-width: 96% !important;
+    font-size: 16px !important;
+  }
+}
+
+
+body.minglora-for-you-active .fyp-photo-carousel {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain !important;
+  scroll-snap-type: x mandatory !important;
+  scrollbar-width: none !important;
+  touch-action: pan-x pan-y !important;
+  background: #080b12 !important;
+}
+
+body.minglora-for-you-active .fyp-photo-carousel::-webkit-scrollbar {
+  display: none !important;
+}
+
+body.minglora-for-you-active .fyp-photo-carousel .fyp-photo {
+  position: relative !important;
+  inset: auto !important;
+  display: block !important;
+  flex: 0 0 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  scroll-snap-align: center !important;
+  scroll-snap-stop: always !important;
+}

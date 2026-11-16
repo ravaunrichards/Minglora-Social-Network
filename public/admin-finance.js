@@ -1,0 +1,892 @@
+(() => {
+  'use strict';
+
+  const OWNER_ONLY_MESSAGE = 'Company financial data is available only in the owner-authenticated workspace.';
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[char]));
+  const minor = value => {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0 || amount > Number.MAX_SAFE_INTEGER / 100) {
+      throw new Error('Enter a valid non-negative amount.');
+    }
+    return Math.round(amount * 100);
+  };
+  const money = (value,currency='USD') => {
+    const amount = Number(value || 0) / 100;
+    try { return new Intl.NumberFormat(undefined,{style:'currency',currency:String(currency||'USD').toUpperCase()}).format(amount); }
+    catch { return String(currency || 'USD') + ' ' + amount.toFixed(2); }
+  };
+  const dateLabel = value => {
+    if (!value) return 'Not recorded';
+    const date = new Date(String(value) + (String(value).length === 10 ? 'T12:00:00' : ''));
+    return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleDateString();
+  };
+  const today = () => { const date=new Date(); return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-'); };
+  const parseUsageObject = (value,label) => {
+    const source=String(value||'').trim();
+    if(!source)return {};
+    let parsed;
+    try { parsed=JSON.parse(source); }
+    catch { throw new Error(label+' must be a valid JSON object.'); }
+    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)) {
+      throw new Error(label+' must be a JSON object, not an array or scalar.');
+    }
+    return parsed;
+  };
+  const summarizeUsageObject = value => {
+    if(!value||typeof value!=='object'||Array.isArray(value))return 'Not recorded';
+    const entries=Object.entries(value);
+    if(!entries.length)return 'Not recorded';
+    return entries.slice(0,3).map(([key,item])=>key+': '+(item&&typeof item==='object'?JSON.stringify(item):String(item))).join(', ')+
+      (entries.length>3?' …':'');
+  };
+  const maskProviderReference = value => {
+    const reference=String(value||'').trim();
+    if(!reference)return 'Not recorded';
+    return '••••'+reference.slice(-4);
+  };
+  const parseBudgetThresholds = value => {
+    const values=String(value||'').trim().split(',').map(item=>item.trim()).filter(Boolean).map(Number);
+    if(!values.length||values.length>10||values.some(value=>!Number.isInteger(value)||value<1||value>100)||new Set(values).size!==values.length) {
+      throw new Error('Enter 1 to 10 unique budget alert percentages from 1 to 100, separated by commas.');
+    }
+    return values.sort((a,b)=>a-b);
+  };
+  const budgetThresholdState = (actual,allocation,thresholds) => {
+    if(allocation<=0)return 'No allocation';
+    if(actual>allocation)return 'Over budget';
+    const reached=(Array.isArray(thresholds)?thresholds:[50,75,90,100]).map(Number).filter(value=>actual/allocation*100>=value);
+    return reached.length?'Threshold '+Math.max(...reached)+'% reached':'Below thresholds';
+  };
+  const empty = text => '<p class="admin-finance-empty">' + esc(text) + '</p>';
+  const field = (label,name,type='text',attrs='') =>
+    '<label class="admin-finance-field"><span>' + esc(label) + '</span><input name="' + esc(name) +
+    '" type="' + esc(type) + '" ' + attrs + '></label>';
+  const select = (label,name,options,attrs='') =>
+    '<label class="admin-finance-field"><span>' + esc(label) + '</span><select name="' + esc(name) +
+    '" ' + attrs + '>' + options.map(item => '<option value="' + esc(item[0]) + '">' + esc(item[1]) + '</option>').join('') +
+    '</select></label>';
+  const textarea = (label,name,rows=2) =>
+    '<label class="admin-finance-field admin-finance-field-wide"><span>' + esc(label) + '</span><textarea name="' +
+    esc(name) + '" rows="' + rows + '" maxlength="2000"></textarea></label>';
+  const button = (text,kind='secondary') =>
+    '<button type="submit" class="' + esc(kind) + '">' + esc(text) + '</button>';
+  const statusPill = value => {
+    const normalized = String(value || 'not_recorded').replace(/_/g,' ');
+    return '<span class="admin-finance-status">' + esc(normalized) + '</span>';
+  };
+
+  function mount(panel, api) {
+    if (!panel || panel.querySelector('#admin-finance-control') || typeof api !== 'function') return;
+    const section = document.createElement('section');
+    section.className = 'admin-finance-control admin-control-centre-section';
+    section.id = 'admin-finance-control';
+    section.setAttribute('aria-labelledby','admin-finance-title');
+    section.innerHTML =
+      '<header class="admin-finance-heading"><div><h3 id="admin-finance-title">Company finance &amp; service management</h3>' +
+      '<p>Operating costs, provider directory, subscription records, approved budgets, invoices and expenses. Existing creator and seller balances remain in their separate ledgers.</p></div>' +
+      '<button type="button" id="admin-finance-refresh" class="secondary">Refresh records</button></header>' +
+      '<div class="admin-finance-safety" role="note"><strong>Payments are not connected.</strong> No company bank balance, card, payment vault or provider billing API is connected here. This workspace records verified information and links to provider websites; it does not initiate charges, transfers or automatic renewals. Invoices can only be marked paid after a provider confirmation is integrated and verified.</div>' +
+      '<p id="admin-finance-status" class="admin-finance-status-line" role="status" aria-live="polite">Loading saved company finance records…</p>' +
+      '<div id="admin-finance-metrics" class="admin-finance-metrics" aria-live="polite"></div>' +
+      '<nav class="admin-finance-tabs" role="tablist" aria-label="Company finance pages">' +
+      '<button type="button" data-finance-tab="overview" aria-selected="true">Overview</button>' +
+      '<button type="button" data-finance-tab="providers" aria-selected="false">Providers</button>' +
+      '<button type="button" data-finance-tab="subscriptions" aria-selected="false">Subscriptions</button>' +
+      '<button type="button" data-finance-tab="budgets" aria-selected="false">Budgets</button>' +
+      '<button type="button" data-finance-tab="invoices" aria-selected="false">Invoices</button>' +
+      '<button type="button" data-finance-tab="expenses" aria-selected="false">Expenses</button>' +
+      '<button type="button" data-finance-tab="audit" aria-selected="false">Audit history</button></nav>' +
+      '<div id="admin-finance-tab-panel" class="admin-finance-tab-panel" aria-live="polite"></div>' +
+      '<footer class="admin-finance-footer"><span>Amounts are stored in integer minor units with the original invoice currency preserved.</span>' +
+      '<button type="button" id="admin-finance-export" class="secondary">Export finance records (CSV)</button></footer>';
+
+    panel.append(section);
+    const status = section.querySelector('#admin-finance-status');
+    const metrics = section.querySelector('#admin-finance-metrics');
+    const content = section.querySelector('#admin-finance-tab-panel');
+    let activeTab = 'overview';
+    let records = {providers:[],subscriptions:[],budgets:[],invoices:[],expenses:[],auditEvents:[]};
+    let loading = false;
+
+    const setStatus = (message, error=false) => {
+      status.textContent = message;
+      status.dataset.state = error ? 'error' : 'normal';
+    };
+    async function uploadFinanceAttachment(kind,file) {
+      const extension=String(file?.name||'').toLowerCase().split('.').pop();
+      const extensions={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
+      const mimeType=String(file?.type||extensions[extension]||'').toLowerCase();
+      if(!file||!Number.isSafeInteger(file.size)||file.size<1||file.size>15*1024*1024||
+         !['application/pdf','image/jpeg','image/png','image/webp'].includes(mimeType)) {
+        throw new Error('Choose a PDF, JPEG, PNG or WEBP attachment up to 15 MB.');
+      }
+      const prepared=await api('/admin/finance/attachments/prepare',{
+        method:'POST',body:JSON.stringify({kind,mimeType,byteSize:file.size,fileName:file.name||'finance-document'})
+      });
+      const upload=prepared.upload||{};
+      if(upload.bucket!=='minglora-company-finance'||!upload.path||!upload.signedUrl) {
+        throw new Error('Minglora could not prepare the private company finance upload.');
+      }
+      const standardUpload=async()=>{
+        const formData=new FormData();
+        formData.append('cacheControl','3600');
+        formData.append('',file,file.name||'finance-document');
+        const response=await fetch(upload.signedUrl,{method:'PUT',headers:{'x-upsert':'false'},body:formData});
+        if(!response.ok) {
+          const result=await response.json().catch(()=>({}));
+          throw new Error(result.message||result.error||'The private finance document upload failed.');
+        }
+      };
+      if(file.size<=6*1024*1024) {
+        setStatus('Uploading the document to private finance storage…');
+        await standardUpload();
+      } else {
+        if(!window.tus?.Upload||!upload.endpoint||!upload.token) {
+          throw new Error('Secure resumable uploads are unavailable. Try a document under 6 MB.');
+        }
+        try {
+          await new Promise((resolve,reject)=>{
+            try {
+              const transfer=new window.tus.Upload(file,{
+                endpoint:upload.endpoint,
+                retryDelays:[0,3000,5000,10000,20000],
+                headers:{'x-signature':upload.token},
+                uploadDataDuringCreation:true,
+                removeFingerprintOnSuccess:true,
+                storeFingerprintForResuming:false,
+                chunkSize:4*1024*1024,
+                metadata:{bucketName:upload.bucket,objectName:upload.path,contentType:mimeType,cacheControl:'3600'},
+                onProgress:(uploaded,total)=>{
+                  const percent=total?Math.min(100,Math.round(uploaded/total*100)):0;
+                  setStatus('Uploading private finance document… '+percent+'%');
+                },
+                onError:error=>reject(new Error(error?.message||'Secure document upload failed.')),
+                onSuccess:()=>resolve()
+              });
+              transfer.start();
+            } catch(error) { reject(error); }
+          });
+        } catch(error) {
+          if(!/(invalid compact jws|accessdenied|unauthorized|403)/i.test(String(error?.message||error))) throw error;
+          await standardUpload();
+        }
+      }
+      const completed=await api('/admin/finance/attachments/complete',{
+        method:'POST',
+        body:JSON.stringify({kind,bucket:upload.bucket,path:upload.path,mimeType,byteSize:file.size})
+      });
+      if(!completed.path||completed.bucket!=='minglora-company-finance') {
+        throw new Error('The file uploaded but Minglora could not verify its private finance record.');
+      }
+      return completed.path;
+    }
+    const providerById = id => records.providers.find(item => item.id === id) || null;
+    const subscriptionById = id => records.subscriptions.find(item => item.id === id) || null;
+    const providerOptions = () => records.providers.map(item => [item.id,item.provider_name + ' · ' + item.connection_status.replace(/_/g,' ')]);
+    const metric = (label,value,note='') => '<article class="admin-finance-metric"><small>' + esc(label) +
+      '</small><strong>' + esc(value) + '</strong>' + (note ? '<span>' + esc(note) + '</span>' : '') + '</article>';
+    const subscriptionOptions = () => records.subscriptions.map(item => [item.id,item.service_name]);
+    const editAction = (kind,id) => '<button type="button" class="secondary admin-finance-edit" data-finance-edit="' +
+      esc(kind) + '" data-id="' + esc(id) + '">Edit</button>';
+    const budgetActual = budget => records.expenses.reduce((total,item) => {
+      if (item.expense_status !== 'actual' || item.department_key !== budget.department_key ||
+          String(item.currency_code || '').toUpperCase() !== String(budget.currency_code || '').toUpperCase()) return total;
+      const date = String(item.expense_date || '');
+      if (date < String(budget.period_start || '') || date > String(budget.period_end || '')) return total;
+      return total + Number(item.amount_minor || 0);
+    },0);
+    const reminderLabel = value => {
+      if (!value) return 'No date recorded';
+      const due = new Date(String(value).slice(0,10) + 'T12:00:00');
+      const base = new Date(today() + 'T12:00:00');
+      if (Number.isNaN(due.getTime())) return 'Date unavailable';
+      const days = Math.round((due.getTime() - base.getTime()) / 86400000);
+      if (days < 0) return 'Overdue by ' + Math.abs(days) + ' day(s)';
+      const threshold = [7,14,30,60,90].find(limit => days <= limit);
+      return threshold ? threshold + '-day renewal notice · ' + days + ' day(s) remaining' : 'More than 90 days';
+    };
+
+    function renderMetrics() {
+      const connected = records.providers.filter(item => item.connection_status === 'active' ||
+        item.connection_status === 'free_plan' || item.connection_status === 'paid_plan').length;
+      const activeSubscriptions = records.subscriptions.filter(item => ['active','free_plan','paid_plan'].includes(item.subscription_status)).length;
+      const unpaid = records.invoices.filter(item => !['paid','cancelled'].includes(item.payment_status));
+      const expensesByCurrency = {};
+      records.expenses.filter(item => item.expense_status === 'actual').forEach(item => {
+        const currency = String(item.currency_code || 'USD');
+        expensesByCurrency[currency] = (expensesByCurrency[currency] || 0) + Number(item.amount_minor || 0);
+      });
+      const expenseSummary = Object.keys(expensesByCurrency).length
+        ? Object.entries(expensesByCurrency).map(([currency,amount]) => money(amount,currency)).join(' · ')
+        : 'No expenses recorded';
+      metrics.innerHTML =
+        metric('Directory entries',records.providers.length,'Candidate records are not connected accounts') +
+        metric('Verified active services',connected,'Only confirmed provider status should be recorded') +
+        metric('Active subscriptions',activeSubscriptions,'From saved subscription records') +
+        metric('Outstanding invoices',unpaid.length,'Excludes cancelled and provider-confirmed paid invoices') +
+        metric('Actual recorded expenses',records.expenses.filter(item => item.expense_status === 'actual').length,expenseSummary) +
+        metric('Company cash balance','NOT CONNECTED','No company bank account is linked');
+    }
+
+    function table(headers, rows, emptyText) {
+      if (!rows.length) return empty(emptyText);
+      return '<div class="admin-finance-table-wrap"><table class="admin-finance-table"><thead><tr>' +
+        headers.map(item => '<th>' + esc(item) + '</th>').join('') + '</tr></thead><tbody>' +
+        rows.join('') + '</tbody></table></div>';
+    }
+
+        function renderOverview() {
+      const upcoming = records.subscriptions.filter(item => item.next_payment_date || item.renewal_date)
+        .sort((a,b) => String(a.next_payment_date || a.renewal_date).localeCompare(String(b.next_payment_date || b.renewal_date))).slice(0,8);
+      const invoices = records.invoices.filter(item => !['paid','cancelled'].includes(item.payment_status))
+        .sort((a,b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999'))).slice(0,8);
+      const budgetRows = records.budgets.filter(item => item.approval_status === 'approved').slice(0,8).map(item => {
+        const actual = budgetActual(item);
+        const allocation=Number(item.allocated_amount_minor||0);
+        const remaining=allocation-actual;
+        const utilization=allocation>0?Math.round(actual/allocation*100)+'%':'No allocation';
+        const thresholds=Array.isArray(item.alert_thresholds)?item.alert_thresholds:[50,75,90,100];
+        const alertState=budgetThresholdState(actual,allocation,thresholds);
+        return '<tr><td>' + esc(item.department_name) + '</td><td>' +
+          esc(money(allocation,item.currency_code)) + '</td><td>' +
+          esc(money(actual,item.currency_code)) + '</td><td>' +
+          esc(money(remaining,item.currency_code)) + '</td><td>' + esc(utilization) +
+          '</td><td>' + esc(thresholds.join('%, ')+'%') + '</td><td>' +
+          statusPill(alertState.replace(/ /g,'_')) + '</td></tr>';
+      });
+      content.innerHTML =
+        '<div class="admin-finance-overview-grid"><article><h4>Upcoming subscription dates</h4>' +
+        (upcoming.length ? table(['Service','Next payment / renewal','Reminder window'],upcoming.map(item => {
+          const provider = providerById(item.provider_id);
+          const due = item.next_payment_date || item.renewal_date;
+          return '<tr><td>' + esc(item.service_name) + '<small>' + esc(provider?.provider_name || 'Provider unavailable') +
+            '</small></td><td>' + esc(dateLabel(due)) + '</td><td>' + statusPill(reminderLabel(due)) + '</td></tr>';
+        }),'No subscription dates have been recorded.') : empty('No subscription dates have been recorded.')) +
+        '</article><article><h4>Invoices requiring attention</h4>' +
+        (invoices.length ? table(['Invoice','Due','Status'],invoices.map(item => '<tr><td>' + esc(item.invoice_number) +
+          '<small>' + esc(item.description) + '</small></td><td>' + esc(dateLabel(item.due_date)) +
+          '</td><td>' + statusPill(item.payment_status) + '</td></tr>'),'No invoices have been recorded.') :
+          empty('No invoices have been recorded.')) +
+        '</article></div><article class="admin-finance-budget-summary"><h4>Approved budget vs actual expenses</h4>' +
+        (budgetRows.length ? table(['Department','Budget','Actual','Remaining','Used','Alerts at','Alert state'],budgetRows,'No approved budgets are recorded.') :
+          empty('No approved budgets are recorded. Actual expenses are kept separate from creator and seller balances.')) +
+        '<p class="admin-finance-form-note">Renewal notice windows are calculated from saved dates; this screen does not send email or push notifications. Budget comparisons use only actual expenses in the same department, currency and date range.</p></article>' +
+        '<div class="admin-finance-provider-note"><strong>Provider integrations:</strong> ' +
+        esc(records.providers.filter(item => item.api_connection_status === 'connected').length) +
+        ' provider API connection(s) are recorded. Provider health is not inferred from the directory listing.</div>' +
+        '<p class="admin-finance-muted">Creator earnings, creator payout liabilities, seller liabilities, refunds and customer funds are not included in company operating expenses or cash-balance calculations.</p>';
+    }
+
+        function renderProviders() {
+      const rows = records.providers.map(item => {
+        const canEdit = ['not_registered','planned','registration_pending','disconnected','requires_attention'].includes(item.connection_status);
+        const accountSummary=[
+          item.account_owner ? 'Owner: '+item.account_owner : '',
+          item.account_identifier ? 'Account: '+maskProviderReference(item.account_identifier) : '',
+          item.support_contact ? 'Support: '+item.support_contact : ''
+        ].filter(Boolean).join(' · ') || 'Account details not recorded';
+        const testConnectionAction = item.provider_key === 'supabase'
+          ? '<button type="button" class="secondary admin-finance-test-provider" data-finance-test-provider data-id="' + esc(item.id) + '">Test database + Storage</button>'
+          : '';
+        const lastTest = item.last_synced_at ? ' · Last tested: ' + dateLabel(item.last_synced_at) : '';
+        return '<tr><td><strong>' + esc(item.provider_name) + '</strong><small>' +
+          esc(item.service_category.replace(/_/g,' ')) + (item.is_candidate ? ' · Candidate' : '') + '</small></td><td>' +
+          statusPill(item.connection_status) + '<small>API: ' + esc(item.api_connection_status.replace(/_/g,' ')) +
+          esc(lastTest) + '</small></td><td>' + esc(item.department.replace(/_/g,' ')) + '</td><td>' + esc(accountSummary) +
+          '</td><td><a href="' + esc(item.website_url) + '" target="_blank" rel="noopener noreferrer">Official website</a></td><td>' +
+          testConnectionAction + (canEdit ? editAction('provider',item.id) : '<span class="admin-finance-manual">Managed by verified provider connection</span>') +
+          '</td></tr>';
+      });
+      content.innerHTML =
+        '<div class="admin-finance-section-heading"><div><h4>Service provider directory</h4><p>Listed vendors are candidates supplied in the specification. Their status remains not registered until independently verified.</p></div></div>' +
+        table(['Provider','Connection status','Department','Account details','Website','Record'],rows,'No providers are registered yet.') +
+        '<details class="admin-finance-form-details"><summary>Add a provider record</summary><form id="admin-finance-provider-form" class="admin-finance-form">' +
+        '<input type="hidden" name="api_connection_status" value="not_connected"><input type="hidden" name="is_candidate" value="true">' +
+        field('Provider key (lowercase)','provider_key','text','required pattern="[a-z0-9][a-z0-9_-]{1,63}" maxlength="64"') +
+        field('Provider name','provider_name','text','required maxlength="160"') +
+        field('Official HTTPS website','website_url','url','required placeholder="https://example.com"') +
+        field('Service category','service_category','text','required maxlength="80"') +
+        field('Department','department','text','required value="infrastructure" maxlength="80"') +
+        field('Account owner / company identity','account_owner','text','maxlength="160"') +
+        field('Provider account reference (non-secret ID only)','account_identifier','text','maxlength="160" autocomplete="off"') +
+        field('Provider support contact (email, phone or HTTPS URL)','support_contact','text','maxlength="180"') +
+        select('Integration method recorded',[['manual','Manual / provider portal'],['oauth','OAuth (not connected)'],['api','API (not connected)'],['webhook','Webhook (not connected)'],['none','None / unknown']]) +
+        select('API available (mark Yes only after checking provider documentation)','api_available',[['false','Not verified / not confirmed'],['true','Yes — verified as available']]) +
+        select('Directory status','connection_status',[['not_registered','Not registered'],['planned','Planned'],['registration_pending','Registration pending'],['disconnected','Disconnected'],['requires_attention','Requires attention']]) +
+        select('Importance','service_importance',[['normal','Normal'],['low','Low'],['high','High'],['critical','Critical']]) +
+        textarea('Notes (never store passwords, API keys, tokens or payment credentials)','notes') +
+        '<p class="admin-finance-form-note">Account references are masked in the directory. Recording an integration method or API availability does not connect a provider; connection status stays independently verified.</p>' +
+        button('Save provider') + '</form></details>';
+      section.querySelector('#admin-finance-provider-form')?.addEventListener('submit',async event => {
+        event.preventDefault();
+        const form = event.currentTarget, values = new FormData(form);
+        await save('save_provider',{
+          id:form.dataset.editId || undefined,
+          provider_key:String(values.get('provider_key')||'').trim().toLowerCase(),
+          provider_name:String(values.get('provider_name')||'').trim(),
+          website_url:String(values.get('website_url')||'').trim(),
+          service_category:String(values.get('service_category')||'').trim(),
+          department:String(values.get('department')||'infrastructure').trim().toLowerCase().replace(/\s+/g,'_'),
+          connection_status:String(values.get('connection_status')||'not_registered'),
+          service_importance:String(values.get('service_importance')||'normal'),
+          account_owner:String(values.get('account_owner')||'').trim()||null,
+          account_identifier:String(values.get('account_identifier')||'').trim()||null,
+          support_contact:String(values.get('support_contact')||'').trim()||null,
+          integration_method:String(values.get('integration_method')||'manual'),
+          api_available:String(values.get('api_available')||'false')==='true',
+          api_connection_status:String(values.get('api_connection_status')||'not_connected'),
+          is_candidate:String(values.get('is_candidate')||'true')==='true',
+          notes:String(values.get('notes')||'').trim()
+        },form);
+      });
+    }
+
+        function renderSubscriptions() {
+      const rows = records.subscriptions.map(item => {
+        const provider = providerById(item.provider_id);
+        const billingLink = item.billing_portal_url
+          ? '<a href="' + esc(item.billing_portal_url) + '" target="_blank" rel="noopener noreferrer">OPEN PROVIDER BILLING PORTAL</a>'
+          : '<span class="admin-finance-manual">MANUAL PROVIDER ACTION REQUIRED</span>';
+        const fee = item.monthly_fee_minor !== null && item.monthly_fee_minor !== undefined
+          ? money(item.monthly_fee_minor,item.currency_code) + ' / month'
+          : item.annual_fee_minor !== null && item.annual_fee_minor !== undefined
+            ? money(item.annual_fee_minor,item.currency_code) + ' / year' : 'Price not recorded';
+        const usageCharge=item.usage_charge_minor!==null&&item.usage_charge_minor!==undefined
+          ? money(item.usage_charge_minor,item.currency_code)+(item.usage_unit?' / '+item.usage_unit:' / usage unit')
+          : 'No metered fee';
+        const usageSummary='Included: '+summarizeUsageObject(item.included_usage)+' · Measured: '+summarizeUsageObject(item.measured_usage);
+        const contractSummary='Contract: '+String(item.contract_status||'unknown').replace(/_/g,' ')+
+          ' · Cancellation notice: '+(item.cancellation_notice_days===null||item.cancellation_notice_days===undefined?'Not recorded':item.cancellation_notice_days+' day(s)');
+        const renewalSummary=item.renewal_date
+          ? dateLabel(item.renewal_date)+' · '+reminderLabel(item.renewal_date)
+          : 'No renewal date recorded';
+        return '<tr><td><strong>' + esc(item.service_name) + '</strong><small>' + esc(provider?.provider_name || 'Provider unavailable') +
+          '</small><small>Started: ' + esc(dateLabel(item.started_on)) + '</small></td><td>' + esc(item.package_name || item.plan_type) +
+          '</td><td>' + esc(fee) + '</td><td><small>' + esc(usageCharge) + '</small><small>' + esc(usageSummary) +
+          '</small></td><td>' + esc(dateLabel(item.next_payment_date)) + '</td><td><small>' + esc(contractSummary) +
+          '</small><small>' + esc(item.cancellation_terms || 'No cancellation terms recorded') + '</small></td><td>' +
+          esc(renewalSummary) + '</td><td>' + statusPill(item.subscription_status) +
+          '</td><td>' + billingLink + '</td><td>' + editAction('subscription',item.id) + '</td></tr>';
+      });
+      content.innerHTML =
+        '<div class="admin-finance-section-heading"><div><h4>Subscription register</h4><p>Record only packages, prices and dates you have verified. Auto-renewal is disabled until a supported approval workflow exists.</p></div></div>' +
+        table(['Service','Package','Recorded price','Usage / allowance','Next payment','Contract / cancellation','Renewal','Status','Billing action','Record'],rows,'No subscriptions have been recorded.') +
+        '<details class="admin-finance-form-details"><summary>Add a subscription record</summary><form id="admin-finance-subscription-form" class="admin-finance-form">' +
+        select('Provider','provider_id',providerOptions(),'required') +
+        field('Service name','service_name','text','required maxlength="160"') +
+        field('Package / plan','package_name','text','maxlength="120"') +
+        select('Plan type','plan_type',[['unknown','Unknown'],['free','Free'],['paid','Paid'],['usage_based','Usage based'],['one_time','One time']]) +
+        select('Subscription status','subscription_status',[['planned','Planned'],['not_registered','Not registered'],['registration_pending','Registration pending'],['active','Active (verified record)'],['free_plan','Free plan (verified record)'],['paid_plan','Paid plan (verified record)'],['payment_pending','Payment pending'],['overdue','Overdue'],['suspended','Suspended'],['cancelled','Cancelled'],['disconnected','Disconnected'],['requires_attention','Requires attention']]) +
+        select('Billing currency','currency_code',[['USD','USD'],['JMD','JMD'],['EUR','EUR'],['GBP','GBP'],['CAD','CAD']]) +
+        field('Monthly fee','monthly_fee','number','min="0" step="0.01" inputmode="decimal"') +
+        field('Annual fee','annual_fee','number','min="0" step="0.01" inputmode="decimal"') +
+        field('Setup fee','setup_fee','number','min="0" step="0.01" inputmode="decimal"') +
+        field('Renewal fee','renewal_fee','number','min="0" step="0.01" inputmode="decimal"') +
+        field('Usage charge per unit','usage_charge','number','min="0" step="0.01" inputmode="decimal"') +
+        field('Usage unit (for example GB, minute or transaction)','usage_unit','text','maxlength="80"') +
+        select('Billing frequency','billing_frequency',[['unknown','Unknown'],['monthly','Monthly'],['quarterly','Quarterly'],['annually','Annually'],['weekly','Weekly'],['one_time','One time'],['usage_based','Usage based']]) +
+        field('Subscription start date','started_on','date','') +
+        field('Next payment date','next_payment_date','date','') +
+        field('Renewal date','renewal_date','date','') +
+        textarea('Included usage allowances (JSON object)','included_usage',3) +
+        textarea('Measured / current usage (JSON object)','measured_usage',3) +
+        '<p class="admin-finance-form-note">Usage values must be JSON objects, for example {"storage_gb":10,"minutes":100}. Leave blank when usage is not measured.</p>' +
+        field('Cancellation notice period (days)','cancellation_notice_days','number','min="0" max="365" step="1"') +
+        textarea('Cancellation terms','cancellation_terms') +
+        select('Contract status','contract_status',[['unknown','Unknown'],['not_required','Not required'],['pending','Pending'],['active','Active'],['expired','Expired'],['terminated','Terminated']]) +
+        field('Invoice location / folder','invoice_location','text','maxlength="500"') +
+        field('Billing portal HTTPS URL','billing_portal_url','url','placeholder="Only paste a verified provider billing portal URL"') +
+        textarea('Internal notes','notes') +
+        '<p class="admin-finance-form-note">Auto-renewal remains off. This form does not activate a vendor account, change a provider plan or initiate payment.</p>' +
+        button('Save subscription') + '</form></details>';
+      section.querySelector('#admin-finance-subscription-form')?.addEventListener('submit',async event => {
+        event.preventDefault();
+        const form=event.currentTarget, values=new FormData(form);
+        try {
+          const usageChargeRaw=String(values.get('usage_charge')||'').trim();
+          const noticeRaw=String(values.get('cancellation_notice_days')||'').trim();
+          const cancellationNotice=noticeRaw===''?null:Number(noticeRaw);
+          if(cancellationNotice!==null&&(!Number.isInteger(cancellationNotice)||cancellationNotice<0||cancellationNotice>365)) {
+            throw new Error('Cancellation notice must be a whole number from 0 to 365 days.');
+          }
+          await save('save_subscription',{
+            id:form.dataset.editId || undefined,
+            provider_id:String(values.get('provider_id')||''),
+            service_name:String(values.get('service_name')||'').trim(),
+            package_name:String(values.get('package_name')||'').trim(),
+            plan_type:String(values.get('plan_type')||'unknown'),
+            subscription_status:String(values.get('subscription_status')||'planned'),
+            currency_code:String(values.get('currency_code')||'USD'),
+            monthly_fee_minor:minor(values.get('monthly_fee')||0),
+            annual_fee_minor:minor(values.get('annual_fee')||0),
+            setup_fee_minor:minor(values.get('setup_fee')||0),
+            renewal_fee_minor:minor(values.get('renewal_fee')||0),
+            usage_charge_minor:usageChargeRaw===''?null:minor(usageChargeRaw),
+            usage_unit:String(values.get('usage_unit')||'').trim()||null,
+            billing_frequency:String(values.get('billing_frequency')||'unknown'),
+            started_on:String(values.get('started_on')||'')||null,
+            next_payment_date:String(values.get('next_payment_date')||'')||null,
+            renewal_date:String(values.get('renewal_date')||'')||null,
+            included_usage:parseUsageObject(values.get('included_usage'),'Included usage'),
+            measured_usage:parseUsageObject(values.get('measured_usage'),'Measured usage'),
+            cancellation_notice_days:cancellationNotice,
+            cancellation_terms:String(values.get('cancellation_terms')||'').trim()||null,
+            contract_status:String(values.get('contract_status')||'unknown'),
+            invoice_location:String(values.get('invoice_location')||'').trim()||null,
+            billing_portal_url:String(values.get('billing_portal_url')||'').trim()||null,
+            auto_renewal_enabled:false,auto_renewal_approved:false,
+            notes:String(values.get('notes')||'').trim()
+          },form);
+        } catch(error) { setStatus(error.message || 'Enter valid subscription values.',true); }
+      });
+    }
+
+        function renderBudgets() {
+      const rows=records.budgets.map(item => {
+        const actual=budgetActual(item);
+        const allocation=Number(item.allocated_amount_minor || 0);
+        const remaining=allocation-actual;
+        const utilization=allocation>0 ? Math.round(actual/allocation*100)+'%' : 'No allocation';
+        const thresholds=Array.isArray(item.alert_thresholds)?item.alert_thresholds:[50,75,90,100];
+        const manager=item.manager_user_id?maskProviderReference(item.manager_user_id):'Not assigned';
+        const alertState=budgetThresholdState(actual,allocation,thresholds);
+        return '<tr><td><strong>' + esc(item.department_name) + '</strong><small>' +
+          esc(item.department_key) + '</small></td><td>' + esc(item.period_type) + '</td><td>' +
+          esc(dateLabel(item.period_start)) + ' – ' + esc(dateLabel(item.period_end)) + '</td><td>' +
+          esc(money(allocation,item.currency_code)) + '</td><td>' + esc(money(actual,item.currency_code)) +
+          '</td><td>' + esc(money(remaining,item.currency_code)) + '</td><td>' + esc(utilization) +
+          '</td><td>' + esc(manager) + '</td><td>' + esc(thresholds.join('%, ')+'%') +
+          '</td><td>' + statusPill(alertState.replace(/ /g,'_')) + '</td><td>' + statusPill(item.approval_status) + '</td><td>' +
+          (item.approval_status === 'approved' ? '<span class="admin-finance-manual">Locked</span>' : editAction('budget',item.id)) +
+          '</td></tr>';
+      });
+      content.innerHTML =
+        '<div class="admin-finance-section-heading"><div><h4>Operating budgets</h4><p>Actuals include only recorded expenses matching the budget department, currency and date period. They do not include creator or seller liabilities.</p></div></div>' +
+        table(['Department','Period','Dates','Budget','Actual expenses','Remaining','Used','Manager','Alerts at','Alert state','Approval','Record'],rows,'No operating budgets have been recorded.') +
+        '<details class="admin-finance-form-details"><summary>Create a budget allocation</summary><form id="admin-finance-budget-form" class="admin-finance-form">' +
+        field('Department key','department_key','text','required maxlength="80" pattern="[a-z0-9][a-z0-9_-]{1,79}"') +
+        field('Department name','department_name','text','required maxlength="120"') +
+        select('Period','period_type',[['monthly','Monthly'],['quarterly','Quarterly'],['annual','Annual']]) +
+        field('Period start','period_start','date','required value="' + today() + '"') +
+        field('Period end','period_end','date','required') +
+        select('Currency','currency_code',[['USD','USD'],['JMD','JMD']]) +
+        field('Approved allocation amount','allocated_amount','number','required min="0" step="0.01" inputmode="decimal"') +
+        field('Department manager user ID (optional UUID)','manager_user_id','text','maxlength="36" pattern="[0-9a-fA-F-]{36}" autocomplete="off"') +
+        field('Budget alert thresholds (comma-separated percentages)','alert_thresholds','text','required value="50,75,90,100" maxlength="39" pattern="[0-9, ]+"') +
+        '<p class="admin-finance-form-note">Budget threshold states appear in these dashboards when actual expenses cross a saved percentage. Manager IDs must match an existing Minglora auth account UUID. Email and push notifications are not enabled by this setting.</p>' +
+        select('Approval status','approval_status',[['draft','Draft'],['pending','Pending'],['rejected','Rejected']]) +
+        textarea('Notes','notes') + button('Save budget') + '</form></details>';
+      section.querySelector('#admin-finance-budget-form')?.addEventListener('submit',async event => {
+        event.preventDefault();
+        const form=event.currentTarget, values=new FormData(form);
+        try {
+          await save('save_budget',{
+            id:form.dataset.editId || undefined,
+            department_key:String(values.get('department_key')||'').trim().toLowerCase(),
+            department_name:String(values.get('department_name')||'').trim(),
+            period_type:String(values.get('period_type')||'monthly'),
+            period_start:String(values.get('period_start')||''),
+            period_end:String(values.get('period_end')||''),
+            currency_code:String(values.get('currency_code')||'USD'),
+            allocated_amount_minor:minor(values.get('allocated_amount')),
+            alert_thresholds:parseBudgetThresholds(values.get('alert_thresholds')),
+            manager_user_id:String(values.get('manager_user_id')||'').trim()||null,
+            approval_status:String(values.get('approval_status')||'draft'),
+            notes:String(values.get('notes')||'').trim()
+          },form);
+        } catch(error) { setStatus(error.message || 'Enter a valid budget.',true); }
+      });
+    }
+
+        function renderInvoices() {
+      const rows=records.invoices.map(item => {
+        const provider=providerById(item.provider_id);
+        const sub=subscriptionById(item.subscription_id);
+        const portal=sub?.billing_portal_url;
+        const action=portal
+          ? '<a href="' + esc(portal) + '" target="_blank" rel="noopener noreferrer">OPEN PROVIDER BILLING PORTAL</a>'
+          : '<span class="admin-finance-manual">MANUAL PROVIDER ACTION REQUIRED</span>' +
+            '<a href="' + esc(provider?.website_url || '#') + '" target="_blank" rel="noopener noreferrer">Provider website</a>';
+        const locked=['paid','paid_pending_verification','payment_initiated','payment_scheduled'].includes(item.payment_status);
+        const attachmentLinks=[
+          item.attachment_storage_path ? '<a href="/api/admin/finance/attachments/download?kind=invoice_attachment&id=' + encodeURIComponent(item.id) + '">Invoice document</a>' : '',
+          item.receipt_storage_path ? '<a href="/api/admin/finance/attachments/download?kind=invoice_receipt&id=' + encodeURIComponent(item.id) + '">Payment receipt</a>' : ''
+        ].filter(Boolean).join(' · ') || 'No documents attached';
+        return '<tr><td><strong>' + esc(item.invoice_number) + '</strong><small>' + esc(provider?.provider_name || 'Provider unavailable') +
+          '</small></td><td>' + esc(money(item.total_minor,item.currency_code)) + '</td><td>' +
+          esc(dateLabel(item.due_date)) + '</td><td>' + statusPill(item.payment_status) + '</td><td>' + action +
+          '</td><td>' + attachmentLinks + '</td><td>' +
+          (locked ? '<span class="admin-finance-manual">Locked</span>' : editAction('invoice',item.id)) + '</td></tr>';
+      });
+      content.innerHTML =
+        '<div class="admin-finance-section-heading"><div><h4>Invoice center</h4><p>Invoice documents and payment receipts are stored in a dedicated private Minglora archive. Provider payment verification remains separate.</p></div></div>' +
+        table(['Invoice / provider','Total','Due date','Payment status','Next action','Attachments','Record'],rows,'No invoices have been recorded.') +
+        '<details class="admin-finance-form-details"><summary>Record an invoice</summary><form id="admin-finance-invoice-form" class="admin-finance-form">' +
+        '<input type="hidden" name="attachment_storage_path"><input type="hidden" name="receipt_storage_path">' +
+        select('Provider','provider_id',providerOptions(),'required') +
+        select('Related subscription','subscription_id',[['','No subscription'],...subscriptionOptions()]) +
+        field('Invoice number','invoice_number','text','required maxlength="120"') +
+        field('Description','description','text','required maxlength="500"') +
+        field('Department key','department_key','text','required maxlength="80" value="infrastructure"') +
+        field('Invoice date','invoice_date','date','') +
+        field('Due date','due_date','date','') +
+        select('Currency','currency_code',[['USD','USD'],['JMD','JMD']]) +
+        field('Amount before tax','amount','number','required min="0" step="0.01" inputmode="decimal"') +
+        field('Tax amount','tax','number','min="0" step="0.01" inputmode="decimal"') +
+        select('Payment status','payment_status',[['received','Received'],['under_review','Under review'],['awaiting_approval','Awaiting approval'],['approved','Approved'],['payment_scheduled','Payment scheduled'],['payment_initiated','Payment initiated'],['paid_pending_verification','Paid — awaiting provider verification'],['partially_paid','Partially paid'],['failed','Failed'],['disputed','Disputed'],['overdue','Overdue'],['cancelled','Cancelled']]) +
+        select('Approval status','approval_status',[['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['not_required','Not required']]) +
+        field('External payment reference (not a card number)','payment_reference','text','maxlength="160"') +
+        field('Invoice document (PDF or image)','attachment_file','file','accept="application/pdf,image/jpeg,image/png,image/webp"') +
+        field('Payment receipt (PDF or image)','receipt_file','file','accept="application/pdf,image/jpeg,image/png,image/webp"') +
+        '<p class="admin-finance-form-note">Private files are only available through the MFA-verified owner finance workspace. Never upload card details or banking passwords.</p>' +
+        textarea('Notes','notes') +
+        '<p class="admin-finance-form-note">Do not enter card numbers, CVV codes, bank credentials or API secrets. Marking an invoice Paid is not available until provider verification is implemented.</p>' +
+        button('Save invoice') + '</form></details>';
+      const form=section.querySelector('#admin-finance-invoice-form');
+      form?.addEventListener('submit',async event => {
+        event.preventDefault();
+        const values=new FormData(form);
+        const submit=form.querySelector('button[type="submit"]');
+        if(submit)submit.disabled=true;
+        try {
+          const amount=minor(values.get('amount')), tax=minor(values.get('tax')||0);
+          let attachmentPath=String(values.get('attachment_storage_path')||'').trim()||null;
+          let receiptPath=String(values.get('receipt_storage_path')||'').trim()||null;
+          const attachmentFile=form.elements.namedItem('attachment_file')?.files?.[0];
+          const receiptFile=form.elements.namedItem('receipt_file')?.files?.[0];
+          if(attachmentFile) {
+            attachmentPath=await uploadFinanceAttachment('invoice_attachment',attachmentFile);
+            form.elements.namedItem('attachment_storage_path').value=attachmentPath;
+            form.elements.namedItem('attachment_file').value='';
+          }
+          if(receiptFile) {
+            receiptPath=await uploadFinanceAttachment('invoice_receipt',receiptFile);
+            form.elements.namedItem('receipt_storage_path').value=receiptPath;
+            form.elements.namedItem('receipt_file').value='';
+          }
+          await save('save_invoice',{
+            id:form.dataset.editId || undefined,
+            provider_id:String(values.get('provider_id')||''),
+            subscription_id:String(values.get('subscription_id')||'')||null,
+            invoice_number:String(values.get('invoice_number')||'').trim(),
+            description:String(values.get('description')||'').trim(),
+            department_key:String(values.get('department_key')||'infrastructure').trim().toLowerCase().replace(/\s+/g,'_'),
+            invoice_date:String(values.get('invoice_date')||'')||null,
+            due_date:String(values.get('due_date')||'')||null,
+            currency_code:String(values.get('currency_code')||'USD'),
+            amount_minor:amount,tax_minor:tax,total_minor:amount+tax,
+            payment_status:String(values.get('payment_status')||'received'),
+            approval_status:String(values.get('approval_status')||'pending'),
+            payment_reference:String(values.get('payment_reference')||'').trim()||null,
+            attachment_storage_path:attachmentPath,
+            receipt_storage_path:receiptPath,
+            notes:String(values.get('notes')||'').trim()
+          },form);
+        } catch(error) { setStatus(error.message || 'Enter a valid invoice.',true); }
+        finally { if(submit)submit.disabled=false; }
+      });
+    }
+
+        function renderExpenses() {
+      const rows=records.expenses.map(item => {
+        const provider=providerById(item.provider_id);
+        const receiptLink=item.receipt_storage_path
+          ? '<a href="/api/admin/finance/attachments/download?kind=expense_receipt&id=' + encodeURIComponent(item.id) + '">Download receipt</a>'
+          : 'No receipt attached';
+        return '<tr><td><strong>' + esc(item.description) + '</strong><small>' + esc(provider?.provider_name || 'Provider unavailable') +
+          '</small></td><td>' + esc(item.expense_category.replace(/_/g,' ')) + '</td><td>' +
+          esc(dateLabel(item.expense_date)) + '</td><td>' + esc(money(item.amount_minor,item.currency_code)) +
+          '</td><td>' + statusPill(item.expense_status) + '</td><td>' + receiptLink + '</td><td>' +
+          (item.expense_status === 'reversed' ? '<span class="admin-finance-manual">Reversed</span>' : editAction('expense',item.id)) +
+          '</td></tr>';
+      });
+      content.innerHTML =
+        '<div class="admin-finance-section-heading"><div><h4>Operating expense register</h4><p>Record real company expenses only. Unpaid invoices and creator/seller liabilities are not counted as expenses.</p></div></div>' +
+        table(['Expense','Category','Date','Amount','Status','Receipt','Record'],rows,'No operating expenses have been recorded.') +
+        '<details class="admin-finance-form-details"><summary>Record an actual expense</summary><form id="admin-finance-expense-form" class="admin-finance-form">' +
+        '<input type="hidden" name="receipt_storage_path">' +
+        select('Provider / vendor','provider_id',providerOptions(),'required') +
+        select('Category','expense_category',[['domain','Domain'],['hosting','Hosting'],['database','Database'],['storage','Storage'],['media','Media'],['communications','Communications'],['software','Software'],['security','Security'],['legal','Legal'],['accounting','Accounting'],['marketing','Marketing'],['support','Support'],['tax','Tax'],['fee','Fee'],['other','Other']]) +
+        field('Department key','department_key','text','required maxlength="80" value="infrastructure"') +
+        field('Description','description','text','required maxlength="500"') +
+        field('Date paid / incurred','expense_date','date','required value="' + today() + '"') +
+        select('Currency','currency_code',[['USD','USD'],['JMD','JMD']]) +
+        field('Amount','amount','number','required min="0" step="0.01" inputmode="decimal"') +
+        field('Invoice ID (optional UUID)','invoice_id','text','maxlength="36"') +
+        field('Receipt document (PDF or image)','receipt_file','file','accept="application/pdf,image/jpeg,image/png,image/webp"') +
+        '<p class="admin-finance-form-note">Receipt files are stored in the private company finance archive.</p>' +
+        textarea('Notes','notes') + button('Save expense') + '</form></details>';
+      section.querySelector('#admin-finance-expense-form')?.addEventListener('submit',async event => {
+        event.preventDefault();
+        const form=event.currentTarget, values=new FormData(form);
+        const submit=form.querySelector('button[type="submit"]');
+        if(submit)submit.disabled=true;
+        try {
+          let receiptPath=String(values.get('receipt_storage_path')||'').trim()||null;
+          const receiptFile=form.elements.namedItem('receipt_file')?.files?.[0];
+          if(receiptFile) {
+            receiptPath=await uploadFinanceAttachment('expense_receipt',receiptFile);
+            form.elements.namedItem('receipt_storage_path').value=receiptPath;
+            form.elements.namedItem('receipt_file').value='';
+          }
+          await save('save_expense',{
+            id:form.dataset.editId || undefined,
+            provider_id:String(values.get('provider_id')||''),
+            expense_category:String(values.get('expense_category')||'other'),
+            department_key:String(values.get('department_key')||'infrastructure').trim().toLowerCase().replace(/\s+/g,'_'),
+            description:String(values.get('description')||'').trim(),
+            expense_date:String(values.get('expense_date')||''),
+            currency_code:String(values.get('currency_code')||'USD'),
+            amount_minor:minor(values.get('amount')),
+            invoice_id:String(values.get('invoice_id')||'').trim()||null,
+            expense_status:'actual',
+            receipt_storage_path:receiptPath,
+            notes:String(values.get('notes')||'').trim()
+          },form);
+        } catch(error) { setStatus(error.message || 'Enter a valid expense.',true); }
+        finally { if(submit)submit.disabled=false; }
+      });
+    }
+
+    function renderAuditEvents() {
+      const rows=records.auditEvents.map(item => {
+        const occurredAt=item.created_at ? new Date(item.created_at) : null;
+        const occurred=occurredAt && !Number.isNaN(occurredAt.getTime()) ? occurredAt.toLocaleString() : 'Date unavailable';
+        const actor=String(item.actor_user_id||'');
+        const actorLabel=actor ? actor.slice(0,8)+'…' : 'System';
+        const entityId=String(item.entity_id||'');
+        const entityLabel=[String(item.entity_type||'record'),entityId ? entityId.slice(0,8)+'…' : ''].filter(Boolean).join(' · ');
+        const rawMetadata=item.metadata && typeof item.metadata==='object' ? JSON.stringify(item.metadata) : String(item.metadata||'');
+        const details=rawMetadata ? (rawMetadata.length>360 ? rawMetadata.slice(0,357)+'…' : rawMetadata) : 'No additional detail';
+        return '<tr><td><strong>'+esc(occurred)+'</strong></td><td>'+statusPill(item.action)+'</td>'+
+          '<td>'+esc(entityLabel)+'</td><td>'+esc(actorLabel)+'</td><td><small>'+esc(details)+'</small></td></tr>';
+      });
+      content.innerHTML=
+        '<div class="admin-finance-section-heading"><div><h4>Finance audit history</h4>'+
+        '<p>Read-only, append-only records of company finance changes and protected document access. Up to 100 of the most recent finance events are shown.</p></div></div>'+
+        table(['Time','Action','Record','Actor ID','Recorded details'],rows,'No company finance audit events have been recorded yet.');
+    }
+
+    function beginEdit(kind,id) {
+      const definitions = {
+        provider: {
+          rows:records.providers,formId:'#admin-finance-provider-form',saveLabel:'Save provider',
+          locked:record => !['not_registered','planned','registration_pending','disconnected','requires_attention'].includes(record.connection_status),
+          aliases:{}
+        },
+        subscription: {
+          rows:records.subscriptions,formId:'#admin-finance-subscription-form',saveLabel:'Save subscription',
+          locked:() => false,
+          aliases:{monthly_fee:'monthly_fee_minor',annual_fee:'annual_fee_minor',setup_fee:'setup_fee_minor',renewal_fee:'renewal_fee_minor',usage_charge:'usage_charge_minor'}
+        },
+        budget: {
+          rows:records.budgets,formId:'#admin-finance-budget-form',saveLabel:'Save budget',
+          locked:record => record.approval_status === 'approved',
+          aliases:{allocated_amount:'allocated_amount_minor'}
+        },
+        invoice: {
+          rows:records.invoices,formId:'#admin-finance-invoice-form',saveLabel:'Save invoice',
+          locked:record => ['paid','paid_pending_verification','payment_initiated','payment_scheduled'].includes(record.payment_status),
+          aliases:{amount:'amount_minor',tax:'tax_minor'}
+        },
+        expense: {
+          rows:records.expenses,formId:'#admin-finance-expense-form',saveLabel:'Save expense',
+          locked:record => record.expense_status === 'reversed',
+          aliases:{amount:'amount_minor'}
+        }
+      };
+      const definition=definitions[kind];
+      const record=definition?.rows.find(item => String(item.id) === String(id));
+      if (!definition || !record) {
+        setStatus('The selected finance record is no longer available. Refresh the records.',true);
+        return;
+      }
+      if (definition.locked(record)) {
+        setStatus('This record is locked by its approval or payment state.',true);
+        return;
+      }
+      const form=content.querySelector(definition.formId);
+      if (!form) {
+        setStatus('Open the matching record form first, then retry Edit.',true);
+        return;
+      }
+      const details=form.closest('details');
+      if (details) details.open=true;
+      Array.from(form.elements).forEach(control => {
+        if (!control.name) return;
+        const key=definition.aliases[control.name] || control.name;
+        if (!(key in record)) return;
+        let value=record[key];
+        if (value === null || value === undefined) value='';
+        if ((key === 'included_usage' || key === 'measured_usage') && value && typeof value === 'object') {
+          value=JSON.stringify(value,null,2);
+        }
+        if (control.type === 'number' && key.endsWith('_minor') && value !== '') {
+          value=(Number(value)/100).toFixed(2);
+        }
+        if (control.type === 'date' && value) value=String(value).slice(0,10);
+        const stringValue=String(value);
+        if (control.tagName === 'SELECT' && !Array.from(control.options).some(option => option.value === stringValue)) return;
+        control.value=stringValue;
+      });
+      form.dataset.editId=String(record.id);
+      const submit=form.querySelector('button[type="submit"]');
+      if (submit) submit.textContent='Save changes';
+      if (!form.querySelector('[data-finance-cancel-edit]')) {
+        const cancel=document.createElement('button');
+        cancel.type='button';
+        cancel.className='secondary admin-finance-cancel-edit';
+        cancel.dataset.financeCancelEdit='true';
+        cancel.textContent='Cancel edit';
+        cancel.addEventListener('click',()=>{
+          form.reset();
+          delete form.dataset.editId;
+          if (submit) submit.textContent=definition.saveLabel;
+          cancel.remove();
+          setStatus('Edit cancelled. No database changes were made.');
+        });
+        submit?.before(cancel);
+      }
+      setStatus('Editing saved ' + kind + ' record. Save changes to update the existing record.');
+      form.scrollIntoView?.({behavior:'smooth',block:'nearest'});
+    }
+
+    function renderTab() {
+      section.querySelectorAll('[data-finance-tab]').forEach(tab => {
+        tab.setAttribute('aria-selected',String(tab.dataset.financeTab===activeTab));
+      });
+      if (activeTab==='overview') renderOverview();
+      else if (activeTab==='providers') renderProviders();
+      else if (activeTab==='subscriptions') renderSubscriptions();
+      else if (activeTab==='budgets') renderBudgets();
+      else if (activeTab==='invoices') renderInvoices();
+      else if (activeTab==='expenses') renderExpenses();
+      else if (activeTab==='audit') renderAuditEvents();
+    }
+
+    async function refresh() {
+      if (loading) return;
+      loading = true;
+      const button=section.querySelector('#admin-finance-refresh');
+      if (button) button.disabled=true;
+      setStatus('Syncing company finance records from Minglora Supabase…');
+      try {
+        const result=await api('/admin/finance',{method:'GET'});
+        records={
+          providers:Array.isArray(result.providers)?result.providers:[],
+          subscriptions:Array.isArray(result.subscriptions)?result.subscriptions:[],
+          budgets:Array.isArray(result.budgets)?result.budgets:[],
+          invoices:Array.isArray(result.invoices)?result.invoices:[],
+          expenses:Array.isArray(result.expenses)?result.expenses:[],
+          auditEvents:Array.isArray(result.auditEvents)?result.auditEvents:[]
+        };
+        renderMetrics();
+        renderTab();
+        setStatus('Synced ' + (result.syncedAt ? new Date(result.syncedAt).toLocaleString() : 'saved database records') +
+          ' · ' + records.providers.length + ' providers · ' + records.invoices.length + ' invoices.');
+      } catch(error) {
+        setStatus(error.message || 'Company finance records are unavailable.',true);
+        metrics.innerHTML=metric('Company balance','NOT CONNECTED','No bank feed is connected.');
+        content.innerHTML=empty('Finance data could not be loaded. No local demonstration records were substituted.');
+      } finally {
+        loading=false;
+        if(button)button.disabled=false;
+      }
+    }
+
+        async function save(action,payload,form) {
+      const submit=form?.querySelector('button[type="submit"]');
+      const wasEditing=Boolean(form?.dataset.editId);
+      if(submit)submit.disabled=true;
+      setStatus(wasEditing ? 'Updating the saved finance record…' : 'Saving the finance record…');
+      try {
+        await api('/admin/finance',{method:'POST',body:JSON.stringify({financeAction:action,payload})});
+        if(form) {
+          form.reset();
+          delete form.dataset.editId;
+          form.querySelector('[data-finance-cancel-edit]')?.remove();
+        }
+        setStatus(wasEditing ? 'Record updated. Refreshing the verified database view…' : 'Record saved. Refreshing the verified database view…');
+        await refresh();
+      } catch(error) {
+        setStatus(error.message || 'The record could not be saved.',true);
+      } finally {
+        if(submit)submit.disabled=false;
+      }
+    }
+
+    function exportCsv() {
+      const sections=[
+        ['providers',records.providers],
+        ['subscriptions',records.subscriptions],
+        ['budgets',records.budgets],
+        ['invoices',records.invoices],
+        ['expenses',records.expenses],
+        ['audit_events',records.auditEvents]
+      ];
+      const lines=[];
+      sections.forEach(([name,rows])=>{
+        if(!rows.length)return;
+        lines.push(name.toUpperCase());
+        const headers=[...new Set(rows.flatMap(row=>Object.keys(row)))];
+        const quote=value=>'"'+String(value ?? '').replace(/"/g,'""')+'"';
+        lines.push(headers.map(quote).join(','));
+        rows.forEach(row=>lines.push(headers.map(key=>quote(
+          row[key] && typeof row[key]==='object' ? JSON.stringify(row[key]) : row[key]
+        )).join(',')));
+        lines.push('');
+      });
+      if(!lines.length){setStatus('There are no saved finance records to export.');return;}
+      const blob=new Blob([lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const anchor=document.createElement('a');
+      anchor.href=url;anchor.download='minglora-finance-records-'+today()+'.csv';
+      document.body.append(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+      setStatus('Finance records exported as CSV.');
+    }
+
+    content.addEventListener('click',async event => {
+      const testButton=event.target?.closest?.('[data-finance-test-provider]');
+      if(testButton) {
+        const providerId=String(testButton.dataset.id||'');
+        const originalLabel=testButton.textContent;
+        testButton.disabled=true;
+        testButton.textContent='Testing…';
+        setStatus('Testing the configured Minglora Supabase database and Storage APIs…');
+        try {
+          const result=await api('/admin/finance',{
+            method:'POST',
+            body:JSON.stringify({financeAction:'test_provider_connection',payload:{provider_id:providerId}})
+          });
+          await refresh();
+          const verifiedAt=result.verifiedAt ? new Date(result.verifiedAt).toLocaleString() : 'just now';
+          setStatus('Supabase connection verified: Postgres and Storage passed at '+verifiedAt+'. Billing plan and charges remain unverified.');
+        } catch(error) {
+          setStatus(error.message || 'Supabase connection test failed. The provider record was not marked connected.',true);
+        } finally {
+          testButton.disabled=false;
+          testButton.textContent=originalLabel;
+        }
+        return;
+      }
+      const button=event.target?.closest?.('[data-finance-edit]');
+      if (!button) return;
+      beginEdit(button.dataset.financeEdit,button.dataset.id);
+    });
+    section.querySelectorAll('[data-finance-tab]').forEach(tab => tab.addEventListener('click',()=>{
+      activeTab=tab.dataset.financeTab;renderTab();
+    }));
+    section.querySelector('#admin-finance-refresh')?.addEventListener('click',refresh);
+    section.querySelector('#admin-finance-export')?.addEventListener('click',exportCsv);
+    if (!window.__mingloraAdminAccess?.canAccess) {
+      setStatus(OWNER_ONLY_MESSAGE,true);
+      content.innerHTML=empty(OWNER_ONLY_MESSAGE);
+      return;
+    }
+    refresh();
+  }
+
+  window.MingloraAdminFinance = Object.freeze({mount});
+})();

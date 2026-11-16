@@ -1,0 +1,25 @@
+/* Minglora full-screen media viewer: images, videos, audio and 3D attachments. */
+.mmv-frame{position:relative;display:block;max-width:100%;min-width:0}
+.mmv-frame>img,.mmv-frame>video,.mmv-frame>audio,.mmv-frame>model-viewer{max-width:100%}
+.mmv-image-open{cursor:zoom-in}
+.mmv-expand{
+  position:absolute;right:10px;bottom:10px;z-index:5;display:inline-flex;align-items:center;justify-content:center;
+  min-height:38px;padding:8px 12px;border:1px solid rgba(255,255,255,.45);border-radius:999px;
+  background:rgba(12,18,32,.84);color:#fff;font:700 12px/1.2 inherit;box-shadow:0 3px 16px rgba(0,0,0,.28);cursor:pointer
+}
+.mmv-expand:focus-visible,.mmv-close:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.mmv-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;
+  width:100vw;height:100dvh;min-height:100vh;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
+  background:rgba(3,7,16,.97);color:#fff;overscroll-behavior:contain}
+.mmv-shell{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0}
+.mmv-content{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0}
+.mmv-content>img,.mmv-content>video,.mmv-content>model-viewer{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;background:transparent}
+.mmv-content>audio{width:min(760px,100%);max-width:100%}
+.mmv-close{position:absolute;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:3;
+  display:grid;place-items:center;width:46px;height:46px;border:1px solid #ffffff55;border-radius:50%;
+  background:#141c2ce8;color:#fff;font-size:30px;line-height:1;cursor:pointer}
+.mmv-caption{position:absolute;left:12px;right:66px;top:max(16px,env(safe-area-inset-top));z-index:2;overflow:hidden;
+  color:#fff;font-size:13px;font-weight:650;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+body.mmv-open{overflow:hidden!important}
+@media(max-width:640px){.mmv-expand{right:8px;bottom:8px;min-height:36px;padding:7px 10px}.mmv-caption{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.mmv-overlay *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

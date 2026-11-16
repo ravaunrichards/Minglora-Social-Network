@@ -1,0 +1,1062 @@
+(() => {
+  const defaults = {
+    privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone', shareAudienceDemographics: false },
+    notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false, calls: true, live: true, gifts: true, meetWave: true, leagues: true, account: true },
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', profileStyle: 'facebook', defaultProfileStyle: 'facebook', profileScreenLayout: 'fluid-panel', defaultProfileScreenLayout: 'fluid-panel', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
+  };
+
+  const APP_THEMES = [
+    { value: 'minglora', name: 'Minglora Blue', description: 'The familiar signature look' },
+    { value: 'ocean', name: 'Ocean Breeze', description: 'Teal and sea-glass blue' },
+    { value: 'tropical', name: 'Tropical Pulse', description: 'Coral, aqua and citrus' },
+    { value: 'royal', name: 'Royal Amethyst', description: 'Violet and rich plum' },
+    { value: 'emerald', name: 'Emerald Garden', description: 'Leaf green and jade' },
+    { value: 'rose', name: 'Rose Bloom', description: 'Berry and soft rose' },
+    { value: 'golden', name: 'Golden Hour', description: 'Amber and warm sand' },
+    { value: 'lavender', name: 'Lavender Cloud', description: 'Lavender and cool mint' },
+    { value: 'midnight', name: 'Midnight Neon', description: 'Navy with electric cyan' },
+    { value: 'graphite', name: 'Graphite Studio', description: 'Charcoal and cool silver' }
+  ];
+  const LIVE_THEMES = [
+    { value: 'studio', name: 'Creator Studio', description: 'Neutral dark surfaces keep the video centre stage' },
+    { value: 'ocean', name: 'Ocean Stage', description: 'Deep blue panels with clear aqua accents' },
+    { value: 'tropical', name: 'Tropical Party', description: 'Coral and turquoise for social, high-energy streams' },
+    { value: 'royal', name: 'Royal Lounge', description: 'Plum and champagne accents for a premium room' },
+    { value: 'neon', name: 'Neon Arena', description: 'Electric cyan and violet for gaming and tech streams' },
+    { value: 'sunset', name: 'Sunset Spotlight', description: 'Warm amber and copper for music and conversation' },
+    { value: 'garden', name: 'Garden Glow', description: 'Emerald and mint for relaxed community sessions' },
+    { value: 'social', name: 'Soft Social', description: 'Muted berry and lavender for a softer room' }
+  ];
+
+  function renderThemeChoices(name, themes, selected, kind) {
+    return `<div class="theme-choice-grid ${kind}-theme-grid" role="radiogroup" aria-label="${kind === 'app' ? 'App colour themes' : 'LIVE room themes'}">${themes.map(theme => `
+      <label class="theme-choice ${kind}-theme-choice">
+        <input type="radio" name="${name}" value="${theme.value}" ${selected === theme.value ? 'checked' : ''}>
+        ${kind === 'app'
+          ? `<span class="theme-choice-art app-theme-art app-theme-art-${theme.value}" aria-hidden="true"><i></i><i></i><i></i></span>`
+          : `<span class="theme-choice-art live-theme-art live-theme-art-${theme.value}" aria-hidden="true"><i class="theme-art-live">LIVE</i><i class="theme-art-stage"></i><i class="theme-art-chat"></i></span>`}
+        <span class="theme-choice-copy"><strong>${theme.name}</strong><small>${theme.description}</small></span>
+      </label>`).join('')}</div>`;
+  }
+
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+
+  function totpQrImageSource(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^data:image\/(?:svg\+xml|png|webp);/i.test(raw)) return raw;
+    const svg = raw.replace(/^\uFEFF/, '');
+    if (/^(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(svg)) {
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+    return '';
+  }
+
+  async function api(path, options = {}) {
+    const response = await fetch('/api' + path, {
+      ...options,
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...(window.MingloraDeviceContextHeaders?.() || {}), ...(options.headers || {}) }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Request failed (${response.status})`);
+    return payload;
+  }
+
+  function applyPreferences(settings) {
+    const preferences = settings?.preferences || defaults.preferences;
+    const mode = ['light', 'dark', 'system'].includes(preferences.theme) ? preferences.theme : 'system';
+    const colorTheme = APP_THEMES.some(theme => theme.value === preferences.colorTheme) ? preferences.colorTheme : 'minglora';
+    document.body.classList.toggle('theme-dark', mode === 'dark');
+    document.body.classList.toggle('theme-system', mode === 'system');
+    document.body.classList.toggle('reduce-motion', preferences.reducedMotion === true);
+    document.body.classList.toggle('lite-mode', preferences.liteMode === true);
+    document.body.dataset.colorTheme = colorTheme;
+    document.body.style.colorScheme = mode === 'system' ? 'light dark' : mode;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', ({ minglora:'#1769e0', ocean:'#0f766e', tropical:'#e45b4d', royal:'#7146c7', emerald:'#16834f', rose:'#be315f', golden:'#a16207', lavender:'#7864c8', midnight:'#172033', graphite:'#475569' })[colorTheme]);
+  }
+
+  function sectionHeading(title) {
+    return `<h2 class="settings-section-title">${title}</h2>`;
+  }
+
+  function activityHistoryMarkup(items) {
+    const history=Array.isArray(items)?items.slice(0,20):[];
+    if(!history.length)return '<p class="settings-empty">No recent account activity is available yet.</p>';
+    return '<div class="settings-activity-list">'+history.map(item=>{
+      const date=item.createdAt?new Date(item.createdAt):null;
+      const time=date&&!Number.isNaN(date.getTime())?date.toLocaleString():'Time unavailable';
+      return '<article class="settings-activity-row"><span class="settings-activity-dot" aria-hidden="true"></span><div><strong>'+escapeHtml(String(item.summary||item.action||'Account activity').replace(/_/g,' '))+'</strong><small>'+escapeHtml(time)+'</small></div></article>';
+    }).join('')+'</div>';
+  }
+
+  function profileViewersMarkup(result) {
+    if(!result?.enabled)return '<p class="settings-note">Turn on Profile view history to see signed-in members who also have this setting enabled. Your visits will be visible to them too.</p>';
+    const viewers=Array.isArray(result.viewers)?result.viewers:[];
+    if(!viewers.length)return '<p class="settings-empty">No eligible profile views recorded in the last 30 days yet.</p>';
+    return '<div class="settings-profile-viewer-list">'+viewers.map(item=>{
+      const member=item.user||{},date=item.lastViewedAt?new Date(item.lastViewedAt):null;
+      const lastViewed=date&&!Number.isNaN(date.getTime())?date.toLocaleString():'Time unavailable';
+      return '<button type="button" class="settings-profile-viewer" data-profile-viewer="'+escapeHtml(member.id||'')+'"><img src="'+escapeHtml(member.avatar||'')+'" alt=""><span><strong>'+escapeHtml(member.name||'Minglora member')+'</strong><small>@'+escapeHtml(member.username||'')+' · Last viewed '+escapeHtml(lastViewed)+'</small></span>'+(Number(item.visitCount)>1?'<em>'+Number(item.visitCount)+' visits</em>':'')+'</button>';
+    }).join('')+'</div>';
+  }
+
+  async function openSettings() {
+    // Settings is a destination, not a Home overlay. Record it as a real page
+    // so the shared page shell removes both Home-only rails and browser Back works.
+    if(window.MingloraGetCurrentView?.()!=='settings')window.MingloraActivateSilentView?.('settings');
+    const main = document.querySelector('#main-content');
+    if (!main) return;
+    main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
+    try {
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, profileViewsResult, walletResult, creatorEarningsResult] = await Promise.all([
+        api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
+        api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
+        api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
+        api('/reports/mine').catch(error=>({error:error.message,reports:[]})),
+        api('/moderation/access').catch(()=>({canModerate:false})),
+        api('/admin/access').catch(()=>({canAccess:false,setupRequired:false})),
+        api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message})),
+        api('/coins/wallet').catch(error=>({error:error.message,wallet:null})),
+        api('/creator/earnings').catch(error=>({error:error.message,availableMinor:null,earnedMinor:null}))
+      ]);
+      const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],
+        isPrivateAdmin=adminWorkspaceAccess.canAccess===true||adminWorkspaceAccess.setupRequired===true,
+        canModerate=moderationAccess.canModerate===true&&!isPrivateAdmin;
+      const formatSettingsUSD=minor=>{
+        const value=Number(minor);
+        if(minor===null||minor===undefined||!Number.isFinite(value))return 'Unavailable';
+        return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(value/100);
+      };
+      const settingsMoneyAvailable=formatSettingsUSD(creatorEarningsResult.availableMinor);
+      const settingsLifetimeEarned=formatSettingsUSD(creatorEarningsResult.earnedMinor);
+      const settingsCoinBalance=walletResult.wallet?.balance_coins;
+      const activityResult=result.account?.id
+        ?await api('/users/'+encodeURIComponent(result.account.id)+'/activity').catch(error=>({error:error.message,activity:[]}))
+        :{activity:[]};
+      const activityItems=Array.isArray(activityResult.activity)?activityResult.activity:[];
+      const settings = {
+        privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
+        notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
+        preferences: { ...defaults.preferences, ...(result.settings?.preferences || {}) },
+        experience: { ...(result.settings?.experience || {}) }
+      };
+      applyPreferences(settings);
+      window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: settings }));
+      main.innerHTML = `
+        <div id="settings-navigation" class="settings-facebook-navigation">
+<section class="settings-facebook-page" data-settings-page="home">
+<div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
+<div class="settings-facebook-menu-list" aria-label="Settings and privacy menu">
+<button type="button" class="settings-facebook-row" data-settings-open-page="settings"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#settings"></use></svg></span><span>Settings</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="help-support"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#request"></use></svg></span><span>Help &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="report-support"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#activity"></use></svg></span><span>Report &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-report-problem><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#block"></use></svg></span><span>Report a problem</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="display-accessibility"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#palette"></use></svg></span><span>Display &amp; Accessibility</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row settings-facebook-logout" data-settings-logout><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261110-semantic-icons-3d-1#logout"></use></svg></span><span>Log out</span></button>
+</div>
+<footer class="settings-facebook-footer" aria-label="Legal and information links">
+<div class="settings-facebook-footer-links">
+<button type="button" data-settings-footer="privacy">Privacy</button><span>·</span><button type="button" data-settings-footer="terms">Terms</button><span>·</span><button type="button" data-settings-footer="advertising">Advertising</button><span>·</span><button type="button" data-settings-footer="ad-choices">Ad Choices</button><span>·</span><button type="button" data-settings-footer="cookies">Cookies</button><span>·</span><button type="button" id="settings-more-menu-toggle" aria-expanded="false" aria-controls="settings-more-menu">More</button>
+</div>
+<div class="settings-facebook-more-menu" id="settings-more-menu" hidden><button type="button" data-settings-open-page="about">About</button><button type="button" data-settings-open-page="career">Career</button><button type="button" data-settings-open-page="developers">Developers</button><button type="button" data-settings-open-page="help-center">Help</button></div>
+</footer>
+</section>
+<section class="settings-facebook-page" data-settings-page="settings" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Settings &amp; Privacy</button><h2>Settings</h2>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-page="language"><span>Language</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="privacy-checkup"><span>Privacy Checkup</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="privacy-center"><span>Privacy Center</span><span class="settings-facebook-chevron">›</span></button>
+</div><div id="settings-category-links"></div>
+</section>
+<section class="settings-facebook-page" data-settings-page="help-support" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Help &amp; Support</button><h2>Help &amp; Support</h2>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-page="help-center"><span>Help Center</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="scam-protection"><span>Scam Protection Center</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="account-status"><span>Account Status</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Support Inbox" data-settings-target="#support-tickets-list"><span>Support Inbox</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-report-problem><span>Report a Problem</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="report-support" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Report &amp; Support</button><h2>Report &amp; Support</h2><p class="settings-facebook-description">Contact Minglora Support, review your existing support conversations, or report a technical problem.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Contact Support" data-settings-target="#support-ticket-form"><span>Contact Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Support Inbox" data-settings-target="#support-tickets-list"><span>Support Inbox</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-report-problem><span>Report a problem</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="display-accessibility" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Display &amp; Accessibility</button><h2>Display &amp; Accessibility</h2>
+<div class="settings-facebook-control-block"><div><strong>Dark mode</strong><p>Adjust the appearance of Minglora to reduce glare and give your eyes a break.</p></div>
+<div class="settings-facebook-segmented" role="group" aria-label="Dark mode"><button type="button" data-settings-theme-value="light">Off</button><button type="button" data-settings-theme-value="dark">On</button><button type="button" data-settings-theme-value="system">Automatic</button></div></div>
+<label class="settings-facebook-toggle"><span><strong>Compact Mode</strong><small>Use a denser layout with less space between interface elements.</small></span><input type="checkbox" id="settings-compact-mode"></label>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-notifications" data-settings-category="activity" data-settings-title="Activity Center" data-settings-target="#settings-activity-centre"><span>Activity Center · Activity Log</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="keyboard"><span>Keyboard</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-preferences" data-settings-category="content-display" data-settings-title="Content Preferences"><span>Content Preferences</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-accessibility" data-settings-category="content-display" data-settings-title="Accessibility Settings"><span>Accessibility Settings</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="keyboard" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="display-accessibility">⬅️ Keyboard</button><h2>Keyboard</h2>
+<button type="button" class="settings-facebook-row" id="settings-see-all-shortcuts" aria-expanded="false" aria-controls="settings-shortcut-reference"><span>See all keyboard shortcuts</span><span class="settings-facebook-chevron">›</span></button>
+<div id="settings-shortcut-reference" class="settings-shortcut-reference" hidden><div><kbd>1</kbd><span>Open Home feed</span></div><div><kbd>2</kbd><span>Open Friends</span></div><div><kbd>3</kbd><span>Open LIVE</span></div><div><kbd>4</kbd><span>Open Messages</span></div><div><kbd>5</kbd><span>Open More</span></div></div>
+<label class="settings-facebook-toggle"><span><strong>Use single-character keyboard shortcuts</strong><small>Use single-character shortcuts for common actions. Shortcuts are ignored while typing in a text field.</small></span><input type="checkbox" id="settings-keyboard-shortcuts-quick"></label>
+</section>
+<section class="settings-facebook-page" data-settings-page="language" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="settings">⬅️ Language</button><h2>Language</h2><div class="settings-facebook-info-card"><strong>App language</strong><p>English is the currently connected interface language. Other language packs are not yet available, so this page does not pretend to switch untranslated screens.</p><p class="muted">Your device language is detected automatically by your browser.</p></div></section>
+<section class="settings-facebook-page" data-settings-page="privacy-checkup" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="settings">⬅️ Privacy Checkup</button><h2>Privacy Checkup</h2><p class="settings-facebook-description">Review the privacy and security choices that control who can see your information and how your account is protected.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Who can see what you share?"><span>Who can see what you share?</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Who can contact you?"><span>Who can contact you?</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="How to keep your account secure"><span>How to keep your account secure</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-data" data-settings-category="account" data-settings-title="Your information and account controls"><span>Your information and account controls</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="privacy-center" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="settings">⬅️ Privacy Center</button><h2>Privacy Center</h2><p class="settings-facebook-description">Learn about and manage Minglora privacy choices. These links open existing account controls rather than duplicate settings.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Profile and audience controls"><span>Profile and audience controls</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-blocking" data-settings-category="interactions" data-settings-title="Blocking and interactions"><span>Blocking and interactions</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="Password, two-factor authentication and sessions"><span>Password, two-factor authentication and sessions</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-data" data-settings-category="account" data-settings-title="Download or manage your information"><span>Download or manage your information</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="help-center" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="help-support">⬅️ Help Center</button><h2>Help Center</h2><p class="settings-facebook-description">Find help with your Minglora account, privacy, sign-in, messages and creator features.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="Sign-in and account security"><span>Sign-in and account security</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Privacy and audience"><span>Privacy and audience</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Contact Minglora Support" data-settings-target="#support-ticket-form"><span>Contact Minglora Support</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="scam-protection" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="help-support">⬅️ Scam Protection Center</button><h2>Scam Protection Center</h2><div class="settings-facebook-info-card"><strong>Protect your account</strong><ul><li>Never share your password, one-time sign-in codes or authenticator codes.</li><li>Be cautious of messages asking you to send money, coins or gifts to unlock an account or prize.</li><li>Check links and account identities before opening them or sending personal information.</li><li>Use a unique password and enable two-factor authentication where available.</li></ul><button type="button" class="settings-facebook-inline-link" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="Security and login">Review security settings</button><button type="button" class="settings-facebook-inline-link" data-settings-report-problem>Report suspicious activity</button></div></section>
+<section class="settings-facebook-page" data-settings-page="account-status" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="help-support">⬅️ Account Status</button><h2>Account Status</h2><div class="settings-facebook-info-card"><p>Your current Minglora account status</p><strong id="settings-account-status-value"></strong><p class="muted">This status is read from your signed-in account record. For a restriction or review that needs attention, contact Minglora Support.</p><button type="button" class="settings-facebook-inline-link" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Contact Support" data-settings-target="#support-ticket-form">Contact Support</button></div></section>
+<section class="settings-facebook-page" data-settings-page="about" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ About</button><h2>About Minglora</h2><p class="settings-facebook-description">Minglora is a social network for connecting with people, sharing moments and participating in communities.</p></section>
+<section class="settings-facebook-page" data-settings-page="career" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Career</button><h2>Career</h2><p class="settings-facebook-description">Career listings are not currently connected to this menu. No open roles are published here.</p></section>
+<section class="settings-facebook-page" data-settings-page="developers" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Developers</button><h2>Developers</h2><p class="settings-facebook-description">Minglora's source repository and project history:</p><a class="settings-facebook-inline-link" href="https://github.com/ravaunrichards/Minglora-Social-Network" target="_blank" rel="noopener noreferrer">Minglora on GitHub</a></section>
+<section class="settings-facebook-page" data-settings-page="information" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Settings &amp; Privacy</button><h2 id="settings-information-title">Information</h2><p class="settings-facebook-description" id="settings-information-copy"></p><p class="settings-facebook-description">For account questions, use Help &amp; Support to contact Minglora.</p><button type="button" class="settings-facebook-inline-link" data-settings-open-page="help-support">Open Help &amp; Support</button></section>
+</div>
+<div id="settings-detail-heading" class="settings-facebook-detail-heading" hidden><button type="button" id="settings-detail-back" class="settings-facebook-back">⬅️ Settings</button><h2 id="settings-detail-title">Settings</h2></div>
+        <form id="settings-form" class="settings-panels" hidden>
+            <div class="settings-category-intro">
+              <p>Choose a category to find its settings. Existing Minglora controls are kept in their original sections and saved together.</p>
+              <div class="settings-category-grid" role="group" aria-label="Settings &amp; privacy categories">
+                <button type="button" class="settings-category-tab active" aria-pressed="true" data-settings-category-button="activity" data-category-description="Notifications and profile-view activity."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#activity"></use></svg><span>Activity</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="account" data-category-description="Your account information, personal data and account actions."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#profile"></use></svg><span>Account</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="visibility" data-category-description="Profile privacy and audience choices."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#privacy"></use></svg><span>Visibility</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="interactions" data-category-description="Blocking and voice/video call preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends"></use></svg><span>Interactions</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="content-display" data-category-description="Appearance, themes, feed order and display preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#palette"></use></svg><span>Content &amp; Display</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="cache-cellular" data-category-description="Lite mode, browser storage and temporary cached images."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore"></use></svg><span>Cache &amp; Cellular</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="device-access" data-category-description="Camera, microphone, location, screen sharing, notifications and device time zone."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#settings"></use></svg><span>Device Access</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="support-about" data-category-description="Support requests, help and platform information."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#external-link"></use></svg><span>Support &amp; About</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="logon" data-category-description="Password, sign-in security, active sessions and logout."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#lock"></use></svg><span>Logon</span></button>
+              </div>
+              <p class="settings-category-description" id="settings-category-description">Notifications and profile-view activity.</p>
+            </div>
+            <section class="settings-card" id="settings-account" data-settings-category="account">
+              ${sectionHeading('Account information')}
+              <div class="settings-readonly-grid">
+                <div><small>Display name</small><strong>${escapeHtml(result.account?.name || 'Not available')}</strong></div>
+                <div><small>Username</small><strong>@${escapeHtml(result.account?.username || '')}</strong></div>
+                <div><small>Email address</small><strong>${escapeHtml(result.account?.email || 'Not available')}</strong></div>
+              </div>
+              <div class="settings-wallet-summary">
+                <div><small>AVAILABLE MONEY · <span id="settings-money-currency">USD</span></small><strong id="settings-money-available">${escapeHtml(settingsMoneyAvailable)}</strong></div>
+                <div><small>LIFETIME EARNED · <span id="settings-earned-currency">USD</span></small><strong id="settings-money-earned">${escapeHtml(settingsLifetimeEarned)}</strong></div>
+                <div><small>COIN BALANCE</small><strong>${settingsCoinBalance==null?'Unavailable':Number(settingsCoinBalance).toLocaleString()+' Coins'}</strong></div>
+              </div>
+              <label class="settings-field"><span><strong>Display currency</strong><small>Changes estimated display amounts only. Wallet accounting, PayPal checkout and payouts remain in USD.</small></span>
+                <select id="settings-display-currency" name="displayCurrency">${[['USD','US Dollar'],['JMD','Jamaican Dollar'],['CAD','Canadian Dollar'],['GBP','British Pound'],['EUR','Euro'],['TTD','Trinidad & Tobago Dollar'],['BBD','Barbadian Dollar'],['XCD','East Caribbean Dollar'],['GYD','Guyanese Dollar'],['AUD','Australian Dollar'],['JPY','Japanese Yen'],['INR','Indian Rupee'],['NGN','Nigerian Naira'],['ZAR','South African Rand'],['KES','Kenyan Shilling']].map(([code,label])=>`<option value="${code}" ${(settings.preferences.displayCurrency||'USD')===code?'selected':''}>${label} (${code})</option>`).join('')}</select>
+              </label>
+              <p class="settings-note" id="settings-currency-rate-status" role="status" aria-live="polite">Amounts are shown in USD.</p>
+              <div class="settings-wallet-actions">
+                <button type="button" class="secondary" data-settings-wallet-tab="recharge">Coins &amp; Get Coins</button>
+                <button type="button" class="secondary" data-settings-wallet-tab="earnings">Live gift rewards &amp; monetization</button>
+                <button type="button" class="secondary" data-settings-wallet-tab="exchange">Exchange</button>
+                <button type="button" class="secondary" data-settings-creator-section="monetization">Creator Studio · Monetization</button>
+              </div>
+              <p class="settings-note">Balances above come from the existing Minglora Wallet &amp; earnings service. Wallet settlement is currently in USD; a selectable display-currency conversion is not yet connected.</p>
+              <p class="settings-note">Campaign and subscription management will be added to their dedicated tools when those workflows are available. This page links to the existing wallet rather than creating duplicate transaction controls.</p>
+              <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Email changes are requested through the secure sign-in provider and take effect after email confirmation.</p>
+              <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
+            </section>
+            <section class="settings-card" id="settings-privacy" data-settings-category="visibility">
+              ${sectionHeading('Privacy &amp; audience')}
+              <label class="settings-field"><span><strong>Profile visibility</strong><small>Friends-only and private profiles are filtered by the server in profile discovery, search and feed results.</small></span>
+                <select name="profileVisibility"><option value="public" ${settings.privacy.profileVisibility === 'public' ? 'selected' : ''}>Public</option><option value="friends" ${settings.privacy.profileVisibility === 'friends' ? 'selected' : ''}>Friends only</option><option value="private" ${settings.privacy.profileVisibility === 'private' ? 'selected' : ''}>Private</option></select>
+              </label>
+              <label class="settings-toggle"><span><strong>Allow friend requests</strong><small>Let other members send you friend requests.</small></span><input type="checkbox" name="allowFriendRequests" ${settings.privacy.allowFriendRequests ? 'checked' : ''}></label>
+              <label class="settings-field"><span><strong>Who can message you?</strong><small>Choose who can start a new direct conversation.</small></span>
+                <select name="messageAudience"><option value="everyone" ${settings.privacy.messageAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.messageAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.messageAudience === 'nobody' ? 'selected' : ''}>Nobody new</option></select>
+              </label>
+              <label class="settings-field"><span><strong>Who can invite you to MeetWave?</strong><small>This setting controls meeting invitations only. It does not change direct messages, calls or LIVE access.</small></span>
+                <select name="meetWaveAudience"><option value="everyone" ${settings.privacy.meetWaveAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.meetWaveAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.meetWaveAudience === 'nobody' ? 'selected' : ''}>Nobody</option></select>
+              </label>
+              <label class="settings-toggle"><span><strong>Share anonymous audience demographics</strong><small>Allow your country to be included in aggregate video-audience insights for creators. Country groups appear only when at least five opted-in viewers are in the same group. Your name and account are never shown. Off by default.</small></span><input type="checkbox" name="shareAudienceDemographics" ${settings.privacy.shareAudienceDemographics === true ? 'checked' : ''}></label>
+              <div class="settings-subsection-heading"><strong>Who can view your lists?</strong><small>These choices apply to the corresponding profile relationship lists.</small></div>
+              ${[['friendsListAudience','Friends list'],['followersListAudience','Followers list'],['followingListAudience','Following list'],['subscribersListAudience','Subscribers list']].map(([name,label])=>`<label class="settings-field"><span><strong>${label}</strong></span><select name="${name}">${[['public','Everyone'],['friends','Friends'],['followers','Followers'],['private','Only you']].map(([value,text])=>`<option value="${value}" ${(settings.privacy[name]||'public')===value?'selected':''}>${text}</option>`).join('')}</select></label>`).join('')}
+            </section>
+            <section class="settings-card" id="settings-interaction-preferences" data-settings-category="interactions">
+              ${sectionHeading('Comments &amp; interactions')}
+              <label class="settings-field"><span><strong>Who can comment on your posts?</strong><small>This is checked by the server when someone submits a comment.</small></span>
+                <select name="commentAudience"><option value="everyone" ${(settings.privacy.commentAudience||'everyone')==='everyone'?'selected':''}>Everyone</option><option value="friends" ${settings.privacy.commentAudience==='friends'?'selected':''}>Friends only</option><option value="nobody" ${settings.privacy.commentAudience==='nobody'?'selected':''}>Nobody else</option></select>
+              </label>
+              <p class="settings-note">Mention controls, content reuse permissions and viewer download permissions will be connected when those specific publishing workflows expose enforceable audience checks. No inactive switches are shown here.</p>
+            </section>
+            <section class="settings-card" id="settings-blocking" data-settings-category="interactions">
+              ${sectionHeading('Blocking')}
+              <div class="settings-blocked-list">
+                ${blockedUsers.length ? blockedUsers.map(member => `<div class="settings-blocked-person"><img src="${escapeHtml(member.avatar || '')}" alt=""><div><strong>${escapeHtml(member.name || 'Minglora member')}</strong><small>@${escapeHtml(member.username || '')}</small></div><button class="secondary" type="button" data-unblock-user="${escapeHtml(member.id)}">Unblock</button></div>`).join('') : '<p class="settings-empty">You have not blocked anyone.</p>'}
+              </div>
+            </section>
+            <section class="settings-card" id="settings-notifications" data-settings-category="activity">
+              ${sectionHeading('Notifications')}
+              <label class="settings-toggle"><span><strong>In-app notifications</strong><small>Master switch for notifications inside Minglora.</small></span><input type="checkbox" name="notificationInApp" ${settings.notifications.inApp ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Friend requests</strong><small>Notifications when someone requests or confirms a friendship.</small></span><input type="checkbox" name="notificationFriendRequests" ${settings.notifications.friendRequests ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Messages</strong><small>Notifications when someone sends you a message.</small></span><input type="checkbox" name="notificationMessages" ${settings.notifications.messages ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Post interactions</strong><small>Notifications for reactions, comments and new followers.</small></span><input type="checkbox" name="notificationInteractions" ${settings.notifications.interactions ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Device push notifications</strong><small>Send enabled notification categories to this device when the browser or installed web app is in the background. Enable this device from the Notifications page too.</small></span><input type="checkbox" name="notificationPush" ${settings.notifications.push ? 'checked' : ''}></label>
+              <div class="settings-subsection-heading"><strong>Choose what you are notified about</strong><small>Each category can be switched off independently. Changes apply to in-app and device push delivery.</small></div>
+              <label class="settings-toggle"><span><strong>Voice &amp; video calls</strong><small>Incoming one-to-one and group call invitations.</small></span><input type="checkbox" name="notificationCalls" ${settings.notifications.calls !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Minglora LIVE</strong><small>When followed creators go LIVE and LIVE moderator updates.</small></span><input type="checkbox" name="notificationLive" ${settings.notifications.live !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Gifts &amp; Fan Club</strong><small>Gifts received and Fan Club membership activity.</small></span><input type="checkbox" name="notificationGifts" ${settings.notifications.gifts !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>MeetWave invitations</strong><small>Invitations to your MeetWave rooms.</small></span><input type="checkbox" name="notificationMeetWave" ${settings.notifications.meetWave !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>League matches</strong><small>Challenges and accepted match invitations.</small></span><input type="checkbox" name="notificationLeagues" ${settings.notifications.leagues !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Account &amp; platform updates</strong><small>Important account, verification and platform notices.</small></span><input type="checkbox" name="notificationAccount" ${settings.notifications.account !== false ? 'checked' : ''}></label>
+              <label class="settings-toggle"><span><strong>Profile view history</strong><small>See which signed-in members viewed your profile in the last 30 days. Your visit is shown only to members who also enable this setting.</small></span><input type="checkbox" name="notificationProfileViews" ${settings.notifications.profileViews ? 'checked' : ''}></label>
+              <div class="settings-profile-view-history" id="settings-profile-view-history">${profileViewersMarkup(profileViewsResult)}</div>
+              <div class="settings-activity-centre">
+                <div class="settings-inline-heading"><div><h3>Activity Center</h3><p class="muted">Recent profile and account actions recorded by Minglora.</p></div></div>
+                <div id="settings-activity-list">${activityHistoryMarkup(activityItems)}</div>
+                <p class="settings-note">Watch, comment, search, advertising, mention and content-reuse histories are not yet tracked in this activity feed. They will be added when their event records are available.</p>
+              </div>
+            </section>
+            <section class="settings-card" id="settings-calls" data-settings-category="interactions">
+              ${sectionHeading('Voice &amp; video calls')}
+              <p class="muted">Voice-call and video-call ringtones are configured independently in Sound &amp; Notifications below. Your previous custom ringtone is retained in your private sound library.</p>
+            </section>
+            <section class="settings-card" id="settings-sound-studio" data-settings-category="interactions">
+              ${sectionHeading('Sound &amp; Notifications')}
+              <div id="minglora-sound-studio-root"></div>
+            </section>
+            <section class="settings-card theme-centre-card" id="settings-preferences" data-settings-category="content-display">
+              ${sectionHeading('Theme Centre')}
+              <div class="theme-centre-section">
+                <div class="theme-centre-heading"><div><h3>App appearance</h3><p>Choose the overall colour identity used across your feed, profile, messages and navigation.</p></div></div>
+                <label class="settings-field"><span><strong>Light or dark mode</strong><small>Use your device setting, or choose a fixed mode.</small></span>
+                  <select name="theme"><option value="system" ${settings.preferences.theme === 'system' ? 'selected' : ''}>Use device setting</option><option value="light" ${settings.preferences.theme === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${settings.preferences.theme === 'dark' ? 'selected' : ''}>Dark</option></select>
+                </label>
+                <h4 class="theme-choice-heading">Choose an app theme</h4>
+                <p class="theme-choice-help">These palettes use the same layout and controls, with coordinated accents and surfaces.</p>
+                ${renderThemeChoices('colorTheme', APP_THEMES, settings.preferences.colorTheme, 'app')}
+              </div>
+              <div class="theme-centre-section live-theme-centre-section">
+                <div class="theme-centre-heading"><div><h3>Your LIVE room style</h3><p>This is your default broadcast look. It changes the room frame, panels and accents—not your camera feed or video quality. Viewers see the host's selected style.</p></div></div>
+                ${renderThemeChoices('liveRoomTheme', LIVE_THEMES, settings.preferences.liveRoomTheme, 'live')}
+              </div>
+              <div class="theme-centre-section theme-extra-preferences">
+                <label class="settings-field"><span><strong>Default feed order</strong><small>Choose which posts appear first when you open the feed.</small></span>
+                  <select name="feedSort"><option value="recent" ${settings.preferences.feedSort === 'recent' ? 'selected' : ''}>Most recent</option><option value="oldest" ${settings.preferences.feedSort === 'oldest' ? 'selected' : ''}>Oldest first</option></select>
+                </label>
+                <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Reduce interface animations and transitions.</small></span><input type="checkbox" name="reducedMotion" ${settings.preferences.reducedMotion ? 'checked' : ''}></label>
+              </div>
+            </section>
+            <section class="settings-card" id="settings-keyboard" data-settings-category="content-display">
+              ${sectionHeading('Keyboard')}
+              <label class="settings-toggle"><span><strong>Use single-character keyboard shortcuts</strong><small>Use 1–5 to navigate Minglora. Shortcuts are ignored while you type in an editable field.</small></span><input type="checkbox" name="keyboardShortcuts" ${settings.preferences.keyboardShortcuts ? 'checked' : ''}></label>
+              <p class="settings-note">Available shortcuts: 1 Home, 2 Friends, 3 LIVE, 4 Messages, 5 More.</p>
+            </section>
+            <section class="settings-card" id="settings-accessibility" data-settings-category="content-display">
+              ${sectionHeading('Accessibility Settings')}
+              <label class="settings-field"><span><strong>Compact Mode</strong><small>Use a denser layout with less space between interface elements.</small></span><select name="experienceDensity"><option value="comfortable" ${(settings.experience.density || 'comfortable') === 'comfortable' ? 'selected' : ''}>Off</option><option value="compact" ${settings.experience.density === 'compact' ? 'selected' : ''}>On</option></select></label>
+              <label class="settings-field"><span><strong>Contrast</strong><small>Increase contrast between interface text, borders and backgrounds.</small></span><select name="experienceContrast"><option value="standard" ${(settings.experience.contrast || 'standard') === 'standard' ? 'selected' : ''}>Standard</option><option value="high" ${settings.experience.contrast === 'high' ? 'selected' : ''}>High contrast</option></select></label>
+              <label class="settings-field"><span><strong>Text size</strong><small>Adjust the interface text scale.</small></span><select name="experienceFontScale">${[85,90,95,100,105,110,115,120,125,130,135,140,145,150].map(value => `<option value="${value}" ${Number(settings.experience.fontScale || 100) === value ? 'selected' : ''}>${value}%</option>`).join('')}</select></label>
+            </section>
+            <section class="settings-card" id="settings-cache" data-settings-category="cache-cellular">
+              ${sectionHeading('Cache &amp; Cellular')}
+              <label class="settings-toggle"><span><strong>Lite mode</strong><small>Reduce decorative motion and heavy visual effects for a simpler, more responsive interface. LIVE and video streaming data use is controlled separately.</small></span><input type="checkbox" name="liteMode" ${settings.preferences.liteMode ? 'checked' : ''}></label>
+              <div class="settings-storage-summary">
+                <div><small>Browser storage used</small><strong id="settings-storage-used">Checking…</strong></div>
+                <div><small>Temporary cached images</small><strong id="settings-cached-images">Checking…</strong></div>
+              </div>
+              <div class="settings-cache-actions"><button type="button" class="secondary" id="settings-clear-image-cache">Clear cached images</button><span class="settings-note" id="settings-cache-status" role="status" aria-live="polite">This removes temporary browser-cached images only. It does not delete your Minglora posts, account data or files saved to your device.</span></div>
+              <p class="settings-note">Downloaded files saved by your phone or computer are managed by that device. Minglora will not delete personal device downloads from this browser setting.</p>
+            </section>
+            <section class="settings-card" id="settings-device-access" data-settings-category="device-access">
+              ${sectionHeading('Device access &amp; time zone')}
+              <p class="settings-note">Minglora checks what this phone, tablet or computer supports. Protected resources are requested only when you press a control or use the feature that needs them. Minglora cannot bypass your browser or operating-system permissions.</p>
+              <div class="settings-storage-summary">
+                <div><small>Detected device time zone</small><strong id="settings-device-timezone">Detecting…</strong></div>
+                <div><small>Device / browser</small><strong id="settings-device-platform">Detecting…</strong></div>
+              </div>
+              <div class="settings-device-access-grid">
+                <article class="settings-device-access-card"><div><strong>Camera</strong><small id="device-access-camera-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="camera">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Microphone</strong><small id="device-access-microphone-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="microphone">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Location</strong><small id="device-access-location-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="location">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Screen sharing</strong><small id="device-access-screen-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="screen">Request access</button></article>
+                <article class="settings-device-access-card"><div><strong>Notifications</strong><small id="device-access-notifications-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="notifications">Allow notifications</button></article>
+                <article class="settings-device-access-card"><div><strong>Photos &amp; files</strong><small id="device-access-files-status">Available through the device file picker when you choose an upload.</small></div><span class="settings-device-access-note">Choose files when uploading</span></article>
+                <article class="settings-device-access-card"><div><strong>Device storage</strong><small id="device-access-storage-status">Checking availability…</small></div><button type="button" class="secondary" data-device-access-request="storage">Check storage</button></article>
+              </div>
+              <p class="settings-note" id="settings-device-access-feedback" role="status" aria-live="polite">Camera and microphone streams are closed immediately after an access check. Location coordinates are not saved or sent by this check.</p>
+            </section>
+            <section class="settings-card" id="settings-data" data-settings-category="account">
+              ${sectionHeading('Your information')}
+              <div class="settings-data-export"><div><strong>Download your information</strong><p>Creates a JSON file with your profile, settings, posts, comments, relationships, groups, Pages, Stories, messages and in-app notifications. Passwords, authentication tokens and active session secrets are not included.</p></div><button class="primary" type="button" id="download-account-data">Download information</button></div>
+              <div class="settings-account-actions">
+                <div class="settings-account-action"><div><strong>Temporarily deactivate your account</strong><p>Sign out all devices and hide your account. Signing in again reactivates it.</p></div><button class="secondary" type="button" id="deactivate-account">Deactivate account</button></div>
+                <form id="account-deletion-request-form" class="settings-security-form">
+                  <h3>Request permanent account deletion</h3>
+                  <p class="muted">Confirm your password to submit a permanent deletion request. Your account remains available until the verified deletion process is completed.</p>
+                  <label class="field"><span>Current password</span><input type="password" name="currentPassword" autocomplete="current-password" minlength="10" maxlength="1024" required></label>
+                  <label class="settings-toggle"><span><strong>I understand this is a permanent deletion request</strong><small>Content, account identity and stored media will be reviewed for coordinated deletion.</small></span><input type="checkbox" name="confirmDeletion" required></label>
+                  <button class="danger" type="submit">Submit deletion request</button>
+                  <p class="settings-form-status" id="account-deletion-status" role="status"></p>
+                </form>
+              </div>
+              <p class="settings-data-status" id="account-export-status" role="status"></p>
+            </section>
+            <section class="settings-card" id="settings-security" data-settings-category="logon">
+              ${sectionHeading('Security and login')}
+              <form id="security-email-form" class="settings-security-form">
+                <h3>Change email address</h3><label class="field"><span>New email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" minlength="10" required></label>
+                <button class="secondary" type="submit">Request email change</button><p class="settings-form-status" id="security-email-status" role="status"></p>
+              </form>
+              <form id="security-password-form" class="settings-security-form">
+                <h3>Change password</h3><label class="field"><span>Current password</span><input name="currentPassword" type="password" autocomplete="current-password" required minlength="10"></label>
+                <label class="field"><span>New password</span><input name="newPassword" type="password" autocomplete="new-password" required minlength="10" maxlength="1024"></label>
+                <label class="field"><span>Confirm new password</span><input name="confirmPassword" type="password" autocomplete="new-password" required minlength="10" maxlength="1024"></label>
+                <button class="primary" type="submit">Update password</button><p class="settings-form-status" id="security-password-status" role="status"></p>
+              </form>
+              <div class="settings-security-form">
+                <div class="settings-inline-heading"><h3>Authenticator app (two-factor authentication)</h3><span class="settings-status-pill">${mfaResult.enabled?'Enabled':mfaResult.available?'Not enabled':'Unavailable'}</span></div>
+                <p class="muted">Connect an authenticator app to your Supabase account. Minglora requires a current code at sign-in once enabled, and confirms the provider's AAL2 session before marking setup complete.</p>
+                <div id="mfa-enrollment-panel"></div>
+                <div id="mfa-factors-list">${factors.length?factors.map(factor=>'<div class="settings-blocked-person"><div><strong>'+escapeHtml(factor.friendlyName||'Authenticator')+'</strong><small>'+escapeHtml(factor.type||'TOTP')+' · '+escapeHtml(factor.status||'unknown')+'</small></div><button class="secondary" type="button" data-remove-factor="'+escapeHtml(factor.id)+'" data-factor-status="'+escapeHtml(factor.status||'')+'">Remove</button></div>').join(''):'<p class="settings-empty">No authenticator factors enrolled.</p>'}</div>
+                <button class="secondary" type="button" id="enroll-totp">Set up or restart authenticator</button>
+                <p class="settings-form-status" id="mfa-status" role="status">${escapeHtml(mfaResult.error||'')}</p>
+              </div>
+              <div class="settings-security-form">
+                <div class="settings-inline-heading"><h3>Active sessions</h3><button type="button" class="secondary" id="revoke-other-sessions">Log out other devices</button></div>
+                <div id="active-sessions-list">${sessions.map(session=>'<div class="settings-session-row"><div><strong>'+escapeHtml(session.userAgent||'Unknown device')+(session.current?' · This device':'')+'</strong><small>Last active '+escapeHtml(session.lastSeenAt||'')+' · Expires '+escapeHtml(session.expiresAt||'')+'</small></div>'+(session.current?'<span class="settings-current-session">Current</span>':'<button type="button" class="secondary" data-revoke-session="'+escapeHtml(session.id)+'">Revoke</button>')+'</div>').join('')||'<p class="settings-empty">'+escapeHtml(sessionResult.error||'No active sessions found.')+'</p>'}</div>
+              </div>
+            </section>
+            <section class="settings-card" id="settings-help" data-settings-category="support-about">
+              ${sectionHeading('Help &amp; support')}
+              <form id="support-ticket-form" class="settings-security-form">
+                <h3>Contact support</h3>
+                <label class="field"><span>What do you need help with?</span><select name="category"><option value="general">General question</option><option value="account">Account</option><option value="security">Security</option><option value="bug">Report a bug</option><option value="abuse">Safety / abuse</option><option value="billing">Billing</option><option value="privacy">Privacy</option></select></label>
+                <label class="field"><span>Subject</span><input name="subject" minlength="4" maxlength="120" required></label>
+                <label class="field"><span>Message</span><textarea name="message" rows="4" maxlength="5000" required placeholder="Describe what happened and how we can help."></textarea></label>
+                <button class="primary" type="submit">Send to support</button><p class="settings-form-status" id="support-create-status" role="status">${escapeHtml(supportResult.error||'')}</p>
+              </form>
+              <div class="settings-security-form"><h3>Your support conversations</h3><div id="support-tickets-list">${tickets.map(ticket=>'<article class="settings-ticket" data-ticket="'+escapeHtml(ticket.id)+'"><div class="settings-inline-heading"><strong>'+escapeHtml(ticket.subject)+'</strong><span class="settings-status-pill">'+escapeHtml(ticket.status)+'</span></div><small>'+escapeHtml(ticket.category)+' · '+escapeHtml(ticket.createdAt)+'</small><div class="settings-ticket-messages">'+(ticket.messages||[]).map(message=>'<p><strong>'+escapeHtml(message.sender?.name||'Minglora support')+':</strong> '+escapeHtml(message.message)+'</p>').join('')+'</div>'+(ticket.status==='closed'?'':'<form class="support-reply-form" data-reply-ticket="'+escapeHtml(ticket.id)+'"><input name="message" maxlength="5000" required placeholder="Reply to support"><button class="secondary" type="submit">Reply</button></form>')+'</article>').join('')||'<p class="settings-empty">No support tickets yet.</p>'}</div>
+              </div>
+              <div class="settings-security-form"><h3>Your reports</h3><div id="member-reports-list">${reports.map(report=>'<div class="settings-session-row"><div><strong>'+escapeHtml(report.targetType)+' · '+escapeHtml(report.category)+'</strong><small>'+escapeHtml(report.createdAt)+' · '+escapeHtml(report.status)+'</small></div></div>').join('')||'<p class="settings-empty">You have not submitted any reports.</p>'}</div></div>
+              ${canModerate?'<div class="settings-security-form" id="moderation-workspace"><div class="settings-inline-heading"><h3>Moderator queue</h3></div><div id="moderation-reports-list">Loading reports…</div></div>':''}
+              ${canModerate?'<div class="settings-security-form" id="moderator-support-workspace"><div class="settings-inline-heading"><h3>Support inbox</h3></div><div id="moderator-support-tickets">Loading support tickets…</div></div>':''}
+            </section>
+            <section class="settings-card settings-signout-card" id="settings-signout" data-settings-category="logon">
+              ${sectionHeading('Log out')}
+              <div class="settings-session-actions">
+                <div><strong>Finished using Minglora?</strong><p>Log out securely when you are done on this phone, tablet or computer.</p></div>
+                <button type="button" class="danger settings-logout-button" id="settings-logout-btn">Log out</button>
+              </div>
+            </section>
+            <div class="settings-save-bar"><span class="muted" id="settings-save-status" role="status" aria-live="polite">Changes save automatically to your Minglora account.</span><button class="primary" type="submit">Save now</button></div>
+        </form>`;
+
+      document.querySelector('#edit-profile-from-settings')?.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('minglora:open-profile-editor')));
+      document.querySelector('#settings-logout-btn')?.addEventListener('click',()=>document.querySelector('#logout-btn')?.click());
+      document.querySelector('#profile-privacy-from-settings')?.addEventListener('click',()=>document.querySelector('#settings-privacy')?.scrollIntoView({behavior:settings.preferences.reducedMotion?'auto':'smooth',block:'start'}));
+
+      document.querySelector('#download-account-data')?.addEventListener('click', async buttonEvent => {
+        const button = buttonEvent.currentTarget;
+        const status = document.querySelector('#account-export-status');
+        button.disabled = true;
+        status.textContent = 'Preparing your account export…';
+        try {
+          const archive = await api('/account/export');
+          const blob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const date = new Date().toISOString().slice(0, 10);
+          link.href = url;
+          link.download = `minglora-account-export-${date}.json`;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+          status.textContent = 'Your account export has been prepared.';
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      document.querySelector('#deactivate-account')?.addEventListener('click',async event=>{
+        const button=event.currentTarget;
+        const confirmation=window.prompt('Type DEACTIVATE to sign out all devices and temporarily deactivate your Minglora account.');
+        if(confirmation!=='DEACTIVATE')return;
+        button.disabled=true;
+        try{
+          await api('/account/deactivate',{method:'POST',body:JSON.stringify({confirmation})});
+          window.alert('Your account is deactivated. Sign in again when you are ready to reactivate it.');
+          window.location.reload();
+        }catch(error){window.alert(error.message);button.disabled=false;}
+      });
+      document.querySelector('#account-deletion-request-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#account-deletion-status'),button=form.querySelector('button[type="submit"]'),values=new FormData(form);
+        if(!values.get('confirmDeletion')){status.textContent='Confirm that you understand the permanent deletion request.';return;}
+        button.disabled=true;status.textContent='Verifying your password and submitting the request…';
+        try{
+          const result=await api('/account/deletion-request',{method:'POST',body:JSON.stringify({currentPassword:values.get('currentPassword')})});
+          status.textContent=result.message||'Your deletion request has been recorded.';form.reset();
+        }catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+
+      document.querySelectorAll('[data-unblock-user]').forEach(button => button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          await api('/users/' + encodeURIComponent(button.dataset.unblockUser) + '/block', { method: 'DELETE', body: '{}' });
+          window.alert('Member unblocked.');
+          await openSettings();
+        } catch (error) {
+          button.disabled = false;
+          window.alert(error.message);
+        }
+      }));
+
+      document.querySelector('#security-email-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#security-email-status'),button=form.querySelector('button[type="submit"]');button.disabled=true;
+        try{const values=new FormData(form);const result=await api('/security/email',{method:'POST',body:JSON.stringify({email:values.get('email'),currentPassword:values.get('currentPassword')})});status.textContent=result.message||'Check your new email for a verification link.';form.reset();}
+        catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+      document.querySelector('#security-password-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#security-password-status'),button=form.querySelector('button[type="submit"]'),values=new FormData(form);
+        if(values.get('newPassword')!==values.get('confirmPassword')){status.textContent='The new passwords do not match.';return;}
+        button.disabled=true;
+        try{await api('/security/password',{method:'POST',body:JSON.stringify({currentPassword:values.get('currentPassword'),newPassword:values.get('newPassword')})});status.textContent='Password updated successfully.';form.reset();}
+        catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+      document.querySelector('#enroll-totp')?.addEventListener('click',async buttonEvent=>{
+        const button=buttonEvent.currentTarget,panel=document.querySelector('#mfa-enrollment-panel'),status=document.querySelector('#mfa-status');button.disabled=true;
+        try{
+          const result=await api('/security/mfa/totp/enroll',{method:'POST',body:'{}'}),factor=result.factor||{},totp=result.totp||{};
+          const qr=String(totp.qr_code||totp.qrCode||totp.qr||'').trim(),secret=String(totp.secret||'').trim(),uri=String(totp.uri||'').trim();
+          const qrImage=totpQrImageSource(qr);
+          const enrollmentReady=Boolean(factor.id&&(secret||uri||qrImage));
+          panel.innerHTML='<div class="mfa-enrollment"><p>1. Scan this QR code in your authenticator app, or enter the secret manually.</p>'+(qrImage?'<img class="mfa-qr" src="'+escapeHtml(qrImage)+'" alt="Authenticator QR code" decoding="async" referrerpolicy="no-referrer">':'<p class="settings-form-status" role="alert">Supabase did not return a usable QR image. The setup key or manual authenticator URI will still be shown when available. Restart setup to request a fresh QR code.</p>')+'<div class="mfa-secret"><small>Authenticator setup key</small><code>'+escapeHtml(secret||'Setup key was not returned')+'</code></div>'+(uri?'<p class="muted">Manual setup URI: '+escapeHtml(uri)+'</p>':'')+(enrollmentReady?'<form id="mfa-verify-form"><input type="hidden" name="factorId" value="'+escapeHtml(factor.id)+'"><label class="field"><span>2. Enter the 6–8 digit code from your authenticator app</span><input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,8}" minlength="6" maxlength="8" required></label><p class="settings-form-status" id="mfa-verify-status" role="alert"></p><button class="primary" type="submit">Verify and enable two-factor authentication</button></form>':'<p class="settings-form-status" role="alert">Setup data is incomplete. Restart enrollment to request a fresh QR code.</p>')+'</div>';
+          panel.querySelector('#mfa-verify-form')?.addEventListener('submit',async formEvent=>{
+            formEvent.preventDefault();const verifyForm=formEvent.currentTarget,verifyButton=verifyForm.querySelector('button[type="submit"]'),verifyStatus=verifyForm.querySelector('#mfa-verify-status');verifyButton.disabled=true;if(verifyStatus)verifyStatus.textContent='Checking your authenticator code…';
+            try{const data=new FormData(verifyForm);await api('/security/mfa/totp/verify',{method:'POST',body:JSON.stringify({factorId:data.get('factorId'),code:String(data.get('code')||'').replace(/\s/g,'')})});if(verifyStatus)verifyStatus.textContent='Authenticator verified. Your administrator security session is now elevated.';window.alert('Two-factor authentication is enabled. Your next sign-in will require an authenticator code.');await openSettings();}
+            catch(error){if(verifyStatus)verifyStatus.textContent=error.message;status.textContent=error.message;verifyButton.disabled=false;}
+          });
+          status.textContent='Authenticator enrollment started. Verify the code to finish setup.';
+        }catch(error){status.textContent=error.message;}
+        finally{button.disabled=false;}
+      });
+      document.querySelectorAll('[data-remove-factor]').forEach(button=>button.addEventListener('click',async()=>{
+        if(!window.confirm('Remove this authenticator factor? This reduces your sign-in protection.'))return;
+        let code='';
+        if(button.dataset.factorStatus==='verified'&&mfaResult.aal!=='aal2'){
+          code=String(window.prompt('Enter the current code from this authenticator app to confirm removal.')||'').replace(/\s/g,'');
+          if(!/^\d{6,8}$/.test(code)){if(code)window.alert('Enter the current 6–8 digit authenticator code.');return;}
+        }
+        button.disabled=true;
+        try{
+          const result=await api('/security/mfa/factors/'+encodeURIComponent(button.dataset.removeFactor),{method:'DELETE',body:JSON.stringify({code})});
+          if(result.reauthenticationRequired){window.alert(result.message||'Sign in again to renew your security session.');window.location.reload();return;}
+          await openSettings();
+        }catch(error){window.alert(error.message);button.disabled=false;}
+      }));
+      document.querySelector('#revoke-other-sessions')?.addEventListener('click',async buttonEvent=>{
+        const button=buttonEvent.currentTarget;if(!window.confirm('Log out all Minglora sessions except this device?'))return;button.disabled=true;
+        try{await api('/security/sessions/revoke-others',{method:'POST',body:'{}'});await openSettings();}
+        catch(error){window.alert(error.message);button.disabled=false;}
+      });
+      document.querySelectorAll('[data-revoke-session]').forEach(button=>button.addEventListener('click',async()=>{
+        if(!window.confirm('Revoke this device session?'))return;button.disabled=true;
+        try{await api('/security/sessions/'+encodeURIComponent(button.dataset.revokeSession),{method:'DELETE',body:'{}'});await openSettings();}
+        catch(error){window.alert(error.message);button.disabled=false;}
+      }));
+      document.querySelector('#support-ticket-form')?.addEventListener('submit',async event=>{
+        event.preventDefault();const form=event.currentTarget,status=document.querySelector('#support-create-status'),button=form.querySelector('button[type="submit"]'),values=new FormData(form);button.disabled=true;
+        try{await api('/support/tickets',{method:'POST',body:JSON.stringify({category:values.get('category'),subject:values.get('subject'),message:values.get('message')})});await openSettings();}
+        catch(error){status.textContent=error.message;button.disabled=false;}
+      });
+      document.querySelectorAll('[data-reply-ticket]').forEach(form=>form.addEventListener('submit',async event=>{
+        event.preventDefault();const values=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
+        try{await api('/support/tickets/'+encodeURIComponent(form.dataset.replyTicket)+'/messages',{method:'POST',body:JSON.stringify({message:values.get('message')})});await openSettings();}
+        catch(error){window.alert(error.message);button.disabled=false;}
+      }));
+      async function loadModeratorSupportInbox(){
+        const panel=document.querySelector('#moderator-support-tickets');if(!panel)return;panel.textContent='Loading support tickets…';
+        try{
+          const result=await api('/support/tickets?scope=all');
+          panel.innerHTML=(result.tickets||[]).map(ticket=>'<article class="settings-ticket"><div class="settings-inline-heading"><div><strong>'+escapeHtml(ticket.subject)+'</strong><small>'+escapeHtml(ticket.requester?.name||ticket.userId)+' · '+escapeHtml(ticket.category)+'</small></div><span class="settings-status-pill">'+escapeHtml(ticket.status)+'</span></div><div class="settings-ticket-messages">'+(ticket.messages||[]).map(message=>'<p><strong>'+escapeHtml(message.sender?.name||message.senderId)+':</strong> '+escapeHtml(message.message)+'</p>').join('')+'</div>'+(ticket.status==='closed'?'':'<form class="moderator-ticket-reply" data-moderator-reply="'+escapeHtml(ticket.id)+'"><textarea name="message" maxlength="5000" rows="2" required placeholder="Reply to this member"></textarea><select name="status"><option value="waiting_for_member">Waiting for member</option><option value="in_progress">In progress</option><option value="closed">Close ticket</option></select><button class="primary" type="submit">Reply</button></form>')+'</article>').join('')||'<p class="settings-empty">The support inbox is empty.</p>';
+          panel.querySelectorAll('[data-moderator-reply]').forEach(form=>form.addEventListener('submit',async event=>{
+            event.preventDefault();const values=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
+            try{
+              const message=String(values.get('message')||'').trim();
+              if(message)await api('/support/tickets/'+encodeURIComponent(form.dataset.moderatorReply)+'/messages',{method:'POST',body:JSON.stringify({message})});
+              await api('/support/tickets/'+encodeURIComponent(form.dataset.moderatorReply),{method:'PATCH',body:JSON.stringify({status:values.get('status')})});
+              await loadModeratorSupportInbox();
+            }catch(error){window.alert(error.message);button.disabled=false;}
+          }));
+        }catch(error){panel.textContent=error.message;}
+      }
+      async function loadModerationQueue(){
+        const panel=document.querySelector('#moderation-reports-list');if(!panel)return;panel.textContent='Loading reports…';
+        try{
+          const result=await api('/moderation/reports?status=open');
+          panel.innerHTML=(result.reports||[]).map(report=>{
+            const actions=report.targetType==='post'?'<option value="hide_post">Hide post</option><option value="remove_post">Remove post</option>':report.targetType==='story'?'<option value="remove_story">Remove story</option>':report.targetType==='user'?'<option value="suspend_account">Suspend account</option>':'';
+            return '<article class="moderation-report"><div class="settings-inline-heading"><strong>'+escapeHtml(report.targetType)+' · '+escapeHtml(report.category)+'</strong><span class="settings-status-pill">'+escapeHtml(report.status)+'</span></div><p>'+escapeHtml(report.details||'No extra details')+'</p><small>Reporter: '+escapeHtml(report.reporter?.username||'member')+' · Target owner: '+escapeHtml(report.targetOwner?.username||'unknown')+'</small><form class="moderation-report-form" data-moderate-report="'+escapeHtml(report.id)+'"><select name="status"><option value="triaged">Mark in review</option><option value="actioned">Mark actioned</option><option value="dismissed">Dismiss</option><option value="open">Keep open</option></select><select name="action"><option value="">No content action</option>'+actions+'</select><button class="primary" type="submit">Apply</button></form></article>';
+          }).join('')||'<p class="settings-empty">No open reports.</p>';
+          panel.querySelectorAll('[data-moderate-report]').forEach(form=>form.addEventListener('submit',async event=>{
+            event.preventDefault();const values=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
+            try{await api('/moderation/reports/'+encodeURIComponent(form.dataset.moderateReport),{method:'PATCH',body:JSON.stringify({status:values.get('status'),action:values.get('action')||null})});await loadModerationQueue();}
+            catch(error){window.alert(error.message);button.disabled=false;}
+          }));
+        }catch(error){panel.textContent=error.message;}
+      }
+      if(canModerate){loadModerationQueue();loadModeratorSupportInbox();}
+      
+      let displayCurrency=settings.preferences.displayCurrency||'USD';
+      let displayRate=displayCurrency==='USD'?1:null;
+      let displayRateDate=null;
+      const formatSettingsMoney=(minor)=>{
+        if(minor===null||minor===undefined||!Number.isFinite(Number(minor)))return 'Unavailable';
+        if(!displayRate)return 'Unavailable';
+        try{return new Intl.NumberFormat(undefined,{style:'currency',currency:displayCurrency}).format((Number(minor)/100)*displayRate);}
+        catch{return formatSettingsUSD(minor);}
+      };
+      async function refreshSettingsCurrency(){
+        const status=document.querySelector('#settings-currency-rate-status');
+        if(displayCurrency==='USD'){displayRate=1;displayRateDate='';}
+        else{
+          if(status)status.textContent='Loading the latest available reference rate…';
+          try{
+            const response=await fetch('https://api.frankfurter.dev/v2/rate/usd/'+encodeURIComponent(displayCurrency.toLowerCase()),{headers:{Accept:'application/json'},cache:'no-cache'});
+            if(!response.ok)throw new Error('Reference rate unavailable for '+displayCurrency+'.');
+            const rate=await response.json();
+            if(rate.base!=='USD'||rate.quote!==displayCurrency||!Number.isFinite(Number(rate.rate))||Number(rate.rate)<=0)throw new Error('The currency provider returned an invalid rate.');
+            displayRate=Number(rate.rate);displayRateDate=String(rate.date||'');
+          }catch(error){
+            displayRate=null;displayRateDate=null;
+            if(status)status.textContent='Could not load a current reference rate. Amounts remain in USD until the rate is available.';
+          }
+        }
+        if(displayRate!==null){
+          const available=document.querySelector('#settings-money-available');
+          const earned=document.querySelector('#settings-money-earned');
+          const moneyCurrency=document.querySelector('#settings-money-currency');
+          const earnedCurrency=document.querySelector('#settings-earned-currency');
+          if(available)available.textContent=formatSettingsMoney(creatorEarningsResult.availableMinor);
+          if(earned)earned.textContent=formatSettingsMoney(creatorEarningsResult.earnedMinor);
+          if(moneyCurrency)moneyCurrency.textContent=displayCurrency;
+          if(earnedCurrency)earnedCurrency.textContent=displayCurrency;
+          if(status)status.textContent=displayCurrency==='USD'?'Balances shown in USD.':('Estimated display conversion · '+displayCurrency+' · reference rate dated '+(displayRateDate||'date not supplied')+'. This does not change wallet settlement.');
+        }
+      }
+      const settingsForm = document.querySelector('#settings-form');
+      document.querySelector('#settings-display-currency')?.addEventListener('change',event=>{
+        displayCurrency=event.currentTarget.value||'USD';
+        void refreshSettingsCurrency();
+      });
+      void refreshSettingsCurrency();
+      document.querySelectorAll('[data-settings-wallet-tab]').forEach(button=>button.addEventListener('click',()=>{
+        const tab=button.dataset.settingsWalletTab;
+        window.dispatchEvent(new CustomEvent('minglora:open-wallet',{detail:{tab}}));
+      }));
+      document.querySelectorAll('[data-settings-creator-section]').forEach(button=>button.addEventListener('click',()=>{
+        window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:button.dataset.settingsCreatorSection}}));
+      }));
+      const categoryTabs=[...document.querySelectorAll('[data-settings-category-button]')];
+      const categorizedSections=[...settingsForm.querySelectorAll('[data-settings-category]')];
+      function activateSettingsCategory(category) {
+        const selected=categoryTabs.find(tab=>tab.dataset.settingsCategoryButton===category);
+        if(!selected)return;
+        for(const tab of categoryTabs){
+          const active=tab===selected;
+          tab.classList.toggle('active',active);
+          tab.setAttribute('aria-pressed',active?'true':'false');
+        }
+        for(const section of categorizedSections)section.hidden=section.dataset.settingsCategory!==category;
+        const description=document.querySelector('#settings-category-description');
+        if(description)description.textContent=selected.dataset.categoryDescription||'';
+      }
+      const settingsNavigation=document.querySelector('#settings-navigation');
+      const settingsMenuPages=[...settingsNavigation.querySelectorAll('[data-settings-page]')];
+      const settingsCategoryIntro=settingsForm.querySelector('.settings-category-intro');
+      const settingsCategoryLinks=document.querySelector('#settings-category-links');
+      if(settingsCategoryIntro&&settingsCategoryLinks)settingsCategoryLinks.append(settingsCategoryIntro);
+      let currentMenuPage='home';
+      let returnToMenuPage='settings';
+      function showSettingsMenuPage(page){
+        if(page==='help-center'){window.location.assign('/help-center.html');return;}
+        const target=settingsMenuPages.find(item=>item.dataset.settingsPage===page);
+        if(!target)return;
+        currentMenuPage=page;settingsNavigation.hidden=false;settingsForm.hidden=true;
+        const detailHeading=document.querySelector('#settings-detail-heading');
+        if(detailHeading)detailHeading.hidden=true;
+        for(const item of settingsMenuPages)item.hidden=item!==target;
+        window.scrollTo({top:0,behavior:settings.preferences.reducedMotion?'auto':'smooth'});
+      }
+      function parentPageLabel(page){
+        return ({home:'Settings & Privacy',settings:'Settings','help-support':'Help & Support','report-support':'Report & Support','display-accessibility':'Display & Accessibility',keyboard:'Keyboard',language:'Language','privacy-checkup':'Privacy Checkup','privacy-center':'Privacy Center','help-center':'Help Center','scam-protection':'Scam Protection Center','account-status':'Account Status',about:'About',career:'Career',developers:'Developers',information:'Settings & Privacy'})[page]||'Settings';
+      }
+      function openSettingsDetail(category,title,sectionId,targetSelector){
+        const selectedSection=sectionId?categorizedSections.find(section=>section.id===sectionId):null;
+        if(sectionId&&!selectedSection)return;
+        returnToMenuPage=currentMenuPage;settingsNavigation.hidden=true;settingsForm.hidden=false;
+        const heading=document.querySelector('#settings-detail-heading');
+        const back=document.querySelector('#settings-detail-back');
+        const titleNode=document.querySelector('#settings-detail-title');
+        if(heading)heading.hidden=false;
+        if(back)back.textContent='⬅️ '+parentPageLabel(returnToMenuPage);
+        if(titleNode)titleNode.textContent=title||'Settings';
+        activateSettingsCategory(category);
+        if(selectedSection)for(const section of categorizedSections)section.hidden=section!==selectedSection;
+        if(targetSelector){const target=document.querySelector(targetSelector);if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:settings.preferences.reducedMotion?'auto':'smooth',block:'start'}));}
+        else window.scrollTo({top:0,behavior:settings.preferences.reducedMotion?'auto':'smooth'});
+      }
+      categoryTabs.forEach(tab=>tab.addEventListener('click',()=>openSettingsDetail(tab.dataset.settingsCategoryButton,tab.querySelector('span')?.textContent?.trim()||tab.dataset.settingsCategoryButton)));
+      settingsNavigation.addEventListener('click',event=>{
+        const pageButton=event.target.closest('[data-settings-open-page]');
+        if(pageButton){showSettingsMenuPage(pageButton.dataset.settingsOpenPage);return;}
+        const sectionButton=event.target.closest('[data-settings-open-section]');
+        if(sectionButton){openSettingsDetail(sectionButton.dataset.settingsCategory||'support-about',sectionButton.dataset.settingsTitle||sectionButton.textContent.trim(),sectionButton.dataset.settingsOpenSection,sectionButton.dataset.settingsTarget||'');return;}
+        const footer=event.target.closest('[data-settings-footer]');
+        if(footer){
+          const topic=footer.dataset.settingsFooter;
+          if(topic==='privacy'){showSettingsMenuPage('privacy-center');return;}
+          const copy={terms:'A dedicated Minglora Terms page is not connected to this menu yet. This information page does not replace published legal terms.',advertising:'Advertising preference controls are not currently connected to this settings page. No inactive advertising switch is presented as working.','ad-choices':'Ad Choices controls are not currently connected to this settings page. This page will expose controls only when an enforceable preference is available.',cookies:'Cookie and browser-storage information is not yet published in a dedicated policy page. Temporary cached images can be cleared under Cache & Cellular without deleting your account or downloaded files.'};
+          document.querySelector('#settings-information-title').textContent=topic==='ad-choices'?'Ad Choices':topic.charAt(0).toUpperCase()+topic.slice(1);
+          document.querySelector('#settings-information-copy').textContent=copy[topic]||'Information is not available yet.';
+          showSettingsMenuPage('information');return;
+        }
+        if(event.target.closest('[data-settings-report-problem]')){
+          showSettingsMenuPage('help-support');openSettingsDetail('support-about','Report a Problem','settings-help','#support-ticket-form');
+          const reportCategory=document.querySelector('#support-ticket-form select[name="category"]');if(reportCategory)reportCategory.value='bug';
+          return;
+        }
+        if(event.target.closest('[data-settings-logout]'))document.querySelector('#logout-btn')?.click();
+      });
+      settingsNavigation.querySelectorAll('[data-settings-back-page]').forEach(button=>button.addEventListener('click',()=>showSettingsMenuPage(button.dataset.settingsBackPage)));
+      document.querySelector('#settings-detail-back')?.addEventListener('click',()=>showSettingsMenuPage(returnToMenuPage));
+      document.querySelector('#settings-more-menu-toggle')?.addEventListener('click',event=>{
+        const button=event.currentTarget,menu=document.querySelector('#settings-more-menu'),open=menu?.hidden===true;
+        if(menu)menu.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');
+      });
+      document.querySelector('#settings-see-all-shortcuts')?.addEventListener('click',event=>{
+        const button=event.currentTarget,list=document.querySelector('#settings-shortcut-reference'),open=list?.hidden===true;
+        if(list)list.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');
+      });
+      const quickThemeButtons=[...settingsNavigation.querySelectorAll('[data-settings-theme-value]')];
+      function syncQuickAppearance(){
+        const theme=settingsForm.querySelector('[name="theme"]')?.value||'system';
+        for(const button of quickThemeButtons){const active=button.dataset.settingsThemeValue===theme;button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false');}
+        const density=settingsForm.querySelector('[name="experienceDensity"]')?.value||settings.experience.density||'comfortable';
+        const compact=document.querySelector('#settings-compact-mode');if(compact)compact.checked=density==='compact';
+        const keyboard=settingsForm.querySelector('[name="keyboardShortcuts"]'),quickKeyboard=document.querySelector('#settings-keyboard-shortcuts-quick');
+        if(quickKeyboard&&keyboard)quickKeyboard.checked=keyboard.checked;
+      }
+      quickThemeButtons.forEach(button=>button.addEventListener('click',()=>{
+        const field=settingsForm.querySelector('[name="theme"]');if(!field)return;
+        field.value=button.dataset.settingsThemeValue;field.dispatchEvent(new Event('change',{bubbles:true}));syncQuickAppearance();
+      }));
+      document.querySelector('#settings-compact-mode')?.addEventListener('change',event=>{
+        const field=settingsForm.querySelector('[name="experienceDensity"]');if(!field)return;
+        field.value=event.currentTarget.checked?'compact':'comfortable';field.dispatchEvent(new Event('change',{bubbles:true}));syncQuickAppearance();
+      });
+      document.querySelector('#settings-keyboard-shortcuts-quick')?.addEventListener('change',event=>{
+        const field=settingsForm.querySelector('[name="keyboardShortcuts"]');if(!field)return;
+        field.checked=event.currentTarget.checked;field.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      settingsForm.querySelector('[name="keyboardShortcuts"]')?.addEventListener('change',event=>{
+        window.MingloraKeyboardShortcutsEnabled=event.currentTarget.checked;
+        const quick=document.querySelector('#settings-keyboard-shortcuts-quick');if(quick)quick.checked=event.currentTarget.checked;
+      });
+      settingsForm.querySelector('[name="theme"]')?.addEventListener('change',syncQuickAppearance);
+      settingsForm.querySelector('[name="experienceDensity"]')?.addEventListener('change',syncQuickAppearance);
+      window.MingloraKeyboardShortcutsEnabled=settings.preferences.keyboardShortcuts===true;
+      if(!window.__mingloraSettingsSingleKeyShortcutsBound){
+        document.addEventListener('keydown',event=>{
+          if(window.MingloraKeyboardShortcutsEnabled!==true||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+          if(event.target?.closest?.('input,textarea,select,[contenteditable="true"],[role="textbox"]'))return;
+          const route={'1':'feed','2':'friends','3':'live','4':'messages','5':'more'}[event.key];if(!route)return;
+          const control=document.querySelector('[data-view="'+route+'"]:not([hidden])');
+          if(control&&!control.disabled){event.preventDefault();control.click();}
+        });window.__mingloraSettingsSingleKeyShortcutsBound=true;
+      }
+      const statusNode=document.querySelector('#settings-account-status-value');
+      if(statusNode)statusNode.textContent=result.account?.status||'Not available';
+      syncQuickAppearance();showSettingsMenuPage('home');
+
+      const setDeviceAccessStatus=(resource,message)=>{
+        const label=document.querySelector('#device-access-'+resource+'-status');
+        if(label)label.textContent=message;
+      };
+      const permissionLabel=state=>state==='granted'?'Allowed':state==='denied'?'Blocked in browser settings':state==='prompt'?'Ask when this feature is used':'Permission status unavailable';
+      async function queryDevicePermission(name){
+        try{
+          if(!navigator.permissions?.query)return 'unavailable';
+          return (await navigator.permissions.query({name})).state;
+        }catch{return 'unavailable';}
+      }
+      async function refreshDeviceAccess(){
+        const zoneLabel=document.querySelector('#settings-device-timezone');
+        const platformLabel=document.querySelector('#settings-device-platform');
+        try{
+          const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Local time zone unavailable';
+          if(zoneLabel)zoneLabel.textContent=zone;
+        }catch{if(zoneLabel)zoneLabel.textContent='Unavailable in this browser';}
+        if(platformLabel)platformLabel.textContent=String(navigator.userAgentData?.platform||navigator.platform||'Web browser');
+        const [camera,microphone,location]=await Promise.all([
+          queryDevicePermission('camera'),queryDevicePermission('microphone'),queryDevicePermission('geolocation')
+        ]);
+        setDeviceAccessStatus('camera',navigator.mediaDevices?.getUserMedia?permissionLabel(camera):'Camera API not supported');
+        setDeviceAccessStatus('microphone',navigator.mediaDevices?.getUserMedia?permissionLabel(microphone):'Microphone API not supported');
+        setDeviceAccessStatus('location',navigator.geolocation?permissionLabel(location):'Location API not supported');
+        setDeviceAccessStatus('screen',navigator.mediaDevices?.getDisplayMedia?'Available when you start screen sharing':'Screen sharing is not supported here');
+        setDeviceAccessStatus('notifications',!('Notification' in window)?'Notifications are not supported here':Notification.permission==='granted'?'Allowed':Notification.permission==='denied'?'Blocked in browser settings':'Not yet allowed');
+        setDeviceAccessStatus('storage',navigator.storage?.estimate?'Available':'Storage estimate is not supported here');
+      }
+      async function requestDeviceAccess(resource){
+        const feedback=document.querySelector('#settings-device-access-feedback');
+        if(feedback)feedback.textContent='Waiting for your device permission…';
+        if(resource==='camera'||resource==='microphone'){
+          if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support camera or microphone capture.');
+          const constraints=resource==='camera'?{video:true}:{audio:true};
+          const stream=await navigator.mediaDevices.getUserMedia(constraints);
+          stream.getTracks().forEach(track=>track.stop());
+          if(feedback)feedback.textContent=resource==='camera'?'Camera access is available. The camera stream was closed after the check.':'Microphone access is available. The audio stream was closed after the check.';
+        }else if(resource==='location'){
+          if(!navigator.geolocation)throw new Error('This browser does not support device location.');
+          await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(()=>resolve(),error=>reject(error),{enableHighAccuracy:false,timeout:12000,maximumAge:60000}));
+          if(feedback)feedback.textContent='Location permission is available. This check did not save or send your coordinates.';
+        }else if(resource==='screen'){
+          if(!navigator.mediaDevices?.getDisplayMedia)throw new Error('Screen sharing is not supported by this browser or device.');
+          const stream=await navigator.mediaDevices.getDisplayMedia({video:true});
+          stream.getTracks().forEach(track=>track.stop());
+          if(feedback)feedback.textContent='Screen sharing permission is available. The preview stream was stopped after the check.';
+        }else if(resource==='notifications'){
+          if(!('Notification' in window))throw new Error('This browser does not support notifications.');
+          const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+          if(permission!=='granted')throw new Error('Notifications were not allowed. Check this device’s browser or app settings.');
+          if(feedback)feedback.textContent='Notifications are allowed on this device. Turn on Minglora push in the Notifications settings to subscribe this device.';
+        }else if(resource==='storage'){
+          const estimate=await navigator.storage?.estimate?.();
+          if(!estimate)throw new Error('This browser does not expose storage estimates.');
+          const used=Number(estimate.usage||0),quota=Number(estimate.quota||0);
+          const format=bytes=>bytes<1024?bytes+' B':bytes<1048576?(bytes/1024).toFixed(1)+' KB':(bytes/1048576).toFixed(1)+' MB';
+          if(feedback)feedback.textContent='Device storage available to Minglora: '+format(used)+' used'+(quota?' of '+format(quota):'')+'.';
+        }
+        await refreshDeviceAccess();
+      }
+      document.querySelectorAll('[data-device-access-request]').forEach(button=>button.addEventListener('click',async()=>{
+        const resource=button.dataset.deviceAccessRequest;
+        button.disabled=true;
+        try{await requestDeviceAccess(resource);}
+        catch(error){
+          const status=document.querySelector('#settings-device-access-feedback');
+          if(status)status.textContent=error.message||'The device did not grant this permission.';
+          await refreshDeviceAccess();
+        }finally{button.disabled=false;}
+      }));
+      refreshDeviceAccess();
+
+      async function refreshStorageSummary(){
+        const usedLabel=document.querySelector('#settings-storage-used');
+        const imageLabel=document.querySelector('#settings-cached-images');
+        const formatBytes=value=>{const bytes=Math.max(0,Number(value)||0);if(bytes<1024)return bytes+' B';if(bytes<1024*1024)return (bytes/1024).toFixed(1)+' KB';return (bytes/(1024*1024)).toFixed(1)+' MB';};
+        try{
+          const estimate=await navigator.storage?.estimate?.();
+          if(usedLabel)usedLabel.textContent=estimate?.usage!=null?formatBytes(estimate.usage)+' used':'Unavailable';
+        }catch{if(usedLabel)usedLabel.textContent='Unavailable';}
+        try{
+          if(!('caches' in window)){if(imageLabel)imageLabel.textContent='Unavailable';return;}
+          let count=0;
+          for(const cacheName of await caches.keys()){
+            if(!cacheName.startsWith('minglora-shell-'))continue;
+            const cache=await caches.open(cacheName);
+            count+=(await cache.keys()).filter(request=>request.destination==='image').length;
+          }
+          if(imageLabel)imageLabel.textContent=count.toLocaleString()+' cached images';
+        }catch{if(imageLabel)imageLabel.textContent='Unavailable';}
+      }
+      document.querySelector('#settings-clear-image-cache')?.addEventListener('click',async event=>{
+        const button=event.currentTarget,status=document.querySelector('#settings-cache-status');
+        button.disabled=true;
+        if(status)status.textContent='Clearing temporary cached images…';
+        try{
+          if(!('caches' in window))throw new Error('This browser does not provide the Cache Storage API.');
+          let removed=0;
+          for(const cacheName of await caches.keys()){
+            if(!cacheName.startsWith('minglora-shell-'))continue;
+            const cache=await caches.open(cacheName);
+            for(const request of await cache.keys()){
+              if(request.destination==='image'&&await cache.delete(request))removed++;
+            }
+          }
+          if(status)status.textContent=removed.toLocaleString()+' temporary cached images cleared. Your account data and device downloads were not changed.';
+          await refreshStorageSummary();
+        }catch(error){if(status)status.textContent='Cache could not be cleared. '+error.message;}
+        finally{button.disabled=false;}
+      });
+      refreshStorageSummary();
+      document.querySelector('#settings-profile-view-history')?.addEventListener('click',event=>{
+        const button=event.target.closest('[data-profile-viewer]');
+        const userId=button?.dataset.profileViewer;
+        if(userId)window.dispatchEvent(new CustomEvent('minglora:open-profile',{detail:{userId}}));
+      });
+
+      const settingsSaveStatus = document.querySelector('#settings-save-status');
+      let settingsSaveTimer = null;
+      let settingsSaveQueue = Promise.resolve();
+
+      function collectSettingsPayload() {
+        const formData = new FormData(settingsForm);
+        return {
+          privacy: {
+            profileVisibility: formData.get('profileVisibility'),
+            allowFriendRequests: formData.has('allowFriendRequests'),
+            messageAudience: formData.get('messageAudience'),
+            meetWaveAudience: formData.get('meetWaveAudience'),
+            shareAudienceDemographics: formData.has('shareAudienceDemographics'),
+            friendsListAudience: formData.get('friendsListAudience'),
+            followersListAudience: formData.get('followersListAudience'),
+            followingListAudience: formData.get('followingListAudience'),
+            subscribersListAudience: formData.get('subscribersListAudience'),
+            commentAudience: formData.get('commentAudience')
+          },
+          notifications: {
+            inApp: formData.has('notificationInApp'),
+            friendRequests: formData.has('notificationFriendRequests'),
+            messages: formData.has('notificationMessages'),
+            interactions: formData.has('notificationInteractions'),
+            push: formData.has('notificationPush'),
+            profileViews: formData.has('notificationProfileViews'),
+            calls: formData.has('notificationCalls'),
+            live: formData.has('notificationLive'),
+            gifts: formData.has('notificationGifts'),
+            meetWave: formData.has('notificationMeetWave'),
+            leagues: formData.has('notificationLeagues'),
+            account: formData.has('notificationAccount')
+          },
+          preferences: {
+            theme: formData.get('theme'),
+            colorTheme: formData.get('colorTheme') || 'minglora',
+            liveRoomTheme: formData.get('liveRoomTheme') || 'studio',
+            feedSort: formData.get('feedSort'),
+            reducedMotion: formData.has('reducedMotion'),
+            liteMode: formData.has('liteMode'),
+            displayCurrency: formData.get('displayCurrency') || 'USD',
+            keyboardShortcuts: formData.has('keyboardShortcuts')
+          },
+          experience: {
+            density: formData.get('experienceDensity') || settings.experience.density || 'comfortable',
+            contrast: formData.get('experienceContrast') || settings.experience.contrast || 'standard',
+            fontScale: Number(formData.get('experienceFontScale') || settings.experience.fontScale || 100)
+          }
+        };
+      }
+
+      async function persistSettings() {
+        const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(collectSettingsPayload()) });
+        applyPreferences(saved.settings);
+        settings.experience = { ...settings.experience, ...(saved.settings?.experience || {}) };
+        if (window.MingloraExperience?.apply && saved.settings?.experience) window.MingloraExperience.apply(saved.settings.experience);
+        window.MingloraKeyboardShortcutsEnabled = saved.settings?.preferences?.keyboardShortcuts === true;
+        window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: saved.settings }));
+        if(settingsForm?.querySelector('[name="notificationProfileViews"]')){
+          const profileViews=await api('/profile-views').catch(()=>({enabled:false,viewers:[]}));
+          const history=document.querySelector('#settings-profile-view-history');
+          if(history)history.innerHTML=profileViewersMarkup(profileViews);
+        }
+        settingsSaveStatus.textContent = 'All changes saved to your Minglora account.';
+      }
+
+      function queueSettingsSave() {
+        if (!settingsForm || !settingsSaveStatus) return;
+        clearTimeout(settingsSaveTimer);
+        settingsSaveStatus.textContent = 'Unsaved changes — saving automatically…';
+        settingsSaveTimer = window.setTimeout(() => {
+          settingsSaveQueue = settingsSaveQueue.catch(() => {}).then(async () => {
+            settingsSaveStatus.textContent = 'Saving changes…';
+            try {
+              await persistSettings();
+            } catch (error) {
+              settingsSaveStatus.textContent = 'Not saved. ' + error.message;
+            }
+          });
+        }, 450);
+      }
+
+      settingsForm?.addEventListener('change', event => {
+        if (event.target?.name !== 'theme' && event.target?.name !== 'colorTheme') return;
+        const formData = new FormData(settingsForm);
+        applyPreferences({ preferences: {
+          ...settings.preferences,
+          theme: formData.get('theme'),
+          colorTheme: formData.get('colorTheme') || 'minglora'
+        }});
+      });
+      settingsForm?.addEventListener('change', queueSettingsSave);
+      settingsForm?.addEventListener('submit', async event => {
+        event.preventDefault();
+        clearTimeout(settingsSaveTimer);
+        const button = settingsForm.querySelector('button[type="submit"]');
+        button.disabled = true;
+        settingsSaveQueue = settingsSaveQueue.catch(() => {}).then(async () => {
+          settingsSaveStatus.textContent = 'Saving changes…';
+          try {
+            await persistSettings();
+          } catch (error) {
+            settingsSaveStatus.textContent = 'Not saved. ' + error.message;
+          }
+        });
+        try {
+          await settingsSaveQueue;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    } catch (error) {
+      main.innerHTML = `<section class="card empty-state"><h3>Settings could not be loaded</h3><p>${escapeHtml(error.message)}</p><button class="primary" id="retry-settings">Try again</button></section>`;
+      document.querySelector('#retry-settings')?.addEventListener('click', openSettings);
+    }
+  }
+
+  async function openSupport(destination='contact'){
+    await openSettings();
+    await new Promise(resolve=>window.requestAnimationFrame(()=>window.requestAnimationFrame(resolve)));
+    const click=selector=>{const button=document.querySelector(selector);if(!button)throw new Error('The requested Support option is not available.');button.click();};
+    if(destination==='inbox'){
+      click('#settings-navigation [data-settings-open-page="help-support"]');
+      await new Promise(resolve=>window.requestAnimationFrame(resolve));
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-title="Support Inbox"]');
+      return true;
+    }
+    if(destination==='report-problem'){
+      click('#settings-navigation [data-settings-open-page="help-support"]');
+      await new Promise(resolve=>window.requestAnimationFrame(resolve));
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-report-problem]');
+      return true;
+    }
+    click('#settings-navigation [data-settings-open-page="report-support"]');
+    await new Promise(resolve=>window.requestAnimationFrame(resolve));
+    click('#settings-navigation [data-settings-page="report-support"] [data-settings-title="Contact Support"]');
+    return true;
+  }
+  window.MingloraSettings = { open: openSettings, render: openSettings };
+  window.MingloraSettings.openSupport = openSupport;
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('#rail-settings')?.addEventListener('click', openSettings);
+    window.addEventListener('minglora:session-ready', async () => { try { const result = await api('/settings'); applyPreferences(result.settings); window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: result.settings })); } catch {} });
+  });
+})();

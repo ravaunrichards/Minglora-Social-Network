@@ -1,0 +1,60 @@
+name: Minglora profile visual QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/index.html'
+      - 'public/styles.css'
+      - 'public/profile-*.css'
+      - 'public/social-facebook-layout.css'
+      - 'public/profile-style-system.css'
+      - 'tests/e2e/profile-style-visual.mjs'
+      - '.github/workflows/profile-visual-qa.yml'
+  push:
+    branches:
+      - feat/profile-style-library-10x9
+    paths:
+      - 'public/index.html'
+      - 'public/styles.css'
+      - 'public/profile-*.css'
+      - 'public/social-facebook-layout.css'
+      - 'public/profile-style-system.css'
+      - 'tests/e2e/profile-style-visual.mjs'
+      - '.github/workflows/profile-visual-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-profile-matrix:
+    name: Chromium profile layout matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked project dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install isolated Playwright runner
+        run: npm install --no-save --package-lock=false playwright@1.56.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Check visual QA script syntax
+        run: node --check tests/e2e/profile-style-visual.mjs
+      - name: Render all profile style, screen layout and viewport combinations
+        run: node tests/e2e/profile-style-visual.mjs
+      - name: Upload profile screenshots and matrix report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-profile-visual-evidence
+          path: artifacts/profile-style-visual/
+          if-no-files-found: warn
+          retention-days: 7

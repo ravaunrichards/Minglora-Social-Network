@@ -1,0 +1,857 @@
+import { randomUUID } from "node:crypto";
+
+export const CREATOR_LEAGUE_CLASSES = Object.freeze([
+  "D5", "D4", "D3", "D2", "D1", "C5", "C4", "C3", "C2", "C1",
+  "B5", "B4", "B3", "B2", "B1", "A3", "A2", "A1"
+]);
+export const MATCH_POWERUPS = Object.freeze([
+  { id: "momentum_boost", name: "Momentum Boost", symbol: "⚡", durationMs: 30000, multiplier: 1.25, description: "25% extra eligible match points for 30 seconds." },
+  { id: "shield", name: "Shield", symbol: "🛡️", durationMs: 30000, description: "Blocks the next opposing Momentum Boost or Score Multiplier bonus for 30 seconds. Base Gift points still count." },
+  { id: "time_boost", name: "Time Boost", symbol: "⏳", durationMs: 30000, description: "Adds 30 seconds in flexible-timer matches only." },
+  { id: "score_multiplier", name: "Score Multiplier", symbol: "⭐", durationMs: 15000, multiplier: 2, description: "Doubles eligible match points for 15 seconds only." }
+]);
+
+const COLLECTIONS = [
+  "creatorLeagueProfiles", "creatorLeagueGiftLedger", "creatorLeagueDailyScores",
+  "creatorLeagueDailySettlements", "creatorLeagueMatches", "creatorLeaguePowerupUses",
+  "creatorLeagueEvents"
+];
+
+const asNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+const recordTime = record => {
+  const value = Date.parse(record?.updatedAt || record?.completedAt || record?.startedAt || record?.createdAt || "");
+  return Number.isFinite(value) ? value : 0;
+};
+function uniqueRecords(records, keyFor, merge = current => current) {
+  const unique = new Map();
+  for (const record of Array.isArray(records) ? records : []) {
+    if (!record || typeof record !== "object") continue;
+    const key = keyFor(record);
+    if (!key) continue;
+    const current = unique.get(key);
+    unique.set(key, current ? merge(current, record) : record);
+  }
+  return [...unique.values()];
+}
+function mergeProfileRecords(current, incoming) {
+  const preferred = recordTime(incoming) > recordTime(current) ? incoming : current;
+  const merged = { ...(preferred === current ? incoming : current), ...preferred };
+  for (const key of ["lifetimeGiftPoints", "matchWins", "matchLosses", "matchDraws"]) {
+    merged[key] = Math.max(asNumber(current[key]), asNumber(incoming[key]));
+  }
+  if (current.seasonKey === incoming.seasonKey) {
+    merged.seasonPoints = Math.max(asNumber(current.seasonPoints), asNumber(incoming.seasonPoints));
+  }
+  return merged;
+}
+function uniqueMatchEffects(effects) {
+  return uniqueRecords(effects, item =>
+    item?.type && item?.side ? [item.type, item.side].join(":") : item?.id,
+    (current, incoming) => {
+      const currentExpiry = Date.parse(current.expiresAt || "") || 0;
+      const incomingExpiry = Date.parse(incoming.expiresAt || "") || 0;
+      return incomingExpiry > currentExpiry ? incoming : current;
+    }
+  );
+}
+function uniqueMatchEvents(events) {
+  return uniqueRecords(events, item => {
+    if (item.type === "gift_score" && item.giftId) return "gift:" + item.giftId;
+    if (item.type === "shield_blocked_bonus" && item.giftId) return "shield_block:" + item.giftId;
+    if (item.type === "viewer_support" && item.userId) return "support:" + item.userId;
+    if (["shield_used", "time_boost_used", "score_effect_used"].includes(item.type) && item.side) {
+      return [item.type, item.side, item.powerupId || ""].join(":");
+    }
+    return item.id || [item.type, item.side, item.userId, item.giftId, item.createdAt].join(":");
+  }, (current, incoming) => recordTime(incoming) > recordTime(current) ? incoming : current);
+}
+function normalizeMatch(match) {
+  const storedScores = match.scores || {};
+  match.supporters = uniqueRecords(match.supporters, item => item.userId, current => current);
+  match.activeEffects = uniqueMatchEffects(match.activeEffects);
+  match.pendingEffects = uniqueMatchEffects(match.pendingEffects);
+  match.events = uniqueMatchEvents(match.events);
+  match.scores = {
+    challenger: Math.max(0, asNumber(storedScores.challenger)),
+    opponent: Math.max(0, asNumber(storedScores.opponent))
+  };
+  for (const side of ["challenger", "opponent"]) {
+    const scoreEvents = match.events.filter(item =>
+      item.side === side && ["gift_score", "viewer_support"].includes(item.type)
+    );
+    if (scoreEvents.length) {
+      match.scores[side] = Math.max(0, scoreEvents.reduce((total, item) =>
+        total + (item.type === "viewer_support" && !Number.isFinite(Number(item.matchPoints))
+          ? 3 : asNumber(item.matchPoints)), 0));
+    }
+  }
+  match.timeBoostUsed = {
+    challenger: Boolean(match.timeBoostUsed?.challenger),
+    opponent: Boolean(match.timeBoostUsed?.opponent)
+  };
+  return match;
+}
+function mergeMatchRecords(current, incoming) {
+  // Terminal states always beat stale active snapshots so refresh/dedupe cannot
+  // accidentally resurrect a match after it has completed or expired.
+  const priority = { completed: 4, expired: 3, live: 2, pending: 1 };
+  const currentTime = recordTime(current);
+  const incomingTime = recordTime(incoming);
+  const preferred = (priority[incoming.status] || 0) > (priority[current.status] || 0) ||
+    ((priority[incoming.status] || 0) === (priority[current.status] || 0) && incomingTime > currentTime)
+    ? incoming : current;
+  const merged = { ...(preferred === current ? incoming : current), ...preferred };
+  const challengerScores = [];
+  const opponentScores = [];
+  for (const item of [current, incoming]) {
+    const sameOrientation = item.challengerId === preferred.challengerId && item.opponentId === preferred.opponentId;
+    challengerScores.push(asNumber(item.scores?.[sameOrientation ? "challenger" : "opponent"]));
+    opponentScores.push(asNumber(item.scores?.[sameOrientation ? "opponent" : "challenger"]));
+  }
+  merged.scores = {
+    challenger: Math.max(...challengerScores),
+    opponent: Math.max(...opponentScores)
+  };
+  merged.supporters = uniqueRecords([...(preferred.supporters || []), ...((preferred === current ? incoming : current).supporters || [])], item => item.userId);
+  merged.events = uniqueMatchEvents([...(preferred.events || []), ...((preferred === current ? incoming : current).events || [])]);
+  merged.activeEffects = uniqueMatchEffects([...(preferred.activeEffects || []), ...((preferred === current ? incoming : current).activeEffects || [])]);
+  merged.pendingEffects = uniqueMatchEffects([...(preferred.pendingEffects || []), ...((preferred === current ? incoming : current).pendingEffects || [])]);
+  merged.timeBoostUsed = {
+    challenger: Boolean(current.timeBoostUsed?.challenger || incoming.timeBoostUsed?.challenger),
+    opponent: Boolean(current.timeBoostUsed?.opponent || incoming.timeBoostUsed?.opponent)
+  };
+  merged.ratingAwarded = Boolean(current.ratingAwarded || incoming.ratingAwarded);
+  return normalizeMatch(merged);
+}
+function compactMatches(matches) {
+  const byId = uniqueRecords(matches, match => match.id ? "id:" + match.id : null, mergeMatchRecords);
+  return uniqueRecords(byId, match => {
+    if (["pending", "live"].includes(match.status) && match.challengerId && match.opponentId) {
+      return "active:" + [String(match.challengerId), String(match.opponentId)].sort().join("|");
+    }
+    return match.id ? "id:" + match.id : null;
+  }, mergeMatchRecords);
+}
+const ensureCollections = db => {
+  for (const name of COLLECTIONS) if (!Array.isArray(db[name])) db[name] = [];
+  db.creatorLeagueProfiles = uniqueRecords(db.creatorLeagueProfiles, item => item.userId, mergeProfileRecords);
+  db.creatorLeagueGiftLedger = uniqueRecords(db.creatorLeagueGiftLedger, item => item.giftId || item.id);
+
+  // The unique confirmed-gift ledger is the source of truth for League points.
+  // Rebuild daily/lifetime totals from it so duplicate snapshots cannot inflate
+  // scores and concurrent snapshots cannot lose independent confirmed Gifts.
+  const dailyGiftTotals = new Map();
+  const lifetimeGiftTotals = new Map();
+  const seasonGiftTotals = new Map();
+  const dailyGiftKeys = new Set();
+  const lifetimeGiftUsers = new Set();
+  const seasonGiftKeys = new Set();
+  for (const gift of db.creatorLeagueGiftLedger) {
+    const amount = asNumber(gift.coinAmount);
+    if (!gift.userId || !gift.dayKey || amount <= 0) continue;
+    const dailyKey = String(gift.userId) + "\u0000" + String(gift.dayKey);
+    dailyGiftKeys.add(dailyKey);
+    lifetimeGiftUsers.add(gift.userId);
+    if (gift.seasonKey) seasonGiftKeys.add(String(gift.userId) + "\u0000" + String(gift.seasonKey));
+    if (gift.refundedAt || gift.status === "refunded") continue;
+    dailyGiftTotals.set(dailyKey, (dailyGiftTotals.get(dailyKey) || 0) + amount);
+    lifetimeGiftTotals.set(gift.userId, (lifetimeGiftTotals.get(gift.userId) || 0) + amount);
+    if (gift.seasonKey) {
+      const seasonKey = String(gift.userId) + "\u0000" + String(gift.seasonKey);
+      seasonGiftTotals.set(seasonKey, (seasonGiftTotals.get(seasonKey) || 0) + amount);
+    }
+  }
+  db.creatorLeagueDailyScores = uniqueRecords(
+    db.creatorLeagueDailyScores,
+    item => item.userId && item.dayKey ? String(item.userId) + "\u0000" + String(item.dayKey) : null,
+    (current, incoming) => {
+      const preferred = recordTime(incoming) > recordTime(current) ? incoming : current;
+      return { ...(preferred === current ? incoming : current), ...preferred, points: Math.max(asNumber(current.points), asNumber(incoming.points)) };
+    }
+  );
+  const existingDailyKeys = new Set();
+  for (const daily of db.creatorLeagueDailyScores) {
+    const key = String(daily.userId) + "\u0000" + String(daily.dayKey);
+    // Reconcile days that had a gift event, even when every gift for the day
+    // has since been refunded. Leave independently-scored days untouched.
+    if (dailyGiftKeys.has(key)) daily.points = dailyGiftTotals.get(key) || 0;
+    existingDailyKeys.add(key);
+  }
+  for (const [key, points] of dailyGiftTotals) {
+    if (existingDailyKeys.has(key)) continue;
+    const [userId, dayKey] = key.split("\u0000");
+    db.creatorLeagueDailyScores.push({ id: randomUUID(), userId, dayKey, points });
+  }
+  for (const profile of db.creatorLeagueProfiles) {
+    profile.lifetimeGiftPoints = lifetimeGiftTotals.get(profile.userId) || 0;
+    const seasonKey = String(profile.userId) + "\u0000" + String(profile.seasonKey || "");
+    if (seasonGiftKeys.has(seasonKey)) profile.seasonPoints = seasonGiftTotals.get(seasonKey) || 0;
+  }
+  db.creatorLeagueDailySettlements = uniqueRecords(db.creatorLeagueDailySettlements, item => item.dayKey);
+  db.creatorLeaguePowerupUses = uniqueRecords(db.creatorLeaguePowerupUses, item =>
+    item.userId && item.powerupId && item.dayKey ? [item.userId, item.powerupId, item.dayKey].join(":") : item.id
+  );
+  db.creatorLeagueEvents = uniqueRecords(db.creatorLeagueEvents, item => item.id);
+  db.creatorLeagueMatches = compactMatches(db.creatorLeagueMatches).map(normalizeMatch);
+};
+export const utcDayKey = value => new Date(value || Date.now()).toISOString().slice(0, 10);
+export function creatorLeagueSeasonKey(value = new Date()) {
+  const date = new Date(value);
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 1);
+  date.setUTCHours(0, 0, 0, 0);
+  return utcDayKey(date);
+}
+function seasonEndsAt(value = new Date()) {
+  const date = new Date(value);
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 8);
+  date.setUTCHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+function event(db, userId, type, details, now = new Date()) {
+  db.creatorLeagueEvents.push({ id: randomUUID(), userId, type, details, createdAt: now.toISOString() });
+}
+
+/**
+ * Reverse a refunded LIVE Gift without deleting its audit record. The entry
+ * remains visible to internal audits but never contributes to League scoring.
+ */
+export function refundCreatorLeagueGift(db, giftId, now = new Date()) {
+  ensureCollections(db);
+  const id = String(giftId || "");
+  if (!id) return { reversed: false, reason: "invalid_gift_id" };
+  const gift = db.creatorLeagueGiftLedger.find(item => item.giftId === id);
+  if (!gift) return { reversed: false, reason: "gift_not_found" };
+  if (gift.refundedAt || gift.status === "refunded") {
+    return { reversed: false, reason: "already_refunded", userId: gift.userId };
+  }
+
+  const timestamp = (now instanceof Date ? now : new Date(now)).toISOString();
+  gift.refundedAt = timestamp;
+  gift.status = "refunded";
+
+  for (const match of db.creatorLeagueMatches) {
+    const before = Array.isArray(match.events) ? match.events.length : 0;
+    match.events = (match.events || []).filter(item =>
+      !(item.giftId === id && ["gift_score", "shield_blocked_bonus"].includes(item.type))
+    );
+    if (match.events.length !== before) {
+      match.scores ||= { challenger: 0, opponent: 0 };
+      for (const side of ["challenger", "opponent"]) {
+        match.scores[side] = match.events
+          .filter(item => item.side === side && ["gift_score", "viewer_support"].includes(item.type))
+          .reduce((total, item) => total + (item.type === "viewer_support" && !Number.isFinite(Number(item.matchPoints))
+            ? 3 : asNumber(item.matchPoints)), 0);
+      }
+      match.updatedAt = timestamp;
+      normalizeMatch(match);
+    }
+  }
+
+  event(db, gift.userId, "gift_refunded", {
+    giftId: id, coinAmount: asNumber(gift.coinAmount), giftCode: String(gift.giftCode || "")
+  }, new Date(timestamp));
+  const refundedDayKey = String(gift.dayKey || "");
+  ensureCollections(db);
+
+  // If this Gift belonged to an already-settled day, rewind to the first
+  // placement snapshot and replay affected days from the corrected Gift ledger.
+  const affectedSettlements = db.creatorLeagueDailySettlements
+    .filter(item => item.dayKey && refundedDayKey && item.dayKey >= refundedDayKey)
+    .sort((a, b) => String(a.dayKey).localeCompare(String(b.dayKey)));
+  const firstReplay = affectedSettlements.find(item => Array.isArray(item.placements));
+  if (firstReplay) {
+    for (const placement of firstReplay.placements) {
+      const profile = db.creatorLeagueProfiles.find(item => item.userId === placement.userId);
+      if (!profile) continue;
+      profile.leagueClass = placement.leagueClass;
+      profile.fragments = Math.max(-3, Math.min(3, Math.trunc(asNumber(placement.fragmentsBefore))));
+      profile.leagueShields = Math.max(0, Math.min(10, Math.trunc(asNumber(placement.shieldsBefore))));
+    }
+    const replayDays = affectedSettlements
+      .filter(item => String(item.dayKey) >= String(firstReplay.dayKey))
+      .map(item => String(item.dayKey));
+    db.creatorLeagueDailySettlements = db.creatorLeagueDailySettlements
+      .filter(item => String(item.dayKey) < String(firstReplay.dayKey));
+    for (const replayDay of replayDays) {
+      settleCreatorLeagueDay(db, replayDay, new Date(timestamp));
+    }
+  }
+  return { reversed: true, userId: gift.userId, coinAmount: asNumber(gift.coinAmount) };
+}
+export function ensureCreatorLeagueProfile(db, userId, region = "GLOBAL", now = new Date()) {
+  ensureCollections(db);
+  const seasonKey = creatorLeagueSeasonKey(now);
+  let profile = db.creatorLeagueProfiles.find(item => item.userId === userId);
+  if (!profile) {
+    profile = {
+      userId, region: String(region || "GLOBAL").trim().toUpperCase() || "GLOBAL",
+      leagueClass: "D5", fragments: 0, leagueShields: 0,
+      lifetimeGiftPoints: 0, seasonPoints: 0, seasonKey,
+      matchWins: 0, matchLosses: 0, matchDraws: 0,
+      createdAt: now.toISOString(), updatedAt: now.toISOString()
+    };
+    db.creatorLeagueProfiles.push(profile);
+  } else {
+    if (!CREATOR_LEAGUE_CLASSES.includes(profile.leagueClass)) profile.leagueClass = "D5";
+    delete profile.matchRankIndex;
+    delete profile.matchRankPoints;
+    if (!Number.isInteger(profile.fragments)) profile.fragments = 0;
+    profile.fragments = Math.max(-3, Math.min(3, profile.fragments));
+    if (!Number.isInteger(profile.leagueShields) || profile.leagueShields < 0) profile.leagueShields = 0;
+    profile.leagueShields = Math.min(10, profile.leagueShields);
+    if (profile.seasonKey !== seasonKey) { profile.seasonKey = seasonKey; profile.seasonPoints = 0; }
+    if (!profile.region) profile.region = String(region || "GLOBAL").trim().toUpperCase() || "GLOBAL";
+    profile.updatedAt = now.toISOString();
+  }
+  return profile;
+}
+function applyClassMovement(profile, fragmentDelta, db, now) {
+  const currentIndex = CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass);
+  if (currentIndex < 0 || !Number.isInteger(fragmentDelta) || fragmentDelta === 0) return;
+
+  profile.fragments = Math.max(-3, Math.min(3, Math.trunc(asNumber(profile.fragments))));
+  profile.leagueShields = Math.max(0, Math.min(10, Math.trunc(asNumber(profile.leagueShields))));
+
+  if (fragmentDelta < 0 && profile.leagueShields > 0) {
+    profile.leagueShields -= 1;
+    event(db, profile.userId, "league_shield_used", {
+      leagueClass: profile.leagueClass, preventedFragmentLoss: true
+    }, now);
+    profile.updatedAt = now.toISOString();
+    return;
+  }
+
+  profile.fragments += fragmentDelta;
+  while (profile.fragments >= 4 && CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass) < CREATOR_LEAGUE_CLASSES.length - 1) {
+    const index = CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass);
+    const from = profile.leagueClass;
+    profile.leagueClass = CREATOR_LEAGUE_CLASSES[index + 1];
+    profile.fragments -= 4;
+    profile.leagueShields = Math.min(10, profile.leagueShields + 1);
+    event(db, profile.userId, "creator_promotion", {
+      from, to: profile.leagueClass, shieldEarned: true, fragmentsCarried: profile.fragments
+    }, now);
+  }
+  while (profile.fragments <= -4 && CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass) > 0) {
+    const index = CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass);
+    const from = profile.leagueClass;
+    profile.leagueClass = CREATOR_LEAGUE_CLASSES[index - 1];
+    profile.fragments += 4;
+    event(db, profile.userId, "creator_demotion", {
+      from, to: profile.leagueClass, fragmentsCarried: profile.fragments
+    }, now);
+  }
+
+  const finalIndex = CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass);
+  if (finalIndex === 0 && profile.fragments < 0) profile.fragments = 0;
+  if (finalIndex === CREATOR_LEAGUE_CLASSES.length - 1 && profile.fragments > 3) profile.fragments = 3;
+  profile.updatedAt = now.toISOString();
+}
+
+export function creatorLeagueFragmentsForPlacement(leagueClass, position, participantCount) {
+  if (!CREATOR_LEAGUE_CLASSES.includes(leagueClass)) return 0;
+  const count = Math.max(0, Math.trunc(asNumber(participantCount)));
+  const rank = Math.max(0, Math.trunc(asNumber(position)));
+  if (!count || rank < 1 || rank > count) return 0;
+
+  const percentile = (rank - 1) / count;
+  const division = leagueClass[0];
+  if (division === "A" || division === "B") {
+    if (percentile < 0.01) return 3;
+    if (percentile < 0.10) return 2;
+    if (percentile < 0.20) return 1;
+    if (percentile < (division === "A" ? 0.60 : 0.70)) return 0;
+    return -1;
+  }
+  if (division === "C" || leagueClass === "D1") {
+    if (percentile < 0.10) return 2;
+    if (percentile < 0.20) return 1;
+    if (percentile < 0.80) return 0;
+    return -1;
+  }
+  if (percentile < 0.10) return 2;
+  if (percentile < 0.20) return 1;
+  return 0;
+}
+export function settleCreatorLeagueDay(db, dayKey, now = new Date()) {
+  ensureCollections(db);
+  if (db.creatorLeagueDailySettlements.some(item => item.dayKey === dayKey)) {
+    return { settled: false, reason: "already_settled" };
+  }
+
+  const scores = new Map();
+  for (const item of db.creatorLeagueDailyScores) {
+    if (item.dayKey !== dayKey || !item.userId) continue;
+    scores.set(item.userId, (scores.get(item.userId) || 0) + Math.max(0, asNumber(item.points)));
+  }
+
+  const profiles = db.creatorLeagueProfiles.filter(profile => profile?.userId);
+  const groups = new Map();
+  for (const profile of profiles) {
+    const key = [
+      String(profile.region || "GLOBAL").trim().toUpperCase(),
+      String(profile.leagueClass || "D5")
+    ].join("\\u0000");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ profile, points: scores.get(profile.userId) || 0 });
+  }
+
+  const placements = [];
+  for (const members of groups.values()) {
+    members.sort((a, b) =>
+      b.points - a.points ||
+      String(a.profile.userId).localeCompare(String(b.profile.userId))
+    );
+    const participantCount = members.length;
+    let index = 0;
+    while (index < members.length) {
+      let end = index + 1;
+      while (end < members.length && members[end].points === members[index].points) end += 1;
+      const tied = end - index > 1;
+      for (let cursor = index; cursor < end; cursor += 1) {
+        const { profile, points } = members[cursor];
+        const position = index + 1;
+        // Zero-score members remain visible in the cohort but cannot gain or
+        // lose progression fragments on a day without eligible LIVE Gift activity.
+        const fragmentDelta = tied || points <= 0
+          ? 0
+          : creatorLeagueFragmentsForPlacement(profile.leagueClass, position, participantCount);
+        const beforeClass = profile.leagueClass;
+        const beforeFragments = profile.fragments;
+        const beforeShields = profile.leagueShields;
+        if (fragmentDelta !== 0) applyClassMovement(profile, fragmentDelta, db, now);
+        placements.push({
+          userId: profile.userId, region: profile.region || "GLOBAL",
+          leagueClass: beforeClass, points, position, participantCount, fragmentDelta,
+          fragmentsBefore: beforeFragments, fragmentsAfter: profile.fragments,
+          shieldsBefore: beforeShields, shieldsAfter: profile.leagueShields,
+          classAfter: profile.leagueClass, tied
+        });
+      }
+      index = end;
+    }
+  }
+
+  db.creatorLeagueDailySettlements.push({
+    id: randomUUID(), dayKey, settledAt: now.toISOString(),
+    activeCreators: profiles.length, placementsProcessed: placements.length, placements
+  });
+  return {
+    settled: true,
+    activeCreators: profiles.length,
+    placementsProcessed: placements.length,
+    promoted: placements.filter(item => CREATOR_LEAGUE_CLASSES.indexOf(item.classAfter) > CREATOR_LEAGUE_CLASSES.indexOf(item.leagueClass)).length,
+    demoted: placements.filter(item => CREATOR_LEAGUE_CLASSES.indexOf(item.classAfter) < CREATOR_LEAGUE_CLASSES.indexOf(item.leagueClass)).length
+  };
+}
+function settlePastDays(db, now) {
+  const today = utcDayKey(now);
+  for (let offset = 1; offset <= 7; offset += 1) {
+    const day = new Date(now);
+    day.setUTCDate(day.getUTCDate() - offset);
+    const key = utcDayKey(day);
+    if (key !== today && !db.creatorLeagueDailySettlements.some(item => item.dayKey === key)) settleCreatorLeagueDay(db, key, now);
+  }
+}
+
+/**
+ * Scheduled reconciliation for every creator league profile.
+ *
+ * Daily placements run once per completed UTC day, even when nobody opens
+ * League Arena. Gift ledger values remain authoritative: refunds are excluded
+ * and weekly points are rebuilt from the current season's ledger rows.
+ */
+export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
+  ensureCollections(db);
+
+  // Give every account a persisted starting class, even before their first
+  // LIVE Gift or first visit to League Arena.
+  const knownProfileIds = new Set(db.creatorLeagueProfiles.map(profile => profile.userId));
+  let profilesCreated = 0;
+  const seasonKeyForNewProfiles = creatorLeagueSeasonKey(now);
+  const initializedAt = now.toISOString();
+  for (const user of db.users || []) {
+    if (!user?.id || knownProfileIds.has(user.id)) continue;
+    db.creatorLeagueProfiles.push({
+      userId: user.id,
+      region: String(user.country || user.region || "GLOBAL").trim().toUpperCase() || "GLOBAL",
+      leagueClass: "D5",
+      fragments: 0,
+      leagueShields: 0,
+      lifetimeGiftPoints: 0,
+      seasonPoints: 0,
+      seasonKey: seasonKeyForNewProfiles,
+      matchWins: 0,
+      matchLosses: 0,
+      matchDraws: 0,
+      createdAt: initializedAt,
+      updatedAt: initializedAt
+    });
+    knownProfileIds.add(user.id);
+    profilesCreated += 1;
+  }
+
+  const today = utcDayKey(now);
+  const pendingDays = [...new Set(db.creatorLeagueDailyScores
+    .filter(item => item.dayKey && item.dayKey < today)
+    .map(item => String(item.dayKey)))]
+    .filter(dayKey => !db.creatorLeagueDailySettlements.some(item => item.dayKey === dayKey))
+    .sort();
+
+  let placementsProcessed = 0;
+  const settledDays = [];
+  for (const dayKey of pendingDays) {
+    const result = settleCreatorLeagueDay(db, dayKey, now);
+    if (!result.settled) continue;
+    settledDays.push(dayKey);
+    placementsProcessed += Number(result.placementsProcessed || 0);
+  }
+
+  const seasonKey = creatorLeagueSeasonKey(now);
+  const lifetimeTotals = new Map();
+  const seasonTotals = new Map();
+  for (const gift of db.creatorLeagueGiftLedger) {
+    if (gift.refundedAt || gift.status === "refunded" || !gift.userId) continue;
+    const amount = Math.max(0, asNumber(gift.coinAmount));
+    if (!amount) continue;
+    lifetimeTotals.set(gift.userId, (lifetimeTotals.get(gift.userId) || 0) + amount);
+    if (gift.seasonKey === seasonKey) {
+      seasonTotals.set(gift.userId, (seasonTotals.get(gift.userId) || 0) + amount);
+    }
+  }
+
+  let profilesUpdated = 0;
+  for (const profile of db.creatorLeagueProfiles) {
+    const lifetimeGiftPoints = lifetimeTotals.get(profile.userId) || 0;
+    const seasonPoints = seasonTotals.get(profile.userId) || 0;
+    const needsUpdate = profile.seasonKey !== seasonKey ||
+      asNumber(profile.seasonPoints) !== seasonPoints ||
+      asNumber(profile.lifetimeGiftPoints) !== lifetimeGiftPoints;
+    if (!needsUpdate) continue;
+    profile.seasonKey = seasonKey;
+    profile.seasonPoints = seasonPoints;
+    profile.lifetimeGiftPoints = lifetimeGiftPoints;
+    profile.updatedAt = now.toISOString();
+    profilesUpdated += 1;
+  }
+
+  return {
+    changed: settledDays.length > 0 || profilesUpdated > 0 || profilesCreated > 0,
+    settledDays,
+    placementsProcessed,
+    profilesUpdated,
+    profilesCreated,
+    seasonKey
+  };
+}
+function finishMatch(db, match, now) {
+  if (!match || match.status !== "live" || match.resultRecorded || match.ratingAwarded) return false;
+  match.status = "completed";
+  match.completedAt = now.toISOString();
+  const challenger = Number(match.scores.challenger || 0);
+  const opponent = Number(match.scores.opponent || 0);
+  if (challenger === opponent) {
+    match.result = "draw"; match.winnerId = null;
+    ensureCreatorLeagueProfile(db, match.challengerId, "GLOBAL", now).matchDraws += 1;
+    ensureCreatorLeagueProfile(db, match.opponentId, "GLOBAL", now).matchDraws += 1;
+  } else {
+    const winnerId = challenger > opponent ? match.challengerId : match.opponentId;
+    const loserId = winnerId === match.challengerId ? match.opponentId : match.challengerId;
+    match.result = "win"; match.winnerId = winnerId;
+    ensureCreatorLeagueProfile(db, winnerId, "GLOBAL", now).matchWins += 1;
+    ensureCreatorLeagueProfile(db, loserId, "GLOBAL", now).matchLosses += 1;
+  }
+  match.resultRecorded = true;
+  delete match.ratingAwarded;
+  event(db, match.challengerId, "match_completed", { matchId: match.id, result: match.result, winnerId: match.winnerId, score: challenger + "-" + opponent }, now);
+  event(db, match.opponentId, "match_completed", { matchId: match.id, result: match.result, winnerId: match.winnerId, score: opponent + "-" + challenger }, now);
+  return true;
+}
+export function settleExpiredLeagueMatches(db, now = new Date()) {
+  ensureCollections(db);
+  let completed = 0;
+  for (const match of db.creatorLeagueMatches) {
+    if (match.status === "live" && new Date(match.endsAt).getTime() <= now.getTime() && finishMatch(db, match, now)) completed += 1;
+    if (match.status === "pending" && new Date(match.expiresAt).getTime() <= now.getTime()) {
+      match.status = "expired"; match.completedAt = now.toISOString();
+    }
+  }
+  return completed;
+}
+export function recordLiveGiftForLeagues(db, details) {
+  ensureCollections(db);
+  const now = details.now || new Date();
+  settleExpiredLeagueMatches(db, now);
+  const giftId = String(details.giftId || "");
+  const amount = Number(details.coinAmount);
+  if (!giftId || !Number.isSafeInteger(amount) || amount <= 0) return { recorded: false, reason: "unconfirmed_gift" };
+  if (db.creatorLeagueGiftLedger.some(item => item.giftId === giftId)) return { recorded: false, reason: "duplicate_transaction" };
+  const profile = ensureCreatorLeagueProfile(db, details.recipientId, details.region || "GLOBAL", now);
+  const dayKey = utcDayKey(now);
+  const seasonKey = creatorLeagueSeasonKey(now);
+  db.creatorLeagueGiftLedger.push({
+    id: randomUUID(), giftId, userId: details.recipientId,
+    broadcastId: String(details.broadcastId || ""), giftCode: String(details.giftCode || ""),
+    coinAmount: amount, dayKey, seasonKey, createdAt: now.toISOString()
+  });
+  let daily = db.creatorLeagueDailyScores.find(item => item.userId === details.recipientId && item.dayKey === dayKey);
+  if (!daily) { daily = { id: randomUUID(), userId: details.recipientId, dayKey, points: 0 }; db.creatorLeagueDailyScores.push(daily); }
+  daily.points += amount;
+  profile.lifetimeGiftPoints += amount;
+  if (profile.seasonKey !== seasonKey) { profile.seasonKey = seasonKey; profile.seasonPoints = 0; }
+  profile.seasonPoints += amount;
+  profile.updatedAt = now.toISOString();
+
+  const match = db.creatorLeagueMatches.find(item => item.status === "live" &&
+    (item.challengerSessionId === details.broadcastId || item.opponentSessionId === details.broadcastId));
+  let matchPoints = 0;
+  if (match) {
+    const side = match.challengerSessionId === details.broadcastId ? "challenger" : "opponent";
+    const matchesGift = match.giftMode !== "specific" || match.selectedGiftCode === details.giftCode;
+    if (matchesGift && new Date(match.startedAt).getTime() <= now.getTime() && new Date(match.endsAt).getTime() > now.getTime()) {
+      match.activeEffects = (match.activeEffects || []).filter(item => new Date(item.expiresAt).getTime() > now.getTime());
+      const effects = match.activeEffects.filter(item => item.side === side && item.type !== "shield");
+      let multiplier = effects.reduce((best, item) => Math.max(best, Number(item.multiplier || 1)), 1);
+      const protectedSide = side === "challenger" ? "opponent" : "challenger";
+      const shieldIndex = match.activeEffects.findIndex(item => item.type === "shield" && item.side === protectedSide);
+      let shieldBlockedBonus = false;
+      if (shieldIndex >= 0 && multiplier > 1) {
+        match.activeEffects.splice(shieldIndex, 1);
+        multiplier = 1;
+        shieldBlockedBonus = true;
+        match.events.push({ id: randomUUID(), type: "shield_blocked_bonus", side: protectedSide, protectedFrom: side, giftId, blockedMultiplier: true, createdAt: now.toISOString() });
+      }
+      matchPoints = Math.round(amount * multiplier);
+      match.scores[side] = Number(match.scores[side] || 0) + matchPoints;
+      match.events.push({ id: randomUUID(), type: "gift_score", side, giftId, rawPoints: amount, matchPoints, multiplier, shieldBlockedBonus, createdAt: now.toISOString() });
+    }
+  }
+  return { recorded: true, creatorLeaguePoints: amount, matchPoints, matchId: match ? match.id : null };
+}
+export function createCreatorLeagueMatch(db, input) {
+  ensureCollections(db);
+  const now = input.now || new Date();
+  settleExpiredLeagueMatches(db, now);
+  if (!input.challengerId || !input.opponentId || input.challengerId === input.opponentId) throw Object.assign(new Error("Choose two different creators for this League Match."), { status: 400 });
+  if (!input.challengerSessionId || !input.opponentSessionId || input.challengerSessionId === input.opponentSessionId) {
+    throw Object.assign(new Error("Choose two different active LIVE sessions for this League Match."), { status: 400 });
+  }
+  if (!["all", "specific"].includes(input.giftMode)) throw Object.assign(new Error("Choose all Gifts or a specific Gift scoring mode."), { status: 400 });
+  if (input.giftMode === "specific" && !/^[a-z0-9_-]{1,60}$/i.test(input.selectedGiftCode || "")) throw Object.assign(new Error("Choose a valid Gift for this match."), { status: 400 });
+  const busy = db.creatorLeagueMatches.find(match => ["pending", "live"].includes(match.status) &&
+    [match.challengerId, match.opponentId].some(id => id === input.challengerId || id === input.opponentId));
+  if (busy) throw Object.assign(new Error("One of these creators already has a pending or active League Match."), { status: 409 });
+  const match = {
+    id: input.id || randomUUID(), challengerId: input.challengerId, opponentId: input.opponentId,
+    challengerSessionId: input.challengerSessionId, opponentSessionId: input.opponentSessionId,
+    giftMode: input.giftMode, selectedGiftCode: input.giftMode === "specific" ? input.selectedGiftCode : null,
+    status: "pending", scores: { challenger: 0, opponent: 0 }, supporters: [],
+    activeEffects: [], pendingEffects: [], events: [],
+    timeBoostUsed: { challenger: false, opponent: false }, timerMode: "flexible",
+    createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + 2 * 60 * 1000).toISOString()
+  };
+  db.creatorLeagueMatches.push(match);
+  event(db, input.challengerId, "match_challenge_sent", { matchId: match.id, opponentId: input.opponentId }, now);
+  event(db, input.opponentId, "match_challenge_received", { matchId: match.id, challengerId: input.challengerId }, now);
+  return match;
+}
+function resolveCanonicalMatch(db, match) {
+  if (!match?.id) return match;
+  return (db.creatorLeagueMatches || []).find(item => item.id === match.id) || match;
+}
+export function acceptCreatorLeagueMatch(db, match, userId, now = new Date()) {
+  settleExpiredLeagueMatches(db, now);
+  match = resolveCanonicalMatch(db, match);
+  if (!match || match.status !== "pending") throw Object.assign(new Error("This League Match invitation is no longer available."), { status: 404 });
+  if (match.opponentId !== userId) throw Object.assign(new Error("Only the invited creator can accept this match."), { status: 403 });
+  if (new Date(match.expiresAt).getTime() <= now.getTime()) { match.status = "expired"; throw Object.assign(new Error("This League Match invitation has expired."), { status: 410 }); }
+  match.status = "live"; match.startedAt = now.toISOString(); match.endsAt = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
+  match.activeEffects = []; match.pendingEffects = []; match.events = [];
+  event(db, match.challengerId, "match_started", { matchId: match.id }, now);
+  event(db, match.opponentId, "match_started", { matchId: match.id }, now);
+  return match;
+}
+export function supportCreatorLeagueMatch(db, match, viewerId, side, now = new Date()) {
+  settleExpiredLeagueMatches(db, now);
+  match = resolveCanonicalMatch(db, match);
+  if (!match || match.status !== "live") throw Object.assign(new Error("This League Match is not active."), { status: 409 });
+  if (!["challenger", "opponent"].includes(side)) throw Object.assign(new Error("Choose a valid side to support."), { status: 400 });
+  if ([match.challengerId, match.opponentId].includes(viewerId)) throw Object.assign(new Error("Creators cannot support their own match."), { status: 403 });
+  if (match.supporters.some(item => item.userId === viewerId)) throw Object.assign(new Error("You have already supported a side in this match."), { status: 409 });
+  match.supporters.push({ userId: viewerId, side, points: 3, createdAt: now.toISOString() });
+  match.scores[side] = asNumber(match.scores[side]) + 3;
+  match.events.push({ id: randomUUID(), type: "viewer_support", userId: viewerId, side, matchPoints: 3, createdAt: now.toISOString() });
+  return match;
+}
+export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new Date()) {
+  settleExpiredLeagueMatches(db, now);
+  match = resolveCanonicalMatch(db, match);
+  if (!match || match.status !== "live") throw Object.assign(new Error("Power-ups can only be used during an active match."), { status: 409 });
+  const side = match.challengerId === userId ? "challenger" : match.opponentId === userId ? "opponent" : null;
+  if (!side) throw Object.assign(new Error("Only a creator in this match can activate a power-up."), { status: 403 });
+  const powerup = MATCH_POWERUPS.find(item => item.id === powerupId);
+  if (!powerup) throw Object.assign(new Error("Choose a valid match power-up."), { status: 400 });
+  const dayKey = utcDayKey(now);
+  if (db.creatorLeaguePowerupUses.some(item => item.userId === userId && item.powerupId === powerupId && item.dayKey === dayKey)) throw Object.assign(new Error("You have already used this power-up today."), { status: 409 });
+  if (powerupId === "shield") {
+    match.activeEffects = match.activeEffects.filter(item => new Date(item.expiresAt).getTime() > now.getTime());
+    if (match.activeEffects.some(item => item.type === "shield" && item.side === side)) {
+      throw Object.assign(new Error("Your side already has an active Shield."), { status: 409 });
+    }
+    match.activeEffects.push({
+      id: randomUUID(), type: "shield", side, shieldable: true,
+      durationMs: powerup.durationMs,
+      expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(),
+      createdAt: now.toISOString()
+    });
+    match.events.push({ id: randomUUID(), type: "shield_used", side, blocks: "one opposing score boost", durationMs: powerup.durationMs, createdAt: now.toISOString() });
+  } else if (powerupId === "time_boost") {
+    if (match.timerMode === "fixed") throw Object.assign(new Error("Time Boost is disabled in this fixed-timer match format."), { status: 409 });
+    if (match.timeBoostUsed[side]) throw Object.assign(new Error("Your side has already used Time Boost in this match."), { status: 409 });
+    match.timeBoostUsed[side] = true;
+    match.endsAt = new Date(new Date(match.endsAt).getTime() + powerup.durationMs).toISOString();
+    match.events.push({ id: randomUUID(), type: "time_boost_used", side, addedSeconds: 30, createdAt: now.toISOString() });
+  } else {
+    match.activeEffects = match.activeEffects.filter(item => new Date(item.expiresAt).getTime() > now.getTime());
+    match.activeEffects.push({ id: randomUUID(), type: powerupId, side, multiplier: powerup.multiplier, expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(), createdAt: now.toISOString() });
+    match.events.push({ id: randomUUID(), type: "score_effect_used", side, powerupId, multiplier: powerup.multiplier, durationMs: powerup.durationMs, createdAt: now.toISOString() });
+  }
+  db.creatorLeaguePowerupUses.push({ id: randomUUID(), userId, powerupId, matchId: match.id, dayKey, createdAt: now.toISOString() });
+  return match;
+}
+function publicMember(users, id) {
+  const user = (users || []).find(item => item.id === id);
+  return user ? { id: user.id, name: user.name || user.displayName || user.username || "Minglora creator", username: user.username || "creator", avatarUrl: user.avatarUrl || user.avatar_url || user.avatar || null } :
+    { id, name: "Minglora creator", username: "creator", avatarUrl: null };
+}
+function decorateMatch(match, users) {
+  return { ...match, challenger: publicMember(users, match.challengerId), opponent: publicMember(users, match.opponentId) };
+}
+export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
+  ensureCollections(db);
+  settleExpiredLeagueMatches(db, now);
+  const currentTime = now instanceof Date ? now.getTime() : Date.parse(now);
+  const matches = compactMatches(db.creatorLeagueMatches).filter(match => {
+    if (match.status === "live") return true;
+    if (![match.challengerId, match.opponentId].includes(userId)) return false;
+    if (match.status === "pending") return true;
+    if (match.status !== "completed") return false;
+    const completedAt = Date.parse(match.completedAt || "");
+    return Number.isFinite(completedAt) && Number.isFinite(currentTime) &&
+      currentTime >= completedAt && currentTime - completedAt < 604800000;
+  });
+  return matches
+    .sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt))
+    .slice(0, 50).map(match => decorateMatch(match, users));
+}
+export function getCreatorLeagueLeaderboard(db, user, options = {}) {
+  ensureCollections(db);
+  const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+  const period = String(options.period || "weekly").toLowerCase();
+  if (!["daily", "weekly"].includes(period)) {
+    throw Object.assign(new Error("Choose a daily or weekly Creator League ranking."), { status: 400 });
+  }
+
+  const viewerProfile = ensureCreatorLeagueProfile(
+    db, user.id, user.country || user.region || "GLOBAL", now
+  );
+  const requestedClass = String(options.leagueClass || viewerProfile.leagueClass).toUpperCase();
+  if (!CREATOR_LEAGUE_CLASSES.includes(requestedClass)) {
+    throw Object.assign(new Error("Choose a valid Creator League class."), { status: 400 });
+  }
+
+  const dayKey = utcDayKey(now);
+  const seasonKey = creatorLeagueSeasonKey(now);
+  const dailyPoints = new Map();
+  if (period === "daily") {
+    for (const item of db.creatorLeagueDailyScores) {
+      if (item.dayKey !== dayKey || !item.userId) continue;
+      dailyPoints.set(item.userId, (dailyPoints.get(item.userId) || 0) + Math.max(0, asNumber(item.points)));
+    }
+  }
+
+  const eligible = db.creatorLeagueProfiles
+    .filter(item => item.userId && item.leagueClass === requestedClass &&
+      String(item.region || "GLOBAL").toUpperCase() === String(viewerProfile.region || "GLOBAL").toUpperCase())
+    .map(item => ({
+      profile: item,
+      points: period === "daily"
+        ? (dailyPoints.get(item.userId) || 0)
+        : Math.max(0, asNumber(item.seasonKey === seasonKey ? item.seasonPoints : 0))
+    }))
+    .sort((a, b) =>
+      b.points - a.points ||
+      asNumber(b.profile.lifetimeGiftPoints) - asNumber(a.profile.lifetimeGiftPoints) ||
+      String(a.profile.userId).localeCompare(String(b.profile.userId))
+    )
+    .slice(0, 99);
+
+  return {
+    period,
+    leagueClass: requestedClass,
+    region: viewerProfile.region,
+    dayKey,
+    seasonKey,
+    leaderboard: eligible.map(({ profile, points }, index) => ({
+      position: index + 1,
+      ...publicMember(db.users, profile.userId),
+      leagueClass: profile.leagueClass,
+      points,
+      lifetimeGiftPoints: Math.max(0, asNumber(profile.lifetimeGiftPoints))
+    }))
+  };
+}
+
+export function getCreatorLeagueOverview(db, user, now = new Date()) {
+  ensureCollections(db);
+  settlePastDays(db, now);
+  settleExpiredLeagueMatches(db, now);
+  const seasonKey = creatorLeagueSeasonKey(now);
+  for (const member of db.creatorLeagueProfiles) {
+    if (member.seasonKey !== seasonKey) {
+      member.seasonKey = seasonKey;
+      member.seasonPoints = 0;
+      member.updatedAt = now.toISOString();
+    }
+  }
+  const profile = ensureCreatorLeagueProfile(db, user.id, user.country || user.region || "GLOBAL", now);
+  const dayKey = utcDayKey(now);
+  const daily = db.creatorLeagueDailyScores.find(item => item.userId === user.id && item.dayKey === dayKey);
+  const todayScores = new Map();
+  for (const item of db.creatorLeagueDailyScores) {
+    if (item.dayKey !== dayKey || !item.userId) continue;
+    todayScores.set(item.userId, (todayScores.get(item.userId) || 0) + Math.max(0, asNumber(item.points)));
+  }
+  const leaders = db.creatorLeagueProfiles
+    .filter(item => item.leagueClass === profile.leagueClass &&
+      String(item.region || "GLOBAL").toUpperCase() === String(profile.region || "GLOBAL").toUpperCase())
+    .map(item => ({ profile: item, points: todayScores.get(item.userId) || 0 }))
+    .sort((a, b) => b.points - a.points || String(a.profile.userId).localeCompare(String(b.profile.userId)))
+    .slice(0, 99)
+    .map(({profile: item, points}, index) => ({
+      position: index + 1, ...publicMember(db.users, item.userId),
+      leagueClass: item.leagueClass, points, fragments: Number(item.fragments || 0)
+    }));
+  const uses = db.creatorLeaguePowerupUses.filter(item => item.userId === user.id && item.dayKey === dayKey);
+  return {
+    profile: {
+      leagueClass: profile.leagueClass,
+      region: profile.region,
+      fragments: Math.trunc(asNumber(profile.fragments)),
+      fragmentsToPromotion: Math.max(0, 4 - Math.max(0, Math.trunc(asNumber(profile.fragments)))),
+      demotionFragments: Math.max(0, -Math.trunc(asNumber(profile.fragments))),
+      leagueShields: Math.max(0, Math.min(10, Math.trunc(asNumber(profile.leagueShields)))),
+      lifetimeGiftPoints: profile.lifetimeGiftPoints,
+      seasonPoints: profile.seasonPoints, todayGiftPoints: Number(daily ? daily.points : 0),
+      seasonKey: profile.seasonKey, seasonEndsAt: seasonEndsAt(now),
+      matchWins: profile.matchWins, matchLosses: profile.matchLosses, matchDraws: profile.matchDraws
+    },
+    classes: CREATOR_LEAGUE_CLASSES.slice().reverse(),
+    leaderboard: leaders,
+    recentEvents: db.creatorLeagueEvents.filter(item => item.userId === user.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 12),
+    powerups: MATCH_POWERUPS.map(item => ({ ...item, usedToday: uses.some(use => use.powerupId === item.id) })),
+    activeMatches: listCreatorLeagueMatches(db, db.users, user.id, now)
+  };
+}

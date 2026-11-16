@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <title>Minglora Jamaican culture category</title>
+  <symbol id="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+    <defs>
+      <linearGradient id="jc-green" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#2a9b58"/>
+        <stop offset=".55" stop-color="#14753f"/>
+        <stop offset="1" stop-color="#0a512e"/>
+      </linearGradient>
+      <linearGradient id="jc-gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffeb86"/>
+        <stop offset=".48" stop-color="#f3c63f"/>
+        <stop offset="1" stop-color="#bf851f"/>
+      </linearGradient>
+      <linearGradient id="jc-black" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#343944"/>
+        <stop offset="1" stop-color="#11151c"/>
+      </linearGradient>
+      <clipPath id="jamaica-flag-clip">
+        <path d="M5.5 4.25Q12.8 2.7 20.4 4.2V16.85Q12.8 15.45 5.5 17Z"/>
+      </clipPath>
+    </defs>
+    <path d="M3.7 3.05V21.35" stroke="currentColor" stroke-width="1.55"/>
+    <circle cx="3.7" cy="2.65" r=".85" fill="currentColor" stroke="none"/>
+    <path d="M4.25 4.15Q12.6 2.45 20.85 4.05V17.45Q12.5 15.85 4.25 17.55Z" fill="#070b11" opacity=".24" stroke="none"/>
+    <g clip-path="url(#jamaica-flag-clip)" data-artwork="jamaica-flag-saltire-v1">
+      <path d="M5 3H21V18H5Z" fill="url(#jc-black)" stroke="none"/>
+      <path d="M5 3.6Q12.8 2.25 20.9 3.65L13 10.55Z" fill="url(#jc-green)" stroke="none"/>
+      <path d="M5.05 17.25L13 10.55L20.9 17.1Q12.8 15.85 5.05 17.25Z" fill="url(#jc-green)" stroke="none"/>
+      <path d="M5.45 4.15L20.8 17.1M20.8 4.15L5.45 17.1" fill="none" stroke="url(#jc-gold)" stroke-width="3.5" stroke-linecap="square"/>
+      <path d="M5.45 4.15L20.8 17.1M20.8 4.15L5.45 17.1" fill="none" stroke="#fff0a6" stroke-width=".55" opacity=".68" stroke-linecap="round"/>
+      <path d="M11.8 5.1Q13.3 10.4 12.6 15.95" fill="none" stroke="#ffffff" stroke-width=".42" opacity=".22"/>
+      <path d="M6.4 6Q10.3 7.15 12.2 10.3M14.2 10.8Q17 13.1 19.2 15.25" fill="none" stroke="#ffffff" stroke-width=".35" opacity=".18"/>
+    </g>
+    <path d="M5.5 4.25Q12.8 2.7 20.4 4.2V16.85Q12.8 15.45 5.5 17Z" stroke="currentColor" stroke-width=".82" opacity=".88"/>
+    <path d="M4.25 5.1 5.4 5.1M4.25 16.2 5.4 16.2" stroke="currentColor" stroke-width=".8"/>
+    <path d="M2.5 21.3H5" stroke="currentColor" stroke-width="1.25"/>
+  </symbol>
+</svg>

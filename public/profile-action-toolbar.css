@@ -1,0 +1,307 @@
+/* Minglora viewer profile action toolbar only.
+   Keeps five primary actions compact, right-aligned and in one row.
+   Report and Block live in a single in-flow More menu so they never overlay content. */
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions-shell {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  display: flex !important;
+  flex: 0 1 auto !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  justify-self: end !important;
+  align-self: center !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions--primary {
+  position: static !important;
+  display: flex !important;
+  flex: 0 1 auto !important;
+  flex-flow: row nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  width: max-content !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions--primary > .profile-edit,
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  width: auto !important;
+  min-width: 36px !important;
+  max-width: 150px !important;
+  min-height: 38px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 7px 10px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  line-height: 1.15 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-icon {
+  display: block !important;
+  flex: 0 0 17px !important;
+  width: 17px !important;
+  height: 17px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.9 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-follow {
+  max-width: 112px !important;
+  background: var(--blue, #1769e0) !important;
+  border: 1px solid var(--blue, #1769e0) !important;
+  color: #fff !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-subscribe,
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-message,
+.minglora-profile-page .profile-header-card.profile-header-card--viewer [data-profile-call],
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more {
+  background: var(--surface-soft, #f0f2f5) !important;
+  border: 1px solid var(--line, #e4e6eb) !important;
+  color: var(--text, #1c1e21) !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-subscribe {
+  max-width: 150px !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-message,
+.minglora-profile-page .profile-header-card.profile-header-card--viewer [data-profile-call],
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more {
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-message .profile-action-label,
+.minglora-profile-page .profile-header-card.profile-header-card--viewer [data-profile-call] .profile-action-label {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-subscribe .profile-action-label {
+  display: inline-block !important;
+  max-width: 106px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more svg {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  fill: currentColor !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-menu {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 3px !important;
+  align-self: flex-end !important;
+  width: min(100%, 176px) !important;
+  min-width: 148px !important;
+  margin: 0 !important;
+  padding: 5px !important;
+  border: 1px solid var(--line, #e4e6eb) !important;
+  border-radius: 10px !important;
+  background: var(--card, #fff) !important;
+  box-sizing: border-box !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-menu[hidden] {
+  display: none !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 9px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 7px 9px !important;
+  border: 0 !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  color: var(--text, #1c1e21) !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-menu-item:hover {
+  background: var(--surface-soft, #f0f2f5) !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-block {
+  color: var(--danger, #c43d4b) !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-menu-item svg {
+  display: block !important;
+  flex: 0 0 17px !important;
+  width: 17px !important;
+  height: 17px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.9 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions-shell :is(button, a):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--blue, #1769e0) 65%, transparent) !important;
+  outline-offset: 2px !important;
+}
+
+@media (min-width: 761px) and (max-width: 900px) {
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions-shell {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    align-items: flex-end !important;
+    width: 100% !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions--primary {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions-shell {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    align-self: start !important;
+    align-items: flex-end !important;
+    width: 100% !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions--primary {
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    justify-content: flex-end !important;
+    gap: 5px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions--primary > .profile-edit,
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more {
+    min-height: 36px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-follow {
+    max-width: 88px !important;
+    padding-inline: 8px !important;
+    font-size: 11px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-subscribe {
+    max-width: 94px !important;
+    padding-inline: 8px !important;
+    font-size: 11px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-subscribe .profile-action-label {
+    max-width: 62px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-message,
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer [data-profile-call],
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more {
+    width: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
+    height: 36px !important;
+    padding: 0 !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-icon {
+    width: 16px !important;
+    height: 16px !important;
+    flex-basis: 16px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-counts {
+    grid-row: 3 !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info--with-thought > .profile-actions-shell {
+    grid-row: 3 !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info--with-thought > .profile-counts {
+    grid-row: 4 !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions--primary {
+    gap: 3px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-follow {
+    max-width: 70px !important;
+    padding-inline: 6px !important;
+    font-size: 10.5px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-subscribe {
+    max-width: 76px !important;
+    padding-inline: 6px !important;
+    font-size: 10.5px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-subscribe .profile-action-label {
+    max-width: 47px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer #profile-message,
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer [data-profile-call],
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more {
+    width: 30px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    height: 34px !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-icon {
+    width: 15px !important;
+    height: 15px !important;
+    flex-basis: 15px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-action-more svg {
+    transition: none !important;
+  }
+}

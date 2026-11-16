@@ -1,0 +1,147 @@
+name: Android build and release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/android/**'
+      - 'scripts/create-android-release-manifest.mjs'
+      - '.github/workflows/android-release.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/android/**'
+      - 'scripts/create-android-release-manifest.mjs'
+      - '.github/workflows/android-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Build Minglora Android
+    runs-on: ubuntu-latest
+    env:
+      MINGLORA_ANDROID_VERSION_CODE: ${{ github.run_number }}
+      MINGLORA_ANDROID_VERSION_NAME: 1.0.${{ github.run_number }}
+      MINGLORA_ANDROID_MIN_VERSION_CODE: ${{ vars.MINGLORA_ANDROID_MIN_VERSION_CODE }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle 9.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Install Android SDK packages
+        run: |
+          if [[ -z "$ANDROID_HOME" || ! -d "$ANDROID_HOME" ]]; then
+            echo "Android SDK is not present on this runner." >&2
+            exit 1
+          fi
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [[ -z "$SDKMANAGER" ]]; then
+            echo "Android sdkmanager was not found." >&2
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Build debug APK
+        working-directory: apps/android
+        run: gradle --no-daemon clean assembleDebug -PmingloraVersionCode="$MINGLORA_ANDROID_VERSION_CODE" -PmingloraVersionName="$MINGLORA_ANDROID_VERSION_NAME"
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-android-debug-${{ github.run_number }}
+          path: apps/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Check release signing configuration
+        id: signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" && -n "$ANDROID_KEY_ALIAS" && -n "$ANDROID_KEYSTORE_PASSWORD" && -n "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore protected release keystore
+        if: steps.signing.outputs.ready == 'true' && github.event_name != 'pull_request'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/minglora-release.jks"
+          chmod 600 "$RUNNER_TEMP/minglora-release.jks"
+
+      - name: Build signed release APK
+        if: steps.signing.outputs.ready == 'true' && github.event_name != 'pull_request'
+        working-directory: apps/android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/minglora-release.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          gradle --no-daemon clean assembleRelease -PmingloraVersionCode="$MINGLORA_ANDROID_VERSION_CODE" -PmingloraVersionName="$MINGLORA_ANDROID_VERSION_NAME"
+          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/minglora-android.apk
+
+      - name: Generate release update manifest
+        if: steps.signing.outputs.ready == 'true' && github.event_name != 'pull_request'
+        env:
+          MINGLORA_ANDROID_APK_PATH: apps/android/app/build/outputs/apk/release/minglora-android.apk
+          MINGLORA_ANDROID_UPDATE_OUTPUT: apps/android/app/build/outputs/apk/release/android-update.json
+          MINGLORA_ANDROID_RELEASE_NOTES: Minglora Android automated release.
+        run: node scripts/create-android-release-manifest.mjs
+
+      - name: Publish signed APK and update manifest
+        if: steps.signing.outputs.ready == 'true' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: minglora-android-${{ github.run_number }}
+          name: Minglora Android 1.0.${{ github.run_number }}
+          body: |
+            Automated Minglora Android release from main.
+
+            The APK hosts the live Minglora web client. Server-side web and API deployments remain independent of this native package.
+          files: |
+            apps/android/app/build/outputs/apk/release/minglora-android.apk
+            apps/android/app/build/outputs/apk/release/android-update.json
+          make_latest: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+
+      - name: Upload signed APK artifact
+        if: steps.signing.outputs.ready == 'true' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-android-release-${{ github.run_number }}
+          path: |
+            apps/android/app/build/outputs/apk/release/minglora-android.apk
+            apps/android/app/build/outputs/apk/release/android-update.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Explain release signing status
+        if: always()
+        run: |
+          if [[ "${{ steps.signing.outputs.ready }}" != "true" ]]; then
+            echo "Debug APK built. Signed GitHub Release publishing was skipped because one or more Android signing secrets are missing." >> "$GITHUB_STEP_SUMMARY"
+            echo "Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_PASSWORD to enable installable update releases." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Debug APK built for pull-request verification. Release publishing only occurs from main or workflow_dispatch." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Signed APK and update manifest published to the latest Minglora Android GitHub Release." >> "$GITHUB_STEP_SUMMARY"
+          fi

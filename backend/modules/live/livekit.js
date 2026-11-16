@@ -1,0 +1,244 @@
+import { AccessToken, RoomServiceClient, DataPacket_Kind } from 'livekit-server-sdk';
+
+// LiveKit protocol TrackSource enum: CAMERA=1, MICROPHONE=2.
+export const LIVEKIT_TRACK_SOURCE = Object.freeze({ CAMERA: 1, MICROPHONE: 2, SCREEN_SHARE: 3 });
+
+function config() {
+  const rawUrl=String(process.env.LIVEKIT_URL||'').trim();
+  let serverUrl='',clientUrl='';
+  try{
+    const parsed=new URL(rawUrl);
+    if(parsed.protocol==='https:'||parsed.protocol==='wss:'){
+      serverUrl='https://'+parsed.host;
+      clientUrl='wss://'+parsed.host;
+    }else if(parsed.protocol==='http:'||parsed.protocol==='ws:'){
+      serverUrl='http://'+parsed.host;
+      clientUrl='ws://'+parsed.host;
+    }
+  }catch{}
+  return {
+    serverUrl,
+    clientUrl,
+    apiKey: String(process.env.LIVEKIT_API_KEY || '').trim(),
+    apiSecret: String(process.env.LIVEKIT_API_SECRET || '').trim()
+  };
+}
+
+export function isLiveKitConfigured() {
+  const settings = config();
+  return Boolean(settings.serverUrl && settings.clientUrl && settings.apiKey && settings.apiSecret);
+}
+
+export async function broadcastLiveKitData(roomName, packet, topic = 'minglora-live-gift') {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName) ||
+      !topic || String(topic).length > 128 ||
+      !packet || typeof packet !== 'object' || Array.isArray(packet)) {
+    const error = new Error('A valid LIVE room, data packet and topic are required.');
+    error.status = 400;
+    throw error;
+  }
+  let payload;
+  try {
+    payload = new TextEncoder().encode(JSON.stringify(packet));
+  } catch {
+    const error = new Error('The LIVE data packet could not be serialized.');
+    error.status = 400;
+    throw error;
+  }
+  if (payload.byteLength > 12 * 1024) {
+    const error = new Error('The LIVE data packet is too large to broadcast.');
+    error.status = 413;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  await service.sendData(roomName, payload, DataPacket_Kind.RELIABLE, { topic: String(topic) });
+  return { sent: true, byteLength: payload.byteLength, topic: String(topic) };
+}
+
+
+let connectionHealth = { configured: false, connected: false, checkedAt: null, checkedAtMs: 0, error: null };
+
+export async function verifyLiveKitConnection({ force = false } = {}) {
+  const settings = config();
+  const configured = Boolean(settings.serverUrl && settings.clientUrl && settings.apiKey && settings.apiSecret);
+  if (!configured) {
+    connectionHealth = {
+      configured: false,
+      connected: false,
+      checkedAt: null,
+      checkedAtMs: Date.now(),
+      error: 'LiveKit server credentials are not configured.'
+    };
+    return { configured: connectionHealth.configured, connected: connectionHealth.connected, checkedAt: connectionHealth.checkedAt, error: connectionHealth.error };
+  }
+
+  const cacheTtl = connectionHealth.connected ? 30000 : 5000;
+  if (!force && connectionHealth.configured && Date.now() - connectionHealth.checkedAtMs < cacheTtl) {
+    return { configured: connectionHealth.configured, connected: connectionHealth.connected, checkedAt: connectionHealth.checkedAt, error: connectionHealth.error };
+  }
+
+  try {
+    const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+    await service.listRooms();
+    connectionHealth = { configured: true, connected: true, checkedAt: new Date().toISOString(), checkedAtMs: Date.now(), error: null };
+  } catch (error) {
+    const status = Number(error?.statusCode || error?.status || error?.response?.status || 0);
+    const message = String(error?.message || '');
+    const rejected = status === 401 || status === 403 || /unauthenticated|unauthorized|invalid.*(key|secret)|signature/i.test(message);
+    connectionHealth = {
+      configured: true,
+      connected: false,
+      checkedAt: new Date().toISOString(),
+      checkedAtMs: Date.now(),
+      error: rejected
+        ? 'LiveKit rejected the API key or API secret.'
+        : status
+          ? 'LiveKit API returned HTTP ' + status + '.'
+          : 'Could not reach LiveKit. Check LIVEKIT_URL and network access.'
+    };
+  }
+
+  return { configured: connectionHealth.configured, connected: connectionHealth.connected, checkedAt: connectionHealth.checkedAt, error: connectionHealth.error };
+}
+
+export async function createLiveKitToken({ identity, name, roomName, canPublish = false, canPublishData = canPublish, publishSources = null }) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!identity || !roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName)) {
+    const error = new Error('A valid participant identity and room name are required.');
+    error.status = 400;
+    throw error;
+  }
+
+  const accessToken = new AccessToken(settings.apiKey, settings.apiSecret, {
+    identity: String(identity),
+    name: String(name || identity).slice(0, 64),
+    ttl: '2h'
+  });
+  accessToken.addGrant({
+    roomJoin: true,
+    room: roomName,
+    canPublish: Boolean(canPublish),
+    canSubscribe: true,
+    canPublishData: Boolean(canPublishData),
+    ...(Array.isArray(publishSources) ? { canPublishSources: publishSources } : {})
+  });
+
+  return {
+    url: settings.clientUrl,
+    token: await accessToken.toJwt()
+  };
+}
+
+
+export async function ensureLiveKitRoom(roomName, maxParticipants = 8) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName)) {
+    const error = new Error('A valid LiveKit room name is required.');
+    error.status = 400;
+    throw error;
+  }
+  const participantLimit = Number(maxParticipants);
+  if (!Number.isInteger(participantLimit) || participantLimit < 2 || participantLimit > 100) {
+    const error = new Error('The LiveKit room participant limit is invalid.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  const existing = await service.listRooms([roomName]);
+  const existingRoom = existing.find(room => room.name === roomName);
+  if (existingRoom) {
+    const currentLimit = Number(existingRoom.maxParticipants || 0);
+    const currentParticipants = Number(existingRoom.numParticipants || 0);
+    if (currentLimit === 0 || currentLimit >= participantLimit) {
+      return { name: roomName, created: false, maxParticipants: currentLimit || participantLimit };
+    }
+    if (currentParticipants > 0) {
+      return { name: roomName, created: false, maxParticipants: currentLimit, upgradePending: true };
+    }
+    await service.deleteRoom(roomName);
+  }
+  try {
+    await service.createRoom({ name: roomName, emptyTimeout: 600, maxParticipants: participantLimit });
+    return { name: roomName, created: true, maxParticipants: participantLimit };
+  } catch (error) {
+    const rooms = await service.listRooms([roomName]);
+    const room = rooms.find(item => item.name === roomName);
+    if (room) return { name: roomName, created: false, maxParticipants: Number(room.maxParticipants || participantLimit) };
+    throw error;
+  }
+}
+
+export async function listLiveKitParticipants(roomName) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.clientUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName)) {
+    const error = new Error('A valid LIVE room name is required.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  const participants = await service.listParticipants(roomName);
+  return participants.map(participant => ({
+    identity: participant.identity,
+    name: participant.name || participant.identity,
+    joinedAt: participant.joinedAt ? new Date(Number(participant.joinedAt) * 1000).toISOString() : null
+  }));
+}
+
+export async function deleteLiveKitRoom(roomName) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName)) {
+    const error = new Error('A valid LIVE room name is required.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  await service.deleteRoom(roomName);
+}
+
+export async function removeLiveKitParticipant(roomName, identity) {
+  const settings = config();
+  if (!settings.serverUrl || !settings.apiKey || !settings.apiSecret) {
+    const error = new Error('LiveKit is not configured for Minglora.');
+    error.status = 503;
+    throw error;
+  }
+  if (!roomName || !/^[a-zA-Z0-9_-]{1,128}$/.test(roomName) ||
+      !identity || String(identity).length > 128) {
+    const error = new Error('A valid LIVE room and participant are required.');
+    error.status = 400;
+    throw error;
+  }
+  const service = new RoomServiceClient(settings.serverUrl, settings.apiKey, settings.apiSecret);
+  const participants = await service.listParticipants(roomName);
+  if (!participants.some(participant => participant.identity === String(identity))) {
+    return { removed: false, wasConnected: false };
+  }
+  await service.removeParticipant(roomName, String(identity));
+  return { removed: true, wasConnected: true };
+}

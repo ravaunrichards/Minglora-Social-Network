@@ -1,0 +1,177 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
+import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+
+const root=path.resolve(new URL('..',import.meta.url).pathname);
+const dataDir=path.join(os.tmpdir(),'minglora-profile-features-'+randomUUID());
+let port=0;
+let server=null;
+async function reservePort(){
+  const listener=net.createServer();
+  await new Promise((resolve,reject)=>{listener.once('error',reject);listener.listen(0,'127.0.0.1',resolve);});
+  const value=listener.address().port;await new Promise(resolve=>listener.close(resolve));return value;
+}
+async function startServer(){
+  server=spawn(process.execPath,['src/server.js'],{cwd:root,env:{...process.env,PORT:String(port),NODE_ENV:'test',PERSISTENCE_DRIVER:'json',DATA_DIR:dataDir,SESSION_SECRET:'profile-feature-test-secret-with-sufficient-entropy',TENOR_API_KEY:''},stdio:'ignore'});
+  for(let attempt=0;attempt<80;attempt+=1){try{const response=await fetch('http://127.0.0.1:'+port+'/api/health');if(response.status===200)return;}catch{}await delay(75);}
+  throw new Error('Minglora test API did not become ready.');
+}
+async function stopServer(){
+  if(!server)return;const child=server;server=null;if(child.exitCode!==null)return;
+  await new Promise(resolve=>{const timer=setTimeout(()=>{child.kill('SIGKILL');resolve();},2500);child.once('exit',()=>{clearTimeout(timer);resolve();});child.kill('SIGTERM');});
+}
+async function request(cookie,url,options={}){
+  const response=await fetch('http://127.0.0.1:'+port+url,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{}),...(options.headers||{})}});
+  let body={};try{body=await response.json();}catch{}
+  return {status:response.status,body,headers:response.headers,cookie:response.headers.get('set-cookie')?.split(';')[0]||cookie};
+}
+async function register(name,username,email){
+  const result=await request('', '/api/auth/register',{method:'POST',body:JSON.stringify({name,username,email,password:'ProfileTestPass123!'})});
+  assert.equal(result.status,201,JSON.stringify(result.body));return {id:result.body.user.id,cookie:result.cookie,user:result.body.user};
+}
+
+test('profile status, check-ins, events, Highlights, archives, activity and section settings work end-to-end',async t=>{
+  fs.rmSync(dataDir,{recursive:true,force:true});port=await reservePort();await startServer();
+  t.after(async()=>{await stopServer();fs.rmSync(dataDir,{recursive:true,force:true});});
+  const alice=await register('Minglora Profile Owner','profileowner','profile-owner@example.test');
+  const bob=await register('Minglora Profile Viewer','profileviewer','profile-viewer@example.test');
+  const creator=await register('Creator Hub Creator Network','creatorhubcreatornetwork','CreatorHubCreatorNetwork@Gmail.Com');
+  assert.equal(alice.user.profileLayout,'advanced','new profiles should use the advanced layout by default');
+  const savedProfileLayout=await request(alice.cookie,'/api/settings',{method:'PATCH',body:JSON.stringify({preferences:{profileLayout:'creator'}})});
+  assert.equal(savedProfileLayout.status,200,JSON.stringify(savedProfileLayout.body));
+  assert.equal(savedProfileLayout.body.settings.preferences.profileLayout,'creator');
+  const publicProfileLayout=await request(bob.cookie,'/api/users/'+alice.id);
+  assert.equal(publicProfileLayout.body.user.profileLayout,'creator','the chosen presentation should be visible on the public profile');
+  const invalidProfileLayout=await request(alice.cookie,'/api/settings',{method:'PATCH',body:JSON.stringify({preferences:{profileLayout:'unlocked-admin'}})});
+  assert.equal(invalidProfileLayout.status,400,'unsupported profile layouts must be rejected');
+
+  assert.notEqual(creator.user.verificationBadge,'blue','an email address alone must not grant a profile verification sticker');
+  assert.equal(creator.user.platformBadge,null,'verification must not grant a platform Admin badge');
+
+  const sections=await request(alice.cookie,'/api/profile-sections',{method:'PATCH',body:JSON.stringify({sections:{about:false,checkIns:false,events:true,highlights:true}})});
+  assert.equal(sections.status,200,JSON.stringify(sections.body));assert.equal(sections.body.sections.about,false);assert.equal(sections.body.sections.checkIns,false);
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/profile-sections')).body.sections.about,false);
+
+  const status=await request(alice.cookie,'/api/profile-status',{method:'POST',body:JSON.stringify({text:'Building on Minglora',mood:'Focused',audience:'followers',expiresInHours:24})});
+  assert.equal(status.status,201,JSON.stringify(status.body));assert.equal(status.body.status.text,'Building on Minglora');
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).body.status,null);
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought,undefined,'followers-only thoughts must not leak to non-followers');
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id)).body.user.profileThought.text,'Building on Minglora');
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/profile-status')).body.status.text,'Building on Minglora');
+
+  const checkIn=await request(alice.cookie,'/api/check-ins',{method:'POST',body:JSON.stringify({place:'Spanish Town',note:'Profile feature integration test',visibility:'followers'})});
+  assert.equal(checkIn.status,201,JSON.stringify(checkIn.body));assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,0);
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/follow',{method:'POST',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/users/'+bob.id+'/follow',{method:'POST',body:'{}'})).status,200,'mutual follows should create the reciprocal connection');
+
+  const bobFriendList=await request(bob.cookie,'/api/friends/lists',{method:'POST',body:JSON.stringify({name:'Block cleanup list'})});
+  const aliceFriendList=await request(alice.cookie,'/api/friends/lists',{method:'POST',body:JSON.stringify({name:'Block cleanup list'})});
+  assert.equal(bobFriendList.status,201);assert.equal(aliceFriendList.status,201);
+  assert.equal((await request(bob.cookie,'/api/friends/lists/'+bobFriendList.body.list.id+'/members/'+alice.id,{method:'PUT',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/friends/lists/'+aliceFriendList.body.list.id+'/members/'+bob.id,{method:'PUT',body:'{}'})).status,200);
+  assert.equal((await request(bob.cookie,'/api/friends/'+alice.id+'/preferences',{method:'PATCH',body:JSON.stringify({isFavorite:true})})).status,200);
+  assert.equal((await request(alice.cookie,'/api/friends/'+bob.id+'/preferences',{method:'PATCH',body:JSON.stringify({isCloseFriend:true})})).status,200);
+
+  const alicePage=await request(alice.cookie,'/api/pages',{method:'POST',body:JSON.stringify({handle:'aliceblocktest',title:'Alice Block Test Page',category:'Community'})});
+  const bobPage=await request(bob.cookie,'/api/pages',{method:'POST',body:JSON.stringify({handle:'bobblocktest',title:'Bob Block Test Page',category:'Community'})});
+  assert.equal(alicePage.status,201,JSON.stringify(alicePage.body));assert.equal(bobPage.status,201,JSON.stringify(bobPage.body));
+  assert.equal((await request(bob.cookie,'/api/pages/'+alicePage.body.page.id+'/follow',{method:'POST',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/pages/'+bobPage.body.page.id+'/follow',{method:'POST',body:'{}'})).status,200);
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).body.status.text,'Building on Minglora');
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought.text,'Building on Minglora');
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,1);
+
+  const event=await request(alice.cookie,'/api/events',{method:'POST',body:JSON.stringify({title:'Minglora Community Night',description:'Profile API integration check',location:'Spanish Town',startAt:new Date(Date.now()+86400000).toISOString(),visibility:'public'})});
+  assert.equal(event.status,201,JSON.stringify(event.body));assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/events')).body.events.length,1);
+  assert.equal((await request(bob.cookie,'/api/events/'+event.body.event.id+'/rsvp',{method:'POST',body:JSON.stringify({status:'interested'})})).status,200);
+
+  const story=await request(alice.cookie,'/api/stories',{method:'POST',body:JSON.stringify({text:'A saved Minglora profile story',audience:'public'})});
+  assert.equal(story.status,201,JSON.stringify(story.body));
+  const highlight=await request(alice.cookie,'/api/highlights',{method:'POST',body:JSON.stringify({title:'Community moments',storyIds:[story.body.story.id]})});
+  assert.equal(highlight.status,201,JSON.stringify(highlight.body));
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/highlights')).body.highlights[0].title,'Community moments');
+
+  const post=await request(alice.cookie,'/api/posts',{method:'POST',body:JSON.stringify({text:'This post will be archived and restored.'})});
+  assert.equal(post.status,201,JSON.stringify(post.body));
+  const comment=await request(alice.cookie,'/api/posts/'+post.body.post.id+'/comments',{method:'POST',body:JSON.stringify({text:'A comment that must be locked with the archive.'})});
+  assert.equal(comment.status,201,JSON.stringify(comment.body));
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/save',{method:'POST',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/profile/archive',{method:'POST',body:JSON.stringify({postId:post.body.post.id})})).status,200);
+  assert.equal((await request(alice.cookie,'/api/profile/archive')).body.posts.length,1);
+  assert.equal((await request(alice.cookie,'/api/feed')).body.posts.some(item=>item.id===post.body.post.id),false);
+  assert.equal((await request(alice.cookie,'/api/search?q=archived')).body.posts.some(item=>item.id===post.body.post.id),false);
+  assert.equal((await request(alice.cookie,'/api/saved-posts')).body.posts.some(item=>item.id===post.body.post.id),false);
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/reactions',{method:'POST',body:JSON.stringify({reaction:'like'})})).status,404);
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/comments',{method:'POST',body:JSON.stringify({text:'This must fail while archived.'})})).status,404);
+  assert.equal((await request(alice.cookie,'/api/posts/'+post.body.post.id+'/comments/'+comment.body.comment.id,{method:'DELETE',body:'{}'})).status,404);
+  assert.equal((await request(alice.cookie,'/api/profile/archive/'+post.body.post.id,{method:'DELETE',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/feed')).body.posts.some(item=>item.id===post.body.post.id),true);
+  assert.equal((await request(alice.cookie,'/api/saved-posts')).body.posts.some(item=>item.id===post.body.post.id),true);
+
+  const activity=await request(alice.cookie,'/api/users/'+alice.id+'/activity');
+  assert.equal(activity.status,200);assert.ok(activity.body.activity.some(item=>item.action==='profile_status_updated'));
+  assert.ok(activity.body.activity.some(item=>item.action==='check_in_created'));assert.ok(activity.body.activity.some(item=>item.action==='event_created'));
+  const removedThought=await request(alice.cookie,'/api/profile-status',{method:'DELETE',body:'{}'});
+  assert.equal(removedThought.status,200,JSON.stringify(removedThought.body));
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/profile-status')).body.status,null);
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought,undefined);
+  assert.ok((await request(alice.cookie,'/api/users/'+alice.id+'/activity')).body.activity.some(item=>item.action==='profile_thought_deleted'));
+
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/block',{method:'POST',body:'{}'})).status,200);
+  const blockedProfile=await request(bob.cookie,'/api/users/'+alice.id);
+  assert.equal(blockedProfile.status,404,'a blocked account must not expose its profile');
+  assert.equal(blockedProfile.body.error,'User not found.','the blocked viewer gets the same neutral not-found response');
+  assert.equal((await request(alice.cookie,'/api/users/'+bob.id)).status,404,'blocking must prevent profile access in both directions');
+  const blockedOwnerFollowing=await request(bob.cookie,'/api/users/'+bob.id+'/following');
+  assert.equal(blockedOwnerFollowing.status,200);
+  assert.equal(blockedOwnerFollowing.body.users.some(member=>member.id===alice.id),false,'blocking removes the follow edge from the owner’s Following list');
+  const blockedTargetFollowing=await request(alice.cookie,'/api/users/'+alice.id+'/following');
+  assert.equal(blockedTargetFollowing.status,200);
+  assert.equal(blockedTargetFollowing.body.users.some(member=>member.id===bob.id),false,'blocking also removes the reverse Following edge');
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/followers')).body.users.some(member=>member.id===bob.id),false,'blocking removes the reverse Followers edge');
+  assert.equal((await request(bob.cookie,'/api/friends/manage')).body.count,0,'the blocker no longer has the blocked member in Friends');
+  assert.equal((await request(alice.cookie,'/api/friends/manage')).body.count,0,'the blocked member no longer has the blocker in Friends');
+  assert.equal((await request(bob.cookie,'/api/friends/lists')).body.lists.find(list=>list.id===bobFriendList.body.list.id).memberIds.includes(alice.id),false);
+  assert.equal((await request(alice.cookie,'/api/friends/lists')).body.lists.find(list=>list.id===aliceFriendList.body.list.id).memberIds.includes(bob.id),false);
+  assert.equal((await request(alice.cookie,'/api/pages/'+alicePage.body.page.id+'/followers')).body.followers.some(item=>item.userId===bob.id),false,'Page follow in the reverse direction is removed');
+  assert.equal((await request(bob.cookie,'/api/pages/'+bobPage.body.page.id+'/followers')).body.followers.some(item=>item.userId===alice.id),false,'Page follow in the blocker direction is removed');
+  const blockedRsvp=await request(bob.cookie,'/api/events/'+event.body.event.id+'/rsvp',{method:'POST',body:JSON.stringify({status:'going'})});
+  assert.equal(blockedRsvp.status,404,'Blocked members cannot view or RSVP to a public event.');
+  assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).status,404);
+  const unblock=await request(bob.cookie,'/api/users/'+alice.id+'/block',{method:'DELETE',body:'{}'});
+  assert.equal(unblock.status,200);assert.equal(unblock.body.blocked,false);
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/following')).body.users.some(member=>member.id===bob.id),false,'unblocking must not silently restore old follows');
+  assert.equal((await request(bob.cookie,'/api/friends/manage')).body.count,0,'unblocking must not silently restore friendship');
+  assert.equal((await request(alice.cookie,'/api/pages/'+alicePage.body.page.id+'/followers')).body.followers.some(item=>item.userId===bob.id),false,'unblocking must not restore page follows');
+
+  await stopServer();
+  const dbPath=path.join(dataDir,'db.json'),persisted=JSON.parse(fs.readFileSync(dbPath,'utf8'));
+  const savedStory=persisted.stories.find(item=>item.id===story.body.story.id);assert.ok(savedStory);
+  savedStory.expiresAt=new Date(Date.now()-1000).toISOString();fs.writeFileSync(dbPath,JSON.stringify(persisted,null,2));
+  await startServer();
+  const archive=await request(alice.cookie,'/api/users/'+alice.id+'/story-archive');
+  assert.equal(archive.status,200,JSON.stringify(archive.body));
+  assert.equal(archive.body.stories.some(item=>item.id===story.body.story.id),true,'expired Stories are retained in the private Story archive');
+  const afterExpiry=await request(alice.cookie,'/api/users/'+alice.id+'/highlights');
+  assert.equal(afterExpiry.body.highlights.some(item=>item.title==='Community moments'),true,'Highlights continue to resolve archived Stories');
+
+  await stopServer();
+  const bannedDb=JSON.parse(fs.readFileSync(dbPath,'utf8'));
+  const bannedCreator=bannedDb.users.find(item=>item.id===creator.id);
+  assert.ok(bannedCreator,'the test creator should remain in the persisted user store');
+  bannedCreator.status='banned';
+  bannedCreator.bannedUntil=null;
+  fs.writeFileSync(dbPath,JSON.stringify(bannedDb,null,2));
+  await startServer();
+  const bannedProfile=await request(bob.cookie,'/api/users/'+creator.id);
+  assert.equal(bannedProfile.status,404,'banned users must not have public profiles');
+  assert.equal(bannedProfile.body.error,'User not found.','banned and blocked profiles share the same neutral response');
+  const bannedFollowers=await request(bob.cookie,'/api/users/'+creator.id+'/followers');
+  assert.equal(bannedFollowers.status,404,'relationship lists for banned profiles must also be hidden');
+});
