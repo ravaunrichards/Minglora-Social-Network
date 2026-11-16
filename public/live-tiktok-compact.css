@@ -760,7 +760,7 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 
 /* 3. Fluid Grid — one tall tile on the left and two smaller tiles stacked on the right. */
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{
-  display:grid!important;top:15%!important;left:5%!important;width:90%!important;height:56%!important;
+  display:grid!important;top:15%!important;right:auto!important;bottom:auto!important;left:5%!important;width:90%!important;height:56%!important;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
   grid-template-rows:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;gap:4px!important;
 }
@@ -772,14 +772,14 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 
 /* 4. Fixed Grid — nine equal tiles in a three-by-three block. */
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{
-  display:grid!important;top:14%!important;left:5%!important;width:90%!important;height:64%!important;
+  display:grid!important;top:14%!important;right:auto!important;bottom:auto!important;left:5%!important;width:90%!important;height:64%!important;
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
   grid-template-rows:repeat(3,minmax(0,1fr))!important;grid-auto-flow:row!important;gap:4px!important;
 }
 
 /* 5. Fixed Panel — one tall large tile on the left and three stacked tiles on the right. */
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]{
-  display:grid!important;top:9%!important;left:4%!important;width:92%!important;height:82%!important;
+  display:grid!important;top:9%!important;right:auto!important;bottom:auto!important;left:4%!important;width:92%!important;height:82%!important;
   grid-template-columns:minmax(0,2.1fr) minmax(0,.9fr)!important;
   grid-template-rows:repeat(3,minmax(0,1fr))!important;grid-auto-flow:row!important;gap:4px!important;
 }
@@ -792,7 +792,7 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 
 /* 6. Side by Side — two large top tiles and two rows of four smaller tiles. */
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]{
-  display:grid!important;top:14%!important;left:4%!important;width:92%!important;height:63%!important;
+  display:grid!important;top:14%!important;right:auto!important;bottom:auto!important;left:4%!important;width:92%!important;height:63%!important;
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
   grid-template-rows:minmax(0,1.2fr) repeat(2,minmax(0,.58fr))!important;
   grid-auto-flow:row!important;gap:4px!important;
@@ -806,7 +806,7 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 
 /* 7. Spotlight — one wide top tile above two rows of four smaller tiles. */
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]{
-  display:grid!important;top:14%!important;left:4%!important;width:92%!important;height:62%!important;
+  display:grid!important;top:14%!important;right:auto!important;bottom:auto!important;left:4%!important;width:92%!important;height:62%!important;
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
   grid-template-rows:minmax(0,1.12fr) repeat(2,minmax(0,.58fr))!important;
   grid-auto-flow:row!important;gap:4px!important;
