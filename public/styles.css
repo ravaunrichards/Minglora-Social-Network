@@ -7556,6 +7556,7 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .live-daily-podium-card small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted,#8c94a3);font-size:9px}
 .live-daily-podium-card>b{font-size:10px;font-variant-numeric:tabular-nums}
 .live-ranking-avatar-wrap{position:relative;display:inline-grid;place-items:center;flex:0 0 38px;width:38px;height:38px}
+.live-ranking-row>span.live-ranking-avatar-wrap:not(.live-ranking-position):not(.live-daily-podium){display:inline-grid;gap:0;flex:0 0 38px;min-width:38px;width:38px;height:38px}
 .live-ranking-avatar-wrap>img{display:block;width:38px;height:38px;border-radius:50%;object-fit:cover}
 .live-ranking-medal{
   position:absolute;right:-7px;bottom:-5px;z-index:2;min-width:22px;height:22px;
