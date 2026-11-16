@@ -207,3 +207,15 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - Model/artwork status: `design-review-pending`. Human visual, licensing, audio mastering and physical-device acceptance remain open.
 - Production DB/coin values/wallets/transactions/payouts are unchanged.
 - Exact next action: continue the bespoke model/artwork gap audit from the canonical gift catalogue; do not claim the full LIVE asset mission complete.
+
+
+## Dolphin bespoke LIVE asset continuation — 2026-11-15
+
+- Canonical record verified from `data/minglora-gift-catalog.json`: `dolphin-4bkejj`, Dolphin, category `animals`, configured value 10 Coins, source `active=true`. The catalogue data itself is unchanged.
+- Added dedicated source `assets/3d-assets/gift-models/dolphin-model.mjs` with a bottlenose body, rostrum, pearl belly, dorsal/pectoral fins, split tail flukes, gills, eyes, blowhole and sea spray.
+- Added original primary SVG and transparent icon artwork, exact-code generator routing, Dolphin leap choreography and synthesized ocean/splash sound.
+- Added source regression assertions and expanded the Chromium renderer matrix from 12 to 13 bespoke gifts (39 desktop/tablet/mobile captures expected).
+- Verification status: **PENDING** final PR CI and Chromium run. Review remains `design-review-pending`; rights, human visual approval and physical-device checks remain outstanding.
+- Source catalogue Coin value/status and production Supabase gift rows, wallets, transactions, payouts and deployment remain unchanged.
+- Previous Maracas asset remains verified: 36/36 Chromium pixel renders on the prior implementation commit and the latest documentation-only PR head. Overall PR remains unmerged due pre-existing standard CI failures.
+- Exact next action: verify Dolphin asset generation, catalogue unit coverage and 39-view browser matrix; do not claim the full LIVE asset mission complete.

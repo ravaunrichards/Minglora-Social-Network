@@ -124,3 +124,15 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - LIVE audio: original locally synthesized shaker-noise pulses with short pitched accents; not a recorded or mastered audio file
 - Review state: `design-review-pending`; no premium, legal/rights, human visual or physical-device approval is implied
 - Integration: exact canonical gift code only; source catalogue metadata, configured coin value, publication flag, database rows and LIVE transaction flow are unchanged
+
+
+## Dolphin v1
+
+- Source: `dolphin-model.mjs`
+- Canonical target: `dolphin-4bkejj` (Dolphin; animals; configured value 10 Coins; source active flag preserved)
+- Output: generated self-contained glTF 2.0, subject-specific primary SVG and transparent icon
+- Geometry: hydrodynamic blue-grey bottlenose body, tapered rostrum, pearl countershading, dorsal fin, paired pectoral flippers, split tail flukes, glossy eyes, eyebrow highlights, gill grooves, blowhole and sea-spray droplets
+- LIVE motion: exact-code selection of the dedicated `dolphin-leap` Web Animations sequence
+- LIVE audio: locally synthesized ocean wash, water splash and three soft rising tones; not a recorded or mastered audio file
+- Review state: `design-review-pending`; human visual, rights and physical-device approval are not implied
+- Integration: exact canonical gift code only; source catalogue metadata, configured coin value, publication flag, database rows and LIVE transaction flow are unchanged

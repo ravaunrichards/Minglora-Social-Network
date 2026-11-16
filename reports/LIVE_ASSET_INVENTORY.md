@@ -96,7 +96,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-The repository now has twelve individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball. The generator still uses shared procedural category/name geometry for the remaining 1,736 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+The repository now has thirteen individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball, Maracas and Dolphin. The generator still uses shared procedural category/name geometry for the remaining 1,735 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -276,3 +276,12 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 | `assets/3d-assets/gift-models/maracas-model.mjs` | Maracas (`maracas-1wegi7n`) | Coral and lagoon calabash gourds, hardwood handles, spiral grip wraps, enamel bands, hand-painted diamond seed inlays and radial brass sunbursts | Design review pending; original model and vector art, no rights or human approval implied |
 
 The original Maracas model is routed only for its canonical gift code. Its source catalogue value remains 1 Coin and its source active flag remains true. The existing production database release gate is unchanged.
+
+
+## Dolphin bespoke gift model — 2026-11-15
+
+| Source | Canonical item | Model art direction | Review state |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/dolphin-model.mjs` | Dolphin (`dolphin-4bkejj`) | Blue-grey bottlenose dolphin with tapered rostrum, dorsal fin, pectoral flippers, split tail flukes, gill grooves, glossy eyes and sea spray | Design review pending; original model and vector art, no rights or human approval implied |
+
+The original Dolphin model is routed only for its canonical gift code. Its source catalogue value remains 10 Coins and its source active flag remains true. The existing production database release gate is unchanged.

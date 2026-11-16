@@ -379,3 +379,12 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Merge state: **BLOCKED / NOT MERGED** — GitHub reports the PR mergeable for conflicts but overall state `unstable` because standard checks are red. Do not bypass required checks.
 - Review status remains `design-review-pending`; no human visual approval, rights clearance, mastered sound recording or physical-device QA is claimed.
 - Production Supabase gift rows, Coin values, wallet balances, purchases, ledger entries, payouts and deployments remain untouched.
+
+
+## Dolphin asset addition — implementation pending verification — 2026-11-15
+
+- A new dedicated original PBR glTF source and canonical gift artwork are being added for the existing Dolphin record (`dolphin-4bkejj`, category `animals`, configured value 10 Coins, source `active=true`).
+- Exact-code generator routing, transparent SVG icon generation, a dedicated leap motion, locally synthesized water audio, source regression assertions and a 13-model desktop/tablet/mobile renderer matrix are included in this implementation.
+- Status remains **IN PROGRESS** until the generated-asset build, Dolphin unit test and 39-view Chromium model-render matrix pass on the final PR head.
+- Artwork/model remain `design-review-pending`; rights clearance, human visual approval, mastered recording and physical-device QA are not claimed.
+- No production catalogue, Coin price, wallet, payment, transaction or deployment change is part of this asset addition.

@@ -81,6 +81,14 @@
       {offset:.84,opacity:1,transform:"translate3d(2px,0,0) rotateZ(-.7deg) scale(1.015)",filter:"none"},
       neutral
     ];
+    if(preset==="dolphin-leap")return [
+      {offset:0,opacity:0,transform:"translate3d(-12px,22px,0) rotateZ(-7deg) scale(.82)",filter:"brightness(.82) saturate(.88)"},
+      {offset:.18,opacity:1,transform:"translate3d(3px,-12px,0) rotateZ(4deg) scale(1.1)",filter:"brightness(1.24) saturate(1.2)"},
+      {offset:.39,opacity:1,transform:"translate3d(12px,-18px,0) rotateZ(8deg) scale(1.08)",filter:"brightness(1.3) saturate(1.24)"},
+      {offset:.62,opacity:1,transform:"translate3d(-8px,-5px,0) rotateZ(-5deg) scale(1.02)",filter:"brightness(1.14)"},
+      {offset:.82,opacity:1,transform:"translate3d(3px,3px,0) rotateZ(2deg) scale(1.015)",filter:"none"},
+      neutral
+    ];
     if(preset==="maraca-rhythm")return [
       {offset:0,opacity:0,transform:"translate3d(0,18px,0) rotateZ(-7deg) scale(.82)",filter:"brightness(.82)"},
       {offset:.16,opacity:1,transform:"translate3d(-6px,-3px,0) rotateZ(8deg) scale(1.08)",filter:"brightness(1.25) saturate(1.2)"},
@@ -367,6 +375,37 @@
     });
     return true;
   }
+  function playDolphin(c,now,seed){
+    const ocean=c.createBufferSource(),lowpass=c.createBiquadFilter(),wash=c.createGain();
+    ocean.buffer=createGiftNoise(c,seed,1.12);
+    lowpass.type="lowpass";
+    lowpass.frequency.setValueAtTime(1700,now);
+    lowpass.frequency.exponentialRampToValueAtTime(520,now+.82);
+    lowpass.Q.setValueAtTime(.42,now);
+    wash.gain.setValueAtTime(.0001,now);
+    wash.gain.linearRampToValueAtTime(.028,now+.13);
+    wash.gain.exponentialRampToValueAtTime(.0001,now+.92);
+    ocean.connect(lowpass);lowpass.connect(wash);wash.connect(c.destination);
+    ocean.start(now);ocean.stop(now+.96);
+    const splash=c.createBufferSource(),splashFilter=c.createBiquadFilter(),splashGain=c.createGain();
+    splash.buffer=createGiftNoise(c,seed^0x5a17, .48);
+    splashFilter.type="highpass";splashFilter.frequency.setValueAtTime(2200,now+.54);
+    splashGain.gain.setValueAtTime(.0001,now+.54);
+    splashGain.gain.linearRampToValueAtTime(.018,now+.61);
+    splashGain.gain.exponentialRampToValueAtTime(.0001,now+.91);
+    splash.connect(splashFilter);splashFilter.connect(splashGain);splashGain.connect(c.destination);
+    splash.start(now+.54);splash.stop(now+.94);
+    [523.25,659.25,783.99].forEach((frequency,index)=>{
+      const start=now+.2+index*.19,tone=c.createOscillator(),gain=c.createGain();
+      tone.type="sine";tone.frequency.setValueAtTime(frequency,start);
+      tone.frequency.exponentialRampToValueAtTime(frequency*1.16,start+.16);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(.012,start+.025);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.23);
+      tone.connect(gain);gain.connect(c.destination);tone.start(start);tone.stop(start+.25);
+    });
+    return true;
+  }
   function playMaracas(c,now,seed){
     const rattle=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();
     rattle.buffer=createGiftNoise(c,seed,.9);
@@ -453,6 +492,7 @@
       if(gift.code==="live-island-rmn3mc")return playLiveIsland(c,now,seed);
       if(gift.code==="crystal-crown-1itryeu")return playCrystalCrown(c,now,seed);
       if(gift.code==="phoenix-wep6uk")return playPhoenix(c,now,seed);
+      if(gift.code==="dolphin-4bkejj")return playDolphin(c,now,seed);
       if(gift.code==="maracas-1wegi7n")return playMaracas(c,now,seed);
       if(gift.code==="beach-maracas-1exxoag")return playBeachMaracas(c,now,seed);
       if(gift.code==="royal-lions-scepter-15000-mgl")return playRoyalLionsScepter(c,now,seed);
@@ -470,7 +510,7 @@
       return true;
     }catch{return false;}
   }
-  const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal"]);
+  const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal","dolphin-leap"]);
   function mount(parent,gift,options={}){
     if(!parent||!gift)return null;
     const originalGift=gift;
@@ -579,7 +619,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
+      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
