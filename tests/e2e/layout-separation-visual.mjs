@@ -45,7 +45,7 @@ function checkGeometry(layout,state,product,viewport){
     assertFullTile(host,state.grid,label+' main tile');
     assertSmallTile(g1,state.grid,label+' first lower-right panel');
     assertSmallTile(g2,state.grid,label+' second lower-right panel');
-    assert.ok(g1.y<g2.y,label+' guest panels should stack vertically');
+    assert.ok(g1.y<g2.y,label+' guest panels should stack vertically; seat 1 y='+g1.y+', seat 2 y='+g2.y);
     assert.ok(g1.x>state.grid.x+state.grid.width*.55,label+' guest panels should sit on the right');
   }else if(layout==='fluid-grid'){
     assert.equal(state.columns,2,label+' should have two columns');
@@ -107,7 +107,7 @@ try{
       for(const layout of layouts){
         const tiles=makeSeats(product==='meetwave');
         const body=product==='live'
-          ?'<main id="live-player-shell"><section id="live-video-stage" class="live-video-stage" style="width:100%;height:640px;min-height:560px"><div id="live-guest-layout" class="live-guest-layout" data-live-layout="'+layout+'">'+makeHeading+tiles+'</div></section></main>'
+          ?'<main id="live-player-shell"><section id="live-video-stage" class="live-video-stage" style="width:100%;height:640px;min-height:560px"><div id="live-guest-layout" class="live-guest-layout" data-live-layout="'+layout+'" style="width:100%;height:100%;min-height:100%">'+makeHeading+tiles+'</div></section></main>'
           :'<main class="mw-meeting"><section id="mw-screen-stage" class="mw-screen-stage" data-guest-layout="'+layout+'" style="width:100%;height:640px;min-height:560px"><div id="mw-grid" class="mw-video-grid live-guest-layout" data-layout="'+layout+'" data-guest-layout="'+layout+'">'+makeHeading+tiles+'</div></section></main>';
         const css=product==='live'?liveCss:meetwaveCss;
         await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:100%;min-height:100%;}'+css+'</style></head><body>'+body+'</body></html>');
