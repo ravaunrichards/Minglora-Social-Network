@@ -37,6 +37,7 @@
   }
   function updateSelected(){
     const gift=selected();
+    if(gift)void window.MingloraGiftFX?.preloadGiftSound?.(gift);
     const summary=document.getElementById("minglora-gift-selected-summary");
     const sound=document.getElementById("minglora-gift-sound");
     const send=document.getElementById("minglora-gift-send");
@@ -98,7 +99,7 @@
       const b=e.target.closest("[data-gift-category]");if(!b)return;state.category=b.dataset.giftCategory;state.page=0;document.getElementById("minglora-gift-categories").innerHTML=categoryMarkup();drawGrid();
     });
     document.getElementById("minglora-gift-more")?.addEventListener("click",()=>{state.page++;drawGrid();});
-    document.getElementById("minglora-gift-sound")?.addEventListener("click",()=>{const g=selected();if(g){window.MingloraGiftFX?.prime();window.MingloraGiftFX?.preview(g);}});
+    document.getElementById("minglora-gift-sound")?.addEventListener("click",()=>{const g=selected();if(g){window.MingloraGiftFX?.prime(g);window.MingloraGiftFX?.preview(g);}});
     document.getElementById("minglora-gift-recipient")?.addEventListener("input",e=>{state.recipient=e.target.value;});
     document.getElementById("minglora-gift-recharge")?.addEventListener("click",()=>window.activateNav?.("coins"));
     document.getElementById("minglora-gifter-progress")?.addEventListener("click",()=>window.activateNav?.("gifter-progression"));
@@ -113,7 +114,7 @@
     const username=String(document.getElementById("minglora-gift-recipient")?.value||"").trim().replace(/^@/,"").toLowerCase();
     if(!gift){if(status)status.textContent="Select a gift before sending.";return;}
     if(!/^[a-z0-9_]{3,30}$/.test(username)){if(status)status.textContent="Enter a valid @username (3–30 letters, numbers or underscores).";return;}
-    window.MingloraGiftFX?.prime();if(button)button.disabled=true;if(status)status.textContent="Verifying recipient and sending gift…";
+    window.MingloraGiftFX?.prime(gift);if(button)button.disabled=true;if(status)status.textContent="Verifying recipient and sending gift…";
     try{
       const fundingSource=String(document.getElementById("minglora-gift-funding-source")?.value||"cash");
       const result=fundingSource==="cash"

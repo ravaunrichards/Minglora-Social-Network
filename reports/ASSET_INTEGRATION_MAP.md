@@ -257,3 +257,17 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - PWA: the gift-effects asset version and service-worker shell cache reference were advanced for the updated runtime and motion index.
 - Verification: CI 1,251/1,251 passed; Chromium model QA 45/45 model and pixel checks across three viewports, 45 screenshots, zero page errors and zero request cancellations. Evidence artifact 14200011992.
 - Acceptance: design, licensing, mastered audio and physical-device checks remain pending. Catalogue source metadata is not a production offering; no production catalogue, price, wallet or transaction data changed.
+ 
+## Gift-specific WAV audio integration — 2026-11-16
+
+| Layer | Implementation |
+|---|---|
+| Generator | scripts/generate-minglora-gift-sounds.mjs creates 15 different source-authored cues. |
+| Generated files | public/assets/gift-sounds/gifts/{slug}.wav plus public/assets/gift-sounds/manifest.json; ignored build outputs, regenerated at startup/build. |
+| Metadata | Same-origin hash-versioned URLs, SHA-256, bytes, duration, PCM sample format, source/license and generated-review-required status. |
+| Gift Center | public/gifts.js preloads the selected gift and passes that canonical gift to prime(gift) before preview/send. |
+| Runtime | public/gift-effects.js allow-lists 15 codes, validates manifest path and RIFF/WAVE/PCM headers, coalesces duplicate requests, caches decoded AudioBuffers and plays cached WAVs when ready. Existing custom/category Web Audio synthesis remains fallback. |
+| PWA | public/sw.js caches hashed same-origin audio requests using full URLs; cache namespace is minglora-gift-sounds-v1. |
+| Build/CI | prestart and npm run build:gift-sounds generate assets. The unit test produces and validates them; CI uploads the generated pack for review. |
+
+The 15 original procedural cues are not professional mastered audio. Their production listening/mix review is pending. No gift send endpoint, Coin amount, price, production publication gate, wallet or ledger flow is changed.

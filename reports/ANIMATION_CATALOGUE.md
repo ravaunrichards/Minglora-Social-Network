@@ -151,3 +151,7 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 ## Pop Parrot — dedicated flight choreography
 
 The canonical Pop Parrot gift (pop-parrot-alp4e8) uses the exact-code parrot-swoop runtime preset. The sequence enters from the left, rises, banks across the stage and settles through the existing motionElement.animate lifecycle. The motion index preserves the canonical catalogue preset separately from the effective bespoke override. Reduced-motion settings, gift-event triggers, duration bounds and cleanup remain shared with the current runtime. Its original synthesized whistle/chirp is action-triggered through the existing sound opt-out lifecycle; it is not a mastered recording. The model remains design-review-pending; rights clearance and physical-device acceptance are outstanding.
+ 
+## Synchronized gift-specific WAV cue coverage — 2026-11-16
+
+The audio layer now has 15 distinct generated WAV cues tied to the matching canonical gift codes and existing visual trigger lifecycle. The Gift Center preloads only the selected cue; an existing user gesture primes the shared AudioContext; gift playback uses the decoded cached cue when available and preserves the current subject-specific Web Audio synth fallback when a cue is still loading or unsupported. Audio does not block the animation, comments or send path. Cue composition, source code, manifest hashes, status and sample format are documented in docs/MINGLORA_LIVE_GIFT_AUDIO.md. These are procedural synthesis outputs, not mastered sound recordings; review remains required.

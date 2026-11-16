@@ -314,3 +314,12 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - All generated assets remain review-required; the source model sets design-review-pending. No screenshot crop, source-company artwork, trademark, third-party gift artwork or copied sound recording is used.
 - No production Supabase gift row, coin offer, wallet, purchase, transaction, payout, user data or deployment was changed. Existing production activation and asset-review gates remain in force.
 - Generated output, repository tests, CI and isolated Chromium model rendering must pass before this source can be called integrated. Human visual/rights approval and physical-device QA remain separate requirements.
+ 
+## Gift-specific WAV cue inventory — 2026-11-16
+
+A checked-in generator now creates 15 unique current bespoke gift WAV cues and public/assets/gift-sounds/manifest.json. Runtime/build output includes Rose (rose-4ieccm), Hibiscus (hibiscus-5-mgl), Djembe Master (djembe-master-1v3jzkm), Palm Breeze (palm-breeze-gknyt0), Gamer Otter (gamer-otter-100-mgl), LIVE Island (live-island-rmn3mc), Crystal Crown (crystal-crown-1itryeu), Phoenix (phoenix-wep6uk), Beach Maracas (beach-maracas-1exxoag), Royal Lions Scepter (royal-lions-scepter-15000-mgl), Baseball (baseball-orcdx9), Crocodile (crocodile-tnyf2j), Dolphin (dolphin-4bkejj), Maracas (maracas-1wegi7n) and Pop Parrot (pop-parrot-alp4e8). Format is 44.1 kHz, stereo, signed 16-bit PCM WAV, unique SHA-256 per cue.
+
+- Generator: scripts/generate-minglora-gift-sounds.mjs; package target npm run build:gift-sounds; included in prestart before unified asset-manifest generation.
+- Runtime: public/gift-effects.js fetches only the allow-listed, same-origin records, validates WAV headers and caches decoded audio; public/gifts.js preloads the selected gift and primes playback through the existing user gesture.
+- PWA: public/sw.js caches exact hashed gift-audio URLs under minglora-gift-sounds-v1; HTML and SW reference the same versioned GiftFX script. CI uploads the generated output directory as an artifact.
+- Generated output is ignored by Git and regenerated from source. Cues are original procedural sound synthesis, not mastered recordings; all remain generated-review-required.
