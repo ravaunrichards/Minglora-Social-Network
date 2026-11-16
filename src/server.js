@@ -6240,7 +6240,7 @@ async function route(req, res) {
           }
           try {
             recordLiveGiftForLeagues(db, {
-              giftId: transactionId, recipientId: session.hostId, broadcastId: session.id,
+              giftId: transactionId, senderId: user.id, recipientId: session.hostId, broadcastId: session.id,
               giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE, coinAmount,
               region: host?.country || 'GLOBAL'
             });
@@ -6402,7 +6402,7 @@ async function route(req, res) {
           }catch(error){console.error('[Minglora Gifter Progression] Confirmed LIVE gift could not be recorded.',{giftId:String(confirmedGiftId),message:String(error?.message||'progression update failed').slice(0,160)});}
           try{
             recordLiveGiftForLeagues(db,{
-              giftId:confirmedGiftId,recipientId:session.hostId,broadcastId:session.id,
+              giftId:confirmedGiftId,senderId:user.id,recipientId:session.hostId,broadcastId:session.id,
               giftCode:String(input.giftCode||''),coinAmount:confirmedCoinAmount,
               region:db.users.find(member=>member.id===session.hostId)?.country||'GLOBAL'
             });
@@ -6727,7 +6727,7 @@ async function route(req, res) {
           }else if(action==='support'){
             supportCreatorLeagueMatch(db,match,user.id,String(input.side||''));
           }else{
-            useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''));
+            useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''),new Date(),{boosterRank:Number(input.boosterRank||0)});
           }
           match=(db.creatorLeagueMatches||[]).find(item=>item.id===match.id)||match;
           await saveStore();
