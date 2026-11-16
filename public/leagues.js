@@ -271,7 +271,7 @@
           "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + esc(item) + "</span>"
         ).join("") + "</div></article>";
     }).join("");
-    return "<div class='league-original-reference-gallery league-original-reference-gallery--progression' aria-label='Original Creator League progression references'>" +
+    return "<div class='league-original-reference-gallery league-original-reference-gallery--progression' aria-label='Original Creator League class progression reference'>" +
       "<figure class='league-original-reference league-original-reference--classes'><figcaption>Original 18-class progression</figcaption>" +
       leagueReferenceImage("Screenshot_20261112_020458_TikTok(1).jpg", "league-progression-reference-image", "Original A3 to A1, B5 to B1, C5 to C1 and D5 to D1 class progression") +
       "</figure>" +
