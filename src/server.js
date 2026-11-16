@@ -59,6 +59,7 @@ const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
+const activeAIBotChatOwners = new Set();
 if (process.env.NODE_ENV === 'production' &&
     (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
   throw new Error('Production startup requires SESSION_SECRET to contain at least 32 characters.');
@@ -2756,6 +2757,11 @@ async function route(req, res) {
             typeof input.message !== 'string' || typeof input.requestId !== 'string') {
           throw Object.assign(new Error('Bot chat accepts only message, optional conversationId and requestId. Credentials and provider overrides are not accepted.'), { status: 400 });
         }
+        if (activeAIBotChatOwners.has(user.id)) {
+          throw Object.assign(new Error('Another AI bot conversation is already running for this account. Wait for it to finish before sending another message.'), { status: 429 });
+        }
+        activeAIBotChatOwners.add(user.id);
+        try {
         const chatState = getAIBotConversation(db, user.id, parts[1], input.conversationId || null);
         const verifiedIdentity = await runAIIdentityCommand('get', { identity_id: chatState.bot.identityId });
         if (String(verifiedIdentity?.identity?.identity_id || '') !== chatState.bot.identityId) {
@@ -2825,6 +2831,9 @@ async function route(req, res) {
             retryable: true,
             providerUsageRecorded: Boolean(error?.provider === 'openai' && Number(error?.usage?.total_tokens) > 0)
           });
+        }
+        } finally {
+          activeAIBotChatOwners.delete(user.id);
         }
       }
       if (method === 'POST' && sub === 'bots') {
