@@ -124,6 +124,28 @@
       "</div></section>";
   }
 
+
+  const BADGE_TIER_EMBLEMS = Object.freeze([
+    { file: "tier-01.svg", label: "Levels 1–9", alt: "Original Gifter tier 1 emblem" },
+    { file: "tier-02.svg", label: "Levels 10–19", alt: "Original Gifter tier 2 emblem" },
+    { file: "tier-03.svg", label: "Levels 20–29", alt: "Original Gifter tier 3 emblem" },
+    { file: "tier-04.svg", label: "Levels 30–39", alt: "Original Gifter tier 4 emblem" },
+    { file: "tier-05.svg", label: "Levels 40–49", alt: "Original Gifter tier 5 emblem" },
+    { file: "tier-06.svg", label: "Level 50+", alt: "Original Gifter tier 6 emblem" }
+  ]);
+
+  function renderBadgeTierEmblems() {
+    return "<section class='gp-tier-emblem-section card' aria-labelledby='gp-tier-emblem-title'>" +
+      "<div class='gp-section-heading'><div><span class='gp-eyebrow'>INDIVIDUAL ORIGINAL CROPS</span><h2 id='gp-tier-emblem-title'>Badge tier emblems</h2>" +
+      "<p>Each emblem is cropped directly from the uploaded reference artwork. The numbered Level 1–50 originals remain the badges used for member identity.</p></div></div>" +
+      "<div class='gp-tier-emblem-grid'>" +
+      BADGE_TIER_EMBLEMS.map(item =>
+        "<figure class='gp-tier-emblem-card'><img src='/assets/gifter-badge-progression-crops/" + item.file +
+        "' alt='" + esc(item.alt) + "' loading='lazy' decoding='async' width='100' height='104'><figcaption>" +
+        esc(item.label) + "</figcaption></figure>"
+      ).join("") + "</div></section>";
+  }
+
   function renderRangeReferenceSheets() {
     return "<section class='gp-reference-section gp-range-reference-section card' aria-labelledby='gp-range-reference-title'>" +
       "<div class='gp-section-heading'><div><span class='gp-eyebrow'>ADDITIONAL ORIGINAL REFERENCES</span><h2 id='gp-range-reference-title'>Gifter level range sheets</h2>" +
@@ -218,6 +240,7 @@
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       (embedded ? "" : "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div>") + "</header>" +
       "<section class='gp-progression-art-reference card' aria-labelledby='gp-progression-art-title'><div class='gp-section-heading'><div><span class='gp-eyebrow'>ORIGINAL BADGE ARTWORK</span><h2 id='gp-progression-art-title'>Gifter badge progression</h2><p>Original badge-tier artwork shown as supplied. Your current badge and unlock progress are calculated from confirmed gifts.</p></div></div><figure class='gp-progression-art-frame'><img src='/assets/gifter-badge-progression-art.jpg' alt='Minglora Gifter badge progression artwork showing badge tiers connected in sequence' loading='eager' decoding='async'></figure></section>" +
+      renderBadgeTierEmblems() +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +
