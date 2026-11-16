@@ -24,8 +24,8 @@ test("Crop References use canonical folders and contain no duplicate image files
     "LV.30 - LV.39.png", "LV.40 - LV.49.png", "LV.50+.png"
   ];
   const rangeNames = [
-    "LV.1 - LV.9.jpg", "LV.10 - LV.19.jpg", "LV.20 - LV.29.jpg",
-    "LV.30 - LV.39.jpg", "LV.40 - LV.49.jpg", "LV.50+.jpg"
+    "LV.1 - LV.9.png", "LV.10 - LV.19.png", "LV.20 - LV.29.png",
+    "LV.30 - LV.39.png", "LV.40 - LV.49.png", "LV.50+.png"
   ];
   const rankingNames = [
     "Screenshot_20261112_021224_TikTok(1).png",
@@ -61,11 +61,11 @@ test("Crop References use canonical folders and contain no duplicate image files
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", name.replace(".png", ".psd"))), name + " has no legacy PSD duplicate");
   }
   for (const name of rangeNames) {
-    const stem = name.replace(".jpg", "");
-    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifter level range sheets", name)), name + " is in the canonical range folder");
-    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", name)), name + " has no legacy JPG duplicate");
-    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", stem + ".png")), name + " has no legacy padded PNG duplicate");
-    assert.ok(!fs.existsSync(path.join(root, "assets", "Crop References", "Gifter level range sheets", stem + ".png")), name + " has no padded PNG duplicate");
+    const stem = name.replace(".png", "");
+    const rangeFolder = path.join(root, "assets", "Crop References", "Gifter level range sheets");
+    assert.ok(fs.existsSync(path.join(rangeFolder, name)), name + " is the canonical PNG range sheet");
+    assert.ok(fs.existsSync(path.join(rangeFolder, stem + ".jpg")), stem + ".jpg is retained as the uploaded JPG companion");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", name)), name + " has no duplicate legacy range-sheet copy");
   }
   const psdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
   assert.equal(fs.readdirSync(psdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain");
@@ -83,7 +83,7 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-png-no-white-tracker-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
@@ -134,11 +134,11 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v345-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v346-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-png-no-white-tracker-1/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-png-no-white-tracker-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
 });
 
 
