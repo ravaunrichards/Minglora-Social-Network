@@ -124,6 +124,112 @@
       "</div></section>";
   }
 
+
+  // Remove only dark pixels connected to the outside boundary of the six
+  // range-sheet JPGs. Bright badge tips, symbols, text and interior artwork
+  // are never cropped or repainted. The original JPG files remain untouched.
+  function removeRangeSheetOuterDarkEdgePixels(imageData, width, height) {
+    if (!imageData?.data || !Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) return 0;
+    const data = imageData.data;
+    const total = width * height;
+    if (data.length < total * 4) return 0;
+
+    const visited = new Uint8Array(total);
+    const queue = new Uint32Array(total);
+    let head = 0;
+    let tail = 0;
+
+    function enqueue(position) {
+      if (position < 0 || position >= total || visited[position]) return;
+      const offset = position * 4;
+      if (
+        data[offset + 3] === 0 ||
+        data[offset] > 60 ||
+        data[offset + 1] > 60 ||
+        data[offset + 2] > 60
+      ) return;
+      visited[position] = 1;
+      queue[tail++] = position;
+    }
+
+    for (let x = 0; x < width; x += 1) {
+      enqueue(x);
+      enqueue((height - 1) * width + x);
+    }
+    for (let y = 0; y < height; y += 1) {
+      enqueue(y * width);
+      enqueue(y * width + width - 1);
+    }
+
+    while (head < tail) {
+      const position = queue[head++];
+      const x = position % width;
+      const y = Math.floor(position / width);
+      if (x > 0) enqueue(position - 1);
+      if (x + 1 < width) enqueue(position + 1);
+      if (y > 0) enqueue(position - width);
+      if (y + 1 < height) enqueue(position + width);
+    }
+
+    // Ignore tiny detections rather than risk altering a mostly clean image.
+    if (tail < Math.max(24, Math.floor(total * 0.001))) return 0;
+    for (let index = 0; index < tail; index += 1) {
+      data[queue[index] * 4 + 3] = 0;
+    }
+    return tail;
+  }
+
+  function cleanRangeSheetImage(image) {
+    if (!image || image.dataset.gpRangeEdgeStatus || image.dataset.gpRangeEdgePending) return;
+
+    const processImage = () => {
+      delete image.dataset.gpRangeEdgePending;
+      if (!image.isConnected || image.dataset.gpRangeEdgeStatus) return;
+      const width = Number(image.naturalWidth || 0);
+      const height = Number(image.naturalHeight || 0);
+      if (!width || !height) return;
+
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("Canvas image processing is unavailable.");
+
+        context.drawImage(image, 0, 0, width, height);
+        const pixels = context.getImageData(0, 0, width, height);
+        const removedPixels = removeRangeSheetOuterDarkEdgePixels(pixels, width, height);
+        if (!removedPixels) {
+          image.dataset.gpRangeEdgeStatus = "unchanged";
+          return;
+        }
+
+        context.putImageData(pixels, 0, 0);
+        const cleanedImage = canvas.toDataURL("image/png");
+        if (!cleanedImage.startsWith("data:image/png")) {
+          throw new Error("The transparent range-sheet image could not be encoded.");
+        }
+        image.dataset.gpRangeEdgeStatus = "cleaned";
+        image.src = cleanedImage;
+      } catch (error) {
+        image.dataset.gpRangeEdgeStatus = "fallback";
+        console.warn("[Minglora Gifter] Range-sheet edge cleanup used the original image:", error?.message || error);
+      }
+    };
+
+    if (image.complete && image.naturalWidth > 0) {
+      processImage();
+      return;
+    }
+
+    image.dataset.gpRangeEdgePending = "true";
+    image.addEventListener("load", processImage, { once: true });
+    image.addEventListener("error", () => {
+      delete image.dataset.gpRangeEdgePending;
+      image.dataset.gpRangeEdgeStatus = "fallback";
+    }, { once: true });
+  }
+
   function renderRangeReferenceSheets() {
     return "<section class='gp-reference-section gp-range-reference-section card' aria-labelledby='gp-range-reference-title'>" +
       "<div class='gp-section-heading'><div><span class='gp-eyebrow'>ADDITIONAL ORIGINAL REFERENCES</span><h2 id='gp-range-reference-title'>Gifter level range sheets</h2>" +
@@ -304,6 +410,7 @@
   }
 
   function bindPage(root = document) {
+    root.querySelectorAll(".gp-range-reference-figure img").forEach(cleanRangeSheetImage);
     root.querySelector("#gp-back-gifts")?.addEventListener("click", () => window.activateNav?.("gifts"));
     const levelGrid = root.querySelector("#gp-level-index-grid");
     levelGrid?.parentElement?.querySelector(".gp-level-layout-controls")?.addEventListener("click", event => {
