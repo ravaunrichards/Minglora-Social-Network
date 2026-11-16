@@ -62,7 +62,7 @@ test('six reference Match Power-Ups keep activation checks, usage limits and Lea
   for (const id of ['boosting_glove','magic_mist','stun_hammer','time_maker','boosters','speed_challenge']) {
     assert.ok(app.includes("id:'" + id + "'"), id + ' is available in the LIVE match panel');
   }
-  assert.ok(app.includes("data-powerup-id='"+ " + "power.id"), 'the six live actions use their selected power-up ID');
+  assert.match(app, /data-powerup-id='"\+power\.id\+"'/, 'the six live actions use their selected power-up ID');
   assert.match(app, /panelStunned=.*stun_hammer/);
   assert.match(app, /live-match-card--stunned/);
   assert.match(app, /MAGIC MIST ACTIVE/);
