@@ -22,6 +22,7 @@
 | Location | Observed state | Production interpretation |
 |---|---|---|
 | `assets/reference/` | 1,121 images (Android + desktop TikTok/Facebook) | Read-only design references |
+| Raster metadata scan (2026-11-16) | 2,863 image files across all six source roots | 2,863 parsed; 0 unsupported; 0 parse failures; dimensions/format/size/hash inventoried; visual and rights review remain open |
 | `assets/Gifts/` | 131 capture PNGs plus 1 reference-sheet JPEG (132 image files total) | Read-only source captures |
 | `assets/Artwork/` | 1,509 extracted PNG records | Review-only, not cleared for production |
 | `assets/Guests Layout/` | 9 JPEG layout diagrams | Read-only layout references; all 9 individually visually inspected |
@@ -330,3 +331,10 @@ Current source-model count is **16 individually authored gift models**; the rema
 - 16 individually authored source models × desktop, tablet and mobile = **48/48 model renders, 48/48 non-empty pixel checks and 48 screenshots**.
 - GitHub Actions run `43789909388`, evidence artifact `14192111910`; zero page errors, HTTP failures, request failures or unexpected cancellations.
 - Earlier 14- and 15-model checkpoints above remain historical and are not overwritten.
+
+
+## Complete raster metadata verification — 2026-11-16
+- The CI scanner parsed **2,863/2,863** raster files from `assets/reference/`, `assets/Gifts/`, `assets/Guests Layout/`, `assets/Gifters Badge Levels/`, `assets/League/` and `assets/Artwork/`; 0 unsupported files and 0 parse failures.
+- Per-file format, width, height, orientation, bit depth, declared alpha-channel state, transparency/animation metadata flags, file bytes and SHA-256 were recorded. Total: 1,742 PNG + 1,121 JPEG; 431,981,981 bytes.
+- A declared alpha channel is not proof of transparent pixels; pixel-alpha analysis, human visual review, licensing and production approval remain incomplete.
+- Evidence artifact: CI run `43790721350`, artifact `14192032121`.

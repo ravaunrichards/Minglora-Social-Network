@@ -52,7 +52,7 @@ These nine references correspond to the existing implementation's seven host-sel
 - `assets/League/`: 20 JPEG reference captures; file inventory completed, with the Android League FAQ sample above visually inspected.
 - `assets/Gifts/`: 131 catalogue capture PNGs plus the `Video Gifts/Video Gifts.jpg` reference sheet. The directory contains 132 image files in total.
 
-The path/size/hash inventory is complete for the 1,121 images under `assets/reference/`. A complete image-by-image human visual review and per-image dimension/transparency extraction for all 1,121 references, all 1,509 extracted gift crops and all 71 badge files has **not** been completed. No original reference was altered or copied into a production asset directory.
+The path/size/hash inventory is complete for the 1,121 images under `assets/reference/`. The 2026-11-16 raster metadata pass also recorded header-level dimensions, formats, orientation, bit depth, alpha-channel flags, SHA-256 and file size for all **2,863** image files across the six scanned roots. Full image-by-image human visual review is still incomplete, and alpha-channel declarations do not prove per-pixel transparency. No original reference was altered or copied into a production asset directory.
 
 ## Preservation and source-of-truth rules
 
@@ -64,7 +64,7 @@ The path/size/hash inventory is complete for the 1,121 images under `assets/refe
 
 ## Follow-up inspection required
 
-A complete screenshot-by-screenshot human review, original-dimension inventory, transparency check for every art file, and device-specific measurement matrix remain open. Desktop screenshots establish a desktop comparison viewport, but do not establish tablet, foldable, iPhone or Smart TV support by themselves.
+A complete screenshot-by-screenshot human visual review, decoded per-pixel alpha/transparency scan, rights/licence review and device-specific measurement matrix remain open. Encoded image dimensions are now inventoried from file headers for all 2,863 scanned images; JPEG EXIF orientation is recorded but not applied to rotate pixel data. Desktop screenshots establish a desktop comparison viewport, but do not establish tablet, foldable, iPhone or Smart TV support by themselves.
 
 ## Raster metadata audit automation
 
@@ -116,3 +116,21 @@ The 45-file `public/assets/gifts/` legacy GLTF collection remains preserved. Its
 The legacy `minglora_dolphin.gltf` record is `minglora-dolphin` / historical code `dolphin` / `Ocean Dolphin`, 7,246 bytes, 10 meshes, 5 materials, 0 textures, 0 images and 0 embedded animations. Its visual review, technical render review and rights review are pending; the manifest explicitly sets `production_eligible=false`. The historical migration value was 650 Coins and the record is absent from the 2026-11-15 production database snapshot. It was not overwritten, rebranded, or substituted for the current `dolphin-4bkejj` gift (10 Coins); the new bespoke Dolphin code/assets route only to that current canonical identifier.
 
 Crocodile had no matching standalone approved model record in the canonical model source inventory, so a dedicated `crocodile-tnyf2j` asset was authored. The Crocodile model and vector art remain design-review-pending; CI render proof is not legal or human visual approval.
+
+
+## Complete raster metadata pass — 2026-11-16
+
+The current CI metadata audit parsed **2,863 / 2,863** candidate raster files with **0 unsupported files and 0 parse failures** (431,981,981 total bytes). It recorded per-file dimensions, detected format, orientation, bit depth, alpha-channel declarations, transparency metadata flags, animation flags and SHA-256.
+
+| Source root | Files | Bytes |
+|---|---:|---:|
+| `assets/reference/` | 1,121 | 387,820,405 |
+| `assets/Gifts/` | 132 | 27,150,149 |
+| `assets/Guests Layout/` | 9 | 66,481 |
+| `assets/Gifters Badge Levels/` | 72 | 2,401,127 |
+| `assets/League/` | 20 | 570,961 |
+| `assets/Artwork/` | 1,509 | 13,972,858 |
+
+Detected formats: 1,742 PNG and 1,121 JPEG. A total of 1,741 files declare an alpha channel; zero declare transparency metadata and zero declare animation metadata. The scanner does not inspect decoded pixels, so it cannot prove any file actually has transparent pixels. It also does not apply EXIF orientation or assess visual quality, rights or publication approval.
+
+Evidence: CI workflow run `43790721350`, artifact `14192032121` (`minglora-live-image-metadata-audit-13488`). The CI run still has the five unchanged baseline unit failures documented separately; the metadata-audit step itself produced and uploaded its report successfully.
