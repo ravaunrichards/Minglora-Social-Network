@@ -7,7 +7,8 @@ import {
   useCreatorLeaguePowerup,
   recordLiveGiftForLeagues,
   ensureCreatorLeagueProfile,
-  listCreatorLeagueMatches
+  listCreatorLeagueMatches,
+  supportCreatorLeagueMatch
 } from "../../backend/modules/leagues/service.js";
 
 const START = new Date("2026-11-16T16:00:00.000Z");
@@ -174,4 +175,47 @@ test("Speed Challenge doubles both match sides for 52 seconds, once per match", 
   assert.equal(after.matchPoints, 10);
   assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 20);
   assert.equal(ensureCreatorLeagueProfile(db, "host-b", "GLOBAL", START).seasonPoints, 10);
+});
+
+
+test("Magic Mist hides score-bearing event detail from the opposing creator without mutating match history", () => {
+  const { db, match } = liveMatch();
+  gift(db, { id: "mist-hidden-gift", senderId: "hidden-gifter", points: 25 });
+  gift(db, { id: "mist-visible-gift", senderId: "visible-gifter", side: "opponent", points: 12 });
+  supportCreatorLeagueMatch(db, match, "support-hidden", "challenger", new Date(START.getTime() + 100));
+  supportCreatorLeagueMatch(db, match, "support-visible", "opponent", new Date(START.getTime() + 200));
+  const originalEventCount = match.events.length;
+  const originalSupporterCount = match.supporters.length;
+
+  useCreatorLeaguePowerup(db, match, "host-a", "magic_mist", new Date(START.getTime() + 1000));
+  const viewingAt = new Date(START.getTime() + 2000);
+  const ownView = listCreatorLeagueMatches(db, db.users, "host-a", viewingAt)[0];
+  const opponentView = listCreatorLeagueMatches(db, db.users, "host-b", viewingAt)[0];
+  const spectatorView = listCreatorLeagueMatches(db, db.users, "spectator", viewingAt)[0];
+
+  assert.equal(opponentView.scores.challenger, null);
+  assert.equal(opponentView.events.some(item => item.side === "challenger" && ["gift_score", "viewer_support"].includes(item.type)), false);
+  assert.equal(opponentView.supporters.some(item => item.side === "challenger"), false);
+  assert.equal(opponentView.events.some(item => item.side === "opponent" && item.type === "gift_score"), true);
+  assert.equal(opponentView.supporters.some(item => item.side === "opponent"), true);
+  assert.equal(ownView.events.some(item => item.side === "challenger" && item.type === "gift_score"), true);
+  assert.equal(ownView.supporters.some(item => item.side === "challenger"), true);
+  assert.equal(spectatorView.events.some(item => item.side === "challenger" && item.type === "gift_score"), true);
+  assert.equal(spectatorView.supporters.some(item => item.side === "challenger"), true);
+
+  const afterExpiry = listCreatorLeagueMatches(db, db.users, "host-b", new Date(START.getTime() + 32000))[0];
+  assert.equal(afterExpiry.scoreVisibility.challenger, true);
+  assert.equal(afterExpiry.events.some(item => item.side === "challenger" && item.type === "gift_score"), true);
+  assert.equal(match.events.length, originalEventCount + 1);
+  assert.equal(match.supporters.length, originalSupporterCount);
+});
+
+test("LIVE match response identifies daily-used power-ups for the current creator only", () => {
+  const { db, match } = liveMatch();
+  useCreatorLeaguePowerup(db, match, "host-a", "boosting_glove", START);
+  useCreatorLeaguePowerup(db, match, "host-b", "stun_hammer", new Date(START.getTime() + 100));
+  const challengerView = listCreatorLeagueMatches(db, db.users, "host-a", new Date(START.getTime() + 200))[0];
+  const opponentView = listCreatorLeagueMatches(db, db.users, "host-b", new Date(START.getTime() + 200))[0];
+  assert.deepEqual(challengerView.usedPowerupsToday, ["boosting_glove"]);
+  assert.deepEqual(opponentView.usedPowerupsToday, ["stun_hammer"]);
 });
