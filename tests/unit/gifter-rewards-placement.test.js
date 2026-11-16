@@ -79,15 +79,19 @@ test('updated Gift entry script and Rewards image are refreshed through the serv
   assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
 
-test('the uploaded Gifter badge progression artwork is served and displayed without restoring the removed Coin chart', () => {
-  const artwork = path.join(root, 'public', 'assets', 'gifter-badge-progression-art.jpg');
-  assert.ok(fs.existsSync(artwork), 'the uploaded original progression artwork exists');
-  assert.ok(progression.includes("src='/assets/gifter-badge-progression-art.jpg'"), 'the progression page displays the supplied image');
-  assert.match(server, /if\(p==='\/assets\/gifter-badge-progression-art\.jpg'\)[\s\S]*?path\.join\(publicDir,'assets','gifter-badge-progression-art\.jpg'\)/);
+test('the uploaded Gifter badge progression PNG is served directly and displayed without a white tracker or the removed Coin chart', () => {
+  const artwork = path.join(root, 'assets', 'Gifters Badge Progressions', 'Gifters Badge Progressions.png');
+  assert.ok(fs.existsSync(artwork), 'the uploaded original PNG progression artwork exists');
+  assert.ok(progression.includes("src='/assets/gifter-badge-progression-art.png'"), 'the progression page displays the supplied PNG');
+  assert.ok(server.includes("if(p==='/assets/gifter-badge-progression-art.png')"));
+  assert.ok(server.includes("path.join(__dirname,'..','assets','Gifters Badge Progressions','Gifters Badge Progressions.png')"));
+  assert.match(server, /Content-Type':'image\/png'/);
   assert.match(server, /Gifter badge progression artwork not found/);
   assert.ok(styles.includes('.gp-progression-art-frame img'));
   assert.match(styles, /\.gp-progression-art-frame img\{[^}]*height:auto[^}]*object-fit:contain/);
-  assert.ok(serviceWorker.includes("'/assets/gifter-badge-progression-art.jpg'"));
+  assert.ok(serviceWorker.includes("'/assets/gifter-badge-progression-art.png'"));
+  assert.ok(!serviceWorker.includes('gifter-badge-progression-art.jpg'), 'the retired JPG is no longer precached');
+  assert.ok(!progression.includes('gp-progression-level-marker'), 'the white progression tracker is absent');
   assert.ok(!progression.includes('gifters-level-up.png'), 'the removed Coin threshold chart stays absent');
   assert.ok(!progression.includes('gp-chart-reference'), 'the removed chart card stays absent');
 });

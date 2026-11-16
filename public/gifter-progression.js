@@ -201,7 +201,7 @@
   const PROGRESSION_TRACK_CENTERS = Object.freeze([95, 272, 450, 628, 806, 984]);
   // The six supplied PNG crops have transparent canvas padding. These measured
   // offsets center the visible badge pixels (not the full PNG canvas) over the
-  // six original tracker symbols at every responsive width.
+  // six original milestone symbols at every responsive width.
   const PROGRESSION_TRACK_OVERLAY_ALIGNMENT = Object.freeze([
     { x: 0.18, y: 2.71 },
     { x: 0.28, y: 3.77 },
@@ -214,26 +214,7 @@
   function progressionTrackState(current = {}) {
     const level = Math.max(0, Math.min(50, Math.floor(Number(current.level) || 0)));
     const hasGifterBadge = Boolean(current.hasUnlockedBadge && level > 0);
-    if (!hasGifterBadge) return { level, hasGifterBadge: false, markerX: null };
-
-    const withinLevel = level < 50
-      ? Math.max(0, Math.min(1, Number(current.progressPercent || 0) / 100))
-      : 0;
-    const effectiveLevel = Math.min(50, level + withinLevel);
-    let markerX = PROGRESSION_TRACK_CENTERS[PROGRESSION_TRACK_CENTERS.length - 1];
-
-    for (let index = 0; index < PROGRESSION_TRACK_STAGES.length - 1; index += 1) {
-      const startLevel = PROGRESSION_TRACK_STAGES[index];
-      const endLevel = PROGRESSION_TRACK_STAGES[index + 1];
-      if (effectiveLevel < endLevel) {
-        const fraction = Math.max(0, Math.min(1, (effectiveLevel - startLevel) / (endLevel - startLevel)));
-        markerX = PROGRESSION_TRACK_CENTERS[index] +
-          ((PROGRESSION_TRACK_CENTERS[index + 1] - PROGRESSION_TRACK_CENTERS[index]) * fraction);
-        break;
-      }
-    }
-
-    return { level, hasGifterBadge: true, markerX, effectiveLevel };
+    return { level, hasGifterBadge };
   }
 
   function renderProgressionTrack(current) {
@@ -248,20 +229,14 @@
           "%' alt='' aria-hidden='true' loading='eager' decoding='async'>"
         : "").join("")
       : "";
-    const marker = track.hasGifterBadge
-      ? "<span class='gp-progression-level-marker' style='left:" +
-        ((track.markerX / 1080) * 100).toFixed(3) + "%' aria-hidden='true' title='Current Gifter Level " +
-        track.level + "'></span>"
-      : "";
     const description = track.hasGifterBadge
-      ? "Gifter Level " + track.level + " of 50. Earned milestone badges light up along the original progression path; the white marker follows your current level."
-      : "No Gifter level yet. Send your first confirmed gift to activate badge tracking.";
+      ? "Gifter Level " + track.level + " of 50. Earned milestone badges highlight the original progression artwork."
+      : "No Gifter level yet. Send your first confirmed gift to activate badge milestone highlights.";
 
     return "<figure class='gp-progression-art-frame'>" +
       "<div class='gp-live-progression-track' role='img' aria-label='" + esc(description) + "'>" +
-      "<img src='/assets/gifter-badge-progression-art.jpg' alt='Original Minglora Gifter badge progression path' loading='eager' decoding='async'>" +
+      "<img src='/assets/gifter-badge-progression-art.png' alt='Original Minglora Gifter badge progression artwork' loading='eager' decoding='async'>" +
       earnedStageBadges +
-      marker +
       "</div></figure>";
   }
 
@@ -288,7 +263,7 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       (embedded ? "" : "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div>") + "</header>" +
-      "<section class='gp-progression-art-reference card' aria-labelledby='gp-progression-art-title'><div class='gp-section-heading'><div><span class='gp-eyebrow'>ORIGINAL BADGE ARTWORK</span><h2 id='gp-progression-art-title'>Gifter badge progression</h2><p>Your white level marker advances along the original six-stage path as confirmed gifts unlock Levels 1–50. Earned badges and the connecting path light up in sequence.</p></div></div>" + renderProgressionTrack(current) + "</section>" +
+      "<section class='gp-progression-art-reference card' aria-labelledby='gp-progression-art-title'><div class='gp-section-heading'><div><span class='gp-eyebrow'>ORIGINAL BADGE ARTWORK</span><h2 id='gp-progression-art-title'>Gifter badge progression</h2><p>Earned milestone badges highlight as you reach Levels 1, 10, 20, 30, 40 and 50. Your exact current level and Coin progress are shown below.</p></div></div>" + renderProgressionTrack(current) + "</section>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +

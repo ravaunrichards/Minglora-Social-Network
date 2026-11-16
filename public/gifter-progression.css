@@ -517,7 +517,7 @@
 @media(max-width:760px){.gp-progression-art-frame{padding:8px;border-radius:12px}.gp-progression-art-frame img{width:100%;height:auto}}
 
 
-/* The original strip remains the layout; earned crop badges and one white current-level marker overlay it. */
+/* The supplied PNG is the complete progression layout; only earned milestone badges overlay its six symbols. */
 .gp-live-progression-track{
   position:relative;display:block;width:100%;aspect-ratio:1080 / 153;min-width:0;
   overflow:visible;isolation:isolate;line-height:0;
@@ -526,14 +526,7 @@
   display:block;width:100%;height:100%;max-width:100%;object-fit:fill;object-position:center;
   border-radius:8px;
 }
-.gp-progression-level-marker{
-  position:absolute;top:85%;transform:translate(-50%,-50%);
-  display:block;width:1.75%;min-width:5px;max-width:19px;aspect-ratio:1;border-radius:50%;
-  box-sizing:border-box;border:1px solid rgba(36,24,56,.55);
-  background:#fff;z-index:2;pointer-events:none;
-  box-shadow:0 0 0 1px rgba(255,255,255,.38),0 1px 3px rgba(35,21,50,.36);
-  transition:left .35s cubic-bezier(.2,.75,.25,1);
-}
+
 /* The supplied PNGs contain transparent canvas padding. Size the visible crop pixels to the original tracker-symbol footprint so the earned overlay fully conceals the muted symbol beneath it. */
 .gp-live-progression-track>.gp-progression-range-badge{
   position:absolute;top:55%;z-index:1;display:block;width:10%;min-width:0;max-width:none;
@@ -567,7 +560,6 @@
 @media(prefers-reduced-motion:reduce){
   .gp-level-index-item.is-current .gp-level-index-art{animation:none}
   .gp-live-progression-track>.gp-progression-range-badge{animation:none}
-  .gp-progression-level-marker{transition:none}
 }
 
 /* Keep the original individual badge state hierarchy while using the supplied crop artwork. */

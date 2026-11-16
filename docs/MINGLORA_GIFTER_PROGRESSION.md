@@ -28,7 +28,7 @@ The maximum level is 50. The client receives the server-calculated level, progre
 
 ## Interactive 50-level progression strip
 
-The supplied original progression strip is the complete visual layout. Its six artwork positions correspond to Levels 1, 10, 20, 30, 40, and 50. One white position marker appears only after the member has a Gifter badge (Level 1 or above); no Level 0 marker is shown. The marker advances continuously along the original strip using the server-calculated current level and within-level progress percentage. Do not add overlay circles, connector lines, a black cover dot, or other shapes: the supplied artwork already defines the layout and spacing.
+The supplied original PNG progression strip is the complete visual layout. Its six artwork positions correspond to Levels 1, 10, 20, 30, 40, and 50. Earned milestone badge crops highlight the corresponding positions after each stage is reached. No white position marker or extra tracker dot is placed over the artwork; the exact current level and Coin progress remain visible separately in the member's Gifter Status.
 
 The ordered Level 1–50 directory remains the individual badge tracker: locked badges stay muted, earned/admin-awarded badges light up, and the current badge receives the strongest highlight. The original progression strip and all 50 original numbered badge images remain unchanged. A successfully confirmed Gift Center send triggers an immediate refresh; the existing quiet overview polling keeps other confirmed gift routes synchronized. The server remains authoritative for coin totals, unlocks, refunds, and admin awards.
 
@@ -53,7 +53,7 @@ Creator League rank and gifts received do not grant Gifter badges.
 
 ## Complete source-reference placement — 2026-11-15
 
-The canonical `assets/Gifters Badge Levels/` collection retains 66 image files (52 PNG and 14 JPEG): 64 mapped reference files plus two paths containing the same progression-strip artwork. The six cropped range sheets are catalogued once under `assets/Crop References/Gifter level range sheets/`; they are no longer duplicated in the legacy Gifter folder. The dedicated deployed progression strip is served from `public/assets/gifter-badge-progression-art.jpg`:
+The canonical `assets/Gifters Badge Levels/` collection retains 66 image files (52 PNG and 14 JPEG): 64 mapped reference files plus two paths containing the same progression-strip artwork. The six cropped range sheets are catalogued once under `assets/Crop References/Gifter level range sheets/`; they are no longer duplicated in the legacy Gifter folder. The supplied PNG progression strip is served directly from its canonical source asset through `/assets/gifter-badge-progression-art.png`:
 
 - `Gifters Rewards.png` remains the primary artwork banner at the top of the Gifts entry page.
 - The 11 `Levels 1-4.jpg` through `Levels 50.jpg` panels appear in the detailed, ordered LV 1–50 section.
@@ -64,4 +64,4 @@ The canonical `assets/Gifters Badge Levels/` collection retains 66 image files (
 
 The six Crop References range JPGs, two master-sheet files, and 50 individual PNGs use explicit server allow-list routes and are included in the PWA shell cache. All images preserve their source aspect ratio with `object-fit: contain`; master and range reference sheets do not replace the live Coin-threshold calculation.
 
-The canonical supplied source remains at `assets/Gifters Badge Progressions/Gifters Badge Progressions.jpg`; its byte-identical deployed copy at `public/assets/gifter-badge-progression-art.jpg` is displayed as a separate, uncropped badge-tier artwork strip immediately below the Gifter page heading. It is served through `/assets/gifter-badge-progression-art.jpg` and cached by the PWA shell. This is visual reference artwork only: it contains no Coin thresholds and does not drive level calculations or unlocks.
+The canonical supplied source is `assets/Gifters Badge Progressions/Gifters Badge Progressions.png`. It is served directly, uncropped, through `/assets/gifter-badge-progression-art.png` and cached by the PWA shell. This is visual artwork only: it contains no Coin thresholds and does not drive level calculations or unlocks. The six earned milestone badge overlays remain tied to the server-confirmed Gifter level.

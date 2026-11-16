@@ -69,17 +69,20 @@ test("shared non-LIVE gifter badge styling is responsive and reduced-motion safe
 });
 
 
-test("original Gifter strip lights earned crop milestones and keeps one white live level marker", () => {
+test("original Gifter PNG strip lights earned crop milestones without a white live level marker", () => {
   assert.ok(progression.includes("PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50])"));
   assert.ok(progression.includes("Boolean(current.hasUnlockedBadge && level > 0)"));
   assert.ok(progression.includes("function progressionTrackState(current = {})"));
-  assert.ok(progression.includes("Number(current.progressPercent || 0) / 100"));
-  assert.ok(progression.includes("gp-progression-level-marker"));
   assert.ok(progression.includes("track.hasGifterBadge"));
   assert.ok(progression.includes("PROGRESSION_TRACK_STAGES.map((stageLevel, index) => track.level >= stageLevel"));
   assert.ok(progression.includes("gp-progression-range-badge"));
+  assert.ok(progression.includes("src='/assets/gifter-badge-progression-art.png'"));
   assert.ok(progressionCss.includes(".gp-live-progression-track>.gp-progression-range-badge"));
-
+  assert.ok(!progression.includes("gifter-badge-progression-art.jpg"));
+  assert.ok(!progression.includes("gp-progression-level-marker"), "the white level marker is not rendered");
+  assert.ok(!progressionCss.includes("gp-progression-level-marker"), "the white level marker has no CSS rule");
+  assert.ok(!progression.includes("white level marker"));
+  assert.ok(!progression.includes("markerX"), "the progression strip no longer calculates a moving dot");
   assert.ok(!progression.includes("gp-progression-marker-cover"), "no black Level 1 cover dot is added");
   assert.ok(!progression.includes("gp-progression-glow-overlay"), "no mismatched SVG overlay is added");
   assert.ok(!progression.includes("gp-progression-link"), "no misaligned connector lines are drawn");
@@ -88,24 +91,6 @@ test("original Gifter strip lights earned crop milestones and keeps one white li
   assert.ok(!progressionCss.includes("gp-progression-glow-overlay"));
   assert.ok(!progressionCss.includes("gp-progression-link"));
   assert.ok(!progressionCss.includes("gp-progression-stage-glow"));
-
-  const markerMarkup = progression.match(/class='gp-progression-level-marker'/g) || [];
-  assert.equal(markerMarkup.length, 1, "exactly one live progression marker is rendered");
-
-  const markerRuleStart = progressionCss.indexOf(".gp-progression-level-marker{");
-  const markerRuleEnd = progressionCss.indexOf("}", markerRuleStart);
-  const markerRule = markerRuleStart >= 0 && markerRuleEnd >= 0
-    ? progressionCss.slice(markerRuleStart, markerRuleEnd + 1)
-    : "";
-  assert.ok(markerRule.includes("width:1.75%;min-width:5px;max-width:19px;aspect-ratio:1;"),
-    "the moving marker matches the original dot's 1.75% / 5–19px footprint");
-  assert.ok(markerRule.includes("box-sizing:border-box"));
-  assert.ok(markerRule.includes("border:1px solid rgba(36,24,56,.55);"),
-    "the replacement marker has a crisp defined edge");
-  assert.ok(markerRule.includes("box-shadow:0 0 0 1px rgba(255,255,255,.38),0 1px 3px rgba(35,21,50,.36);"),
-    "the marker uses a restrained crisp shadow, not a diffuse glow");
-  assert.ok(!markerRule.includes("0 0 7px") && !markerRule.includes("0 0 12px"),
-    "the moving dot must not be blurred by a large glow");
 });
 
 test("each original numbered badge visibly distinguishes locked, earned, admin-awarded and current states", () => {

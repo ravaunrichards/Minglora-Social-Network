@@ -236,5 +236,5 @@ test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
   assert.ok(sw.includes("SHELL.push('/assets/gifter-badges/level_'+String(level).padStart(2,'0')+'.png');"));
   assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/lv-1-9.jpg'"));
   assert.ok(sw.includes("'/assets/gifter-badge-reference/master-sheet.png'"));
-  assert.ok(sw.includes("'/assets/gifter-badge-progression-art.jpg'"), "the new progression art is precached");
+  assert.ok(sw.includes("'/assets/gifter-badge-progression-art.png'"), "the new progression art is precached");
 });

@@ -190,3 +190,10 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Post-merge source verification on `main`: the original strip renderer contains only the single white current-level marker; all four removed overlay tokens are absent from both JS and CSS; the black Level 1 cover dot is absent; locked, earned, current and admin-awarded individual badge styling remains present.
 - The updated no-Level-0/marker-only regression assertion passed in the PR CI run. The first full CI run still reported repository-level failures (including an unrelated For You navigation assertion and unrelated Creator League/API expectations); it also caught an individual badge-state CSS assertion during the intermediate overlay-removal commit. The original badge-state CSS was restored before merge, but a fresh full-suite rerun was not available, so no full CI pass is claimed.
 - PWA asset versions were updated and the shell cache was bumped to v328. Render deployment was not triggered or verified.
+
+### Gifter badge progression PNG correction — 2026-11-16
+- Replaced the displayed progression artwork with the uploaded canonical PNG at `assets/Gifters Badge Progressions/Gifters Badge Progressions.png`; it is served directly through `/assets/gifter-badge-progression-art.png`.
+- Removed the white moving level dot from the strip. The six earned milestone badge highlights remain; exact current level and Coin progress continue to appear in Gifter Status.
+- Updated only the Gifter progression renderer, its image route, relevant PWA asset/version references, focused regression tests and matching documentation.
+- Gifter thresholds, lifetime Coin calculations, gift ledger, refunds, wallets, admin awards, individual badge artwork and database records were not changed.
+- Validation status: source and regression assertions updated; CI/deployment verification pending.
