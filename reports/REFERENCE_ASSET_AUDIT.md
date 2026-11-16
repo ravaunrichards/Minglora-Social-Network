@@ -33,17 +33,17 @@ The nine supplied guest-layout diagrams were each visually inspected:
 
 | Reference file | Visual arrangement |
 |---|---|
-| `assets/Guests Layout/Full Screen.jpg` | One full-stage participant |
-| `assets/Guests Layout/Fluid Panel.jpg` | Large primary panel with small guest overlays |
-| `assets/Guests Layout/Fluid Grid.jpg` | One large tile and one smaller tile |
-| `assets/Guests Layout/Fixed Grid.jpg` | Equal 3×3 grid |
-| `assets/Guests Layout/Fixed Panel.jpg` | Large primary panel with a fixed side stack |
-| `assets/Guests Layout/Side by Side.jpg` | Two primary tiles above a smaller guest row |
-| `assets/Guests Layout/Spotlight.jpg` | Wide spotlight participant above smaller guests |
-| `assets/Guests Layout/Roundtable 1.jpg` | Central host with two vertical guest columns |
-| `assets/Guests Layout/Roundtable 2.jpg` | Central host with side guest stacks |
+| `assets/Crop References/Guests Layout/png/Full Screen.png` | One full-stage participant |
+| `assets/Crop References/Guests Layout/png/Fluid Panel.png` | Large primary panel with small guest overlays |
+| `assets/Crop References/Guests Layout/png/Fluid Grid.png` | One full-height left panel with two stacked right panels |
+| `assets/Crop References/Guests Layout/png/Fixed Grid.png` | Equal 3×3 grid |
+| `assets/Crop References/Guests Layout/png/Fixed Panel.png` | One large left panel with three vertically stacked right panels |
+| `assets/Crop References/Guests Layout/png/Side by Side.png` | Two large top panels above two rows of four compact panels |
+| `assets/Crop References/Guests Layout/png/Spotlight.png` | Wide spotlight participant above smaller guests |
+| `assets/Crop References/Guests Layout/png/Roundtable 1.png` | Central host with two vertical guest columns |
+| `assets/Crop References/Guests Layout/png/Roundtable 2.png` | Central host with side guest stacks |
 
-These nine references correspond to the existing implementation's seven host-selectable layouts plus two separately persisted guest-box layouts. The source-level coverage is in `tests/unit/live-layout-panels.test.js` and `tests/unit/live-guest-layout.test.js`; this audit did not run those tests locally.
+These nine PNG crops are the authoritative source for nine mutually exclusive complete layouts in both LIVE and MeetWave. Roundtable 1 and Roundtable 2 are standalone layouts, not separately persisted guest-box overlays. Source-level coverage is in `tests/unit/live-layout-panels.test.js`, `tests/unit/live-guest-layout.test.js`, `tests/unit/meetwave-room-reference.test.js` and `tests/unit/screen-guest-layout-separation.test.js`; the three-device Chromium crop comparison is run by the layout visual-QA workflow.
 
 ## Additional LIVE-adjacent references inventoried
 

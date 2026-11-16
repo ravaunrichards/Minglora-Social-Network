@@ -29,11 +29,11 @@ This is a continuation checkpoint against the current `main` repository. The old
 - [x] Re-traversed the current main Git tree: 5,499 entries; traversal was not truncated.
 - [x] Confirmed the reference inventory of 1,121 images under `assets/reference/`: 1,071 Android JPEGs, 29 desktop TikTok PNGs and 21 desktop Facebook PNGs.
 - [x] Confirmed 131 gift-catalogue capture PNGs plus one reference-sheet JPEG under `assets/Gifts/`; preserved as reference-only source material.
-- [x] Individually visually inspected all 9 supplied guest-layout diagrams in `assets/Guests Layout/`.
+- [x] Individually visually inspected all 9 authoritative PNG guest-layout crops in `assets/Crop References/Guests Layout/png/`.
 - [x] Visually checked the two Android Fan Club/SuperFan captures, one Android League FAQ capture, and three desktop captures.
 - [x] Corrected two misleading screenshot attributions: `capture-20261112-072050.png` is a For You video/comments page, and `capture-20261112-074126.png` is a creator scheduler. Neither is a LIVE-room reference.
 - [x] Identified the correct desktop LIVE multi-guest reference: `capture-20261112-074648.png`, 1366×638, showing a 2×2 participant stage, viewer roster and separate chat/reaction panel.
-- [x] Confirmed the nine guest layouts map to the existing seven host-selectable layouts plus the two independently persisted roundtable guest-box layouts.
+- [x] Corrected the old seven-plus-two mapping: all nine crops are independent complete layouts in both LIVE and MeetWave.
 - [x] Inventoried 71 Gifters Badge Levels images (53 PNG, 18 JPEG) and 20 League JPEG captures; their complete visual/rights review remains open.
 - [x] Counted 53 named symbols in `public/assets/icons/navigation-3d.svg`; confirmed this does not constitute the complete requested LIVE-specific icon/state pack.
 - [x] Reconfirmed the existing canonical catalogue (1,748 rows; 1,737 active; 11 inactive), 45 standalone GLTF gift models, and generated asset pipeline/motion index.
@@ -49,7 +49,7 @@ This is a continuation checkpoint against the current `main` repository. The old
 - `scripts/generate-live-gift-motion-index.mjs` creates the active-only motion index at `public/assets/animations/gifts/catalog-motion-index.json` (1,737 active profiles).
 - `public/gift-effects.js`, `public/gifts.js` and `public/app.js` contain the existing gift preview/playback and LIVE integration.
 - Existing source tests cover catalogue-to-motion-index correspondence, reduced-motion handling, layout persistence, guest stage behaviour and server-confirmed gift events. The SVG continuation adds vector-shape assertions and a full-catalogue zero-emoji-overlay gate; its Node 24 CI results are authoritative for branch validation, not a substitute for physical-device QA.
-- The supplied guest-layout images map to seven screen layouts plus two separate roundtable guest-box layouts. The implementation tests are `tests/unit/live-layout-panels.test.js` and `tests/unit/live-guest-layout.test.js`.
+- The supplied guest-layout PNGs map one-to-one to nine independent complete layouts. The implementation tests are `tests/unit/live-layout-panels.test.js`, `tests/unit/live-guest-layout.test.js`, `tests/unit/meetwave-room-reference.test.js` and `tests/unit/screen-guest-layout-separation.test.js`. The three-device original-crop visual matrix is run by `.github/workflows/layout-separation-visual-qa.yml`.
 
 ## Partial / not completed
 
@@ -289,7 +289,7 @@ All **45** retained standalone gift models in `public/assets/gifts/` were inspec
 - The per-model load, visibility, rendered-image and pixel-content assertions completed for all 27 combinations. The 27 captures were inspected in a combined contact sheet and selected full-resolution screenshots. Visible output is present at all three tested viewport sizes; this is a browser-render check, not physical-device validation.
 - **Dedicated gift-render workflow: FAILED** at the final network-request assertion. Three `net::ERR_ABORTED` events occurred for previously rendered gift GLTF paths after the viewer changed models. No HTTP 404/5xx response or unhandled page error was recorded in that run. The cancellation classifier remains unresolved; PR #367 is open and unmerged. Do not treat the render workflow as passed or merge it while its required check is red.
 - **Standard CI: PASSED** on the same code head — 1,219 tests passed, 0 failed. Supabase Auth provider acceptance and For You functional navigation passed.
-- **Independent LIVE/MeetWave seven-plus-two layout visual-QA workflow: PASSED.**
+- **Historical LIVE/MeetWave seven-plus-two visual-QA workflow: PASSED.** Its model is superseded by this nine-layout correction; the new original-crop mobile/tablet/desktop matrix is pending.
 
 ### Visual review interpretation
 

@@ -58,7 +58,7 @@ These are the catalogue's actual stored categories, not the 18 conceptual catego
 
 ## LIVE reference and guest layout mapping
 
-The nine files in `assets/Guests Layout/` map to seven host-selectable screen layouts (`full-screen`, `fluid-panel`, `fluid-grid`, `fixed-grid`, `fixed-panel`, `side-by-side`, `spotlight`) and two independently persisted guest-box layouts (`roundtable-1`, `roundtable-2`). See `reports/REFERENCE_ASSET_AUDIT.md` for the individual reference-to-layout mapping and the corrected desktop LIVE screenshot attribution.
+The nine files in `assets/Crop References/Guests Layout/png/` map one-to-one to nine independent full-layout presets (`full-screen`, `fluid-panel`, `fluid-grid`, `fixed-grid`, `fixed-panel`, `side-by-side`, `spotlight`, `roundtable-1`, `roundtable-2`). The same complete preset selector is used in LIVE and MeetWave. See `reports/REFERENCE_ASSET_AUDIT.md` for the individual crop-to-layout mapping and desktop LIVE screenshot attribution.
 
 ## LIVE interface resources already wired
 
