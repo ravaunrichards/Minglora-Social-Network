@@ -53,7 +53,7 @@
     const podium = activePeriod === "daily" && position <= 3;
     const image = podium
       ? "<span class='minglora-gifter-podium' role='img' aria-label='Daily ranking position " + position + "'>" +
-        "<img class='minglora-gifter-rank-frame' src='/assets/daily-ranking-badges/place-" + position + ".png' alt='' loading='lazy' decoding='async'>" +
+        "<img class='minglora-gifter-rank-frame' src='/assets/daily-ranking-badges/top-gifters-place-" + position + ".png' alt='' loading='lazy' decoding='async'>" +
         (avatar
           ? "<img class='minglora-gifter-rank-avatar' src='" + escapeHtml(avatar) + "' alt='' loading='lazy' referrerpolicy='no-referrer'>"
           : "<span class='minglora-gifter-rank-fallback' aria-hidden='true'>" + initial + "</span>") +
