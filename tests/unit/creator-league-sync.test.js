@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   ensureCreatorLeagueProfile,
   recordLiveGiftForLeagues,
+  settleCreatorLeagueDay,
   settleScheduledCreatorLeagueDays
 } from "../../backend/modules/leagues/service.js";
 
@@ -19,7 +20,22 @@ function makeDb() {
   };
 }
 
-test("scheduled league settlement does not delay lifetime milestone class promotion", () => {
+test("an inactive creator stays in the starting class through empty daily settlements", () => {
+  const db = makeDb();
+  const now = new Date("2026-11-15T12:00:00.000Z");
+  const profile = ensureCreatorLeagueProfile(db, "inactive-creator", "GLOBAL", now);
+
+  for (let day = 1; day <= 7; day += 1) {
+    const dayKey = "2026-11-" + String(day).padStart(2, "0");
+    const result = settleCreatorLeagueDay(db, dayKey, now);
+    assert.equal(result.settled, true);
+    assert.equal(profile.leagueClass, "D5");
+    assert.equal(profile.fragments, 0);
+    assert.equal(profile.leagueShields, 0);
+  }
+});
+
+test("daily League placement awards the supplied fragment thresholds independently of lifetime totals", () => {
   const db = makeDb();
   const previousDay = new Date("2026-11-05T12:00:00.000Z");
   const currentDay = new Date("2026-11-06T12:00:00.000Z");
@@ -41,15 +57,19 @@ test("scheduled league settlement does not delay lifetime milestone class promot
 
   const firstRun = settleScheduledCreatorLeagueDays(db, currentDay);
   const topProfile = db.creatorLeagueProfiles.find(item => item.userId === "top-creator");
+  const secondProfile = db.creatorLeagueProfiles.find(item => item.userId === "second-creator");
 
   assert.deepEqual(firstRun.settledDays, ["2026-11-05"]);
-  assert.equal(topProfile.fragments, 0);
-  assert.equal(topProfile.leagueClass, "D5");
+  assert.equal(firstRun.placementsProcessed, 2);
+  assert.equal(topProfile.fragments, 2, "first place in D5 earns the reference +2 fragment band");
+  assert.equal(topProfile.leagueClass, "D5", "two fragments do not promote before four are accumulated");
+  assert.equal(secondProfile.fragments, 0, "lower placement in D5 earns no fragment");
+  assert.equal(secondProfile.leagueClass, "D5");
   assert.equal(db.creatorLeagueDailySettlements.length, 1);
 
   const secondRun = settleScheduledCreatorLeagueDays(db, currentDay);
   assert.deepEqual(secondRun.settledDays, []);
-  assert.equal(topProfile.fragments, 0);
+  assert.equal(topProfile.fragments, 2, "a completed day is not rewarded twice");
   assert.equal(topProfile.leagueClass, "D5");
   assert.equal(db.creatorLeagueDailySettlements.length, 1);
 });

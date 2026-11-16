@@ -9748,6 +9748,39 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     });
     return;
   }
+  const leagueReferenceAssetNames = new Set([
+    'Screenshot_20261112_020247_TikTok(1).jpg',
+    'Screenshot_20261112_020335_TikTok(1).jpg',
+    'Screenshot_20261112_020335_TikTok(2).jpg',
+    'Screenshot_20261112_020335_TikTok(3).jpg',
+    'Screenshot_20261112_020335_TikTok(4).jpg',
+    'Screenshot_20261112_020350_TikTok(1).jpg',
+    'Screenshot_20261112_020436_TikTok(1).jpg',
+    'Screenshot_20261112_020458_TikTok(1).jpg',
+    'Screenshot_20261112_020827_TikTok(1).jpg',
+    'Screenshot_20261112_020827_TikTok(2).jpg',
+    'Screenshot_20261112_020839_TikTok(1).jpg',
+    'Screenshot_20261112_020853_TikTok(1).jpg',
+    'Screenshot_20261112_021224_TikTok(1).jpg',
+    'Screenshot_20261112_021224_TikTok(2).jpg',
+    'Screenshot_20261112_021309_TikTok(1).jpg',
+    'Screenshot_20261112_021309_TikTok(2).jpg',
+    'Screenshot_20261112_021333_TikTok(1).jpg',
+    'Screenshot_20261112_021343_TikTok(1).jpg',
+    'Screenshot_20261112_021355_TikTok(1).jpg',
+    'Screenshot_20261112_021407_TikTok(1).jpg'
+  ]);
+  if(p.startsWith('/assets/League/')){
+    const filename=p.slice('/assets/League/'.length);
+    if(!leagueReferenceAssetNames.has(filename))return json(res,404,{error:'League reference image not found.'});
+    const assetFile=path.join(__dirname,'..','assets','League',filename);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'League reference image not found.'});
+      res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
   if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});

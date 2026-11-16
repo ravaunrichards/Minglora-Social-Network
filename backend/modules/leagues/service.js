@@ -413,7 +413,9 @@ export function settleCreatorLeagueDay(db, dayKey, now = new Date()) {
       for (let cursor = index; cursor < end; cursor += 1) {
         const { profile, points } = members[cursor];
         const position = index + 1;
-        const fragmentDelta = tied
+        // Zero-score members remain visible in the cohort but cannot gain or
+        // lose progression fragments on a day without eligible LIVE Gift activity.
+        const fragmentDelta = tied || points <= 0
           ? 0
           : creatorLeagueFragmentsForPlacement(profile.leagueClass, position, participantCount);
         const beforeClass = profile.leagueClass;

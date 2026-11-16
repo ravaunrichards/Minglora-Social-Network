@@ -17,6 +17,32 @@
     const accessibility = label ? " role='img' aria-label='" + esc(label) + "'" : " aria-hidden='true'";
     return "<svg class='league-asset-icon " + esc(className || "") + "' viewBox='0 0 128 128'" + accessibility + " focusable='false'><use href='/assets/league/league-emblems.svg?v=20261116-original-league-svg-assets-1#" + safeSymbol + "'></use></svg>";
   }
+  const leagueReferenceAssetNames = new Set([
+    'Screenshot_20261112_020247_TikTok(1).jpg',
+    'Screenshot_20261112_020335_TikTok(1).jpg',
+    'Screenshot_20261112_020335_TikTok(2).jpg',
+    'Screenshot_20261112_020335_TikTok(3).jpg',
+    'Screenshot_20261112_020335_TikTok(4).jpg',
+    'Screenshot_20261112_020350_TikTok(1).jpg',
+    'Screenshot_20261112_020436_TikTok(1).jpg',
+    'Screenshot_20261112_020458_TikTok(1).jpg',
+    'Screenshot_20261112_020827_TikTok(1).jpg',
+    'Screenshot_20261112_020827_TikTok(2).jpg',
+    'Screenshot_20261112_020839_TikTok(1).jpg',
+    'Screenshot_20261112_020853_TikTok(1).jpg',
+    'Screenshot_20261112_021224_TikTok(1).jpg',
+    'Screenshot_20261112_021224_TikTok(2).jpg',
+    'Screenshot_20261112_021309_TikTok(1).jpg',
+    'Screenshot_20261112_021309_TikTok(2).jpg',
+    'Screenshot_20261112_021333_TikTok(1).jpg',
+    'Screenshot_20261112_021343_TikTok(1).jpg',
+    'Screenshot_20261112_021355_TikTok(1).jpg',
+    'Screenshot_20261112_021407_TikTok(1).jpg'
+  ]);
+  function leagueReferenceImage(filename, className, label) {
+    if (!leagueReferenceAssetNames.has(filename)) return "";
+    return "<img class='league-original-image " + esc(className || "") + "' src='/assets/League/" + filename + "' alt='" + esc(label || "") + "' loading='lazy' decoding='async'>";
+  }
   function currentPowerup() {
     return (state.overview?.powerups || []).find(item => item.id === state.selectedPowerupId) || null;
   }
@@ -191,19 +217,18 @@
   }
   function podiumMarkup(leaderboard) {
     const ranked = [
-      { member: leaderboard[1], place: 2 },
       { member: leaderboard[0], place: 1 },
+      { member: leaderboard[1], place: 2 },
       { member: leaderboard[2], place: 3 }
     ].filter(entry => entry.member && entry.member.id);
     if (!ranked.length) return "";
-    return "<div class='league-podium' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
-      "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
-        "<span class='league-podium-crown' aria-hidden='true'>" + leagueAssetIcon("rank-" + place, "league-podium-crown-icon") + "</span>" +
-        "<span class='league-podium-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") +
-        "</span>" +
-        "<strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
-        "<b class='league-podium-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</b>" +
-        "<span class='league-podium-base' aria-hidden='true'>" + place + "</span></button>"
+    return "<div class='league-top-three-list' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
+      "<button type='button' class='league-top-three-row is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
+        "<b class='league-position'>#" + place + "</b>" +
+        "<span class='league-rank-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") + "</span>" +
+        "<span class='league-leader-name'><strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
+        "<span class='league-rank-pill league-rank-pill--place-" + place + "'>No. " + place + "</span></span>" +
+        "<strong class='league-leader-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>"
     ).join("") + "</div>";
   }
   function leaderboardMarkup(leaderboard) {
@@ -211,16 +236,13 @@
     const remaining = leaderboard.slice(3).map(item => {
       const position = Math.max(0, Number(item.position || 0));
       const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
-      const awardMarkup = award
-        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-hidden='true'>" + leagueAssetIcon(award === "top-ten" ? "award-top-ten" : "award-top-twenty", "league-ranking-medal-icon") + "</span>"
-        : "";
       const bandMarkup = award
         ? "<span class='league-leader-band league-leader-band--" + award + "'>" + (award === "top-ten" ? "TOP 10" : "TOP 20") + "</span>"
         : "";
       const rowClass = award ? " league-leader-row--" + award : "";
       return "<button type='button' class='league-leader-row" + rowClass + "' data-league-profile='" + esc(item.id || "") + "' aria-label='Open " + esc(item.name || item.username || "creator") + " profile, place " + position + "' " + (!item.id ? "disabled" : "") + ">" +
         "<b class='league-position'>#" + position + "</b>" +
-        "<span class='league-rank-avatar-wrap'>" + image(item, "ml-creator-ring ml-creator-ring--league") + awardMarkup + "</span>" +
+        "<span class='league-rank-avatar-wrap'>" + image(item, "ml-creator-ring ml-creator-ring--league") + "</span>" +
         "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small>" + bandMarkup + "</span>" +
         "<strong class='league-leader-points'>" + Number(item.points ?? item.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>";
     }).join("");
@@ -243,33 +265,76 @@
       if (!levels.length) return "";
       const currentTier = levels.includes(active);
       return "<article class='league-tier-card league-tier-card--" + group.tier + (currentTier ? " is-active-tier" : "") + "'>" +
-        "<div class='league-tier-card-heading'><span class='league-tier-emblem'>" + leagueAssetIcon("division-" + group.tier.toLowerCase(), "league-tier-emblem-icon", "League " + group.tier + " emblem") + "</span>" +
+        "<div class='league-tier-card-heading'><span class='league-tier-emblem' aria-hidden='true'>" + group.tier + "</span>" +
         "<span><strong>League " + group.tier + "</strong><small>" + group.title + "</small></span></div>" +
         "<div class='league-tier-class-list'>" + levels.map(item =>
-          "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + leagueAssetIcon("fragment-" + group.tier.toLowerCase(), "league-class-step-icon") + "<span>" + esc(item) + "</span></span>"
+          "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + esc(item) + "</span>"
         ).join("") + "</div></article>";
     }).join("");
-    return "<div class='league-class-ladder league-tier-grid' aria-label='Creator League class hierarchy'>" + groups + "</div>";
+    return "<div class='league-original-reference-gallery league-original-reference-gallery--progression' aria-label='Original Creator League class progression reference'>" +
+      "<figure class='league-original-reference league-original-reference--classes'><figcaption>Original 18-class progression</figcaption>" +
+      leagueReferenceImage("Screenshot_20261112_020458_TikTok(1).jpg", "league-progression-reference-image", "Original A3 to A1, B5 to B1, C5 to C1 and D5 to D1 class progression") +
+      "</figure>" +
+      "<figure class='league-original-reference league-original-reference--class-order'><figcaption>Original class-order reference</figcaption>" +
+      leagueReferenceImage("Screenshot_20261112_020247_TikTok(1).jpg", "league-class-order-reference-image", "Original uploaded class order: D5 to D1, C5 to C1, B5 to B1 and A3 to A1") +
+      "</figure></div>" +
+      "<div class='league-class-ladder league-tier-grid' aria-label='Live Creator League class hierarchy'>" + groups + "</div>";
   }
   function fragmentRulesMarkup() {
-    const groups = [
-      { tier: "A", title: "A3–A1", rules: [[3, "Top 1%"], [2, "Top 10%"], [1, "Top 20%"], [0, "Top 60%"], [-1, "Bottom 40%"]] },
-      { tier: "B", title: "B5–B1", rules: [[3, "Top 1%"], [2, "Top 10%"], [1, "Top 20%"], [0, "Top 70%"], [-1, "Bottom 30%"]] },
-      { tier: "C", title: "C5–C1", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Top 80%"], [-1, "Bottom 20%"]] },
-      { tier: "D", title: "D1", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Top 80%"], [-1, "Bottom 20%"]] },
-      { tier: "D", title: "D2–D5", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Other placements"]] }
+    const references = [
+      { title: "League A fragment rules", file: "Screenshot_20261112_020335_TikTok(1).jpg", alt: "Original League A thresholds: minus one bottom 99 percent, zero top 60 percent, one top 20 percent, two top 10 percent, three top 1 percent" },
+      { title: "League B fragment rules", file: "Screenshot_20261112_020335_TikTok(2).jpg", alt: "Original League B thresholds: minus one bottom 99 percent, zero top 70 percent, one top 20 percent, two top 10 percent, three top 1 percent" },
+      { title: "League C fragment rules", file: "Screenshot_20261112_020335_TikTok(3).jpg", alt: "Original League C thresholds: minus one bottom 99 percent, zero top 80 percent, one top 20 percent, two top 10 percent" },
+      { title: "League D1 fragment rules", file: "Screenshot_20261112_020335_TikTok(4).jpg", alt: "Original League D1 thresholds: minus one bottom 99 percent, zero top 80 percent, one top 20 percent, two top 10 percent" },
+      { title: "League D2–D5 fragment rules", file: "Screenshot_20261112_020350_TikTok(1).jpg", alt: "Original League D2 through D5 thresholds: zero bottom 99 percent, one top 20 percent, two top 10 percent" }
     ];
-    const cards = groups.map(group =>
-      "<article class='league-fragment-rule-card league-tier-card--" + group.tier + "'><div class='league-fragment-rule-heading'><span class='league-fragment-tier-mark'>" + leagueAssetIcon("division-" + group.tier.toLowerCase(), "league-fragment-tier-icon") + "</span><strong>" + group.title + "</strong></div>" +
-      "<div class='league-fragment-rule-steps'>" + group.rules.map(([value, placement]) =>
-        "<span class='league-fragment-rule-step'>" + leagueAssetIcon("fragment-" + group.tier.toLowerCase(), "league-fragment-step-icon") + "<b>" + (value > 0 ? "+" : "") + value + "</b><small>" + placement + "</small></span>"
-      ).join("") + "</div></article>"
+    const cards = references.map(reference =>
+      "<figure class='league-original-fragment-card'><figcaption>" + esc(reference.title) + "</figcaption>" +
+      leagueReferenceImage(reference.file, "league-original-fragment-image", reference.alt) + "</figure>"
     ).join("");
     return "<section class='card league-fragment-reference' id='league-fragment-reference-zone' aria-labelledby='league-fragment-reference-heading'>" +
-      "<div class='league-section-heading'><div><span class='league-eyebrow'>DAILY LEAGUE PLACEMENT</span><h2 id='league-fragment-reference-heading'>Fragment rewards and protection</h2>" +
-      "<p>Each creator is ranked against their own class in their region using eligible confirmed LIVE Gift value for the completed day.</p></div><span class='league-reference-status'>4 FRAGMENTS = 1 TIER</span></div>" +
-      "<div class='league-fragment-rule-grid'>" + cards + "</div>" +
-      "<p class='league-fragment-reference-note'>Four accumulated fragments promote one tier; four lost fragments demote one tier. A League Shield automatically protects one fragment loss, does not expire, and the balance is capped at 10. D2–D5 have no fragment-loss penalty. Placement thresholds are an observed public model, not a published TikTok specification.</p></section>";
+      "<div class='league-section-heading'><div><span class='league-eyebrow'>DAILY LEAGUE PLACEMENT</span><h2 id='league-fragment-reference-heading'>Placement fragment guide</h2>" +
+      "<p>These are the original placement thresholds from your uploaded League references. Each class keeps its own fragment bands.</p></div><span class='league-reference-status'>REFERENCE ONLY</span></div>" +
+      "<div class='league-original-fragment-references' aria-label='Original League A, B, C, D1 and D2–D5 fragment rule references'>" + cards + "</div>" +
+      "<p class='league-fragment-reference-note'>Four accumulated fragments promote one tier. Four lost fragments demote one tier where fragment loss applies. A League Shield automatically protects one fragment loss, does not expire, and the balance is capped at 10. D2–D5 have no fragment-loss penalty. These images document the reference bands; live placement remains calculated by Minglora's League service.</p></section>";
+  }
+  function rankingReferenceMarkup() {
+    const groups = [
+      {
+        title: "Leaderboard row layouts",
+        items: [
+          { file: "Screenshot_20261112_020827_TikTok(2).jpg", title: "Original top-three rank rows", alt: "Uploaded League reference for No. 1, No. 2 and No. 3 leaderboard rows" },
+          { file: "Screenshot_20261112_020853_TikTok(1).jpg", title: "Original numbered leaderboard", alt: "Uploaded League reference showing numbered top-three standings and score values" }
+        ]
+      },
+      {
+        title: "First, second and third place",
+        items: [
+          { file: "Screenshot_20261112_020839_TikTok(1).jpg", title: "No. 1 creator rank card", alt: "Uploaded original No. 1 creator rank card reference" },
+          { file: "Screenshot_20261112_021224_TikTok(1).jpg", title: "No. 1 award artwork", alt: "Uploaded original first-place gold rank badge and profile-card reference" },
+          { file: "Screenshot_20261112_021224_TikTok(2).jpg", title: "No. 2 award artwork", alt: "Uploaded original second-place silver-blue rank badge and profile-card reference" },
+          { file: "Screenshot_20261112_021309_TikTok(1).jpg", title: "No. 3 award artwork", alt: "Uploaded original third-place bronze rank badge and profile-card reference" },
+          { file: "Screenshot_20261112_021309_TikTok(2).jpg", title: "No. 1 placement layout", alt: "Uploaded original No. 1 placement card layout" },
+          { file: "Screenshot_20261112_021333_TikTok(1).jpg", title: "No. 2 placement layout", alt: "Uploaded original No. 2 placement card layout" },
+          { file: "Screenshot_20261112_021343_TikTok(1).jpg", title: "No. 3 placement layout", alt: "Uploaded original No. 3 placement card layout" }
+        ]
+      },
+      {
+        title: "Top-ten and top-twenty recognition",
+        items: [
+          { file: "Screenshot_20261112_021355_TikTok(1).jpg", title: "Ranks 4–10", alt: "Uploaded original recognition reference for creators ranked No. 4 through No. 10" },
+          { file: "Screenshot_20261112_021407_TikTok(1).jpg", title: "Ranks 11–20", alt: "Uploaded original recognition reference for creators ranked No. 11 through No. 20" }
+        ]
+      }
+    ];
+    return "<details class='card league-ranking-reference-guide' id='league-ranking-reference-guide'>" +
+      "<summary>View your original uploaded ranking references</summary>" +
+      "<p class='league-ranking-reference-intro'>These are the exact source images you uploaded. Live standings above continue to use real Minglora member profiles, placement, scores and profile links.</p>" +
+      groups.map(group => "<section class='league-ranking-reference-group'><h3>" + esc(group.title) + "</h3><div class='league-ranking-reference-grid'>" +
+        group.items.map(item => "<figure class='league-ranking-reference-card'><figcaption>" + esc(item.title) + "</figcaption>" +
+          leagueReferenceImage(item.file, "league-ranking-reference-image", item.alt) + "</figure>").join("") +
+        "</div></section>").join("") +
+      "</details>";
   }
   function rankingControlsMarkup(overview) {
     const availableClasses = (overview.classes || []).slice().reverse();
@@ -295,6 +360,9 @@
     const period = state.rankingPeriod === "daily" ? "daily" : "weekly";
     const leagueClass = state.rankingClass || state.overview?.profile?.leagueClass || "";
     if (status) status.textContent = "Loading " + period + " " + leagueClass + " rankings…";
+    results.innerHTML = "<div class='league-ranking-loading-reference'>" +
+      leagueReferenceImage("Screenshot_20261112_020827_TikTok(1).jpg", "league-ranking-loading-image", "Original uploaded League ranking loading reference") +
+      "</div>";
     try {
       const data = await request("/leagues/leaderboard?period=" + encodeURIComponent(period) + "&class=" + encodeURIComponent(leagueClass));
       if (token !== leaderboardLoadToken || !isLeagueViewActive()) return;
@@ -369,7 +437,7 @@
     const matches = overview.activeMatches || [];
     const leaderboard = overview.leaderboard || [];
     const events = overview.recentEvents || [];
-    return "<div class='league-page'><section class='league-hero' id='league-hero-zone'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem'>" + leagueAssetIcon("division-" + String(p.leagueClass || "D5").charAt(0).toLowerCase(), "league-hero-emblem-icon", "Current " + p.leagueClass + " division emblem") + "<small>" + esc(p.leagueClass) + "</small></div></section>" +
+    return "<div class='league-page'><section class='league-hero' id='league-hero-zone'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem league-hero-emblem--reference'>" + leagueReferenceImage("Screenshot_20261112_020436_TikTok(1).jpg", "league-hero-emblem-image", "Original Creator League division emblems D, C, B and A") + "<small>Current class · " + esc(p.leagueClass) + "</small></div></section>" +
       "<section class='league-overview-grid' id='league-overview-zone'><article class='card league-stat-card league-primary-stat'><span class='league-eyebrow'>CURRENT CREATOR LEAGUE</span><div class='league-stat-value'>" + esc(p.leagueClass) + "</div><strong>" + Number(p.todayGiftPoints).toLocaleString() + " LIVE Gift points today</strong><p>" + Number(p.lifetimeGiftPoints).toLocaleString() + " lifetime eligible points · " + Number(p.seasonPoints).toLocaleString() + " this week</p><small>Your class is determined by daily placement and fragments, not a lifetime gift threshold.</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>LEAGUE FRAGMENTS</span><div class='league-stat-value match-rank-value'>" + (p.fragments >= 0 ? "+" : "") + Number(p.fragments || 0) + "</div><strong>" + (p.fragments >= 0 ? Number(p.fragments || 0) + " / 4 promotion fragments" : Math.abs(Number(p.fragments || 0)) + " / 4 demotion fragments") + "</strong>" + meter(Math.abs(Number(p.fragments || 0)),4) + "<small>" + (p.fragments < 0 ? "Recover fragments to protect your current tier." : p.fragments === 0 ? "Earn fragments through strong daily placement." : "Keep earning fragments to reach the next tier.") + "</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>LEAGUE SHIELDS</span><div class='league-stat-value match-rank-value'>" + Number(p.leagueShields || 0) + " / 10</div><strong>Automatic fragment protection</strong><p>A Shield absorbs one fragment loss before it affects your progress.</p><small>Earn one when promoted. Unused Shields do not expire.</small></article></section>" +
@@ -378,7 +446,7 @@
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
       "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Live scores update automatically.</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
-      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" +
+      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" + rankingReferenceMarkup() +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
       "<p class='league-footnote'>Minglora uses its own branding and assets with a TikTok LIVE-style Creator League structure. Daily class placement controls fragment movement; weekly and lifetime gift totals remain reporting statistics and do not directly promote a class.</p></div>";

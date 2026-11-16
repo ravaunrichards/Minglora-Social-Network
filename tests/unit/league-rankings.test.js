@@ -64,16 +64,16 @@ test("daily and weekly Creator League rankings browse divisions without mixing r
 
   assert.equal(daily.period, "daily");
   assert.equal(daily.region, "JAMAICA");
-  assert.deepEqual(daily.leaderboard.map(item => item.id), ["creator-b", "creator-a"]);
-  assert.deepEqual(daily.leaderboard.map(item => item.points), [300, 100]);
+  assert.deepEqual(daily.leaderboard.map(item => item.id), ["creator-c", "creator-b", "creator-a"]);
+  assert.deepEqual(daily.leaderboard.map(item => item.points), [985092, 300, 100]);
 
   assert.equal(weekly.period, "weekly");
-  assert.deepEqual(weekly.leaderboard.map(item => item.id), ["creator-b", "creator-a"]);
-  assert.deepEqual(weekly.leaderboard.map(item => item.points), [300, 100]);
+  assert.deepEqual(weekly.leaderboard.map(item => item.id), ["creator-c", "creator-b", "creator-a"]);
+  assert.deepEqual(weekly.leaderboard.map(item => item.points), [985092, 300, 100]);
   assert.equal(weekly.leaderboard.find(item => item.id === "creator-a").lifetimeGiftPoints, 900);
 
-  assert.deepEqual(higherDivision.leaderboard.map(item => item.id), ["creator-c"]);
-  assert.equal(higherDivision.leaderboard[0].points, 985092);
+  assert.deepEqual(higherDivision.leaderboard, [], "lifetime gift totals alone do not move a creator into a higher division");
+  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-c").leagueClass, "D5");
   assert.ok(!daily.leaderboard.some(item => item.id === "outside-region"));
 });
 
