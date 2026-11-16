@@ -417,6 +417,6 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [ ] Live AI identity/profile/name/email/provider/organization/department/position/task/approval record counts remain zero. No test identities, human Auth accounts, mailboxes, provider credentials, conversation records or external activity were created.
 - [ ] Global runtime remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 - [ ] No real designated-owner MFA session or configured live provider credential is available for production acceptance. No live model generation is claimed.
-- [ ] The PR branch is 4 commits ahead and 162 commits behind current `main` at this checkpoint (GitHub reports mergeable); reconcile against current main and rerun checks before any merge.
+- [ ] After both tracker updates, the PR branch is 6 commits ahead and 162 commits behind current `main` at this checkpoint (GitHub reports mergeable); reconcile against current main and rerun checks before any merge.
   
 **Current status:** source and focused AI workflows verified; full-repository CI is blocked by unrelated current-main failures; database/runtime rollout and owner/provider acceptance are outstanding. Task 1A1 is not production-complete. The master accepted checklist remains 2/19 by task count; 10-billion identity and simultaneous execution capacity remain unmeasured design objectives.
