@@ -28,7 +28,7 @@ The maximum level is 50. The client receives the server-calculated level, progre
 
 ## Interactive 50-level progression strip
 
-The original six-symbol progression strip is an active progress indicator, not a static decoration. Its six visual milestones correspond to Levels 1, 10, 20, 30, 40, and 50. The white position marker appears only after the member has a Gifter badge (Level 1 or above); no Level 0 marker is shown. The marker advances continuously across the supplied strip using the server-calculated current level and within-level progress percentage. Each reached milestone receives a glow, and the connector between milestones lights progressively as the next milestone is approached.
+The supplied original progression strip is the complete visual layout. Its six artwork positions correspond to Levels 1, 10, 20, 30, 40, and 50. One white position marker appears only after the member has a Gifter badge (Level 1 or above); no Level 0 marker is shown. The marker advances continuously along the original strip using the server-calculated current level and within-level progress percentage. Do not add overlay circles, connector lines, a black cover dot, or other shapes: the supplied artwork already defines the layout and spacing.
 
 The ordered Level 1–50 directory remains the individual badge tracker: locked badges stay muted, earned/admin-awarded badges light up, and the current badge receives the strongest highlight. The original progression strip and all 50 original numbered badge images remain unchanged. A successfully confirmed Gift Center send triggers an immediate refresh; the existing quiet overview polling keeps other confirmed gift routes synchronized. The server remains authoritative for coin totals, unlocks, refunds, and admin awards.
 
