@@ -266,3 +266,32 @@
  .league-top-three-row .league-leader-points{grid-column:3;justify-self:start;margin-top:-2px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.league-original-image{animation:none!important;transition:none!important}}
+
+
+/* Creator League podium: the original first/second/third ranking portrait frames. */
+.league-podium{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:clamp(5px,2vw,18px);padding:22px 5px 10px}
+.league-podium-member{min-width:0;gap:5px;padding:8px 3px 0}
+.league-podium-member.is-place-1{z-index:2;transform:translateY(-9px)}
+.league-podium-member.is-place-1:hover{transform:translateY(-13px)}
+.league-podium-art{position:relative;display:block;flex:0 0 auto;width:clamp(64px,15vw,100px);height:clamp(74px,18vw,116px);isolation:isolate;overflow:hidden}
+.league-podium-rank-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center}
+.league-podium-avatar{position:absolute;z-index:1;left:50%;top:42%;display:grid;place-items:center;width:43%;height:43%;transform:translate(-50%,-50%)}
+.league-podium-avatar .league-avatar{display:block;width:100%;height:100%;border:2px solid rgba(255,255,255,.95);border-radius:50%;object-fit:cover;box-shadow:0 2px 7px rgba(0,0,0,.23)}
+.league-podium-place-label{font-size:9px;font-weight:950;letter-spacing:.09em;color:var(--muted)}
+.league-podium-member strong{max-width:100%;font-size:11px}
+.league-podium-member small{max-width:100%;font-size:9px}
+.league-podium-points{font-size:10px}
+.league-podium-base{gap:1px}
+.league-podium-base>span{font-size:8px;letter-spacing:.12em}
+.league-podium-base>strong{font-size:27px}
+.league-ranking-medal{z-index:2;min-width:25px;height:24px;padding:0 3px;clip-path:none;border-radius:7px 7px 9px 9px;display:grid;place-items:center;font-size:8px;line-height:1}
+.league-ranking-medal--top-ten{background:linear-gradient(145deg,#fff0a2,#c99122 58%,#765016)}
+.league-ranking-medal--top-twenty{background:linear-gradient(145deg,#edf4ff,#8ca5cd 58%,#465d85)}
+@media(max-width:600px){
+  .league-podium{gap:3px;padding-inline:0}
+  .league-podium-member{padding-inline:1px}
+  .league-podium-art{width:clamp(54px,18vw,76px);height:clamp(62px,21vw,88px)}
+  .league-podium-member strong{font-size:9px}
+  .league-podium-member small{font-size:8px}
+  .league-podium-base>strong{font-size:20px}
+}
