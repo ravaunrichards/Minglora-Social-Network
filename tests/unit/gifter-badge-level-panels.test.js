@@ -177,12 +177,11 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
   ];
   const sourcePaths = [
     "Gifters Rewards.png",
-    ...rangeSheets.map(([file]) => file),
     ...panelFiles,
     ...masterSheets.map(([file]) => file),
     ...individualBadgeFiles.map(file => path.join("Level_Badges_01-50_Individual", file))
   ];
-  assert.equal(sourcePaths.length, 70, "the source folder inventory totals 70 remaining Gifter references");
+  assert.equal(sourcePaths.length, 64, "the remaining Gifter badge collection excludes the six separately catalogued Crop References");
   assert.equal(individualBadgeFiles.length, 50, "every individual Gifter PNG is enumerated");
   sourcePaths.forEach(file => {
     assert.ok(fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", file)), file + " remains in the canonical source folder");
@@ -196,10 +195,14 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
   assert.ok(!sw.includes("'/assets/gifters-level-up.png'"));
 
   rangeSheets.forEach(([sourceFile, routeFile]) => {
+    const cropPath = path.join(root, "assets", "Crop References", "Gifter level range sheets", sourceFile);
+    assert.ok(fs.existsSync(cropPath), sourceFile + " is stored once in Crop References");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", sourceFile)), sourceFile + " is not duplicated in the old root folder");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", sourceFile.replace(".jpg", ".png"))), sourceFile + " has no duplicate legacy PNG");
     assert.ok(progression.includes('file: "' + routeFile + '"'), routeFile + " is rendered in the range gallery");
     assert.ok(server.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " has an explicit server allow-list route");
     assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " is precached");
-    assert.ok(server.includes("'" + sourceFile + "'"), sourceFile + " maps to its original source file");
+    assert.ok(server.includes("'" + sourceFile + "'"), sourceFile + " maps to its Crop References source");
   });
   masterSheets.forEach(([sourceFile, route]) => {
     assert.ok(progression.includes(route), route + " appears in the master collection section");
