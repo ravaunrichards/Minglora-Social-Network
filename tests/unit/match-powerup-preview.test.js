@@ -62,6 +62,9 @@ test('six reference Match Power-Ups keep activation checks, usage limits and Lea
   for (const id of ['boosting_glove','magic_mist','stun_hammer','time_maker','boosters','speed_challenge']) {
     assert.ok(app.includes("data-powerup-id='" + id + "'"), id + ' is available in the LIVE match panel');
   }
+  assert.match(app, /BOOSTING GLOVE/);
+  assert.match(app, /BOOSTERS · NO\. 2 &amp; NO\. 3 GIFTERS/);
+  assert.match(app, /STUN HAMMER ACTIVE/);
   assert.match(leagues, /data-match-powerup-select/);
   assert.match(leagues, /data-powerup-select/);
   assert.match(styles, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
