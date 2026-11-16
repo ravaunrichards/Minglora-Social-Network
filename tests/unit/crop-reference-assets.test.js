@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +15,61 @@ const progressionStyles = read("public/gifter-progression.css");
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
 
+
+test("Crop References use canonical folders and contain no duplicate image files", () => {
+  const milestoneNames = [
+    "LV.1 - LV.9.png", "LV.10 - LV.19.png", "LV.20 - LV.29.png",
+    "LV.30 - LV.39.png", "LV.40 - LV.49.png", "LV.50+.png"
+  ];
+  const rangeNames = [
+    "LV.1 - LV.9.jpg", "LV.10 - LV.19.jpg", "LV.20 - LV.29.jpg",
+    "LV.30 - LV.39.jpg", "LV.40 - LV.49.jpg", "LV.50+.jpg"
+  ];
+  const rankingNames = [
+    "Screenshot_20261112_021224_TikTok(1).png",
+    "Screenshot_20261112_021224_TikTok(2).png",
+    "Screenshot_20261112_021309_TikTok(1).png",
+    "Screenshot_20261112_021309_TikTok(2).png",
+    "Screenshot_20261112_021333_TikTok(1).png",
+    "Screenshot_20261112_021343_TikTok(1).png"
+  ];
+  const guestNames = [
+    "Full Screen.png", "Fluid Panel.png", "Fluid Grid.png",
+    "Fixed Grid.png", "Fixed Panel.png", "Side by Side.png",
+    "Spotlight.png", "Roundtable 1.png", "Roundtable 2.png"
+  ];
+  const sourceFiles = [
+    ...milestoneNames.map(name => path.join("assets", "Crop References", "Gifters Badges", "Png", name)),
+    ...rangeNames.map(name => path.join("assets", "Crop References", "Gifter level range sheets", name)),
+    ...rankingNames.map(name => path.join("assets", "Crop References", "Daily Ranking Badge", "png", name)),
+    ...guestNames.map(name => path.join("assets", "Crop References", "Guests Layout", "png", name)),
+    path.join("assets", "Crop References", "Profile Picture", "ENIGMA.png")
+  ];
+  const hashes = new Map();
+  for (const relativePath of sourceFiles) {
+    const bytes = fs.readFileSync(path.join(root, relativePath));
+    const hash = createHash("sha256").update(bytes).digest("hex");
+    assert.ok(!hashes.has(hash), relativePath + " duplicates " + hashes.get(hash));
+    hashes.set(hash, relativePath);
+  }
+  assert.equal(sourceFiles.length, 28);
+  for (const name of milestoneNames) {
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", "Png", name)), name + " is in the canonical milestone folder");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", name)), name + " has no legacy PNG duplicate");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", name.replace(".png", ".psd"))), name + " has no legacy PSD duplicate");
+  }
+  for (const name of rangeNames) {
+    const stem = name.replace(".jpg", "");
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifter level range sheets", name)), name + " is in the canonical range folder");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", name)), name + " has no legacy JPG duplicate");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", stem + ".png")), name + " has no legacy padded PNG duplicate");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Crop References", "Gifter level range sheets", stem + ".png")), name + " has no padded PNG duplicate");
+  }
+  const psdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
+  assert.equal(fs.readdirSync(psdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain");
+  assert.ok(!fs.existsSync(path.join(psdDirectory, "LV.1 - LV.9")), "extensionless PNG duplicate removed");
+});
+
 test("all 50 Gifter levels keep unique artwork while six crop badges light milestone stages", () => {
   assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual/);
   assert.match(server, /gifter-crop-badges\/range-1\.png/);
@@ -22,18 +78,16 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.match(read("public/gifter-progression.js"), /PROGRESSION_TRACK_STAGES\.map\(\(stageLevel, index\) => track\.level >= stageLevel/);
   assert.match(read("public/gifter-progression.js"), /gifter-crop-badges\/range-/);
 
-  assert.match(server, /gifter-badge-range-sheets\/lv-1-9\.jpg/);
-  assert.match(server, /'Crop References','Gifter level range sheets'/);
-  assert.match(read("public/gifter-progression.js"), /file: "lv-1-9\.jpg"/);
-  assert.match(serviceWorker, /gifter-badge-range-sheets\/lv-1-9\.jpg/);
+  assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
+  assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
-  assert.match(progressionStyles, /\.gp-progression-range-badge/);
-  assert.match(progressionStyles, /brightness\(1\.48\)/);
-  assert.match(progressionStyles, /gp-progression-milestone-glow/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
+  assert.match(progressionStyles, /\.gp-progression-range-badge/);  assert.ok(progressionStyles.includes("brightness(1.48)"));
+  assert.ok(progressionStyles.includes("gp-progression-milestone-glow"));
 
 });
 
@@ -81,4 +135,5 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-cropped-badges-bright-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
 });
