@@ -24,12 +24,21 @@ test('LIVE has one exact nine-layout guest registry',()=>{
   assert.match(app,/function applyLiveGuestLayout\(value\)\{applyLiveScreenLayout\(value\);\}/);
 });
 
-test('LIVE panel and grid corrections are scoped to their matching crop layouts',()=>{
-  const contract=liveCss.slice(liveCss.indexOf('/* FINAL NINE GUEST LAYOUTS'));
+test('LIVE applies the nine original crop geometries to its guest seats',()=>{
+  const contract=liveCss.slice(liveCss.indexOf('/* LIVE CROPPED NINE GUEST LAYOUTS'));
   for(const layout of nine)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' LIVE geometry missing');
-  assert.ok(contract.includes('data-live-layout="fluid-grid"]{\n  grid-template-columns:repeat(2,minmax(0,1fr))'));
-  assert.ok(contract.includes('data-live-layout="fluid-panel"]{\n  grid-template-columns:minmax(0,3.15fr)'));
-  assert.ok(contract.includes('data-live-layout="fixed-panel"]{\n  grid-template-columns:minmax(0,2.25fr)'));
+  assert.ok(contract.includes('data-live-layout="full-screen"]>.live-guest-seat:not(.is-host){display:none!important}'));
+  assert.ok(contract.includes('data-live-layout="fluid-panel"]>.live-guest-seat[data-seat-index="1"]'));
+  assert.ok(contract.includes('data-live-layout="fluid-panel"]>.live-guest-seat[data-seat-index="2"]'));
+  assert.ok(contract.includes('data-live-layout="fluid-grid"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1/3!important}'));
+  assert.ok(contract.includes('data-live-layout="fixed-grid"]{\n  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))'));
+  assert.ok(contract.includes('data-live-layout="fixed-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1/4!important}'));
+  assert.ok(contract.includes('data-live-layout="side-by-side"]>.live-guest-seat[data-seat-index="0"]{grid-column:1/3!important'));
+  assert.ok(contract.includes('data-live-layout="spotlight"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:1!important}'));
+  assert.ok(contract.includes('data-live-layout="roundtable-1"]>.live-guest-seat.is-guest{'));
+  assert.ok(contract.includes('data-live-layout="roundtable-2"]{\n  grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) minmax(0,1fr)'));
+  assert.ok(app.includes("src='/assets/live-guest-layouts/"+'"+option.value+".png'));
+  assert.ok(app.includes('seat.dataset.seatIndex=String(spec.seatIndex??0)'));
 });
 
 test('MeetWave uses the same exact nine crop-backed guest layouts as LIVE',()=>{
@@ -55,11 +64,15 @@ test('MeetWave renders nine independently-defined guest panel/grid arrangements'
     assert.ok(contract.includes('data-guest-layout="'+layout+'"'),layout+' MeetWave guest grid missing');
     assert.ok(contract.includes('#mw-grid[data-guest-layout="'+layout+'"]'),layout+' is not applied to its guest grid');
   }
-  assert.ok(contract.includes('data-guest-layout="fluid-grid"] #mw-grid[data-guest-layout="fluid-grid"]{\n  grid-template-columns:repeat(2,minmax(0,1fr))'));
-  assert.ok(contract.includes('data-guest-layout="fixed-grid"] #mw-grid[data-guest-layout="fixed-grid"]{\n  grid-template-columns:repeat(3,minmax(0,1fr))'));
-  assert.ok(contract.includes('data-guest-layout="side-by-side"] #mw-grid[data-guest-layout="side-by-side"]{\n  grid-template-columns:repeat(4,minmax(0,1fr))'));
-  assert.ok(contract.includes('data-guest-layout="roundtable-1"] #mw-grid[data-guest-layout="roundtable-1"]{\n  grid-template-columns:repeat(3,minmax(0,1fr))'));
-  assert.ok(contract.includes('data-guest-layout="roundtable-2"] #mw-grid[data-guest-layout="roundtable-2"]{\n  grid-template-columns:repeat(4,minmax(0,1fr))'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="fluid-panel"]>.live-guest-seat[data-seat-index="1"]'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="fluid-panel"]>.live-guest-seat[data-seat-index="2"]'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="fluid-grid"]{\n  grid-template-columns:minmax(0,1.25fr) minmax(0,.9fr)'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="fixed-grid"]{\n  grid-template-columns:repeat(3,minmax(0,1fr))'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="fixed-panel"]>.live-guest-seat[data-seat-index="3"]'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="side-by-side"]>.live-guest-seat[data-seat-index="0"]{grid-column:1/3!important'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="spotlight"]>.live-guest-seat.is-focused{grid-column:1/-1!important'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="roundtable-1"]>.live-guest-seat.is-host{'));
+  assert.ok(contract.includes('#mw-grid[data-guest-layout="roundtable-2"]{\n  grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) minmax(0,1fr)'));
 });
 
 test('Profile Style Library screen modes remain independent from MeetWave guest presets',()=>{
