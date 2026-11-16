@@ -10,3 +10,6 @@ coverage/
 /public/assets/sound-studio/manifest.json
 /public/assets/sound-studio/README.txt
 /assets/manifests/live-asset-manifest.json
+
+/public/assets/gift-sounds/gifts/*.wav
+/public/assets/gift-sounds/manifest.json
