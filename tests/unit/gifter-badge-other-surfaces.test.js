@@ -69,15 +69,21 @@ test("shared non-LIVE gifter badge styling is responsive and reduced-motion safe
 });
 
 
-test("original six-stage Gifter strip tracks all 50 levels and hides its white marker before Level 1", () => {
+test("original Gifter strip uses only its own artwork and one white live level marker", () => {
   assert.ok(progression.includes("PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50])"));
   assert.ok(progression.includes("Boolean(current.hasUnlockedBadge && level > 0)"));
   assert.ok(progression.includes("function progressionTrackState(current = {})"));
   assert.ok(progression.includes("Number(current.progressPercent || 0) / 100"));
   assert.ok(progression.includes("gp-progression-level-marker"));
   assert.ok(progression.includes("track.hasGifterBadge"));
-  assert.ok(progression.includes("gp-progression-link"));
-  assert.ok(progression.includes("gp-progression-stage-glow"));
+  assert.ok(!progression.includes("gp-progression-marker-cover"), "no black Level 1 cover dot is added");
+  assert.ok(!progression.includes("gp-progression-glow-overlay"), "no mismatched SVG overlay is added");
+  assert.ok(!progression.includes("gp-progression-link"), "no misaligned connector lines are drawn");
+  assert.ok(!progression.includes("gp-progression-stage-glow"), "no misaligned circles are drawn");
+  assert.ok(!progressionCss.includes("gp-progression-marker-cover"));
+  assert.ok(!progressionCss.includes("gp-progression-glow-overlay"));
+  assert.ok(!progressionCss.includes("gp-progression-link"));
+  assert.ok(!progressionCss.includes("gp-progression-stage-glow"));
 });
 
 test("each original numbered badge visibly distinguishes locked, earned, admin-awarded and current states", () => {
