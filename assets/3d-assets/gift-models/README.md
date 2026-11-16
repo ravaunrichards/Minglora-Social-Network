@@ -168,3 +168,15 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Art direction: three-quarter-profile keel-billed rainforest toucan, near-black matte plumage, golden throat/chest, turquoise eye skin, orange bill-blaze stripe, lime curved bill, red/blue bill tips, layered wings, scarlet undertail, zygodactyl feet and natural perch.
 - Runtime: exact-code model/artwork route; `toucan-glide` motion preset; locally synthesized bird-call chimes and filtered leaf-rustle sound.
 - Review: `design-review-pending`; human visual review, licensing/rights clearance, mastered audio and physical-device QA remain outstanding.
+
+
+## Signature Jet v1
+
+- Source: `signature-jet-model.mjs`
+- Canonical target: `signature-jet-exds0m` (Signature Jet; vehicles; configured value 4,888 Coins; source active flag preserved)
+- Output: self-contained glTF 2.0 with separately named PBR mesh primitives, matching original SVG artwork and transparent subject icon at the canonical catalogue paths
+- Geometry: pearl-titanium fuselage and nose cone, smoked panoramic cockpit, individual cabin windows, swept port/starboard wings with navy root inlays and champagne leading-edge seams, twin under-wing turbofan nacelles with intake lips/spinners/exhaust rims, horizontal stabilizers, swept vertical tail fin, navigation lamps and retractable three-wheel landing gear
+- LIVE motion: exact-code `signature-jet-flight` entrance and banking flight choreography; reduced-motion handling remains active in the existing animation runtime
+- LIVE sound: original local Web Audio synthesis of filtered turbine wash, accelerating low engine tone and two short cockpit-style chimes; this is not a mastered recording
+- Review: `design-review-pending`; human art review, rights clearance, mastered audio and physical-device QA remain outstanding
+- Economy: canonical name/category/4,888-Coin value/active flag remain unchanged; no production database, wallet or transaction records are changed

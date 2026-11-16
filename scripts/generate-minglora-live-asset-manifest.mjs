@@ -77,6 +77,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     layers: ["bandpass_growl_noise_sweep", "low_frequency_staff_impact", "five_note_regal_fanfare_196_294_392_587_784hz", "highpass_jewel_shimmer"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
   }),
+  "signature-jet-exds0m": Object.freeze({
+    sound_design_id: "signature-jet-turbofan-pass-and-airframe-chime-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized filtered turbine wash, accelerating low engine tone and short cockpit-style chime; not a mastered aircraft recording",
+    layers: ["filtered_turbofan_noise_sweep", "accelerating_engine_pitch_glide", "two_note_cockpit_chime"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
   "toucan-1ovzxjb": Object.freeze({
     sound_design_id: "toucan-rainforest-call-and-leaf-rustle-v1",
     sound_profile_scope: "gift_specific_web_audio_synthesis",
