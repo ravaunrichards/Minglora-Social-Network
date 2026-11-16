@@ -231,11 +231,23 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
 
 
-## Crocodile bespoke LIVE asset continuation — 2026-11-16
+## Crocodile bespoke LIVE asset verified checkpoint — 2026-11-16
 
 - Canonical source record confirmed: `crocodile-tnyf2j`, Crocodile, category `animals`, configured 10 Coins, `active=true`. Source catalogue record is unchanged.
 - Created original GLTF source `assets/3d-assets/gift-models/crocodile-model.mjs` with torso, segmented underside, raised osteoderm armour, keel-backed tail, separate upper/lower jaw, meshed teeth, amber vertical-pupil eyes, four webbed feet, toes and claws.
 - Added original main/transparent SVG artwork and exact-code model selection, dedicated `crocodile-snap` motion and locally synthesized low rumble/jaw snap audio.
 - Source unit assertions and renderer target expanded to 14 bespoke gift models across three viewports (42 captures expected).
-- Verification pending final branch-head asset build and Chromium browser matrix; design/rights review and device tests are not complete.
-- Previous verified 13-model branch head passed 39/39 Chromium model and pixel renders (run 43780028073; artifact 14188351024). The Crocodile extension is not yet included in that verification.
+- **VERIFIED:** asset build passed for all 1,748 gifts; Crocodile unit assertions passed; 14-model/3-viewport Chromium matrix passed 42/42 model and pixel checks, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (run 43781000444; artifact 14188617258). Design/rights review and physical-device tests remain open.
+- Earlier 13-model PR head passed 39/39 Chromium model and pixel renders; the current 14-model evidence supersedes that checkpoint.
+
+
+## Verified branch state after Crocodile — 2026-11-16
+
+- Current Crocodile implementation commit: `2589b7a` followed by corrected unit assertion commit (latest CI test commit head verified by run 43781000457).
+- Full catalogue gift build: PASS. Crocodile unit: PASS. Maracas unit: PASS. Dolphin unit: PASS. Gifter badge source/panel/individual-image tests: PASS.
+- 14-model renderer: PASS, 42/42 model and pixel checks; 42 screenshots; zero page or network errors/cancellations. Artifact `14188617258`.
+- Layout visual QA: PASS. Supabase Auth provider acceptance: PASS.
+- Standard CI: 1,239 pass / 5 fail. Latest independent main CI: 1,236 pass / 5 fail. Do not change unrelated API fixture, Creator League or For You/League tests as part of this LIVE asset mission.
+- PR #411 remains open and unmerged, with GitHub mergeable-for-conflicts true but overall merge state unstable due red standard CI; no force push, bypass or deployment has been performed.
+- Legacy 45-file GLTF collection remains preserved. Legacy Dolphin is not production eligible and is distinct from current canonical `dolphin-4bkejj`.
+- Next action: continue reference/asset gap audit, then choose the next active canonical gift only after confirming there is no approved existing art/model; no claim of whole mission completion.

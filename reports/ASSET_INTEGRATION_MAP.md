@@ -238,4 +238,13 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Model route: `scripts/generate-minglora-gifts.mjs` maps only `crocodile-tnyf2j` to `createCrocodileModel()` and the original `crocodile-original-v1` vector artwork.
 - Output paths: `public/assets/gifts/catalog/crocodile-tnyf2j.gltf`, `crocodile-tnyf2j.svg`, `crocodile-tnyf2j-icon.svg`.
 - Runtime: `public/gift-effects.js` maps the exact code to the custom synthesized sound and snap visual entrance. Catalogue category, 10-Coin source value and active flag are preserved.
-- QA: 14-model, 3-viewport Chromium test matrix pending final CI.
+- QA: **PASS** — PR #411 run 43781000444 rendered 14 bespoke models across desktop/tablet/mobile: 42/42 model and pixel checks, 42 screenshots, zero page errors, HTTP failures, request failures or cancellations. Artifact 14188617258.
+
+
+## Crocodile exact-code integration and verified QA — 2026-11-16
+
+- Source: `assets/3d-assets/gift-models/crocodile-model.mjs`; canonical code `crocodile-tnyf2j`, unchanged source value 10 Coins and `active=true`.
+- Generator: exact import and routes for the unique glTF model and `crocodile-original-v1` main SVG / transparent icon.
+- Runtime: `public/gift-effects.js` selects `crocodile-snap` and local synthesized rumble/snap audio only for this canonical gift code.
+- Output: `public/assets/gifts/catalog/crocodile-tnyf2j.gltf`, `crocodile-tnyf2j.svg`, `crocodile-tnyf2j-icon.svg`.
+- Acceptance: source-specific unit test passed; 14-model/3-viewport Chromium job passed 42/42 model and pixel checks; layout visual QA passed. Human art/rights and physical-device review remain open.

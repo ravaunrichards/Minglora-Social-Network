@@ -294,3 +294,12 @@ The original Dolphin model is routed only for its canonical gift code. Its sourc
 | `assets/3d-assets/gift-models/crocodile-model.mjs` | Crocodile (`crocodile-tnyf2j`) | Armoured olive crocodile with pale segmented belly, tapering keel tail, long toothed jaws, amber eyes and webbed four-legged stance | Design review pending; original model and vector artwork, no rights or human approval implied |
 
 The exact-code generator route does not change the source catalogue's 10-Coin value or active flag. Existing Supabase catalogue/wallet/ledger/transaction data remain untouched.
+
+
+## Crocodile CI verification — 2026-11-16
+
+- Canonical catalogue build: PASS; all 1,748 gift entries generated primary SVG, transparent icon and glTF outputs, with motion index, Sound Studio pack and asset manifest.
+- Crocodile source regression: PASS. The dedicated test confirmed the preserved 10-Coin active catalogue record, named body/armor/tail/jaw/teeth/eye/leg/claw geometry, glTF buffers/accessors/bounds, original SVG provenance and exact LIVE effects.
+- Chromium QA: PASS — 14 bespoke models × desktop/tablet/mobile = **42/42 model renders and 42/42 non-empty pixel checks**, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (PR #411 run 43781000444, artifact 14188617258).
+- LIVE/MeetWave layout QA: PASS on the corrected Crocodile commit. Overall CI remains red with 1,239 passing and 5 unrelated baseline failures; the same five-failure total exists on main.
+- Review remains design-review-pending. Render and code verification are not human visual/rights acceptance or real-device validation.

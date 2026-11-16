@@ -107,3 +107,12 @@ The current mainline reference update records a controlled black-edge-only crop 
 | LV.50+ | 1006×594 | 989×569 | 7 / 23 / 10 / 2 |
 
 The crop report states the 11 internal detailed panels, master sheets, Rewards banner, badge artwork/lettering, progression logic, Coin thresholds, wallets and the removed Level-Up chart were not changed by this edge crop. This is a technical border cleanup only; it does not constitute visual or rights review of all 72 files. The newly cropped references remain in the reference directory and are not copied into product assets.
+
+
+## Legacy standalone GLTF suitability review — 2026-11-16
+
+The 45-file `public/assets/gifts/` legacy GLTF collection remains preserved. Its manifest describes historical seed/migration identities; it is not the same as the current `public/assets/gifts/catalog/` generated active gift catalogue. Files are not automatically production eligible merely because they are glTF 2.0 or have a matching filename.
+
+The legacy `minglora_dolphin.gltf` record is `minglora-dolphin` / historical code `dolphin` / `Ocean Dolphin`, 7,246 bytes, 10 meshes, 5 materials, 0 textures, 0 images and 0 embedded animations. Its visual review, technical render review and rights review are pending; the manifest explicitly sets `production_eligible=false`. The historical migration value was 650 Coins and the record is absent from the 2026-11-15 production database snapshot. It was not overwritten, rebranded, or substituted for the current `dolphin-4bkejj` gift (10 Coins); the new bespoke Dolphin code/assets route only to that current canonical identifier.
+
+Crocodile had no matching standalone approved model record in the canonical model source inventory, so a dedicated `crocodile-tnyf2j` asset was authored. The Crocodile model and vector art remain design-review-pending; CI render proof is not legal or human visual approval.

@@ -265,3 +265,16 @@ This verifies generated asset loading and non-empty browser pixels, not premium 
 The new Crocodile model is a dedicated low-poly/high-detail mesh assembly with individually named and separately materialized components (torso, belly, armor scutes, tail, dorsal keel, skull, jaws, teeth, eyes, nostrils, legs, toes and claws). The self-contained glTF output carries normals, per-mesh accessors, PBR factors and finite position bounds. A subject-specific SVG and transparent icon are generated from the same exact gift code.
 
 Quality verification remains pending: the source-level unit test, canonical catalogue build and three-viewport Chromium model/pixel matrix must pass before the asset is called verified. Human visual/rights approval, mastered audio and physical-device testing remain outstanding.
+
+
+## Crocodile bespoke model quality checkpoint — 2026-11-16
+
+The Crocodile model is a separate named mesh assembly (armoured torso, counter-shaded belly, osteoderm plates, tapering tail and keel, upper/lower jaws, individually meshed teeth, amber eyes and brows, nostrils, cheek scales, four webbed legs, toes and claws). Its self-contained glTF output contains per-mesh positions/normals/accessors, named components, PBR material factors and finite position bounds. Subject-specific original SVG and transparent icon outputs are routed from the exact canonical gift code.
+
+**Verification:** the canonical generator built all 1,748 gift SVG/icon/glTF outputs, motion index and asset manifest; the Crocodile unit test passed; the 14-model Chromium matrix passed **42/42 model renders and 42/42 non-empty pixel checks** and uploaded 42 screenshots, with zero page errors, HTTP failures, request failures or cancellations (run 43781000444; artifact 14188617258). LIVE/MeetWave layout QA passed on the corrected branch head.
+
+### Legacy Dolphin file inspected and preserved
+
+The earlier `public/assets/gifts/minglora_dolphin.gltf` file remains untouched. Its manifest record (`minglora-dolphin`) identifies a historical `Ocean Dolphin` record with code `dolphin`, source migration 021, historical 650-Coin value, and active-at-migration state. The current production database snapshot marks that record absent. Technical metadata records 10 meshes, 5 materials, no textures, no images and no embedded animations; visual review, technical render review and rights review remain pending, and `production_eligible=false`. This is not the current active catalogue record `dolphin-4bkejj` (10 Coins). The newly-authored Dolphin source targets only that current canonical code; the legacy model has been preserved, not overwritten or promoted.
+
+This browser evidence is not premium visual acceptance. Human visual/rights review for all fourteen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,734 catalogue rows continue to use shared procedural category/name geometry.

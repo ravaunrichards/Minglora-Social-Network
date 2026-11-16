@@ -136,3 +136,13 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Audio: locally synthesized low-pass rumble, band-pass snap transient and descending low tones using the existing Web Audio playback path; this is not a recorded wildlife sound.
 - Artwork/model: original armoured crocodile SVG/transparent icon and bespoke self-contained glTF geometry; only the exact canonical gift code selects these resources.
 - Human art/rights review and sound mastering remain pending; no physical-device acceptance is claimed.
+
+
+## Crocodile snap and synthesized jaw/rumble effect — verified 2026-11-16
+
+- Canonical gift: `crocodile-tnyf2j` (Crocodile; animals; configured 10 Coins; source active flag unchanged).
+- Visual choreography: exact-code selection of `crocodile-snap`, with a short forward lunge, sharp snap accent and controlled recovery through the existing reduced-motion-aware Web Animations host.
+- Audio: locally synthesized low-pass rumble, band-pass snap transient and descending low tones through the existing Web Audio playback path; not a recorded wildlife sound.
+- Artwork/model: original armoured Crocodile SVG/transparent icon and bespoke self-contained glTF source; only the exact canonical gift code selects these resources.
+- Test evidence: dedicated Crocodile source unit test passed; 14 bespoke gift models across three viewports passed 42/42 model and pixel checks with 42 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (PR #411 run 43781000444, artifact 14188617258).
+- This is code/render verification only. Human visual review, rights clearance, mastered audio, and physical-device validation remain pending.

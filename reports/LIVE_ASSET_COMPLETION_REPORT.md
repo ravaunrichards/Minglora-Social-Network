@@ -400,9 +400,19 @@ The browser captures establish that all nine bespoke models load and remain visi
 - This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
 
 
-## Crocodile asset addition — implementation pending verification — 2026-11-16
+## Crocodile asset addition — implementation and browser verification passed — 2026-11-16
 
 - Added dedicated source geometry `assets/3d-assets/gift-models/crocodile-model.mjs` for canonical record `crocodile-tnyf2j` (Animals; configured 10 Coins; source active true).
 - Added code-specific model and original SVG artwork generator routes, dedicated transparent icon provenance, low rumble/jaw-snap synthesized LIVE sound, subject-specific snap choreography, unit coverage and a 14-model desktop/tablet/mobile Chromium renderer target.
-- **IN PROGRESS** until the 1,748-gift build, Crocodile unit assertions and 42-view browser render matrix pass on the final PR head.
+- **VERIFIED:** canonical gift build passed for all 1,748 SVG/icon/glTF records; the Crocodile-specific unit test passed; 14-model desktop/tablet/mobile Chromium matrix completed 42/42 model renders and 42/42 non-empty pixel checks, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (run 43781000444, artifact 14188617258).
 - Review remains `design-review-pending`; no human visual approval, rights clearance, mastered sound or physical-device testing is claimed. Production Coin values and DB/wallet/payout data are unchanged.
+
+
+## Crocodile final verification summary — 2026-11-16
+
+- Unit regression: Crocodile, Maracas and Dolphin bespoke geometry/artwork/effects tests passed in the same branch CI test job.
+- Gifter Badge regression: all 11 detailed original JPG panels, matched individual level references, all 50 distinct original PNG badge files and LIVE/profile leaderboard styling tests passed.
+- Chromium model QA: 42/42 checks and 42/42 pixel checks, 42 screenshots; zero page/network errors or cancellations (run 43781000444; artifact 14188617258).
+- LIVE/MeetWave visual layout QA: passed. Supabase Auth acceptance: passed.
+- Standard test suite: **1,239 passed / 5 failed** (1,244 total). Mainline's latest independent run also had five failures (1,236 passed / 5 failed); unrelated failures are outside this LIVE asset task. The PR is not merged or deployed.
+- Code review/approval still needed for premium visual and rights sign-off. No physical device testing or mastered audio recording is claimed.
