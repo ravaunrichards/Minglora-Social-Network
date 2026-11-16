@@ -143,13 +143,13 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
 test("earned Gifter milestone overlays cover original tracker symbols at matching visible size and alignment", () => {
   const progression = read("public/gifter-progression.js");
   const styles = read("public/gifter-progression.css");
-  const overlayRule = styles.match(/\\.gp-live-progression-track>\\.gp-progression-range-badge\\{([^}]+)\\}/)?.[1] || "";
+  const overlayRule = styles.match(/\.gp-live-progression-track>\.gp-progression-range-badge\{([^}]+)\}/)?.[1] || "";
   assert.match(overlayRule, /width:10%;min-width:0;max-width:none/);
-  assert.match(overlayRule, /transform:translate\\(-50%,-50%\\) scale\\(1\\.35\\)/);
+  assert.match(overlayRule, /transform:translate\(-50%,-50%\) scale\(1\.35\)/);
   assert.match(overlayRule, /z-index:1/);
-  assert.match(progression, /PROGRESSION_TRACK_STAGES = Object\\.freeze\\(\\[1, 10, 20, 30, 40, 50\\]\\)/);
-  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT = Object\\.freeze\\(\\[/);
-  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\\[index\\]\\.x/);
-  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\\[index\\]\\.y/);
-  assert.match(progression, /track\\.level >= stageLevel/);
+  assert.match(progression, /PROGRESSION_TRACK_STAGES = Object\.freeze\(\[1, 10, 20, 30, 40, 50\]\)/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT = Object\.freeze\(\[/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\[index\]\.x/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\[index\]\.y/);
+  assert.match(progression, /track\.level >= stageLevel/);
 });
