@@ -26,6 +26,12 @@ Every account starts with **no gifting badge and all 50 Gifter Levels locked**. 
 
 The maximum level is 50. The client receives the server-calculated level, progress, chart, history, and leaderboard; it cannot submit or award XP. Earned levels remain unlocked. An authorized MFA-verified Creator Hub admin may separately grant a level (including all 50), with an admin-awarded marker and audit entry; this does not add Coin spend or change any wallet. An admin reset starts a new progression epoch without deleting the original gift ledger or lifetime history.
 
+## Interactive 50-level progression strip
+
+The original six-symbol progression strip is an active progress indicator, not a static decoration. Its six visual milestones correspond to Levels 1, 10, 20, 30, 40, and 50. The white position marker appears only after the member has a Gifter badge (Level 1 or above); no Level 0 marker is shown. The marker advances continuously across the supplied strip using the server-calculated current level and within-level progress percentage. Each reached milestone receives a glow, and the connector between milestones lights progressively as the next milestone is approached.
+
+The ordered Level 1–50 directory remains the individual badge tracker: locked badges stay muted, earned/admin-awarded badges light up, and the current badge receives the strongest highlight. The original progression strip and all 50 original numbered badge images remain unchanged. A successfully confirmed Gift Center send triggers an immediate refresh; the existing quiet overview polling keeps other confirmed gift routes synchronized. The server remains authoritative for coin totals, unlocks, refunds, and admin awards.
+
 ## NEW GIFTER identity
 
 The **NEW GIFTER** identity begins when the member sends their first successfully confirmed gift. It remains visible for exactly seven days from that first gift timestamp, then expires automatically. Sending additional gifts during the week does not restart the timer. It is a temporary identity, separate from permanent earned Gifter Level badges.
