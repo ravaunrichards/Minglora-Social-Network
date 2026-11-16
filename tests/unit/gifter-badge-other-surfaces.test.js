@@ -84,6 +84,20 @@ test("original Gifter strip uses only its own artwork and one white live level m
   assert.ok(!progressionCss.includes("gp-progression-glow-overlay"));
   assert.ok(!progressionCss.includes("gp-progression-link"));
   assert.ok(!progressionCss.includes("gp-progression-stage-glow"));
+
+  const markerMarkup = progression.match(/class='gp-progression-level-marker'/g) || [];
+  assert.equal(markerMarkup.length, 1, "exactly one live progression marker is rendered");
+
+  const markerRule = progressionCss.match(/\\.gp-progression-level-marker\\s*\\{([^}]+)\\}/)?.[1] || "";
+  assert.match(markerRule, /width:1\\.75%;min-width:5px;max-width:19px;aspect-ratio:1;/,
+    "the moving marker matches the original dot's 1.75% / 5–19px footprint");
+  assert.match(markerRule, /box-sizing:border-box/);
+  assert.match(markerRule, /border:1px solid rgba\\(36,24,56,\\.55\\)/,
+    "the replacement marker has a crisp defined edge");
+  assert.match(markerRule, /box-shadow:0 0 0 1px rgba\\(255,255,255,\\.38\\),0 1px 3px rgba\\(35,21,50,\\.36\\)/,
+    "the marker uses a restrained crisp shadow, not a diffuse glow");
+  assert.doesNotMatch(markerRule, /0 0 7px|0 0 12px/,
+    "the moving dot must not be blurred by a large glow");
 });
 
 test("each original numbered badge visibly distinguishes locked, earned, admin-awarded and current states", () => {
