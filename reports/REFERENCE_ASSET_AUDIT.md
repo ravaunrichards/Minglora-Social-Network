@@ -48,7 +48,7 @@ These nine references correspond to the existing implementation's seven host-sel
 ## Additional LIVE-adjacent references inventoried
 
 - `assets/Guests Layout/`: 9 JPEG layout diagrams (all 9 visually inspected individually).
-- `assets/Gifters Badge Levels/`: 78 raster image files (58 PNG and 20 JPEG; 77 unique image contents because one progression-strip JPEG exists at two paths); file inventory completed, not a full badge-by-badge visual/rights review.
+- `assets/Gifters Badge Levels/`: 66 raster image files (52 PNG and 14 JPEG; 65 unique image contents because one progression-strip JPEG exists at two paths). The six cropped range JPGs now reside once under `assets/Crop References/Gifter level range sheets/`; the padded PNG and legacy JPG copies were removed from this folder.
 - `assets/League/`: 20 JPEG reference captures; file inventory completed, with the Android League FAQ sample above visually inspected.
 - `assets/Gifts/`: 131 catalogue capture PNGs plus the `Video Gifts/Video Gifts.jpg` reference sheet. The directory contains 132 image files in total.
 
