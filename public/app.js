@@ -2140,13 +2140,30 @@ function renderLiveMatches(matches){
     const bar="<div class='live-match-scorebar"+(challengerHidden||opponentHidden?" is-mist-hidden":"")+"'><i style='width:"+barWidth+"%'></i></div>";
     const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
     const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
-    const powerups=active&&mine?"<div class='live-match-powerups' aria-label='Activate Match Power-Ups'><button type='button' data-live-match-action='powerup' data-powerup-id='boosting_glove' data-match-id='"+esc(match.id)+"'>🥊 Glove</button><button type='button' data-live-match-action='powerup' data-powerup-id='magic_mist' data-match-id='"+esc(match.id)+"'>☁ Mist</button><button type='button' data-live-match-action='powerup' data-powerup-id='stun_hammer' data-match-id='"+esc(match.id)+"'>🔨 Hammer</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_maker' data-match-id='"+esc(match.id)+"'>⏱ +10s</button><button type='button' data-live-match-action='powerup' data-powerup-id='boosters' data-match-id='"+esc(match.id)+"'>2nd &amp; 3rd gifters ×2</button><button type='button' data-live-match-action='powerup' data-powerup-id='speed_challenge' data-match-id='"+esc(match.id)+"'>🚀 Speed Challenge</button></div>":"";
+    const usedPowerupsToday=new Set(Array.isArray(match.usedPowerupsToday)?match.usedPowerupsToday:[]);
+    const livePowerupOptions=[
+      {id:'boosting_glove',name:'Boosting Glove',icon:'powerup-glove'},
+      {id:'magic_mist',name:'Magic Mist',icon:'powerup-mist'},
+      {id:'stun_hammer',name:'Stun Hammer',icon:'powerup-hammer'},
+      {id:'time_maker',name:'Time Maker',icon:'powerup-time-maker'},
+      {id:'boosters',name:'Boosters',icon:'powerup-boosters'},
+      {id:'speed_challenge',name:'Speed Challenge',icon:'powerup-speed'}
+    ];
+    const powerups=active&&mine?"<div class='live-match-powerups' aria-label='Activate Match Power-Ups'>"+livePowerupOptions.map(power=>{
+      const dailyUsed=usedPowerupsToday.has(power.id);
+      const matchLimitReached=power.id==='time_maker'&&Number(match.timeMakerUses||0)>=3;
+      const speedChallengeUsed=power.id==='speed_challenge'&&Boolean(match.speedChallenge);
+      const disabled=dailyUsed||matchLimitReached||speedChallengeUsed;
+      const stateLabel=dailyUsed?'Used today':matchLimitReached?'3 uses reached':speedChallengeUsed?'Used this match':'Available';
+      const icon="<svg class='league-powerup-svg-icon' viewBox='0 0 128 128' aria-hidden='true' focusable='false'><use href='/assets/league/league-emblems.svg?v=20261116-match-powerups-six-reference-1#"+power.icon+"'></use></svg>";
+      return "<button type='button' data-live-match-action='powerup' data-powerup-id='"+power.id+"' data-match-id='"+esc(match.id)+"'"+(disabled?' disabled':'')+" title='"+esc(disabled?stateLabel:'Activate '+power.name)+"' aria-label='"+esc(power.name+' — '+stateLabel)+"'><span class='live-match-powerup-icon'>"+icon+"</span><strong>"+esc(power.name)+"</strong><small>"+stateLabel+"</small></button>";
+    }).join("")+"</div>":"";
     const effects=(match.matchEffects||[]).map(effect=>{
       if(effect.type==='stun_hammer'&&effect.targetSide===mySide)return "<span class='live-match-effect live-match-effect--hammer'>🔨 STUN HAMMER ACTIVE</span>";
       if(effect.type==='boosting_glove'&&effect.side===mySide)return "<span class='live-match-effect live-match-effect--glove'>🥊 BOOSTING GLOVE · 30% CHANCE · 5×</span>";
       if(effect.type==='boosters'&&effect.side===mySide)return "<span class='live-match-effect live-match-effect--boosters'>2× BOOSTERS · NO. 2 &amp; NO. 3 GIFTERS</span>";
       return "";
-    }).join("")+(challengerHidden||opponentHidden?"<span class='live-match-effect live-match-effect--mist'>☁ MAGIC MIST · SCORE HIDDEN</span>":"")+(match.speedChallenge&&new Date(match.speedChallenge.expiresAt).getTime()>Date.now()?"<span class='live-match-effect live-match-effect--speed'>🚀 SPEED CHALLENGE · 2×</span>":"");
+    }).join("")+(challengerHidden||opponentHidden?"<span class='live-match-effect live-match-effect--mist'>☁ MAGIC MIST · SCORE HIDDEN</span>":"")+(Number(match.timeMakerUses||0)>0?"<span class='live-match-effect'>⏱ TIME MAKER · +"+(Number(match.timeMakerUses||0)*10)+" SEC</span>":"")+(match.speedChallenge&&new Date(match.speedChallenge.expiresAt).getTime()>Date.now()?"<span class='live-match-effect live-match-effect--speed'>🚀 SPEED CHALLENGE · 2×</span>":"");
     return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-effects'>"+effects+"</div><div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
   }).join('');
 }
