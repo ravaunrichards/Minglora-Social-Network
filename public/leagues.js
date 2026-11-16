@@ -215,37 +215,47 @@
       : "<span class='league-avatar league-avatar-fallback" + ring + "' aria-hidden='true'>" + esc((member?.name || "M").slice(0,1).toUpperCase()) + "</span>";
   }
   function podiumMarkup(leaderboard) {
-    const ranked = [
-      { member: leaderboard[0], place: 1 },
-      { member: leaderboard[1], place: 2 },
-      { member: leaderboard[2], place: 3 }
-    ].filter(entry => entry.member && entry.member.id);
+    const byPosition = new Map(leaderboard.map((member, index) => [
+      Number(member.position || index + 1), member
+    ]));
+    const ranked = [2, 1, 3].map(place => ({ member: byPosition.get(place), place }))
+      .filter(entry => entry.member && entry.member.id);
     if (!ranked.length) return "";
-    return "<div class='league-top-three-list' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
-      "<button type='button' class='league-top-three-row is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
-        "<b class='league-position'>#" + place + "</b>" +
-        "<span class='league-rank-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") + "</span>" +
-        "<span class='league-leader-name'><strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
-        "<span class='league-rank-pill league-rank-pill--place-" + place + "'>No. " + place + "</span></span>" +
-        "<strong class='league-leader-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>"
+    return "<div class='league-podium' aria-label='Top three Creator League podium'>" + ranked.map(({member, place}) =>
+      "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
+        "<span class='league-podium-art' aria-label='Rank " + place + " profile badge'>" +
+          "<img class='league-podium-rank-frame' src='/assets/daily-ranking-badges/place-" + place + ".png' alt='' loading='lazy' decoding='async'>" +
+          "<span class='league-podium-avatar'>" + image(member, "ml-creator-ring ml-creator-ring--league") + "</span></span>" +
+        "<span class='league-podium-place-label'>No. " + place + "</span>" +
+        "<strong>" + esc(member.name || "Minglora creator") + "</strong>" +
+        "<small>@" + esc(member.username || "creator") + "</small>" +
+        "<span class='league-podium-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</span>" +
+        "<span class='league-podium-base'><span>PLACE</span><strong>" + place + "</strong></span></button>"
     ).join("") + "</div>";
   }
   function leaderboardMarkup(leaderboard) {
-    if (!leaderboard.length) return "<div class='league-empty-inline'>No creators have earned confirmed LIVE Gift points for this division and period yet.</div>";
-    const remaining = leaderboard.slice(3).map(item => {
-      const position = Math.max(0, Number(item.position || 0));
+    const ranked = leaderboard.filter(item => {
+      const position = Number(item.position || 0);
+      return position >= 1 && position <= 20;
+    });
+    if (!ranked.length) return "<div class='league-empty-inline'>No creators have earned confirmed LIVE Gift points for this division and period yet.</div>";
+    const remaining = ranked.filter(item => Number(item.position || 0) > 3).map(item => {
+      const position = Number(item.position || 0);
       const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
       const bandMarkup = award
         ? "<span class='league-leader-band league-leader-band--" + award + "'>" + (award === "top-ten" ? "TOP 10" : "TOP 20") + "</span>"
         : "";
+      const medalMarkup = award
+        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-label='Rank " + position + "'>#" + position + "</span>"
+        : "";
       const rowClass = award ? " league-leader-row--" + award : "";
       return "<button type='button' class='league-leader-row" + rowClass + "' data-league-profile='" + esc(item.id || "") + "' aria-label='Open " + esc(item.name || item.username || "creator") + " profile, place " + position + "' " + (!item.id ? "disabled" : "") + ">" +
         "<b class='league-position'>#" + position + "</b>" +
-        "<span class='league-rank-avatar-wrap'>" + image(item, "ml-creator-ring ml-creator-ring--league") + "</span>" +
+        "<span class='league-rank-avatar-wrap'>" + image(item, "ml-creator-ring ml-creator-ring--league") + medalMarkup + "</span>" +
         "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small>" + bandMarkup + "</span>" +
         "<strong class='league-leader-points'>" + Number(item.points ?? item.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>";
     }).join("");
-    return podiumMarkup(leaderboard) + (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
+    return podiumMarkup(ranked) + (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
   }
   function meter(value, max) {
     const percent = Math.max(0, Math.min(100, Number(value || 0) / Math.max(1, Number(max || 1)) * 100));
