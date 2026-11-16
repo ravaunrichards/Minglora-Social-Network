@@ -48,14 +48,24 @@ test('the original Match Power-Up GLTF files remain available but are not loaded
   }
 });
 
-test('power-up selection preserves activation checks, usage limits and League scoring rules', () => {
+test('six reference Match Power-Ups keep activation checks, usage limits and League scoring separated', () => {
   assert.match(leagues, /activateSelectedPowerup/);
   assert.match(leagues, /powerupRestriction/);
   assert.match(leagues, /usedToday/);
-  assert.match(leagues, /timerMode === "fixed"/);
+  for (const id of ['boosting_glove','magic_mist','stun_hammer','time_maker','boosters','speed_challenge']) {
+    assert.ok(leagues.includes(id), id + ' is available in League Arena');
+  }
+  assert.match(leagues, /selectedBoosterRank/);
+  assert.match(leagues, /time_maker/);
+  assert.match(leagues, /speed_challenge/);
   assert.match(leagues, /never multiply Creator League points or official class standings/);
+  for (const id of ['boosting_glove','magic_mist','stun_hammer','time_maker','boosters','speed_challenge']) {
+    assert.ok(app.includes("data-powerup-id='" + id + "'"), id + ' is available in the LIVE match panel');
+  }
   assert.match(leagues, /data-match-powerup-select/);
   assert.match(leagues, /data-powerup-select/);
+  assert.match(styles, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(styles, /prefers-reduced-motion:reduce/);
 });
 
 test('background League refresh updates power-up details and preserves active interactions', () => {
