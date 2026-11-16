@@ -203,16 +203,16 @@ test("Gifter source references and cropped badge overlays each have one canonica
     assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " is present as the canonical cropped milestone badge");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " has no duplicate legacy milestone badge");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", milestoneCrop.replace(".png", ".psd"))), milestoneCrop + " has no duplicate legacy PSD");
-  });
-  const canonicalPsdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
-  assert.equal(fs.readdirSync(canonicalPsdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain in the canonical Crop References folder");
-  assert.ok(!fs.existsSync(path.join(canonicalPsdDirectory, "LV.1 - LV.9")), "the extensionless duplicate of the LV.1–LV.9 PNG has been removed");
     assert.ok(progression.includes('file: "' + routeFile + '"'), routeFile + " is rendered in the range gallery");
     assert.ok(server.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " has an explicit server allow-list route");
     assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " is precached");
     assert.ok(server.includes("'" + sourceFile + "'"), sourceFile + " maps to its Crop References source");
   });
-  masterSheets.forEach(([sourceFile, route]) => {
+  const canonicalPsdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
+  assert.equal(fs.readdirSync(canonicalPsdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain in the canonical Crop References folder");
+  assert.ok(!fs.existsSync(path.join(canonicalPsdDirectory, "LV.1 - LV.9")), "the extensionless duplicate of the LV.1–LV.9 PNG has been removed");
+  assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", "LV.1 - LV.9")), "the legacy extensionless PSD duplicate has been removed");
+    masterSheets.forEach(([sourceFile, route]) => {
     assert.ok(progression.includes(route), route + " appears in the master collection section");
     assert.ok(server.includes("'" + route + "'"), route + " has an explicit server route");
     assert.ok(sw.includes("'" + route + "'"), route + " is precached");
