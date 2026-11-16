@@ -2472,9 +2472,9 @@
   grid-template-rows:minmax(0,1.65fr) repeat(2,minmax(0,.72fr))!important;
   grid-auto-flow:row dense!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:1!important}
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-seat.is-spotlight{grid-column:1/-1!important;grid-row:1!important;z-index:2!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){grid-column:auto!important;grid-row:auto!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-seat:not(.is-spotlight){grid-column:span 1!important;grid-row:auto!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.mw-empty-seat{grid-column:span 1!important;grid-row:auto!important}
 
 /* 8. ROUNDTABLE 1 — central full-height panel, four guest panels on each side. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]{
