@@ -14,7 +14,7 @@ const rankingStyles = read("public/styles.css");
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
 
-test("all 50 Gifter levels serve the six uploaded bright cropped badge references by level range", () => {
+test("all 50 Gifter levels keep unique artwork while six crop badges light milestone stages", () => {
   assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual/);
   assert.match(server, /gifter-crop-badges\/range-1\.png/);
   assert.match(server, /gifter-crop-badges\/range-6\.png/);
