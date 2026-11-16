@@ -96,7 +96,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-The repository now has fourteen individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball, Maracas, Dolphin and Crocodile. The generator still uses shared procedural category/name geometry for the remaining 1,734 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+The repository now has fifteen individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball, Maracas, Dolphin and Crocodile. The generator still uses shared procedural category/name geometry for the remaining 1,733 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -303,3 +303,12 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - Chromium QA: PASS — 14 bespoke models × desktop/tablet/mobile = **42/42 model renders and 42/42 non-empty pixel checks**, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (PR #411 run 43781000444, artifact 14188617258).
 - LIVE/MeetWave layout QA: PASS on the corrected Crocodile commit. Overall CI remains red with 1,239 passing and 5 unrelated baseline failures; the same five-failure total exists on main.
 - Review remains design-review-pending. Render and code verification are not human visual/rights acceptance or real-device validation.
+
+
+## Carnival Music bespoke LIVE asset — 2026-11-16
+
+| Source | Canonical item | Generated outputs | Integration and approval |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/carnival-music-model.mjs` | Carnival Music (`carnival-music-14x4zts`; music; 999 configured Coins; source active flag preserved) | Self-contained glTF 2.0 with named steelpan, tuning-note, mallet, tripod and feather-fan geometry; original primary SVG and transparent icon | Exact-code route in the canonical gift generator; included in gift catalogue tests, manifest provenance checks and desktop/tablet/mobile Chromium render matrix; design/rights review pending |
+
+Current source-model count is 15 individually authored gift models; the remaining 1,733 catalogue records still use shared procedural/category model generation. A generated GLTF file is not itself evidence of bespoke modelling or premium approval.

@@ -146,3 +146,11 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Artwork/model: original armoured Crocodile SVG/transparent icon and bespoke self-contained glTF source; only the exact canonical gift code selects these resources.
 - Test evidence: dedicated Crocodile source unit test passed; 14 bespoke gift models across three viewports passed 42/42 model and pixel checks with 42 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (PR #411 run 43781000444, artifact 14188617258).
 - This is code/render verification only. Human visual review, rights clearance, mastered audio, and physical-device validation remain pending.
+
+
+## Carnival Music steelpan model presentation — 2026-11-16
+
+- Canonical gift: `carnival-music-14x4zts`.
+- Its original glTF model and SVG artwork are selected through the exact canonical gift code and existing LIVE gift event/viewer path.
+- The source catalogue `grand-entry` animation preset and music-category synthesized sound are reused without mutation. The model does not embed a glTF animation channel and no standalone Lottie, Rive, WebM or MP4 preview is introduced.
+- The sound remains locally synthesized; no mastered per-gift recording is claimed. Human visual, rights and physical-device review remain pending.

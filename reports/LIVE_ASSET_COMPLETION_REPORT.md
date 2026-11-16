@@ -416,3 +416,12 @@ The browser captures establish that all nine bespoke models load and remain visi
 - LIVE/MeetWave visual layout QA: passed. Supabase Auth acceptance: passed.
 - Standard test suite: **1,239 passed / 5 failed** (1,244 total). Mainline's latest independent run also had five failures (1,236 passed / 5 failed); unrelated failures are outside this LIVE asset task. The PR is not merged or deployed.
 - Code review/approval still needed for premium visual and rights sign-off. No physical device testing or mastered audio recording is claimed.
+
+
+## Carnival Music bespoke Caribbean steelpan model increment — 2026-11-16
+
+- Added the original source module `assets/3d-assets/gift-models/carnival-music-model.mjs` for canonical gift `carnival-music-14x4zts`.
+- Added exact-code routing in the canonical generator, subject-specific `carnival-music-original-v1` primary SVG and transparent icon output, catalogue regression coverage, manifest source-provenance coverage, and inclusion in the isolated desktop/tablet/mobile Chromium model-render matrix.
+- Existing configured 999-Coin value, music category, active flag, animation key/preset, sound preset, catalogue identity and LIVE event/transaction handling are preserved. The source catalogue is not edited and no production database, wallet or payment record is changed.
+- Runtime reuses existing `grand-entry` motion and category Web Audio synthesis; no bespoke embedded glTF animation or mastered audio file is claimed.
+- Review status: `design-review-pending`. Human visual approval, rights clearance, premium release approval, mastered audio and physical-device QA remain unfinished.

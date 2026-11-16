@@ -277,4 +277,13 @@ The Crocodile model is a separate named mesh assembly (armoured torso, counter-s
 
 The earlier `public/assets/gifts/minglora_dolphin.gltf` file remains untouched. Its manifest record (`minglora-dolphin`) identifies a historical `Ocean Dolphin` record with code `dolphin`, source migration 021, historical 650-Coin value, and active-at-migration state. The current production database snapshot marks that record absent. Technical metadata records 10 meshes, 5 materials, no textures, no images and no embedded animations; visual review, technical render review and rights review remain pending, and `production_eligible=false`. This is not the current active catalogue record `dolphin-4bkejj` (10 Coins). The newly-authored Dolphin source targets only that current canonical code; the legacy model has been preserved, not overwritten or promoted.
 
-This browser evidence is not premium visual acceptance. Human visual/rights review for all fourteen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,734 catalogue rows continue to use shared procedural category/name geometry.
+This browser evidence is not premium visual acceptance. Human visual/rights review for all fifteen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,733 catalogue rows continue to use shared procedural category/name geometry.
+
+
+## Carnival Music original steelpan model checkpoint — 2026-11-16
+
+The canonical `carnival-music-14x4zts` gift has a separately authored Caribbean steelpan and carnival-feather model source rather than shared music-category geometry. The glTF includes a brushed chrome barrel, hammered dish, eight individually named tuning-note fields, crossed mallets, tripod support, brass trim and eleven shaped satin feather/quill elements. Subject-specific SVG artwork and a transparent icon are emitted by the existing generator.
+
+The model carries source provenance `gift-carnival-music-3d-v1` and `design-review-pending` status. Its canonical 999-Coin value, category, active flag, animation metadata, sound metadata and LIVE transaction identity are preserved. Existing `grand-entry` motion and synthesized category sound remain; no embedded glTF animation, Lottie/Rive export or mastered recording is claimed.
+
+CI has verified canonical generation and the new catalogue test. The dedicated desktop/tablet/mobile Chromium render matrix is the remaining browser gate at this checkpoint. Human visual acceptance, rights clearance, premium approval, mastered audio and physical-device QA remain outstanding.
