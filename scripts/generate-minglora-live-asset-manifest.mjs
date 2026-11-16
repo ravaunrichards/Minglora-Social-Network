@@ -76,7 +76,7 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized low lion-like formant growl, sub impact, five-note brass-like ceremonial fanfare and high-frequency jewel shimmer",
     layers: ["bandpass_growl_noise_sweep", "low_frequency_staff_impact", "five_note_regal_fanfare_196_294_392_587_784hz", "highpass_jewel_shimmer"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
-  },
+  }),
   "pop-parrot-alp4e8": Object.freeze({
     sound_design_id: "pop-parrot-rainbow-whistle-chirp-v1",
     sound_profile_scope: "gift_specific_web_audio_synthesis",
