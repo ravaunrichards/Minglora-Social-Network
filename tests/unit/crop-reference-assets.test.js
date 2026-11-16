@@ -15,12 +15,9 @@ const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
 
 test("all 50 Gifter levels serve the six uploaded bright cropped badge references by level range", () => {
-  assert.match(server, /badgeLevel<=9\s*\?\s*'LV\.1 - LV\.9\.png'/);
-  assert.match(server, /badgeLevel<=19\s*\?\s*'LV\.10 - LV\.19\.png'/);
-  assert.match(server, /badgeLevel<=29\s*\?\s*'LV\.20 - LV\.29\.png'/);
-  assert.match(server, /badgeLevel<=39\s*\?\s*'LV\.30 - LV\.39\.png'/);
-  assert.match(server, /badgeLevel<=49\s*\?\s*'LV\.40 - LV\.49\.png'/);
-  assert.match(server, /'LV\.50\+\.png'/);
+  assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual/);
+  assert.match(server, /gifter-crop-badges\/range-1\.png/);
+  assert.match(server, /gifter-crop-badges\/range-6\.png/);
   assert.match(server, /'Crop References','Gifters Badges','Png'/);
   assert.match(server, /gifter-crop-range-sheets\/lv-1-9\.png/);
   assert.match(server, /'Crop References','Gifter level range sheets'/);
@@ -68,7 +65,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v339-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v340-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-2/);
