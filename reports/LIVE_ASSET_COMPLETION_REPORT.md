@@ -355,3 +355,8 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+
+## Original gift-specific WAV pack — 2026-11-16
+
+Eleven existing individually modelled gifts now have build-generated original Minglora WAV cues (Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball). The files are 44.1 kHz stereo PCM16, individually hashed and indexed in `public/assets/gift-sounds/manifest.json`. They are loaded through the existing GiftFX playback path, cached as decoded AudioBuffers and retain the existing Web Audio synthesis as an immediate-play and failure fallback. These cues are generated procedural audio and remain `generated-review-required`; professional listening review and mastering are not yet complete. The 1,748-row catalogue is not represented as having eleven audio files for every gift; this is an 11-gift subset only. No price, balance, transaction or production activation was changed.

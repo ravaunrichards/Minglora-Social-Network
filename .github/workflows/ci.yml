@@ -91,6 +91,7 @@ jobs:
           node --check public/gift-effects.js
           node --check scripts/generate-minglora-gifts.mjs
           node --check scripts/generate-minglora-sound-library.mjs
+          node --check scripts/generate-minglora-gift-sounds.mjs
           node --check scripts/generate-live-gift-motion-index.mjs
           node --check scripts/generate-minglora-live-asset-manifest.mjs
           node --check scripts/audit-minglora-live-image-metadata.mjs
@@ -147,6 +148,15 @@ jobs:
         run: npm run build:live-gift-motion
       - name: Generate Minglora Sound Studio audio pack
         run: npm run build:sounds
+      - name: Generate original LIVE gift-specific audio cues
+        run: npm run build:gift-sounds
+      - name: Upload Minglora LIVE gift-specific audio pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-live-gift-sound-pack-${{ github.run_number }}
+          path: public/assets/gift-sounds/**
+          if-no-files-found: error
+          retention-days: 30
       - name: Generate Minglora LIVE asset manifest
         run: npm run build:live-asset-manifest
       - name: Upload Minglora LIVE asset manifest
