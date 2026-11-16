@@ -310,7 +310,7 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       (embedded ? "" : "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div>") + "</header>" +
-      "<section class='gp-progression-art-reference card' aria-labelledby='gp-progression-art-title'><div class='gp-section-heading'><div><span class='gp-eyebrow'>ORIGINAL BADGE ARTWORK</span><h2 id='gp-progression-art-title'>Gifter badge progression</h2><p>Your white level marker advances along the original six-stage path as confirmed gifts unlock Levels 1–50. Earned badges and the connecting path light up in sequence.</p></div></div>renderProgressionTrack(current)</section>" +
+      "<section class='gp-progression-art-reference card' aria-labelledby='gp-progression-art-title'><div class='gp-section-heading'><div><span class='gp-eyebrow'>ORIGINAL BADGE ARTWORK</span><h2 id='gp-progression-art-title'>Gifter badge progression</h2><p>Your white level marker advances along the original six-stage path as confirmed gifts unlock Levels 1–50. Earned badges and the connecting path light up in sequence.</p></div></div>" + renderProgressionTrack(current) + "</section>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +
