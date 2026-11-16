@@ -427,3 +427,12 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Catalogue record, price, active flag, offers, balances, wallet/transaction behavior and production database were not modified.
 - Acceptance is pending CI on this branch. The model remains design-review-pending; audio is synthesized and not mastered; human art/rights approval and physical-device testing remain open.
 - Overall mission remains **PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE**. This increment does not close other missing gift assets, reference reviews, full-device QA or remaining LIVE requirements.
+
+## Rose golden-bow reference alignment — verified implementation — 2026-11-16
+
+- Refined the existing canonical Rose model source `assets/3d-assets/gift-models/rose-model.mjs` to match the supplied dewy-red-rose/golden-bow reference with two separately modelled satin loops, central knot, flowing ribbon tails, fold detail and dew accents. The original supplied reference remains unchanged and read-only.
+- Updated the generated Rose SVG with matching original vector bow artwork and provenance. The canonical code remains `rose-4ieccm`; source catalogue category, Coin value, active flag and production data are unchanged.
+- Added exact-code `rose-unfurl` LIVE motion and a gift-specific locally synthesized petal-rustle/celesta-like sound cue through the existing gift-effects lifecycle. This is Web Animations/Web Audio, not an exported Lottie/Rive asset, embedded glTF animation or mastered audio file.
+- CI passed **1,249 tests, 0 failures** (run 43806288226). LIVE/MeetWave layout, profile and AI acceptance passed (runs 43806288194, 43806288351 and 43806288243).
+- Chromium WebGL passed **14 gifts × 3 viewports = 42/42 model renders and 42/42 non-empty pixel checks**, 42 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (run 43806288238; artifact `minglora-live-gift-model-render-evidence`, ID `14199075355`, 9,327,718 bytes).
+- The model and artwork remain `design-review-pending`. Human visual acceptance, rights clearance, professional audio review/mastering and physical-device QA remain outstanding. No production activation, database, pricing, wallet, ledger, transaction or deployment change is claimed.
