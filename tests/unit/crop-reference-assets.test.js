@@ -132,8 +132,8 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v343-self-updating-1/);
-  assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
+  assert.match(serviceWorker, /minglora-shell-v345-self-updating-1/);
+  assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-overlay-alignment-1/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
@@ -153,3 +153,22 @@ test("earned Gifter milestone overlays cover original tracker symbols at matchin
   assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\[index\]\.y/);
   assert.match(progression, /track\.level >= stageLevel/);
 });
+
+test("Daily LIVE ranking serves the complete Top 100 with source-matched podium and medal bands", () => {
+  assert.match(server, /\.slice\(0,100\)/);
+  assert.match(app, /items\.filter\(item=>Number\(item\.position\|\|0\)>3\)/);
+  assert.match(app, /live-daily-podium-stage/);
+  assert.match(app, /daily-ranking-badges\/place-/);
+  assert.match(rankingStyles, /live-ranking-medal--top-ten/);
+  assert.match(rankingStyles, /live-ranking-medal--top-twenty/);
+});
+
+test("Creator League displays the first 20 ranks with original first/second/third frames", () => {
+  assert.match(leagues, /\[2, 1, 3\]/);
+  assert.match(leagues, /leaderboard\.filter\(item =>/);
+  assert.match(leagues, /position <= 20/);
+  assert.match(leagues, /daily-ranking-badges\/place-/);
+  assert.match(leagueStyles, /league-podium-rank-frame/);
+  assert.match(leagueStyles, /league-ranking-medal--top-twenty/);
+});
+
