@@ -1539,3 +1539,21 @@
 .admin-centre-nav-heading:hover{background:rgba(37,111,214,.06)}
 .admin-centre-nav-heading:focus-visible{outline:3px solid color-mix(in srgb,#327bd0 75%,transparent);outline-offset:2px}
 .admin-centre-nav-group.is-collapsed .admin-centre-nav-links{display:none}
+
+
+/* Enigma is the shared Minglora brand mark in the Admin Centre. */
+.admin-centre-brand-mark{
+  display:block;
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+  object-fit:cover;
+  object-position:center 12%;
+  border:0;
+  border-radius:13px;
+  background:transparent;
+  box-shadow:none;
+}
+@media(max-width:560px){
+  .admin-centre-brand-mark{width:35px;height:35px;flex-basis:35px}
+}
