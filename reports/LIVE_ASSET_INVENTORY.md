@@ -303,3 +303,14 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - Chromium QA: PASS — 14 bespoke models × desktop/tablet/mobile = **42/42 model renders and 42/42 non-empty pixel checks**, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (PR #411 run 43781000444, artifact 14188617258).
 - LIVE/MeetWave layout QA: PASS on the corrected Crocodile commit. Overall CI remains red with 1,239 passing and 5 unrelated baseline failures; the same five-failure total exists on main.
 - Review remains design-review-pending. Render and code verification are not human visual/rights acceptance or real-device validation.
+
+
+## Pop Parrot bespoke asset checkpoint — 2026-11-16
+
+- Canonical source item: pop-parrot-alp4e8 / Pop Parrot / animals / 400 Coins / active flag true; the source catalogue row and configured price are preserved.
+- Added assets/3d-assets/gift-models/pop-parrot-model.mjs as an exact-code routed source with separate feathered torso, cheek masks, eyes, hooked beak, five-colour crest, mirrored flight feathers, seven tail feathers, scaled legs and curled talons.
+- Added subject-specific primary SVG artwork and matching transparent gift icon, plus parrot-swoop motion-index and LIVE runtime choreography.
+- Added pop-parrot-rainbow-whistle-chirp-v1 as local synthesized Web Audio; it is not a mastered recording.
+- All generated assets remain review-required; the source model sets design-review-pending. No screenshot crop, source-company artwork, trademark, third-party gift artwork or copied sound recording is used.
+- No production Supabase gift row, coin offer, wallet, purchase, transaction, payout, user data or deployment was changed. Existing production activation and asset-review gates remain in force.
+- Generated output, repository tests, CI and isolated Chromium model rendering must pass before this source can be called integrated. Human visual/rights approval and physical-device QA remain separate requirements.

@@ -148,3 +148,16 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - LIVE audio: locally synthesized low body rumble, filtered jaw snap and short descending tones; not a mastered or recorded animal sound
 - Review state: `design-review-pending`; human visual, rights and physical-device approval is not implied
 - Integration: exact canonical gift code only; source catalogue metadata, configured 10-Coin value, active flag, database rows and transaction flow remain unchanged
+
+
+## Pop Parrot v1
+
+- Source: pop-parrot-model.mjs
+- Canonical target: pop-parrot-alp4e8 (Pop Parrot; animals; configured value 400 Coins; source active flag preserved)
+- Output: generated canonical gift GLTF, primary SVG artwork and transparent icon
+- Geometry: scarlet feathered torso and head, warm golden breast, ivory cheek masks, amber eye rings, hooked graphite beak, swept five-colour crest, mirrored layered cobalt/teal/gold flight feathers, seven sculpted tail feathers, scaled legs and curled gripping talons
+- Materials: named PBR surfaces per mesh; self-contained glTF binary buffers
+- Motion: parrot-swoop choreography through the existing LIVE Web Animations effect lifecycle; reduced-motion preferences remain respected
+- Sound: pop-parrot-rainbow-whistle-chirp-v1 uses local Web Audio synthesis, not a mastered recording
+- Review: design-review-pending; human visual approval, rights clearance, mastered audio and physical-device approval are not implied
+- Preservation: canonical catalogue ID, configured 400-Coin value, active flag, category, animation identity and backend transaction handling remain unchanged
