@@ -58,3 +58,10 @@ The canonical `assets/Gifters Badge Levels/` collection contains 72 image files 
 The six range JPGs, two master-sheet files, and 50 individual PNGs use explicit server allow-list routes and are included in the PWA shell cache. All images preserve their source aspect ratio with `object-fit: contain`; master and range reference sheets do not replace the live Coin-threshold calculation.
 
 The canonical supplied source remains at `assets/Gifters Badge Progressions/Gifters Badge Progressions.jpg`; its byte-identical deployed copy at `public/assets/gifter-badge-progression-art.jpg` is displayed as a separate, uncropped badge-tier artwork strip immediately below the Gifter page heading. It is served through `/assets/gifter-badge-progression-art.jpg` and cached by the PWA shell. This is visual reference artwork only: it contains no Coin thresholds and does not drive level calculations or unlocks.
+
+
+## Uploaded badge artwork crops — 2026-11-15
+
+The uploaded 1080×167 progression strip contains six distinct tier emblems, not 50 separate numbered badges. Six standalone SVG viewBox crops are stored in `public/assets/gifter-badge-progression-crops/`. Each crop references the same deployed original JPEG, preserving the exact supplied pixels without redrawing, stretching, or re-colouring the emblem. The Gifter Progression page presents the uncropped source strip and the six individual crops.
+
+The six emblem stages map to LV 1–9, 10–19, 20–29, 30–39, 40–49 and 50+. They are tier-reference artwork only. The 50 numbered original PNGs continue to be used for current member badges, profile/feed/LIVE identity, Top Gifters and the complete level directory. The legacy `MingloraGifterBadgeArt` helper now returns those same original numbered PNGs instead of generated SVG/3D artwork. No Coin thresholds, gift ledgers, wallet values or progression calculations are changed.
