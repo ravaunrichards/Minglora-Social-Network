@@ -287,3 +287,10 @@ The canonical `carnival-music-14x4zts` gift has a separately authored Caribbean 
 The model carries source provenance `gift-carnival-music-3d-v1` and `design-review-pending` status. Its canonical 999-Coin value, category, active flag, animation metadata, sound metadata and LIVE transaction identity are preserved. Existing `grand-entry` motion and synthesized category sound remain; no embedded glTF animation, Lottie/Rive export or mastered recording is claimed.
 
 CI has verified canonical generation and the new catalogue test. The dedicated desktop/tablet/mobile Chromium render matrix is the remaining browser gate at this checkpoint. Human visual acceptance, rights clearance, premium approval, mastered audio and physical-device QA remain outstanding.
+
+
+## Carnival Music 15-model Chromium/WebGL acceptance — 2026-11-16
+
+The clean-mainline feature commit `e66f2e9d031b8656f87092f66dad418a623feef1` passed the original Minglora gift model browser renderer across 15 individually sourced models and three Chromium viewport sizes: **45/45 model checks, 45/45 non-empty pixel checks, zero page errors, zero HTTP failures and zero request failures**. Evidence is from workflow run `43787366815`, artifact `14190154120`.
+
+This proves build and visible browser loading for the tested Chromium viewports. It is not human visual approval, rights/licensing approval, physical Android/iOS/tablet/foldable/desktop/TV certification, or premium-production sign-off. All bespoke model review states remain `design-review-pending`.

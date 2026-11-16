@@ -312,3 +312,12 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 | `assets/3d-assets/gift-models/carnival-music-model.mjs` | Carnival Music (`carnival-music-14x4zts`; music; 999 configured Coins; source active flag preserved) | Self-contained glTF 2.0 with named steelpan, tuning-note, mallet, tripod and feather-fan geometry; original primary SVG and transparent icon | Exact-code route in the canonical gift generator; included in gift catalogue tests, manifest provenance checks and desktop/tablet/mobile Chromium render matrix; design/rights review pending |
 
 Current source-model count is 15 individually authored gift models; the remaining 1,733 catalogue records still use shared procedural/category model generation. A generated GLTF file is not itself evidence of bespoke modelling or premium approval.
+
+
+## Carnival Music browser render verification — 2026-11-16
+
+- Exact code commit: `e66f2e9d031b8656f87092f66dad418a623feef1`.
+- Chromium/WebGL matrix: 15 bespoke source models × desktop (1280×900), tablet (768×1024) and mobile (390×844) = **45/45 model renders and 45/45 non-empty pixel checks**.
+- Browser report: `page_errors=0`, `http_failures=0`, `request_failures=0`.
+- Workflow: GitHub Actions run `43787366815`; evidence artifact `14190154120` (`minglora-live-gift-model-render-evidence`).
+- This verifies generated asset loading and visible Chromium rendering in simulated viewports, not physical device certification, premium human art approval or rights clearance.

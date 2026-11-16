@@ -425,3 +425,13 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Existing configured 999-Coin value, music category, active flag, animation key/preset, sound preset, catalogue identity and LIVE event/transaction handling are preserved. The source catalogue is not edited and no production database, wallet or payment record is changed.
 - Runtime reuses existing `grand-entry` motion and category Web Audio synthesis; no bespoke embedded glTF animation or mastered audio file is claimed.
 - Review status: `design-review-pending`. Human visual approval, rights clearance, premium release approval, mastered audio and physical-device QA remain unfinished.
+
+
+## Carnival Music clean-mainline implementation and browser verification — 2026-11-16
+
+- Code commit `e66f2e9d031b8656f87092f66dad418a623feef1` adds the original steelpan source, exact-code artwork/model routes, source-level tests, manifest provenance test and 3-viewport render matrix.
+- **Verified browser result:** 15 source models × desktop/tablet/mobile = 45/45 model renders and 45/45 non-empty pixel checks; zero page errors, zero HTTP failures and zero request failures.
+- Workflow: `43787366815`; evidence artifact ID `14190154120`.
+- Carnival Music's dedicated catalogue/model/SVG regression passed. Canonical gift catalogue generation succeeded. LIVE/MeetWave layout independence QA passed in workflow `43787366768`.
+- Standard CI remains failed on five existing tests in unrelated API, Creator League, Home Stories/For You and League-ranking files; the separate For You navigation acceptance also fails. Supabase Auth acceptance passed in the same run. These unrelated failures have not been masked or modified by this asset task.
+- The asset is still `design-review-pending`: human art review, licensing/right clearance, mastered audio, premium approval and physical-device certification remain outstanding. No production gift activation, database, wallet, payment or payout change and no deployment occurred.

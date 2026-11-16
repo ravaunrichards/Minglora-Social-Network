@@ -258,3 +258,12 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Runtime paths: `/assets/gifts/catalog/carnival-music-14x4zts.svg`, `-icon.svg` and `.gltf`; existing Gift Center, LIVE picker and model viewer continue to consume canonical generated paths.
 - Motion/audio: existing `grand-entry` Web Animations preset and synthesized music-category sound are reused. No standalone animation file or mastered recording is claimed.
 - Quality gate: `design-review-pending`; human design/rights review and physical-device QA remain pending.
+
+
+### Carnival Music Chromium evidence
+
+- Code commit: `e66f2e9d031b8656f87092f66dad418a623feef1`.
+- Chromium/WebGL matrix: 15 models × 3 viewports = **45/45 model renders and 45/45 non-empty pixel checks**.
+- Failures: `page_errors=0`, `http_failures=0`, `request_failures=0`.
+- GitHub Actions run `43787366815`; uploaded evidence artifact ID `14190154120`.
+- Scope is simulated Chromium rendering only; legal/design acceptance and physical-device validation remain open.
