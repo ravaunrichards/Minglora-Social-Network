@@ -160,3 +160,10 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Canonical gift: `toucan-1ovzxjb` (Toucan). The exact-code LIVE animation route uses `toucan-glide`: a rising entrance, short banking/gliding movement and soft settle. Reduced-motion mode keeps a shorter entrance rather than running the full choreography.
 - The sound route locally synthesizes three rising/falling chime-like bird calls over a filtered leaf-rustle bed. It is an original Web Audio cue, not a mastered field recording or a production audio file.
 - The 16-source browser matrix rendered 48 model/viewport combinations successfully; this validates the 3D preview paths, not the audio mastering or real-device speaker mix.
+
+
+## Signature Jet flight animation — 2026-11-16
+- Gift: Signature Jet (`signature-jet-exds0m`). Exact-code motion index override: `signature-jet-flight`.
+- Sequence: rising aircraft entrance from lower-left, upward bank, sweeping flight pass, controlled banking settle. Existing reduced-motion preference keeps the runtime's shorter accessible presentation.
+- Associated sound profile: `signature-jet-turbofan-pass-and-airframe-chime-v1`, locally synthesized filtered engine wash/low engine glide/two cockpit chimes. Not a mastered aircraft recording.
+- Generator, runtime, manifest and tests all expose the same exact gift-code route. Current full browser verification is pending on `ccda7be`.

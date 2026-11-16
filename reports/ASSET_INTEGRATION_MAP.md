@@ -274,3 +274,10 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - `scripts/generate-minglora-gifts.mjs` routes the exact code to the bespoke mesh/artwork builder. `public/gift-effects.js` provides `toucan-glide` motion and the locally synthesized three-chirp/rustle sound cue; catalogue price, active state and LIVE gift transaction handling are unchanged.
 - Verification: the complete 1,748-record asset build passed; dedicated Toucan tests passed in CI; current 16-source Chromium/WebGL run `43789909388` passed 48/48 render and 48/48 pixel checks, with 48 screenshots and no page/network failures (artifact `14192111910`).
 - Review state: `design-review-pending`; human visual/rights approval, mastered audio and physical-device testing are not inferred.
+
+
+## Signature Jet production asset integration — 2026-11-16
+- Canonical catalogue item `signature-jet-exds0m` remains a 4,888-Coin active source row; the catalogue, transaction handlers, wallet or balances were not changed.
+- `scripts/generate-minglora-gifts.mjs` imports `createSignatureJetModel()` and emits original `signature-jet-original-v1` artwork plus the transparent gift icon. `assets/3d-assets/gift-models/signature-jet-model.mjs` serializes the separately named PBR aircraft meshes to the canonical GLTF path.
+- `scripts/generate-live-gift-motion-index.mjs` maps only the exact Signature Jet code to `signature-jet-flight`; `public/gift-effects.js` wires the same code to that animation and to the local `playSignatureJet` Web Audio route. `scripts/generate-minglora-live-asset-manifest.mjs` records its dedicated synthesized sound profile.
+- Review state stays `design-review-pending`; visual/rights review, mastered audio, physical-device validation and release approval are not claimed.

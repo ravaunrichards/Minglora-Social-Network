@@ -442,3 +442,13 @@ The browser captures establish that all nine bespoke models load and remain visi
 - LIVE playback uses the `toucan-glide` motion preset and a local Web Audio bird-call/rustle synthesis route. No mastered sound file or external licensed recording is claimed.
 - The combined current set is **16 individually authored gift models**. Chromium/WebGL QA passed **48/48 model renders and 48/48 non-empty pixel checks**, with 48 screenshots and zero page/network errors or unexpected cancellations (workflow `43789909388`, artifact `14192111910`).
 - The catalogue generator also built the complete 1,748-row SVG/icon/glTF output. The generated assets and browser matrix do not substitute for human art/rights review, mastered audio or physical-device acceptance.
+
+
+## Signature Jet integration checkpoint — 2026-11-16
+- [x] Added original Signature Jet model source, PBR primitives and exact-code generator routing.
+- [x] Added original vector artwork/transparent icon generation for `signature-jet-exds0m`.
+- [x] Added exact-code `signature-jet-flight` runtime motion and local synthesized turbine/chime sound profile.
+- [x] Added dedicated GLTF/catalogue/runtime unit checks and manifest/motion-index assertions.
+- [ ] Current `ccda7be` CI, full 17-source Chromium browser render and associated visual QA are pending.
+- [ ] Human design/rights approval, mastered sound, high-detail texture/GLTF animation production, physical-device performance and production deployment remain pending.
+- Current bespoke source count: **17**; remaining shared procedural catalogue rows: **1,731**.

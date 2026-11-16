@@ -97,7 +97,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-The repository now has **sixteen individually art-directed model sources**: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball, Maracas, Dolphin, Crocodile, Carnival Music and Toucan. Each is mapped to its exact canonical gift code through `scripts/generate-minglora-gifts.mjs`. The generator still uses shared procedural category/name geometry for the remaining **1,732 catalogue gifts**; a generated GLTF file per catalogue row is not proof of bespoke modelling or premium approval.
+The repository now has **seventeen individually art-directed model sources**: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball, Maracas, Dolphin, Crocodile, Carnival Music, Toucan and Signature Jet. Each is mapped to its exact canonical gift code through `scripts/generate-minglora-gifts.mjs`. The generator still uses shared procedural category/name geometry for the remaining **1,731 catalogue gifts**; a generated GLTF file per catalogue row is not proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -312,7 +312,7 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 |---|---|---|---|
 | `assets/3d-assets/gift-models/carnival-music-model.mjs` | Carnival Music (`carnival-music-14x4zts`; music; 999 configured Coins; source active flag preserved) | Self-contained glTF 2.0 with named steelpan, tuning-note, mallet, tripod and feather-fan geometry; original primary SVG and transparent icon | Exact-code route in the canonical gift generator; included in gift catalogue tests, manifest provenance checks and desktop/tablet/mobile Chromium render matrix; design/rights review pending |
 
-Current source-model count is **16 individually authored gift models**; the remaining **1,732** catalogue records still use shared procedural/category model generation. A generated GLTF file is not itself evidence of bespoke modelling or premium approval.
+Current source-model count is **17 individually authored gift models**; the remaining **1,731** catalogue records still use shared procedural/category model generation. A generated GLTF file is not itself evidence of bespoke modelling or premium approval.
 
 
 ## Carnival Music browser render verification — 2026-11-16
@@ -338,3 +338,13 @@ Current source-model count is **16 individually authored gift models**; the rema
 - Per-file format, width, height, orientation, bit depth, declared alpha-channel state, transparency/animation metadata flags, file bytes and SHA-256 were recorded. Total: 1,742 PNG + 1,121 JPEG; 431,981,981 bytes.
 - A declared alpha channel is not proof of transparent pixels; pixel-alpha analysis, human visual review, licensing and production approval remain incomplete.
 - Evidence artifact: CI run `43790721350`, artifact `14192032121`.
+
+
+## Signature Jet bespoke vehicle model — 2026-11-16
+| Source | Gift identity | Original artwork/model | Runtime |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/signature-jet-model.mjs` | Signature Jet (`signature-jet-exds0m`; vehicles; 4,888 Coins; active source row preserved) | Pearl-titanium private jet with separately named fuselage, cockpit, windows, port/starboard swept wings, twin turbofans, stabilizers, fin, navigation lights and landing gear; self-contained glTF 2.0 PBR primitives | Exact-code generator route, original SVG/transparent icon, `signature-jet-flight` choreography and locally synthesized turbine/chime cue |
+
+- **Current individually authored source-model count: 17**. The remaining **1,731** canonical rows still use shared procedural/category geometry; a file per gift does not imply bespoke modeling.
+- Source and integration state: `design-review-pending`; visual/rights review, mastered sound and physical-device acceptance are still required.
+- Generator and JavaScript syntax passed in CI on the first Signature Jet correction; dedicated model tests passed on commit `db31e8c37ba4a52a64df6ee818baa3f69ef14322`. The motion-index generator/test contract was subsequently extended and re-running on commit `ccda7be710023535bc44c7b397cceb8777f61d2d`.

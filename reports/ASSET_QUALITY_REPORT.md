@@ -277,7 +277,7 @@ The Crocodile model is a separate named mesh assembly (armoured torso, counter-s
 
 The earlier `public/assets/gifts/minglora_dolphin.gltf` file remains untouched. Its manifest record (`minglora-dolphin`) identifies a historical `Ocean Dolphin` record with code `dolphin`, source migration 021, historical 650-Coin value, and active-at-migration state. The current production database snapshot marks that record absent. Technical metadata records 10 meshes, 5 materials, no textures, no images and no embedded animations; visual review, technical render review and rights review remain pending, and `production_eligible=false`. This is not the current active catalogue record `dolphin-4bkejj` (10 Coins). The newly-authored Dolphin source targets only that current canonical code; the legacy model has been preserved, not overwritten or promoted.
 
-This browser evidence is not premium visual acceptance. Human visual/rights review for all sixteen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,732 catalogue rows continue to use shared procedural category/name geometry.
+This browser evidence is not premium visual acceptance. Human visual/rights review for all seventeen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,731 catalogue rows continue to use shared procedural category/name geometry.
 
 
 ## Carnival Music original steelpan model checkpoint — 2026-11-16
@@ -301,3 +301,9 @@ This proves build and visible browser loading for the tested Chromium viewports.
 - The LIVE runtime maps the exact gift code to `toucan-glide` choreography and a locally synthesized three-chirp/rainforest-rustle sound. This is Web Audio synthesis, not a mastered recording.
 - Current 16-source Chromium/WebGL matrix: **48/48 model renders, 48/48 non-empty pixel checks and 48 screenshots** across desktop/tablet/mobile; zero page errors, HTTP failures, request failures or unexpected cancellations (run `43789909388`, artifact `14192111910`).
 - Human visual approval, rights clearance, mastered audio, high-resolution texture packs, physical-device GPU/memory/battery tests and production approval remain pending.
+
+
+## Signature Jet source-quality record — 2026-11-16
+- `signature-jet-model.mjs` emits a self-contained glTF 2.0 model with separately named aircraft-specific mesh primitives and PBR material factors, plus an original subject-only SVG/icon generated for canonical gift `signature-jet-exds0m`.
+- Its separate runtime route uses `signature-jet-flight` and locally synthesized Web Audio turbine/chime layers. It does not contain a mastered recording or embedded GLTF animation channels.
+- The current count is 17 bespoke source modules and 1,731 catalogue gifts remaining on shared generated geometry. Generated output and unit tests are not a human art-quality, licensing or premium-production approval.
