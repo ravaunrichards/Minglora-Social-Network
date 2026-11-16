@@ -197,3 +197,16 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Updated only the Gifter progression renderer, its image route, relevant PWA asset/version references, focused regression tests and matching documentation.
 - Gifter thresholds, lifetime Coin calculations, gift ledger, refunds, wallets, admin awards, individual badge artwork and database records were not changed.
 - Validation status: source and regression assertions updated; CI/deployment verification pending.
+
+### Unified premium Gifter badge quality — 2026-11-16
+- Task branch: `fix/unified-gifter-badge-quality-20261116`; existing task PR: #454.
+- Inspected all 50 original numbered PNG badges in `assets/Gifters Badge Levels/Level_Badges_01-50_Individual/`. All 50 files are present, have unique SHA-1 blob identities, preserve their distinct level artwork from Level 1 through Level 50, and remain unmodified.
+- Inspected all 11 original detailed level panels, the 50-level master PNG and preview, the six milestone-overlay PNGs, the six separate range-reference PNGs, and the supplied progression-strip PNG. No approved source artwork was edited, recolored, overwritten, restored from an older version or duplicated.
+- Updated only the Gifter individual-badge presentation rules so all states retain the same bright, saturated, high-contrast illumination and layered light/shadow treatment used by the earned progression milestones. Locked badges remain recognizable with a slight opacity distinction; current and admin-awarded states keep their own emphasis. Reduced-motion preferences disable the current-level pulse.
+- Corrected the six Gifter milestone image route to read the canonical files directly from `assets/Crop References/Gifters Badges/`; removed nonexistent JPG range-sheet alias routes and cache entries while retaining the six PNG range-sheet routes.
+- Updated the Gifter reference documentation and regression assertions. The first PR CI run found one stale shared test path for the Daily Ranking and Guests Layout source folders; corrected those two test-only paths to match the current tree without changing those unrelated runtime features.
+- Verified the 50 individual PNGs remain unique and level-specific; 11 detail panels and separate reference sheets remain intact. No progression calculation, stage assignment, Coin threshold, confirmed-gift ledger, refund, wallet, balance, transaction, admin award or database record was changed.
+- Checkpoint commits on this task branch: `a38655bbc07e252f578c42153d3e367906c7bbce` (test source-path correction) and `1ce936e896cef07a568a50550a8098fb996e0840` (Gifter source-reference documentation). The latter is the verified head before this checkpoint entry.
+- Verification at this checkpoint: full CI run #14181 passed all jobs; Auth provider acceptance passed; For You functional navigation passed; seven-plus-two layout visual QA passed; browser acceptance passed. Profile visual QA was still running when this checkpoint was written.
+- PR #454 remains open and mergeable, based on current `main` with 0 commits behind. Merge and deployment are not claimed; no deployment was triggered.
+- Next action: confirm remaining PR checks, then merge PR #454 only after all required checks pass; verify the merge commit and post-merge `main` state.
