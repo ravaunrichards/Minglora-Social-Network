@@ -91,3 +91,13 @@ A separate read-only metadata scanner is part of the LIVE asset workflow:
 - Preserve platform-neutral text, content hierarchy, layout geometry, controls, interaction patterns, responsive behavior and relevant states when recreating the supplied references.
 - Exclude source-company names, logos, wordmarks, trademarks, distinctive branded marks and branded icon artwork from the Minglora application. Use Minglora identity and original assets instead.
 - Keep supplied screenshots and extracted reference crops read-only and separate from production asset paths. Generated artwork remains subject to human visual and rights review before publication.
+
+
+## Completed raster-header metadata audit — 2026-11-16
+
+- CI parsed all **2,863/2,863** source rasters across the six documented roots (1,742 PNG and 1,121 JPEG), with **zero unsupported formats and zero parse failures**.
+- The audit recorded encoded dimensions, aspect/orientation, byte size and SHA-256 for every image; it found 1,741 files declaring an alpha channel. This is header data only: no per-pixel alpha scan, full human visual inspection, quality grading or rights clearance was performed.
+- The detailed per-folder measurements, dominant reference sizes, exact-hash duplicate groups and limitations are recorded in `reports/LIVE_ASSET_RASTER_METADATA_AUDIT_20261116.md`. The uploaded CI JSON artifact contains per-file measurements.
+- 31 exact SHA-256 groups (63 files total) span curated archive copies and references; no source was deleted or consolidated.
+- The current main head was refreshed after this audit. The two intervening main commits did not modify the six scanned source-image roots, so the raster inventory remains applicable to the current source set.
+- The enclosing CI test job was not green: the raster-audit step completed and uploaded its artifact, but separate repository tests failed. Do not interpret metadata parsing as full asset approval.
