@@ -328,7 +328,7 @@ Current source-model count is **17 individually authored gift models**; the rema
 | `assets/3d-assets/gift-models/toucan-model.mjs` | Toucan (`toucan-1ovzxjb`; animals) | Original keel-billed toucan sculpture with separately surfaced anatomy, layered wings/feathers, curved coloured bill, feet and natural perch; matching primary SVG and transparent icon | Exact-code generator/runtime route; Toucan Glide motion and locally synthesized rainforest-call/rustle cue; design/rights review pending |
 
 ## Current 16-model Chromium/WebGL inventory — 2026-11-16
-- 16 individually authored source models × desktop, tablet and mobile = **48/48 model renders, 48/48 non-empty pixel checks and 48 screenshots**.
+- Historical 16-source browser evidence was superseded by the **17-source** matrix: 17 models × desktop/tablet/mobile = **51/51 model renders, 51/51 non-empty pixel checks and 51 screenshots**, with zero page errors, HTTP failures, request failures or cancellations (workflow `43794849282`, artifact `14193698895`).
 - GitHub Actions run `43789909388`, evidence artifact `14192111910`; zero page errors, HTTP failures, request failures or unexpected cancellations.
 - Earlier 14- and 15-model checkpoints above remain historical and are not overwritten.
 
@@ -347,4 +347,4 @@ Current source-model count is **17 individually authored gift models**; the rema
 
 - **Current individually authored source-model count: 17**. The remaining **1,731** canonical rows still use shared procedural/category geometry; a file per gift does not imply bespoke modeling.
 - Source and integration state: `design-review-pending`; visual/rights review, mastered sound and physical-device acceptance are still required.
-- Generator and JavaScript syntax passed in CI on the first Signature Jet correction; dedicated model tests passed on commit `db31e8c37ba4a52a64df6ee818baa3f69ef14322`. The motion-index generator/test contract was subsequently extended and re-running on commit `ccda7be710023535bc44c7b397cceb8777f61d2d`.
+- Generator and JavaScript syntax passed in CI; the dedicated model tests, exact motion-index tests, manifest tests and full 17-source Chromium render matrix passed on current branch head `4fb3118f19c1f6b82649bf62983eeebae52db808`.

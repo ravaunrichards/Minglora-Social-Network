@@ -165,7 +165,7 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 
 ## Current 16-model Chromium/WebGL verification — 2026-11-16
 - Canonical gift build: **1,748 primary SVGs, 1,748 transparent SVG icons and 1,748 glTF models** generated successfully.
-- The 16 individually authored sources were checked across desktop, tablet and mobile Chromium viewports: **48/48 model renders, 48/48 non-empty pixel checks and 48 screenshots**.
+- Historical 16-source evidence remains in the earlier checkpoint. The expanded current 17-source matrix was rendered across desktop, tablet and mobile Chromium viewports: **51/51 model renders, 51/51 non-empty pixel checks and 51 screenshots**, with zero page errors, HTTP failures, failed requests or cancellations (run `43794849282`, artifact `14193698895`).
 - Browser evidence: workflow `43789909388`, artifact `14192111910`; zero page errors, HTTP failures, request failures or unexpected request cancellations.
 - This confirms build and browser rendering only. Human visual acceptance, rights clearance, mastered audio and physical-device sign-off remain outstanding.
 
@@ -175,5 +175,5 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 - New source: `assets/3d-assets/gift-models/signature-jet-model.mjs`, independently generated self-contained glTF 2.0 with named PBR aircraft parts: pearl titanium fuselage/nose, smoked cockpit, cabin glazing, swept wings and inlays, twin turbofan nacelles, intake/exhaust details, tailplanes/stabilizer, navigation lights and retractable landing gear.
 - Exact-code generator integration emits original `signature-jet-original-v1` primary SVG and transparent subject icon at the existing canonical catalogue paths.
 - LIVE motion override: `signature-jet-flight`; sound: locally synthesized turbine wash, rising/falling engine tone and two chimes, explicitly not a mastered recording.
-- Dedicated tests cover the GLTF structure, catalogue source invariants, artwork/icon identity, runtime route, sound manifest and preset mapping. CI asset generation and JavaScript syntax passed on commit `fbeade470f4ac913ba2cb775d884c750d1889d6e`; browser render verification for the current 17-source matrix is pending.
+- Dedicated tests cover the GLTF structure, catalogue source invariants, artwork/icon identity, runtime route, sound manifest and preset mapping. CI asset generation and JavaScript syntax passed on commit `fbeade470f4ac913ba2cb775d884c750d1889d6e`; the 17-source Chromium/WebGL matrix passed **51/51 renders and 51/51 non-empty pixel checks with 51 screenshots** (workflow `43794849282`, artifact `14193698895`).
 - Review status remains `design-review-pending`; human visual/rights approval, mastered audio and physical-device QA remain outstanding.

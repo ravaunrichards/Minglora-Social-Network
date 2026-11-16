@@ -449,6 +449,14 @@ The browser captures establish that all nine bespoke models load and remain visi
 - [x] Added original vector artwork/transparent icon generation for `signature-jet-exds0m`.
 - [x] Added exact-code `signature-jet-flight` runtime motion and local synthesized turbine/chime sound profile.
 - [x] Added dedicated GLTF/catalogue/runtime unit checks and manifest/motion-index assertions.
-- [ ] Current `ccda7be` CI, full 17-source Chromium browser render and associated visual QA are pending.
+- [x] Current 17-source Chromium/WebGL matrix passed 51/51 renders, 51/51 non-empty pixel checks and 51 screenshots (run `43794849282`, artifact `14193698895`); zero page, HTTP, request or cancellation errors.
 - [ ] Human design/rights approval, mastered sound, high-detail texture/GLTF animation production, physical-device performance and production deployment remain pending.
 - Current bespoke source count: **17**; remaining shared procedural catalogue rows: **1,731**.
+
+
+## Verified 17-model browser render checkpoint — 2026-11-16
+- Current E2E list contains 17 exact canonical model codes, including Signature Jet, across desktop (1280×900), tablet (768×1024) and mobile (390×844).
+- Chromium/model-viewer run `43794849282` passed 51/51 model loads, visible presentation canvases, non-empty image/pixel checks and screenshots. Browser page errors 0; HTTP failures 0; failed network requests 0; request cancellations 0.
+- Artifact `14193698895` (`minglora-live-gift-model-render-evidence`), 11,126,930 bytes. The current screenshots were opened for desktop and mobile Signature Jet inspection; the artwork is recognizable and visible but stylized, not photorealistic.
+- Unit suite: 1,246/1,251 passed; the five failing API/Stories/League cases are pre-existing main-branch failures. Signature Jet model, artwork/runtime mapping and motion-index assertions passed.
+- Remaining gates: human design/rights approval, premium art direction, mastered recordings, complete animation-format deliverables, high-resolution textures, actual Android/iOS/tablet/foldable/desktop/TV physical-device performance, and release/deployment.

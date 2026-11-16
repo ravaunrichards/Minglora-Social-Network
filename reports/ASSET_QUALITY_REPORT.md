@@ -299,7 +299,7 @@ This proves build and visible browser loading for the tested Chromium viewports.
 ## Toucan bespoke model and current 16-source browser acceptance — 2026-11-16
 - `assets/3d-assets/gift-models/toucan-model.mjs` adds a separately authored keel-billed toucan with named body, head, bill, throat, wing/feather, feet and perch geometry and per-part PBR material factors. The canonical generator routes only `toucan-1ovzxjb` to this source and emits its matching primary SVG and transparent icon.
 - The LIVE runtime maps the exact gift code to `toucan-glide` choreography and a locally synthesized three-chirp/rainforest-rustle sound. This is Web Audio synthesis, not a mastered recording.
-- Current 16-source Chromium/WebGL matrix: **48/48 model renders, 48/48 non-empty pixel checks and 48 screenshots** across desktop/tablet/mobile; zero page errors, HTTP failures, request failures or unexpected cancellations (run `43789909388`, artifact `14192111910`).
+- The previous 16-source result (48/48) is historical. The current 17-source Chromium/WebGL matrix passed **51/51 model renders, 51/51 non-empty pixel checks and 51 screenshots** across desktop/tablet/mobile; zero page errors, HTTP failures, request failures or cancellations (run `43794849282`, artifact `14193698895`).
 - Human visual approval, rights clearance, mastered audio, high-resolution texture packs, physical-device GPU/memory/battery tests and production approval remain pending.
 
 
@@ -307,3 +307,10 @@ This proves build and visible browser loading for the tested Chromium viewports.
 - `signature-jet-model.mjs` emits a self-contained glTF 2.0 model with separately named aircraft-specific mesh primitives and PBR material factors, plus an original subject-only SVG/icon generated for canonical gift `signature-jet-exds0m`.
 - Its separate runtime route uses `signature-jet-flight` and locally synthesized Web Audio turbine/chime layers. It does not contain a mastered recording or embedded GLTF animation channels.
 - The current count is 17 bespoke source modules and 1,731 catalogue gifts remaining on shared generated geometry. Generated output and unit tests are not a human art-quality, licensing or premium-production approval.
+
+
+## Current Signature Jet browser acceptance — 2026-11-16
+- The current bespoke library contains **17** individually authored source models and the generator emits primary SVG, transparent icon and GLTF outputs for all **1,748** canonical gift catalogue rows. The other **1,731** models are still shared procedural/category geometry, not individual custom sculpts.
+- Chromium WebGL acceptance: **17 gifts × 3 viewports = 51/51 successful GLTF renders, 51/51 non-empty pixel checks and 51 screenshots**. Page errors: 0; HTTP failures: 0; request failures: 0; request cancellations: 0. Run `43794849282`, artifact `14193698895` (11,126,930 bytes).
+- Dedicated Signature Jet structure/source/integration checks and the motion-index/model/sound manifest checks passed. Overall unit suite remains 1,246/1,251 because five pre-existing API/Stories/League tests fail on current main as well; those failures are not represented as LIVE gift asset regressions.
+- The inspected Signature Jet screenshots show a visible, stylized 3D aircraft. They do not establish photorealistic/cinematic quality or human premium-art approval. All 17 remain `design-review-pending` until human creative and rights review. No mastered audio, high-resolution KTX2 texture library, GLTF animation channels, physical-device GPU/battery acceptance or production release is claimed.

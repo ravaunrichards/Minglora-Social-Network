@@ -281,3 +281,10 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - `scripts/generate-minglora-gifts.mjs` imports `createSignatureJetModel()` and emits original `signature-jet-original-v1` artwork plus the transparent gift icon. `assets/3d-assets/gift-models/signature-jet-model.mjs` serializes the separately named PBR aircraft meshes to the canonical GLTF path.
 - `scripts/generate-live-gift-motion-index.mjs` maps only the exact Signature Jet code to `signature-jet-flight`; `public/gift-effects.js` wires the same code to that animation and to the local `playSignatureJet` Web Audio route. `scripts/generate-minglora-live-asset-manifest.mjs` records its dedicated synthesized sound profile.
 - Review state stays `design-review-pending`; visual/rights review, mastered audio, physical-device validation and release approval are not claimed.
+
+
+## Signature Jet verified integration and render evidence — 2026-11-16
+- All paths are exact-code keyed to `signature-jet-exds0m`: generator import and self-contained GLTF model, original SVG/icon generation, model-specific `signature-jet-flight` motion-index override, `public/gift-effects.js` animation/sound route and dedicated sound-manifest record.
+- Generated-assets CI and the dedicated Signature Jet model/source tests pass. E2E renderer matrix includes the canonical gift on desktop/tablet/mobile: **51/51 renders, 51/51 pixel checks and 51 screenshots**, zero page/network failures or cancellations (run `43794849282`, artifact `14193698895`).
+- The overall repository CI still has five existing failures on main (API startup, League settlement, Home Stories, League bands and region-separated rankings); 1,246/1,251 passed, including all new LIVE asset tests.
+- Quality/release limits remain explicit: human art/rights approval, mastered recording, high-resolution KTX2/GLTF animation work, physical-device QA and production deployment are not complete; review status remains `design-review-pending`.

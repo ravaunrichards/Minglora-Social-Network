@@ -166,4 +166,4 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Gift: Signature Jet (`signature-jet-exds0m`). Exact-code motion index override: `signature-jet-flight`.
 - Sequence: rising aircraft entrance from lower-left, upward bank, sweeping flight pass, controlled banking settle. Existing reduced-motion preference keeps the runtime's shorter accessible presentation.
 - Associated sound profile: `signature-jet-turbofan-pass-and-airframe-chime-v1`, locally synthesized filtered engine wash/low engine glide/two cockpit chimes. Not a mastered aircraft recording.
-- Generator, runtime, manifest and tests all expose the same exact gift-code route. Current full browser verification is pending on `ccda7be`.
+- Generator, runtime, manifest and tests all expose the same exact gift-code route. Chromium WebGL verification passed as part of the 17-model matrix: **51/51 renders, 51/51 non-empty pixel checks and 51 screenshots** (run `43794849282`, artifact `14193698895`); human timing/design review remains pending.
