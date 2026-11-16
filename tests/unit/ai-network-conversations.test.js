@@ -34,7 +34,7 @@ test('conversation RPC scopes every command by owner and linked Bot Lab identity
   assert.match(migration, /p\.extra_profile_data->>'source' = 'bot_personality_laboratory'/);
   assert.match(migration, /p\.extra_profile_data->>'bot_id' = v_conversation\.bot_id::text/);
   assert.match(migration, /pg_advisory_xact_lock/);
-  assert.match(migration, /failure_code = 'interrupted'[\\s\\S]*started_at < now\\(\\) - interval '2 minutes'/);
+  assert.match(migration, /failure_code = 'interrupted'[\s\S]*started_at < now\(\) - interval '2 minutes'/);
   assert.match(migration, /where c\\.conversation_id = v_conversation_id and c\\.owner_user_id = p_actor_user_id\\s+for update/i);
   assert.match(migration, /reserved_tokens/);
   assert.match(migration, /daily AI token budget/i);
@@ -52,7 +52,7 @@ test('private runtime allowlists the conversation RPC without changing its custo
 
 test('server routes remain behind designated-admin MFA and verify owner bot linkage before generation', () => {
   const start = server.indexOf("if (p === '/api/ai-network' || p.startsWith('/api/ai-network/'))");
-  const next = server.indexOf("\n  if (p === '/api/", start + 20);
+  const next = server.indexOf('\n  }\n', start + 20);
   assert.ok(start >= 0 && next > start, 'AI Network route exists');
   const route = server.slice(start, next);
   assert.match(route, /isDesignatedCreatorHubAdmin\(user\)/);
