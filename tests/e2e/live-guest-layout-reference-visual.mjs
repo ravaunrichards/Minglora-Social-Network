@@ -83,12 +83,12 @@ try{
         };
       },{layout,markup});
       assert.equal(state.seats.length,count,layout+' renders the exact reference seat count');
-      for(const [index,seat] of state.seats.entries()){
+      const seats=state.seats.map(item=>rect(item,state.stage));
+      for(const [index,seat] of seats.entries()){
         assert.ok(seat.width>0&&seat.height>0,layout+' seat '+(index+1)+' is visible');
         assert.ok(seat.x>=-1&&seat.y>=-1,layout+' seat '+(index+1)+' starts inside the stage');
         assert.ok(seat.right<=state.stage.width+1&&seat.bottom<=state.stage.height+1,layout+' seat '+(index+1)+' remains inside the stage');
       }
-      const seats=state.seats.map(item=>rect(item,state.stage));
       if(layout==='full-screen'){
         fullStage(state.root,state.stage,'Full Screen root');
         fullStage(state.seats[0],state.stage,'Full Screen single host tile');
