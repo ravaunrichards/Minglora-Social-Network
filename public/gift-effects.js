@@ -66,11 +66,27 @@
   function buildPreviewFrames(preset,v){
     const {dx,dy,tilt,spin,peak,rebound}=v;
     const neutral={offset:1,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"};
+    if(preset==="signature-jet-flight")return [
+      {offset:0,opacity:0,transform:"translate3d(-46px,25px,0) rotateZ(-13deg) scale(.7)",filter:"brightness(.76)"},
+      {offset:.18,opacity:1,transform:"translate3d(10px,-12px,0) rotateZ(8deg) scale(1.14)",filter:"brightness(1.3) saturate(1.14)"},
+      {offset:.41,opacity:1,transform:"translate3d(28px,-19px,0) rotateZ(-5deg) scale(1.08)",filter:"brightness(1.2)"},
+      {offset:.66,opacity:1,transform:"translate3d(13px,-6px,0) rotateZ(2.5deg) scale(1.035)",filter:"brightness(1.1)"},
+      {offset:.86,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"},
+      neutral
+    ];
     if(preset==="djembe-strike")return [
       {offset:0,opacity:0,transform:"translate3d(0,15px,0) rotateZ(-5deg) scale(.84)",filter:"brightness(.78)"},
       {offset:.16,opacity:1,transform:"translate3d(0,-5px,0) rotateZ(4deg) scale(1.14)",filter:"brightness(1.42) saturate(1.24)"},
       {offset:.34,opacity:1,transform:"translate3d(0,3px,0) rotateZ(-2deg) scale(.94)",filter:"brightness(1.12)"},
       {offset:.58,opacity:1,transform:"translate3d(0,-2px,0) rotateZ(1deg) scale(1.035)",filter:"none"},
+      neutral
+    ];
+    if(preset==="toucan-glide")return [
+      {offset:0,opacity:0,transform:"translate3d(0,17px,0) rotateZ(-4deg) scale(.86)",filter:"brightness(.84) saturate(.9)"},
+      {offset:.17,opacity:1,transform:"translate3d(-8px,-12px,0) rotateZ(3deg) scale(1.075)",filter:"brightness(1.22) saturate(1.2)"},
+      {offset:.36,opacity:1,transform:"translate3d(7px,-4px,0) rotateZ(-2.2deg) scale(1.035)",filter:"brightness(1.12) saturate(1.12)"},
+      {offset:.57,opacity:1,transform:"translate3d(-5px,2px,0) rotateZ(1.5deg) scale(1.045)",filter:"brightness(1.08)"},
+      {offset:.79,opacity:1,transform:"translate3d(3px,-1px,0) rotateZ(-.8deg) scale(1.015)",filter:"none"},
       neutral
     ];
     if(preset==="island-tide")return [
@@ -288,6 +304,60 @@
     rimGain.gain.setValueAtTime(.0001,now+.018);rimGain.gain.exponentialRampToValueAtTime(.045,now+.025);
     rimGain.gain.exponentialRampToValueAtTime(.0001,now+.12);
     rim.connect(rimGain);rimGain.connect(c.destination);rim.start(now+.018);rim.stop(now+.14);
+    return true;
+  }
+  function playSignatureJet(c,now,seed){
+    const turbine=c.createBufferSource(),highpass=c.createBiquadFilter(),lowpass=c.createBiquadFilter(),envelope=c.createGain();
+    turbine.buffer=createGiftNoise(c,seed^0x4a37c1,1.36);
+    highpass.type="highpass";highpass.frequency.setValueAtTime(95,now);
+    lowpass.type="lowpass";lowpass.frequency.setValueAtTime(360,now);lowpass.frequency.exponentialRampToValueAtTime(1480,now+.46);lowpass.frequency.exponentialRampToValueAtTime(640,now+1.22);
+    envelope.gain.setValueAtTime(.0001,now);envelope.gain.exponentialRampToValueAtTime(.046,now+.23);envelope.gain.exponentialRampToValueAtTime(.0001,now+1.34);
+    turbine.connect(highpass);highpass.connect(lowpass);lowpass.connect(envelope);envelope.connect(c.destination);turbine.start(now);turbine.stop(now+1.37);
+    const engine=c.createOscillator(),engineFilter=c.createBiquadFilter(),engineGain=c.createGain();
+    engine.type="sawtooth";engine.frequency.setValueAtTime(74+(seed%11),now);engine.frequency.exponentialRampToValueAtTime(132,now+.35);engine.frequency.exponentialRampToValueAtTime(91,now+1.05);
+    engineFilter.type="lowpass";engineFilter.frequency.setValueAtTime(260,now);engineFilter.frequency.exponentialRampToValueAtTime(680,now+.38);engineFilter.frequency.exponentialRampToValueAtTime(310,now+1.12);
+    engineGain.gain.setValueAtTime(.0001,now);engineGain.gain.exponentialRampToValueAtTime(.035,now+.08);engineGain.gain.exponentialRampToValueAtTime(.0001,now+1.18);
+    engine.connect(engineFilter);engineFilter.connect(engineGain);engineGain.connect(c.destination);engine.start(now);engine.stop(now+1.2);
+    [587.33,880].forEach((frequency,index)=>{
+      const start=now+.34+index*.2,osc=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      osc.type="sine";osc.frequency.setValueAtTime(frequency*(1+((seed+index*13)%7-3)*.001),start);
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.025/(index+1),start+.018);gain.gain.exponentialRampToValueAtTime(.0001,start+.27);
+      if(pan){pan.pan.setValueAtTime(index===0?-.12:.12,start);osc.connect(gain);gain.connect(pan);pan.connect(c.destination);}else{osc.connect(gain);gain.connect(c.destination);}
+      osc.start(start);osc.stop(start+.29);
+    });
+    return true;
+  }
+  function playToucan(c,now,seed){
+    // Original, locally synthesised rainforest call: three short rising/falling
+    // chime-like chirps over a very soft filtered leaf-rustle bed.
+    const calls=[1244.51,1661.22,1480],delays=[0,.145,.365];
+    calls.forEach((frequency,index)=>{
+      const start=now+delays[index],osc=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      const variation=1+(((seed>>>((index*5)%24))%9)-4)*.0018;
+      const peak=frequency*variation;
+      osc.type=index===1?"triangle":"sine";
+      osc.frequency.setValueAtTime(peak,start);
+      osc.frequency.exponentialRampToValueAtTime(peak*(index===1?.79:1.16),start+.105);
+      osc.frequency.exponentialRampToValueAtTime(peak*.92,start+.19);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(index===1?.043:.036,start+.012);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.205);
+      if(pan){
+        pan.pan.setValueAtTime((index-1)*.22,start);
+        osc.connect(gain);gain.connect(pan);pan.connect(c.destination);
+      }else{
+        osc.connect(gain);gain.connect(c.destination);
+      }
+      osc.start(start);osc.stop(start+.22);
+    });
+    const rustle=c.createBufferSource(),filter=c.createBiquadFilter(),rustleGain=c.createGain();
+    rustle.buffer=createGiftNoise(c,seed^0x51f15e,0.43);
+    filter.type="bandpass";filter.frequency.setValueAtTime(1850,now);filter.Q.setValueAtTime(.48,now);
+    rustleGain.gain.setValueAtTime(.0001,now);
+    rustleGain.gain.exponentialRampToValueAtTime(.012,now+.055);
+    rustleGain.gain.exponentialRampToValueAtTime(.0001,now+.41);
+    rustle.connect(filter);filter.connect(rustleGain);rustleGain.connect(c.destination);
+    rustle.start(now);rustle.stop(now+.43);
     return true;
   }
   function playPalmBreeze(c,now,seed){
@@ -527,6 +597,7 @@
       if(c.state==="suspended")void c.resume();
       const seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),now=c.currentTime;
       if(gift.code==="djembe-master-1v3jzkm")return playDjembe(c,now,seed);
+      if(gift.code==="toucan-1ovzxjb")return playToucan(c,now,seed);
       if(gift.code==="palm-breeze-gknyt0")return playPalmBreeze(c,now,seed);
       if(gift.code==="gamer-otter-100-mgl")return playGamerOtter(c,now,seed);
       if(gift.code==="live-island-rmn3mc")return playLiveIsland(c,now,seed);
@@ -537,6 +608,7 @@
       if(gift.code==="maracas-1wegi7n")return playMaracas(c,now,seed);
       if(gift.code==="beach-maracas-1exxoag")return playBeachMaracas(c,now,seed);
       if(gift.code==="royal-lions-scepter-15000-mgl")return playRoyalLionsScepter(c,now,seed);
+      if(gift.code==="signature-jet-exds0m")return playSignatureJet(c,now,seed);
       const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
@@ -660,7 +732,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="crocodile-tnyf2j"?"crocodile-snap":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
+      const visualPreset=gift.code==="signature-jet-exds0m"?"signature-jet-flight":gift.code==="crocodile-tnyf2j"?"crocodile-snap":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.code==="toucan-1ovzxjb"?"toucan-glide":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),

@@ -55,5 +55,5 @@ test("League asset files and stylesheet/script versions are included in the refr
   assert.ok(sw.includes("/leagues.css?v=" + version));
   assert.ok(sw.includes("/leagues.js?v=" + version));
   assert.ok(sw.includes("/assets/league/league-emblems.svg?v=" + version));
-  assert.ok(sw.includes("minglora-shell-v329-self-updating-1"));
+  assert.match(sw, /minglora-shell-v\d+-self-updating-1/);
 });

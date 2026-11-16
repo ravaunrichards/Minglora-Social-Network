@@ -148,3 +148,35 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - LIVE audio: locally synthesized low body rumble, filtered jaw snap and short descending tones; not a mastered or recorded animal sound
 - Review state: `design-review-pending`; human visual, rights and physical-device approval is not implied
 - Integration: exact canonical gift code only; source catalogue metadata, configured 10-Coin value, active flag, database rows and transaction flow remain unchanged
+
+## Carnival Music v1
+
+- Source: `carnival-music-model.mjs`
+- Target: canonical catalogue item `carnival-music-14x4zts` (Carnival Music; music; configured value 999 Coins)
+- Output: generated self-contained glTF 2.0, subject-specific primary SVG and transparent icon at the canonical gift paths
+- Geometry: brushed steelpan barrel and hammered dish, eight tuned note fields, crossed maple mallets, three-foot support, brass trim and eleven individually shaped satin carnival plumes/quills
+- Integration: exact-code route in `scripts/generate-minglora-gifts.mjs`; existing `grand-entry` animation preset and music-category synthesized sound remain in use
+- Review: `design-review-pending`; human art review, rights clearance and physical-device QA remain outstanding
+- Economy: canonical name/category/999-Coin value/active flag remain unchanged; no production database, wallet or transaction records are changed
+
+
+## Toucan v1
+
+- Source: `toucan-model.mjs`
+- Target: canonical catalogue record `toucan-1ovzxjb` in the animals category; canonical Coin value and active flag are read-only.
+- Output: self-contained glTF 2.0 with distinct anatomy/feather/perch meshes and per-part PBR materials, plus subject-specific primary SVG and transparent icon.
+- Art direction: three-quarter-profile keel-billed rainforest toucan, near-black matte plumage, golden throat/chest, turquoise eye skin, orange bill-blaze stripe, lime curved bill, red/blue bill tips, layered wings, scarlet undertail, zygodactyl feet and natural perch.
+- Runtime: exact-code model/artwork route; `toucan-glide` motion preset; locally synthesized bird-call chimes and filtered leaf-rustle sound.
+- Review: `design-review-pending`; human visual review, licensing/rights clearance, mastered audio and physical-device QA remain outstanding.
+
+
+## Signature Jet v1
+
+- Source: `signature-jet-model.mjs`
+- Canonical target: `signature-jet-exds0m` (Signature Jet; vehicles; configured value 4,888 Coins; source active flag preserved)
+- Output: self-contained glTF 2.0 with separately named PBR mesh primitives, matching original SVG artwork and transparent subject icon at the canonical catalogue paths
+- Geometry: pearl-titanium fuselage and nose cone, smoked panoramic cockpit, individual cabin windows, swept port/starboard wings with navy root inlays and champagne leading-edge seams, twin under-wing turbofan nacelles with intake lips/spinners/exhaust rims, horizontal stabilizers, swept vertical tail fin, navigation lamps and retractable three-wheel landing gear
+- LIVE motion: exact-code `signature-jet-flight` entrance and banking flight choreography; reduced-motion handling remains active in the existing animation runtime
+- LIVE sound: original local Web Audio synthesis of filtered turbine wash, accelerating low engine tone and two short cockpit-style chimes; this is not a mastered recording
+- Review: `design-review-pending`; human art review, rights clearance, mastered audio and physical-device QA remain outstanding
+- Economy: canonical name/category/4,888-Coin value/active flag remain unchanged; no production database, wallet or transaction records are changed

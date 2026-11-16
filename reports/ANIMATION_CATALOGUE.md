@@ -146,3 +146,24 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Artwork/model: original armoured Crocodile SVG/transparent icon and bespoke self-contained glTF source; only the exact canonical gift code selects these resources.
 - Test evidence: dedicated Crocodile source unit test passed; 14 bespoke gift models across three viewports passed 42/42 model and pixel checks with 42 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (PR #411 run 43781000444, artifact 14188617258).
 - This is code/render verification only. Human visual review, rights clearance, mastered audio, and physical-device validation remain pending.
+
+
+## Carnival Music steelpan model presentation — 2026-11-16
+
+- Canonical gift: `carnival-music-14x4zts`.
+- Its original glTF model and SVG artwork are selected through the exact canonical gift code and existing LIVE gift event/viewer path.
+- The source catalogue `grand-entry` animation preset and music-category synthesized sound are reused without mutation. The model does not embed a glTF animation channel and no standalone Lottie, Rive, WebM or MP4 preview is introduced.
+- The sound remains locally synthesized; no mastered per-gift recording is claimed. Human visual, rights and physical-device review remain pending.
+
+
+## Toucan Glide and rainforest-call sound design — 2026-11-16
+- Canonical gift: `toucan-1ovzxjb` (Toucan). The exact-code LIVE animation route uses `toucan-glide`: a rising entrance, short banking/gliding movement and soft settle. Reduced-motion mode keeps a shorter entrance rather than running the full choreography.
+- The sound route locally synthesizes three rising/falling chime-like bird calls over a filtered leaf-rustle bed. It is an original Web Audio cue, not a mastered field recording or a production audio file.
+- The 16-source browser matrix rendered 48 model/viewport combinations successfully; this validates the 3D preview paths, not the audio mastering or real-device speaker mix.
+
+
+## Signature Jet flight animation — 2026-11-16
+- Gift: Signature Jet (`signature-jet-exds0m`). Exact-code motion index override: `signature-jet-flight`.
+- Sequence: rising aircraft entrance from lower-left, upward bank, sweeping flight pass, controlled banking settle. Existing reduced-motion preference keeps the runtime's shorter accessible presentation.
+- Associated sound profile: `signature-jet-turbofan-pass-and-airframe-chime-v1`, locally synthesized filtered engine wash/low engine glide/two cockpit chimes. Not a mastered aircraft recording.
+- Generator, runtime, manifest and tests all expose the same exact gift-code route. Chromium WebGL verification passed as part of the 17-model matrix: **51/51 renders, 51/51 non-empty pixel checks and 51 screenshots** (run `43794849282`, artifact `14193698895`); human timing/design review remains pending.

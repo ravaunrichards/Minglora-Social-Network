@@ -416,3 +416,47 @@ The browser captures establish that all nine bespoke models load and remain visi
 - LIVE/MeetWave visual layout QA: passed. Supabase Auth acceptance: passed.
 - Standard test suite: **1,239 passed / 5 failed** (1,244 total). Mainline's latest independent run also had five failures (1,236 passed / 5 failed); unrelated failures are outside this LIVE asset task. The PR is not merged or deployed.
 - Code review/approval still needed for premium visual and rights sign-off. No physical device testing or mastered audio recording is claimed.
+
+
+## Carnival Music bespoke Caribbean steelpan model increment — 2026-11-16
+
+- Added the original source module `assets/3d-assets/gift-models/carnival-music-model.mjs` for canonical gift `carnival-music-14x4zts`.
+- Added exact-code routing in the canonical generator, subject-specific `carnival-music-original-v1` primary SVG and transparent icon output, catalogue regression coverage, manifest source-provenance coverage, and inclusion in the isolated desktop/tablet/mobile Chromium model-render matrix.
+- Existing configured 999-Coin value, music category, active flag, animation key/preset, sound preset, catalogue identity and LIVE event/transaction handling are preserved. The source catalogue is not edited and no production database, wallet or payment record is changed.
+- Runtime reuses existing `grand-entry` motion and category Web Audio synthesis; no bespoke embedded glTF animation or mastered audio file is claimed.
+- Review status: `design-review-pending`. Human visual approval, rights clearance, premium release approval, mastered audio and physical-device QA remain unfinished.
+
+
+## Carnival Music clean-mainline implementation and browser verification — 2026-11-16
+
+- Code commit `e66f2e9d031b8656f87092f66dad418a623feef1` adds the original steelpan source, exact-code artwork/model routes, source-level tests, manifest provenance test and 3-viewport render matrix.
+- **Verified browser result:** 15 source models × desktop/tablet/mobile = 45/45 model renders and 45/45 non-empty pixel checks; zero page errors, zero HTTP failures and zero request failures.
+- Workflow: `43787366815`; evidence artifact ID `14190154120`.
+- Carnival Music's dedicated catalogue/model/SVG regression passed. Canonical gift catalogue generation succeeded. LIVE/MeetWave layout independence QA passed in workflow `43787366768`.
+- Standard CI remains failed on five existing tests in unrelated API, Creator League, Home Stories/For You and League-ranking files; the separate For You navigation acceptance also fails. Supabase Auth acceptance passed in the same run. These unrelated failures have not been masked or modified by this asset task.
+- The asset is still `design-review-pending`: human art review, licensing/right clearance, mastered audio, premium approval and physical-device certification remain outstanding. No production gift activation, database, wallet, payment or payout change and no deployment occurred.
+
+
+## Toucan model, original rainforest effect and 16-source browser verification — 2026-11-16
+- Added `assets/3d-assets/gift-models/toucan-model.mjs` for canonical gift `toucan-1ovzxjb`, with exact-code generation of original primary SVG artwork, transparent icon and self-contained glTF geometry/materials.
+- LIVE playback uses the `toucan-glide` motion preset and a local Web Audio bird-call/rustle synthesis route. No mastered sound file or external licensed recording is claimed.
+- The combined current set is **16 individually authored gift models**. Chromium/WebGL QA passed **48/48 model renders and 48/48 non-empty pixel checks**, with 48 screenshots and zero page/network errors or unexpected cancellations (workflow `43789909388`, artifact `14192111910`).
+- The catalogue generator also built the complete 1,748-row SVG/icon/glTF output. The generated assets and browser matrix do not substitute for human art/rights review, mastered audio or physical-device acceptance.
+
+
+## Signature Jet integration checkpoint — 2026-11-16
+- [x] Added original Signature Jet model source, PBR primitives and exact-code generator routing.
+- [x] Added original vector artwork/transparent icon generation for `signature-jet-exds0m`.
+- [x] Added exact-code `signature-jet-flight` runtime motion and local synthesized turbine/chime sound profile.
+- [x] Added dedicated GLTF/catalogue/runtime unit checks and manifest/motion-index assertions.
+- [x] Current 17-source Chromium/WebGL matrix passed 51/51 renders, 51/51 non-empty pixel checks and 51 screenshots (run `43794849282`, artifact `14193698895`); zero page, HTTP, request or cancellation errors.
+- [ ] Human design/rights approval, mastered sound, high-detail texture/GLTF animation production, physical-device performance and production deployment remain pending.
+- Current bespoke source count: **17**; remaining shared procedural catalogue rows: **1,731**.
+
+
+## Verified 17-model browser render checkpoint — 2026-11-16
+- Current E2E list contains 17 exact canonical model codes, including Signature Jet, across desktop (1280×900), tablet (768×1024) and mobile (390×844).
+- Chromium/model-viewer run `43794849282` passed 51/51 model loads, visible presentation canvases, non-empty image/pixel checks and screenshots. Browser page errors 0; HTTP failures 0; failed network requests 0; request cancellations 0.
+- Artifact `14193698895` (`minglora-live-gift-model-render-evidence`), 11,126,930 bytes. The current screenshots were opened for desktop and mobile Signature Jet inspection; the artwork is recognizable and visible but stylized, not photorealistic.
+- Unit suite: 1,246/1,251 passed; the five failing API/Stories/League cases are pre-existing main-branch failures. Signature Jet model, artwork/runtime mapping and motion-index assertions passed.
+- Remaining gates: human design/rights approval, premium art direction, mastered recordings, complete animation-format deliverables, high-resolution textures, actual Android/iOS/tablet/foldable/desktop/TV physical-device performance, and release/deployment.

@@ -76,6 +76,20 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized low lion-like formant growl, sub impact, five-note brass-like ceremonial fanfare and high-frequency jewel shimmer",
     layers: ["bandpass_growl_noise_sweep", "low_frequency_staff_impact", "five_note_regal_fanfare_196_294_392_587_784hz", "highpass_jewel_shimmer"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "signature-jet-exds0m": Object.freeze({
+    sound_design_id: "signature-jet-turbofan-pass-and-airframe-chime-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized filtered turbine wash, accelerating low engine tone and short cockpit-style chime; not a mastered aircraft recording",
+    layers: ["filtered_turbofan_noise_sweep", "accelerating_engine_pitch_glide", "two_note_cockpit_chime"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "toucan-1ovzxjb": Object.freeze({
+    sound_design_id: "toucan-rainforest-call-and-leaf-rustle-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized three-note rising/falling bird-call chimes over a soft band-pass leaf-rustle layer",
+    layers: ["three_seeded_stereo_bird_call_chirps_1245_1661_1480hz", "short_frequency_glide_envelopes", "filtered_leaf_rustle_noise"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
 });
 
