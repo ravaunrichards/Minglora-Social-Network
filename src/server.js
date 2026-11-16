@@ -9709,7 +9709,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
   if(individualGifterBadgeMatch){
     const badgeLevel=Number(individualGifterBadgeMatch[1]);
     if(badgeLevel<1||badgeLevel>50)return json(res,404,{error:'Gifter level badge not found.'});
-    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels','Level_Badges_01-50_Individual',`level_${String(badgeLevel).padStart(2,'0')}.png`);
+    const badgeRangeFile = badgeLevel<=9 ? 'LV.1 - LV.9.png' : badgeLevel<=19 ? 'LV.10 - LV.19.png' : badgeLevel<=29 ? 'LV.20 - LV.29.png' : badgeLevel<=39 ? 'LV.30 - LV.39.png' : badgeLevel<=49 ? 'LV.40 - LV.49.png' : 'LV.50+.png';
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Gifters Badges','Png',badgeRangeFile);
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'Gifter level badge not found.'});
       res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
@@ -9744,6 +9745,49 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'Gifter master badge reference not found.'});
       res.writeHead(200,{'Content-Type':contentType,'Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
+  const dailyRankingBadgeAssets = ({
+    '/assets/daily-ranking-badges/place-1.png': 'Screenshot_20261112_021224_TikTok(1).png',
+    '/assets/daily-ranking-badges/place-2.png': 'Screenshot_20261112_021224_TikTok(2).png',
+    '/assets/daily-ranking-badges/place-3.png': 'Screenshot_20261112_021309_TikTok(1).png'
+  })[p];
+  if(dailyRankingBadgeAssets){
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Daily Ranking Badge','png',dailyRankingBadgeAssets);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Daily ranking badge reference not found.'});
+      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
+  const liveGuestLayoutReferenceFiles = ({
+    '/assets/live-guest-layouts/full-screen.png': 'Full Screen.png',
+    '/assets/live-guest-layouts/fluid-panel.png': 'Fluid Panel.png',
+    '/assets/live-guest-layouts/fluid-grid.png': 'Fluid Grid.png',
+    '/assets/live-guest-layouts/fixed-grid.png': 'Fixed Grid.png',
+    '/assets/live-guest-layouts/fixed-panel.png': 'Fixed Panel.png',
+    '/assets/live-guest-layouts/side-by-side.png': 'Side by Side.png',
+    '/assets/live-guest-layouts/spotlight.png': 'Spotlight.png',
+    '/assets/live-guest-layouts/roundtable-1.png': 'Roundtable 1.png',
+    '/assets/live-guest-layouts/roundtable-2.png': 'Roundtable 2.png'
+  })[p];
+  if(liveGuestLayoutReferenceFiles){
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Guests Layout','png',liveGuestLayoutReferenceFiles);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'LIVE guest layout reference not found.'});
+      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
+  if(p==='/assets/profile-defaults/enigma.png'){
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Profile Picture','ENIGMA.png');
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Default profile picture not found.'});
+      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
       res.end(data);
     });
     return;
