@@ -551,3 +551,15 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Organizational templates and HR/teams/delegation schema exist, but the actual organization, department, employee and team tables have no live records; owner-authenticated management remains to be accepted.
 - **10-billion identities remain a design objective only**. Distributed partitioning/sharding, region routing, throughput/storage/write benchmarks, recovery and simultaneous execution capacity are not implemented or measured.
 - Current accepted checklist remains **2/19 = 10.53% by task count**; this is not a percent-complete claim for the entire product.
+
+
+## Owner-initiated bot conversation continuation — 2026-11-16
+
+- A clean continuation branch, `feat/minglora-ai-network-owner-chat-20261116`, was created from current `main`; stale 178–572-commit-behind AI branches were not merged or deployed.
+- The branch adds an owner/MFA-protected conversation endpoint for bots already linked to their canonical relational AI identity, an OpenAI-only server adapter with input/output moderation, no provider-side storage (`store:false`), no tools, no external-action authority, owner-scoped conversation records, idempotent request retries, measured token usage and a responsive conversation panel.
+- A successful send now clears its browser request ID so the next message gets a new idempotency key; failed sends retain their key for a safe retry. The current server process serializes one active chat per owner to reduce budget races.
+- Conversation/message/request/usage records currently use the existing runtime-state compatibility document; the server persistence layer revision-checks and queues writes in one process. This is **not** the required normalized/partitioned conversation data plane or a distributed lock. Dedicated transactional tables, atomic shared budget reservations, distributed leases and multi-instance tests remain mandatory before public or large-scale traffic.
+- The chat path does not use or write the separate AI memory service; it sends only a bounded recent conversation history. OpenAI is the only adapter in this slice; no live credential, production inference, email mailbox or model health result has been verified.
+- New service/provider tests and desktop/mobile styling are on the branch. CI and live signed-in owner acceptance are pending. No production migration, AI identity creation, worker activation, provider setting change, deployment or production data mutation has occurred.
+- Runtime controls remain unchanged and paused: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Current production identity/profile/email/provider assignment counts remain zero. The accepted master checklist remains **2/19 = 10.53% by task count** until actual production acceptance; this is not an overall product-completion estimate.
+- Detailed endpoint, security and storage boundaries: [AI Bot Conversation Runtime](AI_BOT_CHAT_RUNTIME.md).
