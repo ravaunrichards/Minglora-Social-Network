@@ -239,3 +239,15 @@ test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
   assert.ok(sw.includes("'/assets/gifter-badge-reference/master-sheet.png'"));
   assert.ok(sw.includes("'/assets/gifter-badge-progression-art.png'"), "the new progression art is precached");
 });
+
+
+test("all 50 individual Gifter badges share the progression artwork's bright premium lighting", () => {
+  const styles = read("public/gifter-progression.css");
+  const progression = read("public/gifter-progression.js");
+  assert.match(styles, /\.gp-level-index-item \.gp-level-index-art\{[\s\S]*?brightness\(1\.48\) saturate\(1\.3\) contrast\(1\.12\)/);
+  assert.match(styles, /\.gp-level-index-item\.is-locked \.gp-level-index-art\{opacity:\.88\}/);
+  assert.match(styles, /@keyframes gp-earned-badge-pulse[\s\S]*?brightness\(1\.7\) saturate\(1\.42\) contrast\(1\.16\)/);
+  assert.match(styles, /@media\(prefers-reduced-motion:reduce\)[\s\S]*?\.gp-level-index-item\.is-current \.gp-level-index-art\{animation:none\}/);
+  assert.match(progression, /src='\/assets\/gifter-badges\/level_/);
+  assert.doesNotMatch(styles, /\.gp-level-index-item\.is-locked \.gp-level-index-art\{filter:grayscale/);
+});
