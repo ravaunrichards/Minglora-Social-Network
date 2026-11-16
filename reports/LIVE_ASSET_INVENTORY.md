@@ -25,7 +25,7 @@
 | `assets/Gifts/` | 131 capture PNGs plus 1 reference-sheet JPEG (132 image files total) | Read-only source captures |
 | `assets/Artwork/` | 1,509 extracted PNG records | Review-only, not cleared for production |
 | `assets/Guests Layout/` | 9 JPEG layout diagrams | Read-only layout references; all 9 individually visually inspected |
-| `assets/Gifters Badge Levels/` | 72 image files (52 PNG, 20 JPEG; 71 unique image contents because the progression-strip JPEG is duplicated at two paths) | Badge/level source references; full visual and rights review pending |
+| `assets/Gifters Badge Levels/` | 78 raster image files (58 PNG, 20 JPEG; 77 unique image contents because one progression-strip JPEG is duplicated at two paths) | Badge/level source references; full visual and rights review pending |
 | `public/assets/gifter-badge-progression-art.jpg` | 1 JPEG (uploaded original badge-tier progression strip; byte-identical to the supplied source image) | Public production asset; served uncropped on the Gifter Progression page |
 | `assets/League/` | 20 JPEG reference captures | League/rules references; full visual review pending |
 | `public/assets/gifts/` | 45 standalone original Minglora GLTF models | Existing original gift models; retained |
@@ -316,3 +316,26 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - Added `public/assets/icons/live-provider-status/manifest.json` plus `provider-ready.svg`, `provider-not-configured.svg` and `provider-unavailable.svg` (three original 24×24 SVG symbol assets).
 - Consumers: `public/app.js` provider-readiness pill; `public/styles.css`; `public/sw.js` offline shell; `scripts/generate-minglora-live-asset-manifest.mjs`.
 - The pack is included in the unified generated inventory as `minglora-live-provider-status`, with three records. All visual/licensing approval flags remain review-required; this is not a claim of premium-art approval.
+
+
+## Raster-source metadata baseline — verified 2026-11-16
+
+PR #439 CI run 43821480523 (test job 133145316730) completed the read-only header metadata audit of **2,869 source images** across the six folders below. It parsed all 2,869 files with zero unsupported formats and zero parse failures. The LIVE/MeetWave layout independence matrix passed in run 43821480493.
+
+| Folder | Files | Bytes | Width range | Height range |
+|---|---:|---:|---:|---:|
+| `assets/reference/` | 1,121 | 387,820,405 | 144–1,366 px | 157–2,408 px |
+| `assets/Gifts/` | 132 | 27,150,149 | 604–1,080 px | 417–890 px |
+| `assets/Guests Layout/` | 9 | 66,481 | 154–170 px | 292–323 px |
+| `assets/Gifters Badge Levels/` | 78 | 2,958,504 | 170–1,080 px | 76–1,040 px |
+| `assets/League/` | 20 | 570,961 | 711–1,080 px | 216–573 px |
+| `assets/Artwork/` | 1,509 | 13,972,858 | 256 px | 256 px |
+| **Total** | **2,869** | **432,539,358** | — | — |
+
+- Formats: 1,748 PNG and 1,121 JPEG.
+- Encoded alpha-channel declarations: 1,747. This is a file-header property, not proof of transparent pixels.
+- The six newly-present Gifter range-sheet PNGs under `assets/Gifters Badge Levels/Gifters Badges/Png/` were included; their original files remain unchanged. Six companion files in the `psd/` folder are non-raster/source material and are outside this scanner.
+- Unsupported raster files: 0. Parse failures: 0.
+- Pixel alpha was not decoded, JPEG EXIF orientation was not applied, and the scan did not make visual, quality, rights or production-approval decisions.
+- The per-file report was uploaded as artifact `minglora-live-image-metadata-audit-13700` (ID 14204652494); the generated per-gift manifest was uploaded as `minglora-live-asset-manifest-13700` (ID 14205036251).
+- Source files were read-only and unchanged by the audit. The 1,509 extracted artwork crops remain unapproved and must not be treated as cleared original production assets.
