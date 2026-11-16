@@ -305,3 +305,6 @@
   .league-powerup-info-card{transition:none}
   .live-match-powerups button{transition:none}
 }
+
+.league-powerup-btn-icon{display:grid;place-items:center;min-height:28px;margin-bottom:4px}
+.league-powerup-btn-icon .league-powerup-svg-icon{display:block;width:28px;height:28px}
