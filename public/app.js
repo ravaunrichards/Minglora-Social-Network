@@ -2126,18 +2126,23 @@ function renderLiveMatches(matches){
     const challenger=match.challenger?.name||'Challenger',opponent=match.opponent?.name||'Opponent';
     const active=match.status==='live',pending=match.status==='pending';
     const score=match.scores||{challenger:0,opponent:0};
+    const challengerHidden=match.scoreVisibility?.challenger===false;
+    const opponentHidden=match.scoreVisibility?.opponent===false;
     const challengerPoints=Number(score.challenger||0),opponentPoints=Number(score.opponent||0);
     const total=Math.max(1,challengerPoints+opponentPoints);
     const mine=[match.challengerId,match.opponentId].includes(state.user?.id);
+    const mySide=match.challengerId===state.user?.id?'challenger':match.opponentId===state.user?.id?'opponent':'';
     const acceptedByMe=match.opponentId===state.user?.id&&pending;
     const alreadySupported=(match.supporters||[]).some(item=>item.userId===state.user?.id);
-    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+challengerPoints.toLocaleString()+"</b><small>Challenger</small></div>";
-    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+opponentPoints.toLocaleString()+"</b><small>Opponent</small></div>";
-    const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
+    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+(challengerHidden?"Hidden by Mist":challengerPoints.toLocaleString())+"</b><small>Challenger</small></div>";
+    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+(opponentHidden?"Hidden by Mist":opponentPoints.toLocaleString())+"</b><small>Opponent</small></div>";
+    const barWidth=challengerHidden||opponentHidden?50:Math.round(challengerPoints/total*100);
+    const bar="<div class='live-match-scorebar"+(challengerHidden||opponentHidden?" is-mist-hidden":"")+"'><i style='width:"+barWidth+"%'></i></div>";
     const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
     const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
-    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
-    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
+    const powerups=active&&mine?"<div class='live-match-powerups' aria-label='Activate Match Power-Ups'><button type='button' data-live-match-action='powerup' data-powerup-id='boosting_glove' data-match-id='"+esc(match.id)+"'>🥊 Glove</button><button type='button' data-live-match-action='powerup' data-powerup-id='magic_mist' data-match-id='"+esc(match.id)+"'>☁ Mist</button><button type='button' data-live-match-action='powerup' data-powerup-id='stun_hammer' data-match-id='"+esc(match.id)+"'>🔨 Hammer</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_maker' data-match-id='"+esc(match.id)+"'>⏱ +10s</button><button type='button' data-live-match-action='powerup' data-powerup-id='boosters' data-booster-rank='2' data-match-id='"+esc(match.id)+"'>2nd gifter ×2</button><button type='button' data-live-match-action='powerup' data-powerup-id='boosters' data-booster-rank='3' data-match-id='"+esc(match.id)+"'>3rd gifter ×2</button><button type='button' data-live-match-action='powerup' data-powerup-id='speed_challenge' data-match-id='"+esc(match.id)+"'>🚀 Speed Challenge</button></div>":"";
+    const effects=(match.matchEffects||[]).filter(effect=>effect.type==='stun_hammer'&&effect.targetSide===mySide).map(()=>"<span class='live-match-effect live-match-effect--hammer'>🔨 STUN HAMMER ACTIVE</span>").join("")+(challengerHidden||opponentHidden?"<span class='live-match-effect live-match-effect--mist'>☁ MAGIC MIST · SCORE HIDDEN</span>":"")+(match.speedChallenge&&new Date(match.speedChallenge.expiresAt).getTime()>Date.now()?"<span class='live-match-effect live-match-effect--speed'>🚀 SPEED CHALLENGE · 2×</span>":"");
+    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-effects'>"+effects+"</div><div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
   }).join('');
 }
 async function refreshLiveMatchPanel(session,role){
@@ -2177,7 +2182,7 @@ async function setupLiveMatchPanel(session,role){
     const button=event.target?.closest?.('[data-live-match-action]');if(!button)return;
     const action=button.dataset.liveMatchAction,matchId=String(button.dataset.matchId||'');
     const routeAction=action==='accept'?'accept':action==='support-challenger'||action==='support-opponent'?'support':'powerups';
-    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{powerupId:button.dataset.powerupId}:{};
+    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{powerupId:button.dataset.powerupId,boosterRank:Number(button.dataset.boosterRank||2)}:{};
     button.disabled=true;
     try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'League Match power-up activated.');await refreshLiveMatchPanel(session,role);}
     catch(error){toast(error.message||'The League Match action could not be completed.');}
