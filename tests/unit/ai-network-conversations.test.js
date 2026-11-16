@@ -61,8 +61,8 @@ test('server routes remain behind designated-admin MFA and verify owner bot link
   assert.match(route, /runAIConversationCommand\('start_turn'/);
   assert.match(route, /generateOpenAIBotConversation\(/);
   assert.match(route, /probeOpenAIProvider\(/);
-  assert.match(route, /bot\.ownerId === user\.id/);
-  assert.match(route, /bot\.identityLinkStatus === 'linked'/);
+  assert.match(route, /item\.id === botId && item\.ownerId === user\.id/);
+  assert.match(route, /bot\.identityLinkStatus !== 'linked'/);
   assert.match(route, /memoryAccess\?\.settings\?\.memory_enabled === true/);
   assert.match(route, /availableTokens = Math\.max\(0, dailyTokenLimit - creatorTokensUsed\)/);
   assert.match(route, /parts\.length === 1/);
