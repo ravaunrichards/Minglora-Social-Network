@@ -426,3 +426,8 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Dedicated Chromium WebGL job completed successfully: **15 bespoke models × desktop/tablet/mobile = 45/45 model render checks and 45/45 non-empty pixel checks**, with 45 screenshots; the job reported zero page errors and zero request cancellations. Artifact: `minglora-live-gift-model-render-evidence` (ID `14200011992`, 10,147,846 bytes; run 43809576362).
 - The same head's LIVE/MeetWave seven-plus-two layout matrix, profile visual matrix and AI Network browser acceptance passed (runs 43809576395, 43809576394 and 43809576366). These viewport/browser checks do not represent physical-device acceptance.
 - Model/artwork and synthesized sound remain `design-review-pending` / `generated-review-required` as applicable. Human premium-art approval, rights clearance, professional audio listening/mastering and physical Android/iPhone/tablet/foldable/desktop/TV QA remain outstanding. No production activation, deployment or merge is claimed.
+
+
+## LIVE provider status icon pack — 2026-11-16
+
+Added three original 24×24 SVG state marks for the actual LIVE provider preflight result: Provider ready, Provider not configured and Provider connection unavailable. `public/app.js` selects the icon from the existing `status.configured` and `status.connected` response; the text label remains visible and authoritative. SVGs are decorative/aria-hidden and inherit currentColor. The pack is included in the unified generated LIVE manifest and service-worker cache. Design and rights review remain pending; this is not full status coverage for all room connection, loading, guest, moderation or media device events.
