@@ -316,3 +316,11 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - Added `public/assets/icons/live-provider-status/manifest.json` plus `provider-ready.svg`, `provider-not-configured.svg` and `provider-unavailable.svg` (three original 24×24 SVG symbol assets).
 - Consumers: `public/app.js` provider-readiness pill; `public/styles.css`; `public/sw.js` offline shell; `scripts/generate-minglora-live-asset-manifest.mjs`.
 - The pack is included in the unified generated inventory as `minglora-live-provider-status`, with three records. All visual/licensing approval flags remain review-required; this is not a claim of premium-art approval.
+
+## Pop Parrot asset inventory — 2026-11-16
+
+- Source module: `assets/3d-assets/gift-models/pop-parrot-model.mjs` (`createPopParrotModel`).
+- Canonical target: `pop-parrot-alp4e8`; output routes through `scripts/generate-minglora-gifts.mjs` to GLTF 2.0, primary SVG and transparent icon.
+- Exact motion profile: `parrot-swoop` in the generated LIVE motion index and `public/gift-effects.js`; sound design: `pop-parrot-rainbow-whistle-chirp-v1` (locally synthesized, not mastered).
+- Unique source count: fifteen individual model sources in the current inventory. Source catalogue value/active flag are retained as data, not a production activation instruction.
+- Model/design review, rights clearance, mastered audio and physical-device QA are still pending.

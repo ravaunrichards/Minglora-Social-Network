@@ -299,3 +299,9 @@ The Rose reference refinement adds distinct satin-ribbon loop surfaces, a centra
 - Three original same-origin SVG symbols were added for configured-and-connected, not-configured and configured-but-unavailable provider states. All use a 24×24 viewBox, `currentColor` and the established status pill's visual language.
 - Automated review verifies SVG files and manifest paths/hashes, accessible decorative treatment, actual response-based state mapping and service-worker inclusion. The text label remains visible and authoritative.
 - Quality boundary: these are lightweight status indicators, not 3D artwork or animated network-health indicators. Human visual approval, rights sign-off and physical-device verification remain pending.
+
+## Pop Parrot bespoke model quality boundary — 2026-11-16
+
+- Added a dedicated original mesh source with individually named subject groups, a self-contained glTF 2.0 binary buffer, original SVG artwork and a transparent SVG icon. Automated checks assert mesh group presence and finite VEC3 bounds.
+- The renderable model is procedural geometry with named material surfaces; this does not establish texture-mapped PBR completeness, KTX2 delivery, premium-grade texture maps or embedded GLTF animation channels. Runtime movement is driven by the existing Web Animations layer.
+- The subject-specific chirp/whistle is a local Web Audio synthesis profile, not a mastered/recorded sound. Human visual art-direction, rights approval, listening review and physical-device performance/thermal/battery QA remain pending. The model remains `design-review-pending`.

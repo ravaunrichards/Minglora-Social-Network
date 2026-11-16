@@ -133,6 +133,7 @@ test("named gift models retain gift-specific source provenance in the LIVE manif
     ["LIVE Island", "gift-live-island-3d-v1", "assets/3d-assets/gift-models/live-island-model.mjs"],
     ["Crystal Crown", "gift-crystal-crown-3d-v1", "assets/3d-assets/gift-models/crystal-crown-model.mjs"],
     ["Phoenix", "gift-phoenix-3d-v1", "assets/3d-assets/gift-models/phoenix-model.mjs"],
+    ["Pop Parrot", "gift-pop-parrot-3d-v1", "assets/3d-assets/gift-models/pop-parrot-model.mjs"],
     ["Beach Maracas", "gift-beach-maracas-3d-v1", "assets/3d-assets/gift-models/beach-maracas-model.mjs"],
     ["Royal Lions Scepter", "gift-royal-lions-scepter-3d-v1", "assets/3d-assets/gift-models/royal-lions-scepter-model.mjs"]
   ];
@@ -158,7 +159,8 @@ test("LIVE asset manifest exposes the same bespoke motion presets as the runtime
     "crystal-crown-1itryeu": "crown-lustre",
     "phoenix-wep6uk": "phoenix-rise",
     "beach-maracas-1exxoag": "maraca-rhythm",
-    "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
+    "royal-lions-scepter-15000-mgl": "lion-scepter-rise",
+    "pop-parrot-alp4e8": "parrot-swoop"
   };
   for (const [code,preset] of Object.entries(expected)) {
     const gift = manifest.gifts.find(item => item.code === code);
@@ -174,7 +176,7 @@ test("LIVE asset manifest exposes the same bespoke motion presets as the runtime
 
 test("gift-specific synthesized sound designs are inventoried without claiming mastered recordings", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
-  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 9);
+  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 10);
   assert.equal(manifest.summary.physical_device_qa_verified_count, 0);
   const expected = [
     ["djembe-master-1v3jzkm","djembe-hand-drum-impact-v1","gift_specific_synthesized_sound_not_mastered_recording"],
@@ -185,6 +187,7 @@ test("gift-specific synthesized sound designs are inventoried without claiming m
     ["phoenix-wep6uk","phoenix-flame-rise-and-ember-choir-v1","gift_specific_synthesized_sound_not_mastered_recording"],
     ["beach-maracas-1exxoag","beach-maracas-caribbean-shaker-rhythm-v1","gift_specific_synthesized_sound_not_mastered_recording"],
     ["royal-lions-scepter-15000-mgl","royal-lions-scepter-roar-and-regal-fanfare-v1","gift_specific_synthesized_sound_not_mastered_recording"],
+    ["pop-parrot-alp4e8","pop-parrot-rainbow-whistle-chirp-v1","gift_specific_synthesized_sound_not_mastered_recording"],
     ["rose-4ieccm","rose-golden-bow-petal-rustle-and-celesta-v3","gift_specific_synthesized_sound_not_mastered_recording"]
   ];
   for (const [code,designId,status] of expected) {

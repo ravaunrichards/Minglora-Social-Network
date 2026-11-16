@@ -45,6 +45,7 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
       "phoenix-wep6uk": "phoenix-rise",
       "beach-maracas-1exxoag": "maraca-rhythm",
       "royal-lions-scepter-15000-mgl": "lion-scepter-rise",
+      "pop-parrot-alp4e8": "parrot-swoop",
       "rose-4ieccm": "rose-unfurl"
     };
     assert.equal(entry.motion_preset, giftSpecificMotionPreset[entry.code] || gift.animation_preset);
@@ -79,6 +80,7 @@ test("bespoke gift runtime presets are reflected in the generated motion index w
     "phoenix-wep6uk": "phoenix-rise",
     "beach-maracas-1exxoag": "maraca-rhythm",
       "royal-lions-scepter-15000-mgl": "lion-scepter-rise",
+      "pop-parrot-alp4e8": "parrot-swoop",
     "rose-4ieccm": "rose-unfurl"
   };
   const sourceByCode = new Map(source.gifts.map(gift => [gift.code, gift]));

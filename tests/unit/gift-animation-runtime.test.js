@@ -173,3 +173,12 @@ test("Royal Lions Scepter has a dedicated regal rise motion and locally synthesi
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
   assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
 });
+
+test("Pop Parrot uses a dedicated soaring choreography and local synthesized chirp", () => {
+  assert.ok(effects.includes("function playPopParrot(c,now,seed)"));
+  assert.ok(effects.includes('if(gift.code==="pop-parrot-alp4e8")return playPopParrot(c,now,seed);'));
+  assert.ok(effects.includes('gift.code==="pop-parrot-alp4e8"?"parrot-swoop":'));
+  assert.ok(effects.includes('if(preset==="parrot-swoop")return'));
+  assert.ok(effects.includes("motionElement.animate(semanticFrames"));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+});

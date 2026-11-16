@@ -77,6 +77,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     layers: ["bandpass_growl_noise_sweep", "low_frequency_staff_impact", "five_note_regal_fanfare_196_294_392_587_784hz", "highpass_jewel_shimmer"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
   }),
+  "pop-parrot-alp4e8": Object.freeze({
+    sound_design_id: "pop-parrot-rainbow-whistle-chirp-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized ascending birdlike whistle chirps with a light high-pass flutter accent",
+    layers: ["five_note_ascending_sine_whistles_1047_1319_1568_1175_1760hz", "seeded_micro_pitch_bends_and_stereo_placement", "highpass_feather_flutter_noise"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
   "rose-4ieccm": Object.freeze({
     sound_design_id: "rose-golden-bow-petal-rustle-and-celesta-v3",
     sound_profile_scope: "gift_specific_web_audio_synthesis",
