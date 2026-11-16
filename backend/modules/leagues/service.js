@@ -830,14 +830,15 @@ function publicMember(users, id) {
   return user ? { id: user.id, name: user.name || user.displayName || user.username || "Minglora creator", username: user.username || "creator", avatarUrl: user.avatarUrl || user.avatar_url || user.avatar || null } :
     { id, name: "Minglora creator", username: "creator", avatarUrl: null };
 }
-function decorateMatch(match, users, viewerId, now = new Date()) {
+function decorateMatch(match, users, viewerId, now = new Date(), usedPowerupsToday = []) {
   const decorated = {
     ...match,
     scores: { ...(match.scores || { challenger: 0, opponent: 0 }) },
     activeEffects: (match.activeEffects || []).filter(effect => Date.parse(effect.expiresAt || "") > now.getTime()),
     challenger: publicMember(users, match.challengerId),
     opponent: publicMember(users, match.opponentId),
-    scoreVisibility: { challenger: true, opponent: true }
+    scoreVisibility: { challenger: true, opponent: true },
+    usedPowerupsToday: [...new Set(usedPowerupsToday)]
   };
   const viewerSide = match.challengerId === viewerId ? "challenger" : match.opponentId === viewerId ? "opponent" : "";
   const hiddenSide = viewerSide ? decorated.activeEffects.find(effect =>
@@ -846,6 +847,11 @@ function decorateMatch(match, users, viewerId, now = new Date()) {
   if (hiddenSide) {
     decorated.scoreVisibility[hiddenSide] = false;
     decorated.scores[hiddenSide] = null;
+    // A hidden score must not remain reconstructable from individual Gift/support events.
+    decorated.events = (match.events || []).filter(item =>
+      item.side !== hiddenSide || !["gift_score", "viewer_support"].includes(item.type)
+    );
+    decorated.supporters = (match.supporters || []).filter(item => item.side !== hiddenSide);
   }
   decorated.matchEffects = decorated.activeEffects.map(effect => ({
     type: effect.type, side: effect.side, targetSide: effect.targetSide || null,
@@ -855,8 +861,14 @@ function decorateMatch(match, users, viewerId, now = new Date()) {
 }
 export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
   ensureCollections(db);
-  settleExpiredLeagueMatches(db, now);
-  const currentTime = now instanceof Date ? now.getTime() : Date.parse(now);
+  const requestedAt = now instanceof Date ? now : new Date(now);
+  settleExpiredLeagueMatches(db, requestedAt);
+  const currentTime = requestedAt.getTime();
+  const dayKey = utcDayKey(requestedAt);
+  const usedPowerupsToday = [...new Set((db.creatorLeaguePowerupUses || [])
+    .filter(item => item.userId === userId && item.dayKey === dayKey)
+    .map(item => String(item.powerupId || ""))
+    .filter(Boolean))];
   const matches = compactMatches(db.creatorLeagueMatches).filter(match => {
     if (match.status === "live") return true;
     if (![match.challengerId, match.opponentId].includes(userId)) return false;
@@ -868,7 +880,7 @@ export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
   });
   return matches
     .sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt))
-    .slice(0, 50).map(match => decorateMatch(match, users, userId, now instanceof Date ? now : new Date(now)));
+    .slice(0, 50).map(match => decorateMatch(match, users, userId, requestedAt, usedPowerupsToday));
 }
 export function getCreatorLeagueLeaderboard(db, user, options = {}) {
   ensureCollections(db);
