@@ -26,29 +26,30 @@ test("Enigma replaces the old M artwork across all active Minglora brand surface
   assert.ok(adminHtml.includes(brandUrl), "Admin Centre header uses Enigma");
 
   const activeBrandFiles = [index, help, manifest, serviceWorker, brandCss, helpCss, adminHtml, adminCss];
-  for (const content of activeBrandFiles) {
-    assert.doesNotMatch(content, /\\/assets\\/Logo\\/Logo\\.jpg/i, "old M logo is not referenced by active branding");
+  for (const source of activeBrandFiles) {
+    assert.equal(source.includes("/assets/Logo/Logo.jpg"), false, "old M logo is not referenced by active branding");
   }
 
-  assert.match(index, /minglora-branding\\.css\\?v=20261116-enigma-logo-1/);
-  assert.match(help, /help-center\\.css\\?v=20261116-enigma-logo-1/);
-  assert.match(adminHtml, /admin-centre\\.css\\?v=20261116-enigma-logo-1/);
-  assert.match(brandCss, /object-fit:cover!important;object-position:center 12%!important/);
-  assert.match(helpCss, /hc-brand img\\{border-radius:13px;object-fit:cover;object-position:center 12%\\}/);
-  assert.match(adminHtml, /<img class="admin-centre-brand-mark"/);
-  assert.match(adminCss, /\\.admin-centre-brand-mark\\{[\\s\\S]*object-fit:cover[\\s\\S]*object-position:center 12%/);
-  assert.match(manifest, /"type": "image\\/png"/);
-  assert.match(serviceWorker, /minglora-shell-v343-self-updating-1/);
-  assert.match(serviceWorker, /icon:'\\/assets\\/profile-defaults\\/enigma\\.png/);
-  assert.match(serviceWorker, /badge:'\\/assets\\/profile-defaults\\/enigma\\.png/);
+  assert.ok(index.includes("minglora-branding.css?v=20261116-enigma-logo-1"));
+  assert.ok(help.includes("help-center.css?v=20261116-enigma-logo-1"));
+  assert.ok(adminHtml.includes("admin-centre.css?v=20261116-enigma-logo-1"));
+  assert.ok(brandCss.includes("object-fit:cover!important;object-position:center 12%!important"));
+  assert.ok(helpCss.includes(".hc-brand img{border-radius:13px;object-fit:cover;object-position:center 12%}"));
+  assert.ok(adminHtml.includes('<img class="admin-centre-brand-mark"'));
+  assert.ok(adminCss.includes("object-fit:cover;"));
+  assert.ok(adminCss.includes("object-position:center 12%;"));
+  assert.ok(manifest.includes('"type": "image/png"'));
+  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v343-self-updating-1'"));
+  assert.ok(serviceWorker.includes("icon:'" + brandUrl + "'"));
+  assert.ok(serviceWorker.includes("badge:'" + brandUrl + "'"));
 });
 
 test("Enigma brand reuses the canonical artwork and does not change member avatar handling", () => {
   const sourceNotes = read("assets/Crop References/README.md");
   const app = read("public/app.js");
   const server = read("src/server.js");
-  assert.match(sourceNotes, /Profile Picture\\/ENIGMA\\.png/);
-  assert.match(server, /'Crop References','Profile Picture','ENIGMA\\.png'/);
-  assert.match(app, /DEFAULT_PROFILE_AVATAR='\\/assets\\/profile-defaults\\/enigma\\.png/);
-  assert.doesNotMatch(app, /DEFAULT_PROFILE_AVATAR\\s*=\\s*['"][^'"]*Logo\\/Logo/i);
+  assert.ok(sourceNotes.includes("Profile Picture/ENIGMA.png"));
+  assert.ok(server.includes("'Crop References','Profile Picture','ENIGMA.png'"));
+  assert.ok(app.includes("DEFAULT_PROFILE_AVATAR='/assets/profile-defaults/enigma.png"));
+  assert.equal(app.includes("DEFAULT_PROFILE_AVATAR='/assets/Logo/Logo.jpg"), false);
 });
