@@ -9774,7 +9774,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     '/assets/gifter-badge-range-sheets/lv-50-plus.jpg': 'LV.50+.jpg'
   })[p];
   if(gifterBadgeRangeSheetFiles){
-    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels',gifterBadgeRangeSheetFiles);
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Gifter level range sheets',gifterBadgeRangeSheetFiles);
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'Cropped Gifter range sheet not found.'});
       res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
