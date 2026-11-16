@@ -39,6 +39,10 @@ test("Daily top-three ranking uses the supplied cropped first, second and third 
   assert.match(topGifters, /daily-ranking-badges\/place-/);
   assert.match(rankingStyles, /\.minglora-gifter-podium \.minglora-gifter-rank-frame/);
   assert.match(rankingStyles, /\.minglora-gifter-podium \.minglora-gifter-rank-avatar/);
+  assert.match(app, /live-daily-podium/);
+  assert.match(app, /Daily LIVE Gifter Rankings/);
+  assert.match(rankingStyles, /\\.live-daily-podium \\.live-daily-podium-frame/);
+
 });
 
 test("the nine uploaded guest-layout references are used as LIVE layout thumbnails", () => {
@@ -57,7 +61,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v335-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v336-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-crop-reference-integration-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-1/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-crop-bright-earned-1/);
