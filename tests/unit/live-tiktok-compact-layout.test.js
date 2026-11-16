@@ -12,8 +12,8 @@ const compact = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'
 
 test('LIVE compact presentation is scoped to the active room and loaded after existing layout styles', () => {
   assert.match(compact, /body:has\(#live-player-shell\)/);
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261115-nine-guest-layout-reference-parity-1'));
-  assert.ok(worker.includes("SHELL.push('/live-tiktok-compact.css?v=20261115-nine-guest-layout-reference-parity-1')"));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261116-crop-guest-layout-thumbnails-1'));
+  assert.ok(worker.includes("SHELL.push('/live-tiktok-compact.css?v=20261116-crop-guest-layout-thumbnails-1')"));
 });
 
 test('Phones and portrait tablets use one immersive stage with overlays, not stacked video and chat rows', () => {
