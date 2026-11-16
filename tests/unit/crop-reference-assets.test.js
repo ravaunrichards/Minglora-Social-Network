@@ -39,7 +39,11 @@ test("Daily top-three ranking uses the supplied cropped first, second and third 
   assert.match(server, /daily-ranking-badges\/place-2\.png/);
   assert.match(server, /daily-ranking-badges\/place-3\.png/);
   assert.match(topGifters, /activePeriod === "daily" && position <= 3/);
-  assert.match(topGifters, /daily-ranking-badges\/place-/);
+  assert.match(server, /daily-ranking-badges\/top-gifters-place-1\.png/);
+  assert.match(server, /daily-ranking-badges\/top-gifters-place-2\.png/);
+  assert.match(server, /daily-ranking-badges\/top-gifters-place-3\.png/);
+  assert.match(topGifters, /daily-ranking-badges\/top-gifters-place-/);
+  assert.match(serviceWorker, /daily-ranking-badges\/top-gifters-place-1\.png/);
   assert.match(rankingStyles, /\.minglora-gifter-podium \.minglora-gifter-rank-frame/);
   assert.match(rankingStyles, /\.minglora-gifter-podium \.minglora-gifter-rank-avatar/);
   assert.match(app, /live-daily-podium/);
@@ -64,7 +68,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v338-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v339-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-1/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-2/);
