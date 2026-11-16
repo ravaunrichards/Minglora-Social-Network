@@ -437,3 +437,7 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Generated audio files/manifest are runtime build outputs (ignored by Git) at public/assets/gift-sounds/; CI retains a reviewable pack artifact. No generated WAV files are claimed as precommitted repository binaries.
 - Quality boundary: original procedural synthesizer output, not mastered or human-recorded audio. All 15 remain generated-review-required; listening/loudness/mix approval, accessibility review and physical-device audio testing are outstanding. The pack does not cover the remaining 1,733 source-catalogue rows.
 - Production gift publication, Supabase catalogue rows, activation state, prices, purchases, wallets, ledgers, earnings, payouts and deployment remain unchanged.
+ 
+## Gift-specific WAV pack — verified CI result — 2026-11-16
+
+The stacked audio PR head was checked by GitHub Actions. The complete CI test job passed 1,255/1,255 tests (0 failures, 0 cancellations, 0 skips). The original generated gift WAV pack was uploaded successfully as artifact minglora-live-gift-audio-13581, ID 14201787369, 3,291,339 bytes. The workflow's For You functional-navigation and Supabase Auth provider acceptance jobs also passed. The CI run is 43814539145. The generated pack artifact provides reviewable file-level output; it does not replace human listening, mix, mastering or physical-device acceptance.
