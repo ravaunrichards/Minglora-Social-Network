@@ -66,7 +66,7 @@ test("all 50 individual badge files are valid PNGs with distinct image content",
   });
   assert.equal(new Set(hashes).size, 50, "no Level reuses another Level's badge image");
   assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
-  assert.match(server, /individualGifterBadgeMatch[\s\S]*?badgeRangeFile[\s\S]*?'Crop References','Gifters Badges','Png'/);
+  assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual[\s\S]*?'Content-Type':'image\/png'/);
   assert.match(server, /badgeLevel<1\|\|badgeLevel>50/);
 });
 
