@@ -537,3 +537,24 @@
   .gp-level-index-item.is-current .gp-level-index-art{animation:none}
   .gp-progression-level-marker{transition:none}
 }
+
+/* Keep the original individual badge states; only the mismatched strip overlays were removed. */
+.gp-level-index-item.is-locked .gp-level-index-art{
+  filter:grayscale(.88) brightness(.62) saturate(.48);opacity:.7;
+}
+.gp-level-index-item.is-unlocked .gp-level-index-art,
+.gp-level-index-item.is-admin-awarded .gp-level-index-art{
+  filter:drop-shadow(0 0 3px rgba(167,125,255,.52)) drop-shadow(0 2px 5px rgba(15,23,42,.2));
+  opacity:1;
+}
+.gp-level-index-item.is-current .gp-level-index-art{
+  filter:drop-shadow(0 0 4px rgba(255,232,171,.9)) drop-shadow(0 0 10px rgba(152,104,255,.85));
+  animation:gp-earned-badge-pulse 2s ease-in-out infinite;
+}
+.gp-level-index-item.is-admin-awarded .gp-level-index-art{
+  filter:drop-shadow(0 0 4px rgba(236,190,93,.75)) drop-shadow(0 2px 5px rgba(15,23,42,.2));
+}
+@keyframes gp-earned-badge-pulse{
+  0%,100%{filter:drop-shadow(0 0 3px rgba(255,232,171,.66)) drop-shadow(0 0 7px rgba(152,104,255,.58))}
+  50%{filter:drop-shadow(0 0 6px rgba(255,242,198,.98)) drop-shadow(0 0 13px rgba(152,104,255,.96))}
+}
