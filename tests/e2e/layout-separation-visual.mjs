@@ -83,9 +83,9 @@ function checkGeometry(layout,state,product,viewport){
     assert.ok(g1.x<host.x&&g5.x>host.x+host.width-3,label+' guests should be on both sides');
   }
 }
-function stateInPage(){
-  const grid=document.querySelector('#guest-grid');
-  const stage=document.querySelector('#guest-stage');
+function stateInPage(product){
+  const grid=document.querySelector(product==='live'?'#live-guest-layout':'#mw-grid');
+  const stage=document.querySelector(product==='live'?'#live-video-stage':'#mw-screen-stage');
   const tiles=Array.from(grid.querySelectorAll('.live-guest-seat'));
   const getTile=tile=>{
     const r=tile.getBoundingClientRect(),c=getComputedStyle(tile);
@@ -103,16 +103,12 @@ try{
       const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height}});
       for(const layout of layouts){
         const tiles=makeSeats(product==='meetwave');
-        const stageId=product==='live'?'live-video-stage':'mw-screen-stage';
-        const gridClass=product==='live'?'live-guest-layout':'mw-video-grid live-guest-layout';
-        const stageClass=product==='live'?'live-video-stage':'mw-screen-stage';
-        const layoutAttribute=product==='live'?'data-live-layout':'data-guest-layout';
         const body=product==='live'
-          ?'<main id="live-player-shell"><section id="guest-stage" id="'+stageId+'" class="'+stageClass+'" style="width:100%;height:640px;min-height:560px"><div id="guest-grid" id="live-guest-layout" class="'+gridClass+'" '+layoutAttribute+'="'+layout+'">'+makeHeading+tiles+'</div></section></main>'
-          :'<main class="mw-meeting"><section id="guest-stage" id="'+stageId+'" class="'+stageClass+'" '+layoutAttribute+'="'+layout+'" style="width:100%;height:640px;min-height:560px"><div id="guest-grid" id="mw-grid" class="'+gridClass+'" data-layout="'+layout+'" data-guest-layout="'+layout+'">'+makeHeading+tiles+'</div></section></main>';
+          ?'<main id="live-player-shell"><section id="live-video-stage" class="live-video-stage" style="width:100%;height:640px;min-height:560px"><div id="live-guest-layout" class="live-guest-layout" data-live-layout="'+layout+'">'+makeHeading+tiles+'</div></section></main>'
+          :'<main class="mw-meeting"><section id="mw-screen-stage" class="mw-screen-stage" data-guest-layout="'+layout+'" style="width:100%;height:640px;min-height:560px"><div id="mw-grid" class="mw-video-grid live-guest-layout" data-layout="'+layout+'" data-guest-layout="'+layout+'">'+makeHeading+tiles+'</div></section></main>';
         const css=product==='live'?liveCss:meetwaveCss;
         await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:100%;min-height:100%;}'+css+'</style></head><body>'+body+'</body></html>');
-        const state=await page.evaluate(stateInPage);
+        const state=await page.evaluate(stateInPage,product);
         checkGeometry(layout,state,product,viewport.name);
         const file=product+'-'+layout+'-'+viewport.name+'.png';
         await page.screenshot({path:path.join(artifacts,file),fullPage:true});
