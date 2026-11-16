@@ -9,6 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const server = read("src/server.js");
 const app = read("public/app.js");
+const meetwave = read("public/meetwave.js");
 const topGifters = read("public/top-gifters.js");
 const rankingStyles = read("public/styles.css");
 const progressionStyles = read("public/gifter-progression.css");
@@ -117,6 +118,10 @@ test("the nine uploaded guest-layout references are used as LIVE layout thumbnai
     assert.ok(serviceWorker.includes("/assets/live-guest-layouts/" + layout + ".png"), "missing cache entry for " + layout);
   }
   assert.match(app, /live-layout-preview/);
+  for (const layout of layouts) {
+    assert.ok(meetwave.includes('src="/assets/live-guest-layouts/' + layout + '.png"'), "MeetWave preview must use the original crop for " + layout);
+  }
+  assert.equal((meetwave.match(/data-mw-guest-layout="/g) || []).length, 9, "MeetWave exposes each cropped guest layout once");
 });
 
 test("ENIGMA is the default profile avatar and is served from the original crop-reference file", () => {
