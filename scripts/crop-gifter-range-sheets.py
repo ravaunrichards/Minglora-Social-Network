@@ -16,7 +16,7 @@ FILES = [
     "LV.1 - LV.9.jpg", "LV.10 - LV.19.jpg", "LV.20 - LV.29.jpg",
     "LV.30 - LV.39.jpg", "LV.40 - LV.49.jpg", "LV.50+.jpg",
 ]
-BLACK_MAX = 42
+BLACK_MAX = 60
 EDGE_DARK_RATIO = 0.992
 MAX_EDGE_FRACTION = 0.12
 
