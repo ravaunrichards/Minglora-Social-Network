@@ -14,6 +14,8 @@ const rankingStyles = read("public/styles.css");
 const progressionStyles = read("public/gifter-progression.css");
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
+const leagues = read("public/leagues.js");
+const leagueStyles = read("public/leagues.css");
 
 
 test("Crop References use canonical folders and contain no duplicate image files", () => {
