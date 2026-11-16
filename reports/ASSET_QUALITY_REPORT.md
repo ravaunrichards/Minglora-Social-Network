@@ -305,8 +305,11 @@ The Rose reference refinement adds distinct satin-ribbon loop surfaces, a centra
 
 PR #439 CI run 43821480523 (test job 133145316730) parsed **2,869/2,869** supplied raster files across references, gift captures, guest-layout diagrams, Gifter badge imagery, League captures and extracted gift artwork. The scan found 1,748 PNG and 1,121 JPEG files, 1,747 encoded alpha-channel declarations, **zero parse failures** and **zero unsupported raster formats**. The total scanned source size was 432,539,358 bytes.
 
-The six original Gifter range-sheet PNGs in `assets/Gifters Badge Levels/Gifters Badges/Png/` were included and their source dimensions were recorded. All six files remain unchanged; their alpha channel was declared by the PNG header but pixel values were not decoded. The 1,509 extracted catalogue artwork crops are all 256×256 px, and the 50 individual Gifter badge PNGs are 170×76 px. No upscaling or source-image modification occurred.
+The six Gifter milestone badge PNG crops (not the broad level-range sheets) were included in this historical scan from their then-current legacy path `assets/Gifters Badge Levels/Gifters Badges/Png/`. They are now canonical under `assets/Crop References/Gifters Badges/Png/`; the six duplicate legacy PNG copies and duplicate/obsolete PSD paths were removed by PR #443. Their alpha channel was declared by the PNG header, but pixel values were not decoded. The 1,509 extracted catalogue artwork crops are all 256×256 px, and the 50 individual Gifter badge PNGs are 170×76 px. No upscaling or source-image modification occurred.
 
 The per-root dimensions and source sizes are recorded in `reports/REFERENCE_ASSET_AUDIT.md` and `reports/LIVE_ASSET_INVENTORY.md`.
 
 **Quality boundary:** the scanner reads file headers and hashes. It does not decode pixels to measure alpha values, apply JPEG EXIF orientation, rate visual quality, check legal rights or approve product usage. Consequently, 1,747 encoded alpha channels are not 1,747 verified transparent backgrounds. Human review, rights clearance and device-specific design acceptance remain open.
+
+
+**PR #443 source consolidation:** the six cropped level-range JPGs and six milestone badge PNGs now each have one canonical copy under the matching `assets/Crop References/` folders. The old range-sheet PNG/JPG copies, duplicate milestone PNGs, and duplicate or obsolete PSD paths were removed; five genuine layered PSD references remain in the Crop References PSD folder.

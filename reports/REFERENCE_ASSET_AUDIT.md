@@ -48,7 +48,7 @@ These nine references correspond to the existing implementation's seven host-sel
 ## Additional LIVE-adjacent references inventoried
 
 - `assets/Guests Layout/`: 9 JPEG layout diagrams (all 9 visually inspected individually).
-- `assets/Gifters Badge Levels/`: 78 raster image files (58 PNG and 20 JPEG; 77 unique image contents because one progression-strip JPEG exists at two paths); file inventory completed, not a full badge-by-badge visual/rights review.
+- `assets/Gifters Badge Levels/`: 66 raster image files (52 PNG and 14 JPEG; 65 unique image contents because one progression-strip JPEG exists at two paths; 1,785,279 bytes). The six cropped range JPGs reside once under `assets/Crop References/Gifter level range sheets/`, and the six milestone PNG crops reside once under `assets/Crop References/Gifters Badges/Png/`. Their duplicate legacy copies were removed from this folder.
 - `assets/League/`: 20 JPEG reference captures; file inventory completed, with the Android League FAQ sample above visually inspected.
 - `assets/Gifts/`: 131 catalogue capture PNGs plus the `Video Gifts/Video Gifts.jpg` reference sheet. The directory contains 132 image files in total.
 
@@ -93,7 +93,7 @@ PR #439 CI run [43821480523](https://github.com/ravaunrichards/Minglora-Social-N
 
 **Format and parser outcome:** 1,748 PNG and 1,121 JPEG files; 2,869 parsed; zero unsupported formats; zero parse failures. The parser recorded an encoded alpha channel on 1,747 PNGs. It found no transparency chunks/flags and no animation metadata in this raster set.
 
-**Gifter source-sheet addition:** six original PNG range sheets are now present under `assets/Gifters Badge Levels/Gifters Badges/Png/`. All six declare an alpha channel; their source dimensions and byte sizes are:
+**Historical Gifter milestone-crop scan:** the earlier scan captured six cropped milestone badge PNGs under `assets/Gifters Badge Levels/Gifters Badges/Png/` (not the six broad-range JPG sheets). They are now canonical under `assets/Crop References/Gifters Badges/Png/`; their duplicate legacy PNG copies were removed. All six declare an alpha channel; their historical dimensions and byte sizes were:
 
 | Original sheet | Dimensions | Bytes |
 |---|---:|---:|
@@ -130,7 +130,7 @@ The CI uploaded `minglora-live-image-metadata-audit-13700` (artifact **142046524
 
 ## Gifter range-sheet edge-crop checkpoint — 2026-11-15
 
-The current mainline reference update records a controlled black-edge-only crop for the six original Gifter range sheets in `assets/Gifters Badge Levels/` (crop details: `reports/GIFTER_RANGE_SHEET_CROP_REPORT.md`). The sheets remain reference material, not approved product artwork:
+The six cropped Gifter range sheets are now stored once in `assets/Crop References/Gifter level range sheets/` and served directly from that folder (crop details: `reports/GIFTER_RANGE_SHEET_CROP_REPORT.md`). The prior padded PNG duplicates and legacy root JPG duplicates have been removed. The sheets remain reference material, not approved product artwork:
 
 | Source | Before | After | Edge crop (L / T / R / B) |
 |---|---:|---:|---:|
@@ -151,3 +151,8 @@ The 45-file `public/assets/gifts/` legacy GLTF collection remains preserved. Its
 The legacy `minglora_dolphin.gltf` record is `minglora-dolphin` / historical code `dolphin` / `Ocean Dolphin`, 7,246 bytes, 10 meshes, 5 materials, 0 textures, 0 images and 0 embedded animations. Its visual review, technical render review and rights review are pending; the manifest explicitly sets `production_eligible=false`. The historical migration value was 650 Coins and the record is absent from the 2026-11-15 production database snapshot. It was not overwritten, rebranded, or substituted for the current `dolphin-4bkejj` gift (10 Coins); the new bespoke Dolphin code/assets route only to that current canonical identifier.
 
 Crocodile had no matching standalone approved model record in the canonical model source inventory, so a dedicated `crocodile-tnyf2j` asset was authored. The Crocodile model and vector art remain design-review-pending; CI render proof is not legal or human visual approval.
+
+
+## Post-consolidation Gifter source state — PR #443
+
+The current Gifter source folder contains 66 raster images (52 PNG and 14 JPEG, 1,785,279 bytes). The six cropped broad-range JPGs and six cropped milestone PNG overlays are stored once under the appropriate Crop References subfolders. Five genuine layered PSD source files remain in `assets/Crop References/Gifters Badges/psd/`; legacy duplicate PNG/PSD files and the extensionless PNG duplicate were removed. The raster metadata table above is the earlier CI snapshot and is not a post-consolidation scan.

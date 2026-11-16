@@ -17,9 +17,13 @@ const html = read("public/index.html");
 
 
 test("Crop References use canonical folders and contain no duplicate image files", () => {
-  const rangeNames = [
+  const milestoneNames = [
     "LV.1 - LV.9.png", "LV.10 - LV.19.png", "LV.20 - LV.29.png",
     "LV.30 - LV.39.png", "LV.40 - LV.49.png", "LV.50+.png"
+  ];
+  const rangeNames = [
+    "LV.1 - LV.9.jpg", "LV.10 - LV.19.jpg", "LV.20 - LV.29.jpg",
+    "LV.30 - LV.39.jpg", "LV.40 - LV.49.jpg", "LV.50+.jpg"
   ];
   const rankingNames = [
     "Screenshot_20261112_021224_TikTok(1).png",
@@ -35,7 +39,7 @@ test("Crop References use canonical folders and contain no duplicate image files
     "Spotlight.png", "Roundtable 1.png", "Roundtable 2.png"
   ];
   const sourceFiles = [
-    ...rangeNames.map(name => path.join("assets", "Crop References", "Gifters Badges", "Png", name)),
+    ...milestoneNames.map(name => path.join("assets", "Crop References", "Gifters Badges", "Png", name)),
     ...rangeNames.map(name => path.join("assets", "Crop References", "Gifter level range sheets", name)),
     ...rankingNames.map(name => path.join("assets", "Crop References", "Daily Ranking Badge", "png", name)),
     ...guestNames.map(name => path.join("assets", "Crop References", "Guests Layout", "png", name)),
@@ -49,6 +53,21 @@ test("Crop References use canonical folders and contain no duplicate image files
     hashes.set(hash, relativePath);
   }
   assert.equal(sourceFiles.length, 28);
+  for (const name of milestoneNames) {
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", "Png", name)), name + " is in the canonical milestone folder");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", name)), name + " has no legacy PNG duplicate");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", name.replace(".png", ".psd"))), name + " has no legacy PSD duplicate");
+  }
+  for (const name of rangeNames) {
+    const stem = name.replace(".jpg", "");
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifter level range sheets", name)), name + " is in the canonical range folder");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", name)), name + " has no legacy JPG duplicate");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", stem + ".png")), name + " has no legacy padded PNG duplicate");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Crop References", "Gifter level range sheets", stem + ".png")), name + " has no padded PNG duplicate");
+  }
+  const psdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
+  assert.equal(fs.readdirSync(psdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain");
+  assert.ok(!fs.existsSync(path.join(psdDirectory, "LV.1 - LV.9")), "extensionless PNG duplicate removed");
 });
 
 test("all 50 Gifter levels keep unique artwork while six crop badges light milestone stages", () => {
@@ -59,15 +78,17 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.match(read("public/gifter-progression.js"), /PROGRESSION_TRACK_STAGES\.map\(\(stageLevel, index\) => track\.level >= stageLevel/);
   assert.match(read("public/gifter-progression.js"), /gifter-crop-badges\/range-/);
 
-  assert.match(server, /gifter-crop-range-sheets\/lv-1-9\.png/);
-  assert.match(server, /'Crop References','Gifter level range sheets'/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
+  assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
+  assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
   assert.match(progressionStyles, /\.gp-progression-range-badge/);
+  assert.ok(progressionStyles.includes("brightness(1.48)"));
+  assert.ok(progressionStyles.includes("gp-progression-milestone-glow"));
 
 });
 
@@ -111,9 +132,24 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v340-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v342-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-2/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-overlay-alignment-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
+});
+
+
+test("earned Gifter milestone overlays cover original tracker symbols at matching visible size and alignment", () => {
+  const progression = read("public/gifter-progression.js");
+  const styles = read("public/gifter-progression.css");
+  const overlayRule = styles.match(/\.gp-live-progression-track>\.gp-progression-range-badge\{([^}]+)\}/)?.[1] || "";
+  assert.match(overlayRule, /width:10%;min-width:0;max-width:none/);
+  assert.match(overlayRule, /transform:translate\(-50%,-50%\) scale\(1\.35\)/);
+  assert.match(overlayRule, /z-index:1/);
+  assert.match(progression, /PROGRESSION_TRACK_STAGES = Object\.freeze\(\[1, 10, 20, 30, 40, 50\]\)/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT = Object\.freeze\(\[/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\[index\]\.x/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\[index\]\.y/);
+  assert.match(progression, /track\.level >= stageLevel/);
 });

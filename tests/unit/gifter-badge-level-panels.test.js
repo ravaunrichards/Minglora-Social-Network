@@ -82,8 +82,8 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261116-bright-stage-badge-overlays-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-overlay-alignment-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261116-gifter-overlay-alignment-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
@@ -129,8 +129,8 @@ test("Gifter sheet wrapper has no black edging while original artwork and sizing
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-overlay-alignment-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-overlay-alignment-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -150,13 +150,13 @@ test("Gifter progression uses the original ordered Level panels as its primary a
   assert.ok(!progression.includes("gifters-level-up.png"));
   assert.ok(!progression.includes("gp-level-up-reference-note"));
   assert.ok(styles.includes(".gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px"));
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-overlay-alignment-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-overlay-alignment-1"));
   assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
 
 
-test("all 70 remaining Gifter reference images are placed at their correct Rewards locations", () => {
+test("Gifter source references and cropped badge overlays each have one canonical location", () => {
   const progression = read("public/gifter-progression.js");
   const gifts = read("public/gifts.js");
   const server = read("src/server.js");
@@ -177,12 +177,11 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
   ];
   const sourcePaths = [
     "Gifters Rewards.png",
-    ...rangeSheets.map(([file]) => file),
     ...panelFiles,
     ...masterSheets.map(([file]) => file),
     ...individualBadgeFiles.map(file => path.join("Level_Badges_01-50_Individual", file))
   ];
-  assert.equal(sourcePaths.length, 70, "the source folder inventory totals 70 remaining Gifter references");
+  assert.equal(sourcePaths.length, 64, "the remaining Gifter badge collection excludes the six separately catalogued Crop References");
   assert.equal(individualBadgeFiles.length, 50, "every individual Gifter PNG is enumerated");
   sourcePaths.forEach(file => {
     assert.ok(fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", file)), file + " remains in the canonical source folder");
@@ -196,11 +195,23 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
   assert.ok(!sw.includes("'/assets/gifters-level-up.png'"));
 
   rangeSheets.forEach(([sourceFile, routeFile]) => {
+    const cropPath = path.join(root, "assets", "Crop References", "Gifter level range sheets", sourceFile);
+    assert.ok(fs.existsSync(cropPath), sourceFile + " is stored once in Crop References");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", sourceFile)), sourceFile + " is not duplicated in the old root folder");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", sourceFile.replace(".jpg", ".png"))), sourceFile + " has no duplicate legacy range PNG");
+    const milestoneCrop = sourceFile.replace(".jpg", ".png");
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " is present as the canonical cropped milestone badge");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " has no duplicate legacy milestone badge");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", milestoneCrop.replace(".png", ".psd"))), milestoneCrop + " has no duplicate legacy PSD");
     assert.ok(progression.includes('file: "' + routeFile + '"'), routeFile + " is rendered in the range gallery");
     assert.ok(server.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " has an explicit server allow-list route");
     assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " is precached");
-    assert.ok(server.includes("'" + sourceFile + "'"), sourceFile + " maps to its original source file");
+    assert.ok(server.includes("'" + sourceFile + "'"), sourceFile + " maps to its Crop References source");
   });
+  const canonicalPsdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
+  assert.equal(fs.readdirSync(canonicalPsdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain in the canonical Crop References folder");
+  assert.ok(!fs.existsSync(path.join(canonicalPsdDirectory, "LV.1 - LV.9")), "the extensionless duplicate of the LV.1–LV.9 PNG has been removed");
+  assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", "LV.1 - LV.9")), "the legacy extensionless PSD duplicate has been removed");
   masterSheets.forEach(([sourceFile, route]) => {
     assert.ok(progression.includes(route), route + " appears in the master collection section");
     assert.ok(server.includes("'" + route + "'"), route + " has an explicit server route");
@@ -213,10 +224,10 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
   assert.ok(progression.includes("src='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "every original PNG is visibly previewed on its matching level card");
   assert.ok(!progression.includes("gp-level-index-original"), "level cards do not add a duplicate PNG thumbnail");
   assert.match(styles, /\.gp-reference-figure img\{display:block;width:100%[^}]*height:auto[^}]*object-fit:contain/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261116-bright-stage-badge-overlays-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
-  assert.ok(sw.includes("/gifter-progression.js?v=20261116-bright-stage-badge-overlays-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-overlay-alignment-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261116-gifter-overlay-alignment-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-overlay-alignment-1"));
+  assert.ok(sw.includes("/gifter-progression.js?v=20261116-gifter-overlay-alignment-1"));
 });
 
 test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {

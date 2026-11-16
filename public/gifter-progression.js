@@ -21,12 +21,12 @@
   ]);
 
   const BADGE_RANGE_SHEETS = Object.freeze([
-    { file: "lv-1-9.png", label: "LV.1 – LV.9", alt: "Original Gifter badge range reference, Levels 1 through 9" },
-    { file: "lv-10-19.png", label: "LV.10 – LV.19", alt: "Original Gifter badge range reference, Levels 10 through 19" },
-    { file: "lv-20-29.png", label: "LV.20 – LV.29", alt: "Original Gifter badge range reference, Levels 20 through 29" },
-    { file: "lv-30-39.png", label: "LV.30 – LV.39", alt: "Original Gifter badge range reference, Levels 30 through 39" },
-    { file: "lv-40-49.png", label: "LV.40 – LV.49", alt: "Original Gifter badge range reference, Levels 40 through 49" },
-    { file: "lv-50-plus.png", label: "LV.50+", alt: "Original Gifter badge range reference, Level 50 and above" }
+    { file: "lv-1-9.jpg", label: "LV.1 – LV.9", alt: "Cropped Gifter badge range reference, Levels 1 through 9" },
+    { file: "lv-10-19.jpg", label: "LV.10 – LV.19", alt: "Cropped Gifter badge range reference, Levels 10 through 19" },
+    { file: "lv-20-29.jpg", label: "LV.20 – LV.29", alt: "Cropped Gifter badge range reference, Levels 20 through 29" },
+    { file: "lv-30-39.jpg", label: "LV.30 – LV.39", alt: "Cropped Gifter badge range reference, Levels 30 through 39" },
+    { file: "lv-40-49.jpg", label: "LV.40 – LV.49", alt: "Cropped Gifter badge range reference, Levels 40 through 49" },
+    { file: "lv-50-plus.jpg", label: "LV.50+", alt: "Cropped Gifter badge range reference, Level 50 and above" }
   ]);
 
   function isGifterViewActive() {
@@ -127,11 +127,11 @@
   function renderRangeReferenceSheets() {
     return "<section class='gp-reference-section gp-range-reference-section card' aria-labelledby='gp-range-reference-title'>" +
       "<div class='gp-section-heading'><div><span class='gp-eyebrow'>ADDITIONAL ORIGINAL REFERENCES</span><h2 id='gp-range-reference-title'>Gifter level range sheets</h2>" +
-      "<p>All six supplied broad-range sheets appear in their original level order. The live level directory remains authoritative for current unlock status and Coin thresholds.</p></div></div>" +
+      "<p>All six supplied cropped range sheets appear in their original level order. The live level directory remains authoritative for current unlock status and Coin thresholds.</p></div></div>" +
       "<div class='gp-range-reference-grid'>" +
       BADGE_RANGE_SHEETS.map(sheet =>
-        "<figure class='gp-reference-figure gp-range-reference-figure'><figcaption><strong>" + esc(sheet.label) + "</strong><span>Original range reference</span></figcaption>" +
-        "<img src='/assets/gifter-crop-range-sheets/" + sheet.file + "' alt='" + esc(sheet.alt) + "' loading='lazy' decoding='async'></figure>"
+        "<figure class='gp-reference-figure gp-range-reference-figure'><figcaption><strong>" + esc(sheet.label) + "</strong><span>Cropped range reference</span></figcaption>" +
+        "<img src='/assets/gifter-badge-range-sheets/" + sheet.file + "' alt='" + esc(sheet.alt) + "' loading='lazy' decoding='async'></figure>"
       ).join("") + "</div></section>";
   }
 
@@ -199,6 +199,17 @@
   // replace its muted milestone symbols only after the member earns each stage.
   const PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50]);
   const PROGRESSION_TRACK_CENTERS = Object.freeze([95, 272, 450, 628, 806, 984]);
+  // The six supplied PNG crops have transparent canvas padding. These measured
+  // offsets center the visible badge pixels (not the full PNG canvas) over the
+  // six original tracker symbols at every responsive width.
+  const PROGRESSION_TRACK_OVERLAY_ALIGNMENT = Object.freeze([
+    { x: 0.18, y: 2.71 },
+    { x: 0.28, y: 3.77 },
+    { x: 0.43, y: 0.29 },
+    { x: 0.25, y: 1.11 },
+    { x: 0.16, y: 0.48 },
+    { x: 0.10, y: 0.29 }
+  ]);
 
   function progressionTrackState(current = {}) {
     const level = Math.max(0, Math.min(50, Math.floor(Number(current.level) || 0)));
@@ -230,8 +241,10 @@
     const earnedStageBadges = track.hasGifterBadge
       ? PROGRESSION_TRACK_STAGES.map((stageLevel, index) => track.level >= stageLevel
         ? "<img class='gp-progression-range-badge' src='/assets/gifter-crop-badges/range-" +
-          (index + 1) + ".png' style='left:" +
-          ((PROGRESSION_TRACK_CENTERS[index] / 1080) * 100).toFixed(3) +
+          (index + 1) + ".png' style='left:calc(" +
+          ((PROGRESSION_TRACK_CENTERS[index] / 1080) * 100).toFixed(3) + "% - " +
+          PROGRESSION_TRACK_OVERLAY_ALIGNMENT[index].x.toFixed(3) + "%);top:" +
+          (55 + PROGRESSION_TRACK_OVERLAY_ALIGNMENT[index].y).toFixed(2) +
           "%' alt='' aria-hidden='true' loading='eager' decoding='async'>"
         : "").join("")
       : "";
