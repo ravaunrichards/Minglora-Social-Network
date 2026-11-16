@@ -4,12 +4,13 @@ import { readFile } from "node:fs/promises";
 
 const root = new URL("../../", import.meta.url);
 const read = path => readFile(new URL(path, root), "utf8");
-const [app, topGifters, progression, identityCss, progressionCss] = await Promise.all([
+const [app, topGifters, progression, identityCss, progressionCss, gifts] = await Promise.all([
   read("public/app.js"),
   read("public/top-gifters.js"),
   read("public/gifter-progression.js"),
   read("public/gifter-badge-3d.css"),
-  read("public/gifter-progression.css")
+  read("public/gifter-progression.css"),
+  read("public/gifts.js")
 ]);
 
 test("feed post author shows username, display name, then the original individual gifter badge and name", () => {
@@ -65,4 +66,30 @@ test("shared non-LIVE gifter badge styling is responsive and reduced-motion safe
   assert.ok(identityCss.includes(".minglora-gifter-identity"));
   assert.ok(identityCss.includes(".minglora-gifter-badge-name"));
   assert.ok(identityCss.includes("@media(prefers-reduced-motion:reduce)"));
+});
+
+
+test("original six-stage Gifter strip tracks all 50 levels and hides its white marker before Level 1", () => {
+  assert.ok(progression.includes("PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50])"));
+  assert.ok(progression.includes("Boolean(current.hasUnlockedBadge && level > 0)"));
+  assert.ok(progression.includes("function progressionTrackState(current = {})"));
+  assert.ok(progression.includes("Number(current.progressPercent || 0) / 100"));
+  assert.ok(progression.includes("gp-progression-level-marker"));
+  assert.ok(progression.includes("track.hasGifterBadge"));
+  assert.ok(progression.includes("gp-progression-link"));
+  assert.ok(progression.includes("gp-progression-stage-glow"));
+});
+
+test("each original numbered badge visibly distinguishes locked, earned, admin-awarded and current states", () => {
+  assert.ok(progression.includes("item.current ? \"is-current\""));
+  assert.ok(progression.includes("item.unlocked ? \"is-unlocked\""));
+  assert.ok(progressionCss.includes(".gp-level-index-item.is-locked .gp-level-index-art"));
+  assert.ok(progressionCss.includes(".gp-level-index-item.is-unlocked .gp-level-index-art"));
+  assert.ok(progressionCss.includes(".gp-level-index-item.is-current .gp-level-index-art"));
+  assert.ok(progressionCss.includes(".gp-level-index-item.is-admin-awarded .gp-level-index-art"));
+});
+
+test("a confirmed Gift Center send requests an immediate progression refresh", () => {
+  assert.ok(gifts.includes('new CustomEvent("minglora:gifter-progression-refresh")'));
+  assert.ok(progression.includes('window.addEventListener("minglora:gifter-progression-refresh"'));
 });

@@ -136,7 +136,7 @@
         :"";
       if(status)status.textContent=(sent.giftName||gift.name)+" sent to @"+(sent.recipientUsername||username)+". "+balanceAfterLabel+fundingNotice;
       const balance=document.querySelector(".gift-balance-pill strong");if(balance&&fundingSource==="cash"&&Number.isFinite(state.balance))balance.textContent=state.balance.toLocaleString()+" Coins available";
-      window.MingloraGiftFX?.show(gift);window.toast?.(nonCashPromotional?"Gift sent with promotional Coins · no cash earnings created.":"Gift sent successfully.");
+      window.MingloraGiftFX?.show(gift);window.toast?.(nonCashPromotional?"Gift sent with promotional Coins · no cash earnings created.":"Gift sent successfully.");window.dispatchEvent(new CustomEvent("minglora:gifter-progression-refresh"));
     }catch(error){if(status)status.textContent=error.message;window.toast?.(error.message);}
     finally{if(button)button.disabled=!selected();}
   }
