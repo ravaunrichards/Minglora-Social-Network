@@ -1,15 +1,47 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { deflateSync } from "node:zlib";
 import { inspectImageBuffer } from "../../scripts/audit-minglora-live-image-metadata.mjs";
 function pngChunk(type,data){
   const header=Buffer.alloc(8);header.writeUInt32BE(data.length,0);header.write(type,4,4,"ascii");
   return Buffer.concat([header,data,Buffer.alloc(4)]);
 }
-function pngFixture({width=32,height=64,alpha=true,transparency=false}={}){
-  const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(width,0);ihdr.writeUInt32BE(height,4);ihdr[8]=8;ihdr[9]=alpha?6:2;
+function paethPredictor(left,up,upperLeft){
+  const estimate=left+up-upperLeft;
+  const distances=[Math.abs(estimate-left),Math.abs(estimate-up),Math.abs(estimate-upperLeft)];
+  return distances[0]<=distances[1]&&distances[0]<=distances[2]?left:
+    distances[1]<=distances[2]?up:upperLeft;
+}
+function filterPngRow(raw,previous,bytesPerPixel,filter){
+  const result=Buffer.alloc(raw.length);
+  for(let i=0;i<raw.length;i++){
+    const left=i>=bytesPerPixel?raw[i-bytesPerPixel]:0;
+    const up=previous?previous[i]:0;
+    const upperLeft=previous&&i>=bytesPerPixel?previous[i-bytesPerPixel]:0;
+    const predictor=filter===1?left:filter===2?up:filter===3?Math.floor((left+up)/2):
+      filter===4?paethPredictor(left,up,upperLeft):0;
+    result[i]=(raw[i]-predictor+256)&255;
+  }
+  return Buffer.concat([Buffer.from([filter]),result]);
+}
+function pngFixture({width=32,height=64,alpha=true,transparency=false,pixels=null,filters=null,interlace=0}={}){
+  const colorType=alpha?6:2,channels=alpha?4:3,ihdr=Buffer.alloc(13);
+  ihdr.writeUInt32BE(width,0);ihdr.writeUInt32BE(height,4);ihdr[8]=8;ihdr[9]=colorType;ihdr[12]=interlace;
+  const rows=[];let previous=null;
+  for(let y=0;y<height;y++){
+    const raw=Buffer.alloc(width*channels);
+    for(let x=0;x<width;x++){
+      const pixel=pixels?.[y*width+x]||(alpha?[33,80,120,255]:[33,80,120]);
+      for(let channel=0;channel<channels;channel++)raw[x*channels+channel]=pixel[channel];
+    }
+    const filter=filters?.[y]??0;rows.push(filterPngRow(raw,previous,channels,filter));previous=raw;
+  }
   const chunks=[pngChunk("IHDR",ihdr)];
-  if(transparency)chunks.push(pngChunk("tRNS",Buffer.from([0])));
-  chunks.push(pngChunk("IDAT",Buffer.from([0])),pngChunk("IEND",Buffer.alloc(0)));
+  if(transparency){
+    const trns=Buffer.alloc(6);trns.writeUInt16BE(0,0);trns.writeUInt16BE(0,2);trns.writeUInt16BE(0,4);
+    chunks.push(pngChunk("tRNS",trns));
+  }
+  chunks.push(pngChunk("IDAT",deflateSync(Buffer.concat(rows))),pngChunk("IEND",Buffer.alloc(0)));
   return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),...chunks]);
 }
 function jpegFixture({width=256,height=100}={}){
@@ -63,4 +95,47 @@ test("truncated or unsupported buffers fail instead of producing guessed metadat
   assert.throws(()=>inspectImageBuffer(Buffer.from([0x89,0x50,0x4e,0x47])),/unsupported or unrecognized|invalid or truncated PNG/);
   assert.throws(()=>inspectImageBuffer(Buffer.from("not an image")),/unsupported or unrecognized/);
   assert.throws(()=>inspectImageBuffer(Buffer.from([0xff,0xd8,0xff])),/JPEG/);
+});
+
+
+test("PNG RGBA pixel scan distinguishes transparent, partial and opaque pixels",()=>{
+  const result=inspectImageBuffer(pngFixture({width:3,height:1,pixels:[
+    [30,60,90,0],[30,60,90,128],[30,60,90,255]
+  ]}));
+  assert.equal(result.pixel_alpha_values_scanned,true);
+  assert.equal(result.pixels_scanned,3);
+  assert.equal(result.transparent_pixel_count,2);
+  assert.equal(result.fully_transparent_pixel_count,1);
+  assert.equal(result.partially_transparent_pixel_count,1);
+  assert.equal(result.fully_opaque_pixel_count,1);
+  assert.equal(result.pixel_alpha_scan_status,"completed");
+});
+
+test("PNG pixel scan correctly reverses all five PNG row filters",()=>{
+  const filters=[0,1,2,3,4],pixels=[];
+  for(let y=0;y<filters.length;y++){
+    pixels.push([15+y,30,45,y===0?0:255],[60,75+y,90,y===1?128:255]);
+  }
+  const result=inspectImageBuffer(pngFixture({width:2,height:5,pixels,filters}));
+  assert.equal(result.pixel_alpha_values_scanned,true);
+  assert.equal(result.pixels_scanned,10);
+  assert.equal(result.fully_transparent_pixel_count,1);
+  assert.equal(result.partially_transparent_pixel_count,1);
+  assert.equal(result.fully_opaque_pixel_count,8);
+});
+
+test("RGB PNG tRNS key is counted as transparent without an alpha channel",()=>{
+  const result=inspectImageBuffer(pngFixture({width:2,height:1,alpha:false,transparency:true,
+    pixels:[[0,0,0],[10,20,30]]}));
+  assert.equal(result.alpha_channel_present,false);
+  assert.equal(result.transparency_metadata_present,true);
+  assert.equal(result.pixel_alpha_values_scanned,true);
+  assert.equal(result.fully_transparent_pixel_count,1);
+  assert.equal(result.fully_opaque_pixel_count,1);
+});
+
+test("interlaced PNG is explicitly marked as not pixel-scanned",()=>{
+  const result=inspectImageBuffer(pngFixture({width:2,height:1,interlace:1}));
+  assert.equal(result.pixel_alpha_values_scanned,false);
+  assert.equal(result.pixel_alpha_scan_status,"skipped_interlaced_png");
 });

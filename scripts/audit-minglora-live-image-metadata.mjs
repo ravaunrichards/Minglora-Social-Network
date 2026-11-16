@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { inflateSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -29,28 +30,100 @@ function dimensions(width, height, format) {
     orientation: width === height ? "square" : width > height ? "landscape" : "portrait"
   };
 }
-function parsePng(buffer) {
-  const signature = Buffer.from([137,80,78,71,13,10,26,10]);
-  if (buffer.length < 33 || !buffer.subarray(0,8).equals(signature)) fail("invalid or truncated PNG header.");
-  let offset=8, dim=null, bitDepth=null, colorType=null, transparency=false, animated=false, end=false;
-  while (offset+12<=buffer.length) {
-    const length=buffer.readUInt32BE(offset), type=buffer.toString("ascii",offset+4,offset+8);
-    const start=offset+8, dataEnd=start+length, chunkEnd=dataEnd+4;
-    if(dataEnd>buffer.length||chunkEnd>buffer.length) fail("truncated PNG "+type+" chunk.");
+function paethPredictor(left,up,upperLeft){
+  const estimate=left+up-upperLeft;
+  const leftDistance=Math.abs(estimate-left),upDistance=Math.abs(estimate-up),cornerDistance=Math.abs(estimate-upperLeft);
+  if(leftDistance<=upDistance&&leftDistance<=cornerDistance)return left;
+  if(upDistance<=cornerDistance)return up;
+  return upperLeft;
+}
+function scanPngPixelAlpha({width,height,bitDepth,colorType,interlaceMethod,idatChunks,transparencyData}){
+  const skipped=status=>({pixel_alpha_values_scanned:false,pixels_scanned:0,
+    transparent_pixel_count:0,fully_transparent_pixel_count:0,
+    partially_transparent_pixel_count:0,fully_opaque_pixel_count:0,
+    pixel_alpha_scan_status:status});
+  if(interlaceMethod!==0)return skipped("skipped_interlaced_png");
+  if(bitDepth!==8)return skipped("skipped_unsupported_bit_depth");
+  if(colorType!==2&&colorType!==6)return skipped("skipped_unsupported_color_type");
+  if(!idatChunks.length)fail("PNG has no IDAT image data.");
+  const channels=colorType===6?4:3,bytesPerPixel=channels,rowBytes=width*channels,pixelCount=width*height;
+  if(!Number.isSafeInteger(pixelCount)||pixelCount>100000000||!Number.isSafeInteger(rowBytes*height+height)){
+    return skipped("skipped_pixel_limit");
+  }
+  if(transparencyData&&colorType!==2)fail("PNG tRNS is invalid for an RGBA image.");
+  if(transparencyData&&transparencyData.length!==6)fail("RGB PNG tRNS must contain exactly three samples.");
+  const transparentKey=transparencyData?[
+    transparencyData.readUInt16BE(0),transparencyData.readUInt16BE(2),transparencyData.readUInt16BE(4)
+  ]:null;
+  if(transparentKey&&transparentKey.some(value=>value>255))fail("8-bit RGB PNG tRNS sample is outside the supported range.");
+  const inflated=inflateSync(Buffer.concat(idatChunks));
+  const expectedLength=(rowBytes+1)*height;
+  if(inflated.length!==expectedLength)fail("PNG decompressed scanline length does not match its dimensions.");
+  let offset=0,previous=Buffer.alloc(rowBytes),transparent=0,fullyTransparent=0,partial=0,opaque=0;
+  for(let y=0;y<height;y++){
+    const filter=inflated[offset++];
+    if(filter>4)fail("PNG uses an invalid scanline filter "+filter+".");
+    const row=Buffer.allocUnsafe(rowBytes);
+    for(let i=0;i<rowBytes;i++){
+      const sample=inflated[offset++],left=i>=bytesPerPixel?row[i-bytesPerPixel]:0;
+      const up=previous[i]||0,upperLeft=i>=bytesPerPixel?previous[i-bytesPerPixel]:0;
+      let predictor=0;
+      if(filter===1)predictor=left;
+      else if(filter===2)predictor=up;
+      else if(filter===3)predictor=Math.floor((left+up)/2);
+      else if(filter===4)predictor=paethPredictor(left,up,upperLeft);
+      row[i]=(sample+predictor)&255;
+    }
+    for(let x=0;x<width;x++){
+      if(colorType===6){
+        const alpha=row[x*4+3];
+        if(alpha===0){transparent++;fullyTransparent++;}
+        else if(alpha<255){transparent++;partial++;}
+        else opaque++;
+      }else if(transparentKey&&row[x*3]===transparentKey[0]&&
+        row[x*3+1]===transparentKey[1]&&row[x*3+2]===transparentKey[2]){
+        transparent++;fullyTransparent++;
+      }else opaque++;
+    }
+    previous=row;
+  }
+  return {pixel_alpha_values_scanned:true,pixels_scanned:pixelCount,
+    transparent_pixel_count:transparent,fully_transparent_pixel_count:fullyTransparent,
+    partially_transparent_pixel_count:partial,fully_opaque_pixel_count:opaque,
+    pixel_alpha_scan_status:"completed"};
+}
+function parsePng(buffer){
+  const signature=Buffer.from([137,80,78,71,13,10,26,10]);
+  if(buffer.length<33||!buffer.subarray(0,8).equals(signature))fail("invalid or truncated PNG header.");
+  let offset=8,dim=null,bitDepth=null,colorType=null,transparencyData=null,animated=false,end=false,interlaceMethod=null;
+  const idatChunks=[];
+  while(offset+12<=buffer.length){
+    const length=buffer.readUInt32BE(offset),type=buffer.toString("ascii",offset+4,offset+8);
+    const start=offset+8,dataEnd=start+length,chunkEnd=dataEnd+4;
+    if(dataEnd>buffer.length||chunkEnd>buffer.length)fail("truncated PNG "+type+" chunk.");
     if(type==="IHDR"){
-      if(dim||length!==13) fail("invalid PNG IHDR chunk.");
+      if(dim||length!==13)fail("invalid PNG IHDR chunk.");
       dim=dimensions(buffer.readUInt32BE(start),buffer.readUInt32BE(start+4),"PNG");
-      bitDepth=buffer[start+8]; colorType=buffer[start+9];
-    } else if(type==="tRNS") transparency=true;
-    else if(type==="acTL") animated=true;
-    else if(type==="IEND"){ if(length!==0) fail("invalid PNG IEND chunk."); end=true; break; }
+      bitDepth=buffer[start+8];colorType=buffer[start+9];
+      if(buffer[start+10]!==0||buffer[start+11]!==0)fail("PNG declares unsupported compression or filter method.");
+      interlaceMethod=buffer[start+12];
+      if(interlaceMethod!==0&&interlaceMethod!==1)fail("PNG declares an invalid interlace method.");
+    }else if(type==="tRNS")transparencyData=Buffer.from(buffer.subarray(start,dataEnd));
+    else if(type==="IDAT")idatChunks.push(buffer.subarray(start,dataEnd));
+    else if(type==="acTL")animated=true;
+    else if(type==="IEND"){if(length!==0)fail("invalid PNG IEND chunk.");end=true;break;}
     offset=chunkEnd;
   }
-  if(!dim||!end) fail("PNG is missing IHDR or IEND.");
-  if(![0,2,3,4,6].includes(colorType)||![1,2,4,8,16].includes(bitDepth)) fail("PNG declares unsupported color type or bit depth.");
+  if(!dim||!end)fail("PNG is missing IHDR or IEND.");
+  if(![0,2,3,4,6].includes(colorType)||![1,2,4,8,16].includes(bitDepth))fail("PNG declares unsupported color type or bit depth.");
+  const alphaChannelPresent=colorType===4||colorType===6;
+  const transparencyMetadataPresent=Boolean(transparencyData);
+  const pixelAlpha=scanPngPixelAlpha({width:dim.width_px,height:dim.height_px,bitDepth,colorType,
+    interlaceMethod,idatChunks,transparencyData});
   return {format:"PNG",...dim,bit_depth:bitDepth,color_type:colorType,
-    alpha_channel_present:colorType===4||colorType===6,
-    transparency_metadata_present:transparency,animation_metadata_present:animated,frames_detected:null};
+    interlace_method:interlaceMethod,alpha_channel_present:alphaChannelPresent,
+    transparency_metadata_present:transparencyMetadataPresent,
+    animation_metadata_present:animated,frames_detected:null,...pixelAlpha};
 }
 function parseJpeg(buffer) {
   if(buffer.length<4||buffer[0]!==0xff||buffer[1]!==0xd8) fail("invalid or truncated JPEG header.");
@@ -203,7 +276,7 @@ function buildAudit(){
     }
     try{
       const info=inspectImageBuffer(buffer);
-      records.push({...base,...info,pixel_alpha_values_scanned:false,exif_orientation_applied:false,
+      records.push({...base,...info,exif_orientation_applied:false,
         visual_review:"not_performed_by_metadata_audit",production_approval:"not_assessed"});
       byFormat[info.format]=(byFormat[info.format]||0)+1;
       if(info.alpha_channel_present)alphaCount++;
@@ -211,13 +284,23 @@ function buildAudit(){
       if(info.animation_metadata_present)animationCount++;
     }catch(error){failures.push({path:file.relative,error:String(error.message||error)});}
   }
+  const pngRecords=records.filter(item=>item.format==="PNG");
+  const scannedPngRecords=pngRecords.filter(item=>item.pixel_alpha_values_scanned);
   const summary={
     scanned_roots:SCAN_ROOTS.slice(),candidate_image_files:candidates.length,parsed_image_files:records.length,
     unsupported_image_files:unsupported.length,parse_failures:failures.length,total_file_bytes:totalBytes,
     files_by_root:byRoot,files_by_detected_format:byFormat,alpha_channel_declared_count:alphaCount,
     transparency_metadata_declared_count:transparencyCount,animation_metadata_declared_count:animationCount,
-    pixel_alpha_values_scanned:false,exif_orientation_applied:false,full_human_visual_review_completed:false,
-    licensing_review_completed:false
+    pixel_alpha_values_scanned:pngRecords.length>0&&scannedPngRecords.length===pngRecords.length&&records.every(item=>item.format==="PNG"||item.format==="JPEG"),
+    png_pixel_alpha_scanned_count:scannedPngRecords.length,
+    png_pixel_alpha_scan_skipped_count:pngRecords.length-scannedPngRecords.length,
+    png_with_non_opaque_pixels_count:scannedPngRecords.filter(item=>item.transparent_pixel_count>0).length,
+    png_alpha_declared_but_fully_opaque_count:scannedPngRecords.filter(item=>item.alpha_channel_present&&item.transparent_pixel_count===0).length,
+    total_png_pixels_scanned:scannedPngRecords.reduce((sum,item)=>sum+item.pixels_scanned,0),
+    total_fully_transparent_pixels:scannedPngRecords.reduce((sum,item)=>sum+item.fully_transparent_pixel_count,0),
+    total_partially_transparent_pixels:scannedPngRecords.reduce((sum,item)=>sum+item.partially_transparent_pixel_count,0),
+    total_fully_opaque_pixels:scannedPngRecords.reduce((sum,item)=>sum+item.fully_opaque_pixel_count,0),
+    exif_orientation_applied:false,full_human_visual_review_completed:false,licensing_review_completed:false
   };
   return {schema_version:1,generator:"Minglora LIVE raster image metadata audit",generated_at:new Date().toISOString(),
     scope_note:"Read-only raster metadata inspection. Header transparency flags do not establish that any pixels are actually transparent.",
@@ -233,6 +316,13 @@ function markdownReport(audit){
     "| Parse failures | "+audit.summary.parse_failures+" |",
     "| Total bytes | "+audit.summary.total_file_bytes+" |",
     "| Files with declared alpha channel | "+audit.summary.alpha_channel_declared_count+" |",
+    "| PNG pixel-alpha scans completed | "+audit.summary.png_pixel_alpha_scanned_count+" |",
+    "| PNGs containing non-opaque pixels | "+audit.summary.png_with_non_opaque_pixels_count+" |",
+    "| PNGs declaring alpha but fully opaque | "+audit.summary.png_alpha_declared_but_fully_opaque_count+" |",
+    "| PNG pixels scanned | "+audit.summary.total_png_pixels_scanned+" |",
+    "| Fully transparent pixels | "+audit.summary.total_fully_transparent_pixels+" |",
+    "| Partially transparent pixels | "+audit.summary.total_partially_transparent_pixels+" |",
+    "| Fully opaque pixels | "+audit.summary.total_fully_opaque_pixels+" |",
     "| Files with transparency metadata | "+audit.summary.transparency_metadata_declared_count+" |",
     "| Files with animation metadata | "+audit.summary.animation_metadata_declared_count+" |",
     "","## Source folders","","| Folder | Files | Bytes |","|---|---:|---:|"
@@ -247,7 +337,9 @@ function markdownReport(audit){
   }
   lines.push("","## Interpretation limits","",
     "- Dimensions and format are read from raster headers; JPEG dimensions are stored without applying EXIF orientation.",
-    "- Alpha-channel and transparency-chunk/flag fields describe encoded capability or metadata only. This audit does not scan per-pixel alpha and cannot certify a transparent background.",
+    "- PNG pixel-alpha values are decoded for 8-bit, non-interlaced RGB and RGBA files; unsupported PNG bit depths, color types or interlace modes are marked as skipped in JSON.",
+    "- JPEG has no alpha channel. A PNG alpha declaration is not proof of transparency: use the decoded transparent/partial/opaque pixel counts to assess its actual pixels.",
+    "- This scan measures source transparency only; it does not grade visible composition, remove backgrounds or approve artwork for production.",
     "- Human visual review, quality grading, rights/licence clearance and production approval are outside this audit.",
     "- Source images and extracted artwork are read only; this audit does not copy, transform, rename or delete source files.",
     "- Unsupported formats and parse failures are listed in JSON and make the audit command exit unsuccessfully.");
