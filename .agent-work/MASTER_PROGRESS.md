@@ -165,3 +165,16 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 
 - PR merge-preparation correction: restored a byte-identical deployed copy at `public/assets/gifter-badge-progression-art.jpg`; the canonical upload remains at `assets/Gifters Badge Progressions/Gifters Badge Progressions.jpg`. The server route now reads this deployable public file.
 - Fixed the PWA shell to precache both current Gifter progression CSS and JS URLs (not only the image) after CI found stale shell references. Updated the source-file test to verify the public uploaded image path.
+
+
+### Gifter Badge Progression — live TikTok-style tracking — 2026-11-15
+- PR #416 merged into `main` as squash commit `b80d2df6ae9e821fe2918e379363d5cd4c1219bb`.
+- The supplied original six-symbol progression strip is now an active tracker for the server-authoritative 50 Gifter Levels. Its six visual milestones map to Levels 1, 10, 20, 30, 40 and 50; the white position marker interpolates along the strip using the member's current level and in-level progress.
+- The marker is absent until a member has earned or been granted a real Gifter badge (Level 1+); no Level 0 marker is displayed.
+- Reached milestone symbols and connector paths light progressively. In the individual Level 1–50 directory, locked original badges remain muted, earned/admin-awarded badges light up, and the current badge receives the strongest highlight.
+- A successfully confirmed Gift Center send triggers an immediate progress refresh. Existing quiet overview polling continues to synchronize other confirmed gift routes.
+- Preserved the existing server thresholds, gift ledger/deduplication/refund handling, admin-award behavior, the six original stage artwork, all 50 individual original badge PNGs, the original level panels and range sheets. The deleted Gifters Level Up Coin chart and duplicate SVG remain deleted. No wallet, balance, Coin transaction or database progression records were changed.
+- Focused Gifter tests passed: six-stage live marker/no-Level-0 behavior, badge states/glow, immediate Gift Center refresh, original artwork placement, current asset/cache versions, and the existing threshold/service tests.
+- Repository-wide CI is not green: five unrelated API startup/registration, Home Stories and Creator League tests remain failing; those areas were not modified. Supabase Auth acceptance passed.
+- Post-merge source verification on `main` confirmed the tracker logic, CSS, HTML asset references and service-worker shell cache versions are present.
+- Render deployment was not verified because the Render connection had no workspace selected. No manual deployment was triggered.
