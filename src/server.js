@@ -9749,6 +9749,23 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     });
     return;
   }
+  const gifterCropRangeSheetFiles = ({
+    '/assets/gifter-crop-range-sheets/lv-1-9.png': 'LV.1 - LV.9.png',
+    '/assets/gifter-crop-range-sheets/lv-10-19.png': 'LV.10 - LV.19.png',
+    '/assets/gifter-crop-range-sheets/lv-20-29.png': 'LV.20 - LV.29.png',
+    '/assets/gifter-crop-range-sheets/lv-30-39.png': 'LV.30 - LV.39.png',
+    '/assets/gifter-crop-range-sheets/lv-40-49.png': 'LV.40 - LV.49.png',
+    '/assets/gifter-crop-range-sheets/lv-50-plus.png': 'LV.50+.png'
+  })[p];
+  if(gifterCropRangeSheetFiles){
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Gifter level range sheets',gifterCropRangeSheetFiles);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Cropped Gifter range sheet not found.'});
+      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
   const dailyRankingBadgeAssets = ({
     '/assets/daily-ranking-badges/place-1.png': 'Screenshot_20261112_021224_TikTok(1).png',
     '/assets/daily-ranking-badges/place-2.png': 'Screenshot_20261112_021224_TikTok(2).png',
