@@ -130,7 +130,7 @@ The CI uploaded `minglora-live-image-metadata-audit-13700` (artifact **142046524
 
 ## Gifter range-sheet edge-crop checkpoint — 2026-11-15
 
-The current mainline reference update records a controlled black-edge-only crop for the six original Gifter range sheets in `assets/Gifters Badge Levels/` (crop details: `reports/GIFTER_RANGE_SHEET_CROP_REPORT.md`). The sheets remain reference material, not approved product artwork:
+The six cropped Gifter range sheets are now stored once in `assets/Crop References/Gifter level range sheets/` and served directly from that folder (crop details: `reports/GIFTER_RANGE_SHEET_CROP_REPORT.md`). The prior padded PNG duplicates and legacy root JPG duplicates have been removed. The sheets remain reference material, not approved product artwork:
 
 | Source | Before | After | Edge crop (L / T / R / B) |
 |---|---:|---:|---:|
