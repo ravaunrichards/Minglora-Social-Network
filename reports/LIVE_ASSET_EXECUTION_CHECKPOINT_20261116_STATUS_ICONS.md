@@ -37,3 +37,22 @@
 2. Fix any issue found and rerun.
 3. Create a draft stacked PR against feat/minglora-live-pop-parrot-asset-20261116 only after passing CI.
 4. Keep design review and rights clearance pending until a human review is completed.
+
+## Verified CI result — 2026-11-16
+
+- Corrected final implementation/test head before this checkpoint: 483c817b4e12d8bed0dd663d062fed32a213651f.
+- CI run: 43816915290 — all 3 jobs passed.
+- Main unit suite: 1,254 tests, 1,254 passed, 0 failed, 0 cancelled, 0 skipped.
+- For You functional-navigation acceptance: PASS.
+- Supabase Auth/OAuth provider acceptance: PASS.
+- The generated unified LIVE asset manifest step and its CI upload passed.
+- Generated unified manifest artifact: minglora-live-asset-manifest-13611, ID 14203405142, 663,677 bytes.
+- Supplied LIVE raster metadata audit artifact: minglora-live-image-metadata-audit-13611, ID 14203136037, 154,000 bytes.
+- The manifest test verifies 18 control SVGs, 22 category SVGs, 12 LIVE tools SVGs and the new three provider-status SVGs, including file existence, exact SHA-256, 24×24 symbol metadata, review flags and component usage.
+- The dedicated status test verifies the three response states, visible status text, aria-hidden decorative SVG, 14px inline layout, exact versioned app/style URLs, shell v331 and all three offline precache references.
+- CI initially caught two real integration issues: the versioned app/style URLs were missing from the explicit offline shell, and an over-escaped test regex caused a parse error. Both were corrected in code; the next complete run passed. No assertions were removed or weakened.
+- PR #430: https://github.com/ravaunrichards/Minglora-Social-Network/pull/430 (draft; stacked on the Pop Parrot parent branch; no merge/deployment).
+
+## Remaining acceptance
+
+The three symbols remain design-review-pending. Physical screen-reader/accessibility user testing, visual approval and rights review are outstanding. This only covers provider readiness before LIVE setup, not real-time media-room reconnect, track health or broader missing feature-control states.
