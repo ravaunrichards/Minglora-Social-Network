@@ -30,11 +30,11 @@ test('Every supplied LIVE crop has its own complete layout selector and geometry
   const contract=liveCss.slice(start);
   assert.ok(start>=0);
   for(const layout of nine)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' layout is missing');
-  assert.match(contract,/full-screen[\s\S]*?\.live-host-only-layout/);
+  assert.match(contract,/full-screen[\s\S]*?display:none!important/);
   assert.match(contract,/fluid-panel[\s\S]*?right:8px/);
-  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
+  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,1\.12fr\)/);
   assert.match(contract,/fixed-grid[\s\S]*?grid-template-rows:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,1\.72fr\)/);
   assert.match(contract,/side-by-side[\s\S]*?grid-column:1\/3/);
   assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
   assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);

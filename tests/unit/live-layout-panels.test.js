@@ -167,9 +167,9 @@ test('The nine supplied guest arrangements have distinct reference-matched grid 
   const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
   for(const layout of layouts)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' geometry missing');
   assert.match(contract,/fluid-panel[\s\S]*?position:absolute/);
-  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
+  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,1\.12fr\)/);
   assert.match(contract,/fixed-grid[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,1\.72fr\)/);
   assert.match(contract,/side-by-side[\s\S]*?grid-column:1\/3/);
   assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
   assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);

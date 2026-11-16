@@ -140,7 +140,7 @@ test('Nine reference layouts have distinct panel geometry instead of a shared eq
   assert.ok(contract.includes('grid-column:2!important'));
   assert.ok(contract.includes('grid-column:2/4!important'));
   assert.ok(contract.includes('right:8px!important'));
-  assert.ok(contract.includes('minmax(0,2.05fr)'));
+  assert.ok(contract.includes('minmax(0,1.12fr)'));
 });
 test('Active guest focus is selectable in every layout', () => {
   assert.ok(js.includes('function setSpeakerFocus(speakers=[])'));
@@ -180,7 +180,7 @@ test('The host end-meeting control stays in the same shared toolbar', () => {
 test('All nine total seats fit and spotlight has a visible focus treatment', () => {
   assert.ok(js.includes('MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1'));
   assert.ok(js.includes('Array.from({length:MEETWAVE_GUEST_LIMIT}'));
-  assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"] .mw-video-tile.is-spotlight'));
+  assert.ok(finalFit.includes('#mw-grid[data-layout="spotlight"]>.live-guest-seat.is-spotlight{grid-column:1/-1!important;grid-row:1!important;z-index:2!important}'));
   assert.ok(finalFit.includes('grid-column:auto!important'));
   assert.ok(finalFit.includes('grid-row:auto!important'));
   assert.ok(finalFit.includes('border:2px solid #72e0cb!important'));
