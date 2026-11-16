@@ -266,3 +266,35 @@
  .league-top-three-row .league-leader-points{grid-column:3;justify-self:start;margin-top:-2px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.league-original-image{animation:none!important;transition:none!important}}
+
+
+/* Six reference-based Match Power-Ups: compact desktop grid and phone-safe cards. */
+.league-powerup-info-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.league-powerup-info-card{min-height:100%;overflow-wrap:anywhere}
+.league-powerup-card-symbol .league-powerup-svg-icon{width:54px;height:54px}
+.league-powerup-rank-control{display:grid;gap:6px;max-width:340px;font-size:12px;font-weight:800;color:var(--text)}
+.league-powerup-rank-control select{width:100%;min-height:40px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);font:inherit}
+.live-match-powerups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+.live-match-powerups button{min-width:0;min-height:38px;padding:7px 8px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font:inherit;font-size:11px;font-weight:800;overflow-wrap:anywhere}
+.live-match-powerups button:focus-visible{outline:3px solid rgba(52,123,210,.55);outline-offset:2px}
+.live-match-card-effects{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0}
+.live-match-effect{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900;background:var(--surface);border:1px solid var(--line);color:var(--text)}
+.live-match-effect--hammer{border-color:#d98bd6;background:color-mix(in srgb,#d98bd6 13%,var(--surface))}
+.live-match-effect--mist{border-color:#9aa7dc;background:color-mix(in srgb,#9aa7dc 14%,var(--surface))}
+.live-match-effect--speed{border-color:#d3a23b;background:color-mix(in srgb,#d3a23b 15%,var(--surface))}
+.live-match-scorebar.is-mist-hidden{background:repeating-linear-gradient(135deg,var(--line) 0 5px,transparent 5px 10px)}
+@media(max-width:760px){
+  .league-powerup-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .live-match-powerups{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+  .league-powerup-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .league-powerup-info-card{padding:10px}
+  .league-powerup-info-card p{min-height:0}
+  .league-powerup-card-symbol .league-powerup-svg-icon{width:44px;height:44px}
+  .live-match-powerups{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+  .league-powerup-info-card{transition:none}
+  .live-match-powerups button{transition:none}
+}
