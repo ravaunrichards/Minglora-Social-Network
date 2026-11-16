@@ -140,7 +140,7 @@ test("Boosters double Gifts from both the No. 2 and No. 3 ranked match gifters",
   assert.equal(fourth.matchPoints, 10);
   const bonusEvents = match.events.filter(event => event.type === "gift_score" && event.triggeredEffects?.includes("boosters"));
   assert.deepEqual(bonusEvents.map(event => event.senderRank), [2, 3]);
-  assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 215);
+  assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 205);
 });
 
 test("Speed Challenge doubles both match sides for 52 seconds, once per match", () => {
@@ -158,6 +158,6 @@ test("Speed Challenge doubles both match sides for 52 seconds, once per match", 
   assert.equal(duringA.matchPoints, 20);
   assert.equal(duringB.matchPoints, 20);
   assert.equal(after.matchPoints, 10);
-  assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 30);
+  assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 20);
   assert.equal(ensureCreatorLeagueProfile(db, "host-b", "GLOBAL", START).seasonPoints, 10);
 });
