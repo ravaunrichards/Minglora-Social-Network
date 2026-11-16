@@ -662,9 +662,11 @@ export function recordLiveGiftForLeagues(db, details) {
             multiplier = Math.max(multiplier, 5);
             triggeredEffects.push("boosting_glove");
           }
-        } else if (effect.type === "boosters" && [2, 3].includes(senderRank)) {
-          multiplier = Math.max(multiplier, 2);
-          triggeredEffects.push("boosters");
+        } else if (effect.type === "boosters") {
+          if ([2, 3].includes(senderRank)) {
+            multiplier = Math.max(multiplier, 2);
+            triggeredEffects.push("boosters");
+          }
         } else if (Number(effect.multiplier) > 1) {
           multiplier = Math.max(multiplier, Number(effect.multiplier));
           triggeredEffects.push(effect.type);
@@ -803,7 +805,7 @@ export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new 
     match.events.push({ id: randomUUID(), type: "time_boost_used", side, addedSeconds: 30, createdAt: now.toISOString() });
   } else {
     match.activeEffects = (match.activeEffects || []).filter(item => new Date(item.expiresAt).getTime() > now.getTime());
-    const effect = { id: randomUUID(), type: powerupId, side, durationMs: powerup.durationMs, expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(), createdAt: now.toISOString() };
+    const effect = { id: randomUUID(), type: powerupId, side, multiplier: Number(powerup.multiplier || 1), durationMs: powerup.durationMs, expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(), createdAt: now.toISOString() };
     if (powerupId === "stun_hammer") effect.targetSide = side === "challenger" ? "opponent" : "challenger";
     if (powerupId === "boosters") {
       effect.targetRanks = [2, 3];
