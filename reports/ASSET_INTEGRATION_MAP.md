@@ -257,3 +257,14 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - PWA: the gift-effects asset version and service-worker shell cache reference were advanced for the updated runtime and motion index.
 - Verification: CI 1,251/1,251 passed; Chromium model QA 45/45 model and pixel checks across three viewports, 45 screenshots, zero page errors and zero request cancellations. Evidence artifact 14200011992.
 - Acceptance: design, licensing, mastered audio and physical-device checks remain pending. Catalogue source metadata is not a production offering; no production catalogue, price, wallet or transaction data changed.
+
+## LIVE discovery ranking tab icon integration — 2026-11-16
+
+- `public/app.js` uses the immutable `LIVE_DISCOVERY_ICON_NAMES` allow-list and `liveDiscoveryIcon()` renderer inside the three existing tab buttons; the `daily`, `popular` and `league` data destinations, visible labels, event binding, and active class are unchanged.
+- `public/styles.css` lays out the icon and label inline with a 16×16 SVG.
+- `public/assets/icons/live-ranking-discovery/manifest.json` maps all three icons to their exact existing destination, with design-review status.
+- `scripts/generate-minglora-live-asset-manifest.mjs` inventories the pack, hashes its files and reports `live_discovery_ranking_icon_count: 3`.
+- `public/index.html` versions the app/style URL; `public/sw.js` shell v331 pre-caches the three SVGs and manifest.
+- Unit tests cover destinations, labels, click/active logic, SVG shape, hashes, layout and offline references.
+
+This is icon artwork only; rankings data fetching, scoring, ordering, APIs, viewer presence and Creator League scoring were not changed.
