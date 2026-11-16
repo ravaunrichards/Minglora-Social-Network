@@ -21,12 +21,12 @@
   ]);
 
   const BADGE_RANGE_SHEETS = Object.freeze([
-    { file: "lv-1-9.jpg", label: "LV.1 – LV.9", alt: "Original Gifter badge range reference, Levels 1 through 9" },
-    { file: "lv-10-19.jpg", label: "LV.10 – LV.19", alt: "Original Gifter badge range reference, Levels 10 through 19" },
-    { file: "lv-20-29.jpg", label: "LV.20 – LV.29", alt: "Original Gifter badge range reference, Levels 20 through 29" },
-    { file: "lv-30-39.jpg", label: "LV.30 – LV.39", alt: "Original Gifter badge range reference, Levels 30 through 39" },
-    { file: "lv-40-49.jpg", label: "LV.40 – LV.49", alt: "Original Gifter badge range reference, Levels 40 through 49" },
-    { file: "lv-50-plus.jpg", label: "LV.50+", alt: "Original Gifter badge range reference, Level 50 and above" }
+    { file: "lv-1-9.jpg", label: "LV.1 – LV.9", alt: "Cropped Gifter badge range reference, Levels 1 through 9" },
+    { file: "lv-10-19.jpg", label: "LV.10 – LV.19", alt: "Cropped Gifter badge range reference, Levels 10 through 19" },
+    { file: "lv-20-29.jpg", label: "LV.20 – LV.29", alt: "Cropped Gifter badge range reference, Levels 20 through 29" },
+    { file: "lv-30-39.jpg", label: "LV.30 – LV.39", alt: "Cropped Gifter badge range reference, Levels 30 through 39" },
+    { file: "lv-40-49.jpg", label: "LV.40 – LV.49", alt: "Cropped Gifter badge range reference, Levels 40 through 49" },
+    { file: "lv-50-plus.jpg", label: "LV.50+", alt: "Cropped Gifter badge range reference, Level 50 and above" }
   ]);
 
   function isGifterViewActive() {
@@ -127,10 +127,10 @@
   function renderRangeReferenceSheets() {
     return "<section class='gp-reference-section gp-range-reference-section card' aria-labelledby='gp-range-reference-title'>" +
       "<div class='gp-section-heading'><div><span class='gp-eyebrow'>ADDITIONAL ORIGINAL REFERENCES</span><h2 id='gp-range-reference-title'>Gifter level range sheets</h2>" +
-      "<p>All six supplied broad-range sheets appear in their original level order. The live level directory remains authoritative for current unlock status and Coin thresholds.</p></div></div>" +
+      "<p>All six supplied cropped range sheets appear in their original level order. The live level directory remains authoritative for current unlock status and Coin thresholds.</p></div></div>" +
       "<div class='gp-range-reference-grid'>" +
       BADGE_RANGE_SHEETS.map(sheet =>
-        "<figure class='gp-reference-figure gp-range-reference-figure'><figcaption><strong>" + esc(sheet.label) + "</strong><span>Original range reference</span></figcaption>" +
+        "<figure class='gp-reference-figure gp-range-reference-figure'><figcaption><strong>" + esc(sheet.label) + "</strong><span>Cropped range reference</span></figcaption>" +
         "<img src='/assets/gifter-badge-range-sheets/" + sheet.file + "' alt='" + esc(sheet.alt) + "' loading='lazy' decoding='async'></figure>"
       ).join("") + "</div></section>";
   }
