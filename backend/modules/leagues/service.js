@@ -5,11 +5,20 @@ export const CREATOR_LEAGUE_CLASSES = Object.freeze([
   "B5", "B4", "B3", "B2", "B1", "A3", "A2", "A1"
 ]);
 export const MATCH_POWERUPS = Object.freeze([
-  { id: "momentum_boost", name: "Momentum Boost", symbol: "⚡", durationMs: 30000, multiplier: 1.25, description: "25% extra eligible match points for 30 seconds." },
-  { id: "shield", name: "Shield", symbol: "🛡️", durationMs: 30000, description: "Blocks the next opposing Momentum Boost or Score Multiplier bonus for 30 seconds. Base Gift points still count." },
-  { id: "time_boost", name: "Time Boost", symbol: "⏳", durationMs: 30000, description: "Adds 30 seconds in flexible-timer matches only." },
-  { id: "score_multiplier", name: "Score Multiplier", symbol: "⭐", durationMs: 15000, multiplier: 2, description: "Doubles eligible match points for 15 seconds only." }
+  { id: "boosting_glove", name: "Boosting Glove", symbol: "🥊", durationMs: 30000, chance: 0.30, multiplier: 5, description: "For 30 seconds, each eligible Gift has a 30% chance to score 5× in this match." },
+  { id: "magic_mist", name: "Magic Mist", symbol: "☁️", durationMs: 30000, description: "Hides your side's score from the opposing creator for 30 seconds; scoring continues normally." },
+  { id: "stun_hammer", name: "Stun Hammer", symbol: "🔨", durationMs: 30000, description: "Applies a 30-second playful visual stun to the opposing LIVE match panel without interrupting video or controls." },
+  { id: "time_maker", name: "Time Maker", symbol: "⏱️", durationMs: 10000, maxUsesPerMatch: 3, description: "Adds 10 seconds to the match. Up to three uses are shared across both sides." },
+  { id: "boosters", name: "Boosters", symbol: "2×", durationMs: 30000, multiplier: 2, ranks: [2, 3], description: "Doubles eligible Gifts from your No. 2 or No. 3 ranked gifter for 30 seconds." },
+  { id: "speed_challenge", name: "Speed Challenge", symbol: "🚀", durationMs: 52000, multiplier: 2, maxUsesPerMatch: 1, description: "Starts a 52-second bonus round. Eligible Gifts from both sides score 2× match points." }
 ]);
+
+const LEGACY_MATCH_POWERUPS = Object.freeze({
+  momentum_boost: { durationMs: 30000, multiplier: 1.25 },
+  shield: { durationMs: 30000 },
+  time_boost: { durationMs: 30000 },
+  score_multiplier: { durationMs: 15000, multiplier: 2 }
+});
 
 const COLLECTIONS = [
   "creatorLeagueProfiles", "creatorLeagueGiftLedger", "creatorLeagueDailyScores",
@@ -89,6 +98,9 @@ function normalizeMatch(match) {
     challenger: Boolean(match.timeBoostUsed?.challenger),
     opponent: Boolean(match.timeBoostUsed?.opponent)
   };
+  match.timeMakerUses = Math.min(3, Math.max(0, Math.trunc(asNumber(match.timeMakerUses))));
+  match.speedChallenge = match.speedChallenge && typeof match.speedChallenge === "object"
+    ? { ...match.speedChallenge } : null;
   return match;
 }
 function mergeMatchRecords(current, incoming) {
@@ -120,6 +132,11 @@ function mergeMatchRecords(current, incoming) {
     challenger: Boolean(current.timeBoostUsed?.challenger || incoming.timeBoostUsed?.challenger),
     opponent: Boolean(current.timeBoostUsed?.opponent || incoming.timeBoostUsed?.opponent)
   };
+  merged.timeMakerUses = Math.max(asNumber(current.timeMakerUses), asNumber(incoming.timeMakerUses));
+  const speedCandidates = [current.speedChallenge, incoming.speedChallenge].filter(Boolean);
+  merged.speedChallenge = speedCandidates.sort((a, b) =>
+    (Date.parse(b.expiresAt || "") || 0) - (Date.parse(a.expiresAt || "") || 0)
+  )[0] || null;
   merged.ratingAwarded = Boolean(current.ratingAwarded || incoming.ratingAwarded);
   return normalizeMatch(merged);
 }
@@ -580,6 +597,27 @@ export function settleExpiredLeagueMatches(db, now = new Date()) {
   }
   return completed;
 }
+function gifterRankAfterGift(match, side, senderId, giftAmount) {
+  if (!senderId) return 0;
+  const totals = new Map();
+  for (const item of match.events || []) {
+    if (item.type !== "gift_score" || item.side !== side || !item.senderId) continue;
+    const id = String(item.senderId);
+    const current = totals.get(id) || { userId: id, points: 0, firstAt: item.createdAt || "" };
+    current.points += Math.max(0, asNumber(item.rawPoints));
+    if (!current.firstAt || String(item.createdAt || "") < String(current.firstAt)) current.firstAt = item.createdAt || "";
+    totals.set(id, current);
+  }
+  const id = String(senderId);
+  const current = totals.get(id) || { userId: id, points: 0, firstAt: "" };
+  current.points += Math.max(0, asNumber(giftAmount));
+  if (!current.firstAt) current.firstAt = new Date().toISOString();
+  totals.set(id, current);
+  return [...totals.values()].sort((a, b) =>
+    b.points - a.points || String(a.firstAt).localeCompare(String(b.firstAt)) || a.userId.localeCompare(b.userId)
+  ).findIndex(item => item.userId === id) + 1;
+}
+
 export function recordLiveGiftForLeagues(db, details) {
   ensureCollections(db);
   const now = details.now || new Date();
@@ -588,16 +626,18 @@ export function recordLiveGiftForLeagues(db, details) {
   const amount = Number(details.coinAmount);
   if (!giftId || !Number.isSafeInteger(amount) || amount <= 0) return { recorded: false, reason: "unconfirmed_gift" };
   if (db.creatorLeagueGiftLedger.some(item => item.giftId === giftId)) return { recorded: false, reason: "duplicate_transaction" };
+  const senderId = String(details.senderId || "");
   const profile = ensureCreatorLeagueProfile(db, details.recipientId, details.region || "GLOBAL", now);
   const dayKey = utcDayKey(now);
   const seasonKey = creatorLeagueSeasonKey(now);
   db.creatorLeagueGiftLedger.push({
-    id: randomUUID(), giftId, userId: details.recipientId,
+    id: randomUUID(), giftId, userId: details.recipientId, senderId: senderId || null,
     broadcastId: String(details.broadcastId || ""), giftCode: String(details.giftCode || ""),
     coinAmount: amount, dayKey, seasonKey, createdAt: now.toISOString()
   });
   let daily = db.creatorLeagueDailyScores.find(item => item.userId === details.recipientId && item.dayKey === dayKey);
   if (!daily) { daily = { id: randomUUID(), userId: details.recipientId, dayKey, points: 0 }; db.creatorLeagueDailyScores.push(daily); }
+  // Match Power-Ups never change official Creator League points or the Coin ledger.
   daily.points += amount;
   profile.lifetimeGiftPoints += amount;
   if (profile.seasonKey !== seasonKey) { profile.seasonKey = seasonKey; profile.seasonPoints = 0; }
@@ -612,8 +652,28 @@ export function recordLiveGiftForLeagues(db, details) {
     const matchesGift = match.giftMode !== "specific" || match.selectedGiftCode === details.giftCode;
     if (matchesGift && new Date(match.startedAt).getTime() <= now.getTime() && new Date(match.endsAt).getTime() > now.getTime()) {
       match.activeEffects = (match.activeEffects || []).filter(item => new Date(item.expiresAt).getTime() > now.getTime());
-      const effects = match.activeEffects.filter(item => item.side === side && item.type !== "shield");
-      let multiplier = effects.reduce((best, item) => Math.max(best, Number(item.multiplier || 1)), 1);
+      const senderRank = gifterRankAfterGift(match, side, senderId, amount);
+      let multiplier = 1;
+      const triggeredEffects = [];
+      const random = typeof details.random === "function" ? details.random : Math.random;
+      for (const effect of match.activeEffects.filter(item => item.side === side)) {
+        if (effect.type === "boosting_glove") {
+          if (random() < 0.30) {
+            multiplier = Math.max(multiplier, 5);
+            triggeredEffects.push("boosting_glove");
+          }
+        } else if (effect.type === "boosters" && senderRank === Number(effect.targetRank)) {
+          multiplier = Math.max(multiplier, 2);
+          triggeredEffects.push("boosters");
+        } else if (Number(effect.multiplier) > 1) {
+          multiplier = Math.max(multiplier, Number(effect.multiplier));
+          triggeredEffects.push(effect.type);
+        }
+      }
+      if (match.speedChallenge && Date.parse(match.speedChallenge.expiresAt || "") > now.getTime()) {
+        multiplier = Math.max(multiplier, 2);
+        triggeredEffects.push("speed_challenge");
+      }
       const protectedSide = side === "challenger" ? "opponent" : "challenger";
       const shieldIndex = match.activeEffects.findIndex(item => item.type === "shield" && item.side === protectedSide);
       let shieldBlockedBonus = false;
@@ -621,11 +681,16 @@ export function recordLiveGiftForLeagues(db, details) {
         match.activeEffects.splice(shieldIndex, 1);
         multiplier = 1;
         shieldBlockedBonus = true;
+        triggeredEffects.length = 0;
         match.events.push({ id: randomUUID(), type: "shield_blocked_bonus", side: protectedSide, protectedFrom: side, giftId, blockedMultiplier: true, createdAt: now.toISOString() });
       }
       matchPoints = Math.round(amount * multiplier);
       match.scores[side] = Number(match.scores[side] || 0) + matchPoints;
-      match.events.push({ id: randomUUID(), type: "gift_score", side, giftId, rawPoints: amount, matchPoints, multiplier, shieldBlockedBonus, createdAt: now.toISOString() });
+      match.events.push({
+        id: randomUUID(), type: "gift_score", side, giftId, senderId: senderId || null,
+        senderRank: senderRank || null, rawPoints: amount, matchPoints, multiplier,
+        triggeredEffects, shieldBlockedBonus, createdAt: now.toISOString()
+      });
     }
   }
   return { recorded: true, creatorLeaguePoints: amount, matchPoints, matchId: match ? match.id : null };
@@ -649,7 +714,8 @@ export function createCreatorLeagueMatch(db, input) {
     giftMode: input.giftMode, selectedGiftCode: input.giftMode === "specific" ? input.selectedGiftCode : null,
     status: "pending", scores: { challenger: 0, opponent: 0 }, supporters: [],
     activeEffects: [], pendingEffects: [], events: [],
-    timeBoostUsed: { challenger: false, opponent: false }, timerMode: "flexible",
+    timeBoostUsed: { challenger: false, opponent: false }, timeMakerUses: 0,
+    speedChallenge: null, timerMode: "flexible",
     createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + 2 * 60 * 1000).toISOString()
   };
   db.creatorLeagueMatches.push(match);
@@ -685,16 +751,38 @@ export function supportCreatorLeagueMatch(db, match, viewerId, side, now = new D
   match.events.push({ id: randomUUID(), type: "viewer_support", userId: viewerId, side, matchPoints: 3, createdAt: now.toISOString() });
   return match;
 }
-export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new Date()) {
+export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new Date(), options = {}) {
   settleExpiredLeagueMatches(db, now);
   match = resolveCanonicalMatch(db, match);
   if (!match || match.status !== "live") throw Object.assign(new Error("Power-ups can only be used during an active match."), { status: 409 });
   const side = match.challengerId === userId ? "challenger" : match.opponentId === userId ? "opponent" : null;
   if (!side) throw Object.assign(new Error("Only a creator in this match can activate a power-up."), { status: 403 });
-  const powerup = MATCH_POWERUPS.find(item => item.id === powerupId);
+  const legacyPower = LEGACY_MATCH_POWERUPS[powerupId];
+  const powerup = MATCH_POWERUPS.find(item => item.id === powerupId) || (legacyPower ? { id: powerupId, ...legacyPower } : null);
   if (!powerup) throw Object.assign(new Error("Choose a valid match power-up."), { status: 400 });
   const dayKey = utcDayKey(now);
-  if (db.creatorLeaguePowerupUses.some(item => item.userId === userId && item.powerupId === powerupId && item.dayKey === dayKey)) throw Object.assign(new Error("You have already used this power-up today."), { status: 409 });
+  const oncePerDay = !["time_maker", "speed_challenge"].includes(powerupId);
+  if (oncePerDay && db.creatorLeaguePowerupUses.some(item => item.userId === userId && item.powerupId === powerupId && item.dayKey === dayKey)) {
+    throw Object.assign(new Error("You have already used this power-up today."), { status: 409 });
+  }
+  if (powerupId === "time_maker") {
+    match.timeMakerUses = Math.max(0, Math.trunc(asNumber(match.timeMakerUses)));
+    if (match.timeMakerUses >= 3) throw Object.assign(new Error("Time Maker has reached its three-use limit for this match."), { status: 409 });
+    match.timeMakerUses += 1;
+    match.endsAt = new Date(new Date(match.endsAt).getTime() + 10000).toISOString();
+    match.events.push({ id: randomUUID(), type: "time_maker_used", side, useNumber: match.timeMakerUses, addedSeconds: 10, createdAt: now.toISOString() });
+    return match;
+  }
+  if (powerupId === "speed_challenge") {
+    if (match.speedChallenge) throw Object.assign(new Error("Speed Challenge has already been used in this match."), { status: 409 });
+    match.speedChallenge = {
+      startedBy: userId, startedAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 52000).toISOString(),
+      durationMs: 52000, multiplier: 2
+    };
+    match.events.push({ id: randomUUID(), type: "speed_challenge_started", side, durationMs: 52000, multiplier: 2, createdAt: now.toISOString() });
+    return match;
+  }
   if (powerupId === "shield") {
     match.activeEffects = match.activeEffects.filter(item => new Date(item.expiresAt).getTime() > now.getTime());
     if (match.activeEffects.some(item => item.type === "shield" && item.side === side)) {
@@ -714,9 +802,25 @@ export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new 
     match.endsAt = new Date(new Date(match.endsAt).getTime() + powerup.durationMs).toISOString();
     match.events.push({ id: randomUUID(), type: "time_boost_used", side, addedSeconds: 30, createdAt: now.toISOString() });
   } else {
-    match.activeEffects = match.activeEffects.filter(item => new Date(item.expiresAt).getTime() > now.getTime());
-    match.activeEffects.push({ id: randomUUID(), type: powerupId, side, multiplier: powerup.multiplier, expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(), createdAt: now.toISOString() });
-    match.events.push({ id: randomUUID(), type: "score_effect_used", side, powerupId, multiplier: powerup.multiplier, durationMs: powerup.durationMs, createdAt: now.toISOString() });
+    match.activeEffects = (match.activeEffects || []).filter(item => new Date(item.expiresAt).getTime() > now.getTime());
+    const effect = { id: randomUUID(), type: powerupId, side, durationMs: powerup.durationMs, expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(), createdAt: now.toISOString() };
+    if (powerupId === "stun_hammer") effect.targetSide = side === "challenger" ? "opponent" : "challenger";
+    if (powerupId === "boosters") {
+      const targetRank = Number(options.boosterRank);
+      if (![2, 3].includes(targetRank)) throw Object.assign(new Error("Choose the No. 2 or No. 3 gifter for Boosters."), { status: 400 });
+      effect.targetRank = targetRank;
+      effect.multiplier = 2;
+    }
+    if (powerupId === "boosting_glove") {
+      effect.chance = 0.30;
+      effect.multiplier = 5;
+    }
+    match.activeEffects.push(effect);
+    match.events.push({
+      id: randomUUID(), type: "powerup_activated", side, powerupId,
+      targetRank: effect.targetRank || null, targetSide: effect.targetSide || null,
+      multiplier: effect.multiplier || null, durationMs: powerup.durationMs, createdAt: now.toISOString()
+    });
   }
   db.creatorLeaguePowerupUses.push({ id: randomUUID(), userId, powerupId, matchId: match.id, dayKey, createdAt: now.toISOString() });
   return match;
@@ -726,8 +830,28 @@ function publicMember(users, id) {
   return user ? { id: user.id, name: user.name || user.displayName || user.username || "Minglora creator", username: user.username || "creator", avatarUrl: user.avatarUrl || user.avatar_url || user.avatar || null } :
     { id, name: "Minglora creator", username: "creator", avatarUrl: null };
 }
-function decorateMatch(match, users) {
-  return { ...match, challenger: publicMember(users, match.challengerId), opponent: publicMember(users, match.opponentId) };
+function decorateMatch(match, users, viewerId, now = new Date()) {
+  const decorated = {
+    ...match,
+    scores: { ...(match.scores || { challenger: 0, opponent: 0 }) },
+    activeEffects: (match.activeEffects || []).filter(effect => Date.parse(effect.expiresAt || "") > now.getTime()),
+    challenger: publicMember(users, match.challengerId),
+    opponent: publicMember(users, match.opponentId),
+    scoreVisibility: { challenger: true, opponent: true }
+  };
+  const viewerSide = match.challengerId === viewerId ? "challenger" : match.opponentId === viewerId ? "opponent" : "";
+  const hiddenSide = decorated.activeEffects.find(effect =>
+    effect.type === "magic_mist" && effect.side && effect.side !== viewerSide
+  )?.side;
+  if (hiddenSide) {
+    decorated.scoreVisibility[hiddenSide] = false;
+    decorated.scores[hiddenSide] = null;
+  }
+  decorated.matchEffects = decorated.activeEffects.map(effect => ({
+    type: effect.type, side: effect.side, targetSide: effect.targetSide || null,
+    targetRank: effect.targetRank || null, expiresAt: effect.expiresAt
+  }));
+  return decorated;
 }
 export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
   ensureCollections(db);
@@ -744,7 +868,7 @@ export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
   });
   return matches
     .sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt))
-    .slice(0, 50).map(match => decorateMatch(match, users));
+    .slice(0, 50).map(match => decorateMatch(match, users, userId, now instanceof Date ? now : new Date(now)));
 }
 export function getCreatorLeagueLeaderboard(db, user, options = {}) {
   ensureCollections(db);
@@ -851,7 +975,10 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
     classes: CREATOR_LEAGUE_CLASSES.slice().reverse(),
     leaderboard: leaders,
     recentEvents: db.creatorLeagueEvents.filter(item => item.userId === user.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 12),
-    powerups: MATCH_POWERUPS.map(item => ({ ...item, usedToday: uses.some(use => use.powerupId === item.id) })),
+    powerups: MATCH_POWERUPS.map(item => ({
+      ...item,
+      usedToday: !["time_maker", "speed_challenge"].includes(item.id) && uses.some(use => use.powerupId === item.id)
+    })),
     activeMatches: listCreatorLeagueMatches(db, db.users, user.id, now)
   };
 }
