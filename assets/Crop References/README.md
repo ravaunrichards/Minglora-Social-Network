@@ -12,7 +12,7 @@ This directory is the **single source of truth** for the supplied cropped refere
 
 ## 1. Gifter Badge Progression
 
-**Source folder:** `Gifters Badges/Png/`
+**Source folder:** `Gifters Badges/`
 
 Six cropped milestone badge PNG images:
 
@@ -25,7 +25,7 @@ Six cropped milestone badge PNG images:
 
 **Application routes:** `/assets/gifter-crop-badges/range-1.png` through `/assets/gifter-crop-badges/range-6.png`.
 
-**Progression behavior:** The six PNG overlays align with the existing progression strip and reveal in earned order at Levels **1, 10, 20, 30, 40, and 50**. Unreached stages remain hidden/muted; reached stages use the supplied cropped artwork with stronger brightness, saturation, scale and glow. These overlays do not replace the 50 individual member Gifter badges. Five genuine layered PSD source files are preserved in `Gifters Badges/psd/`; duplicate legacy PSD copies are not kept.
+**Progression behavior:** The six PNG overlays align with the existing progression strip and reveal in earned order at Levels **1, 10, 20, 30, 40, and 50**. Unreached stages remain hidden/muted; reached stages use the supplied cropped artwork with stronger brightness, saturation, scale and glow. These overlays do not replace the 50 individual member Gifter badges. The six supplied PNGs are the canonical milestone artwork; do not substitute older versions or add duplicate copies.
 
 ## 2. Gifter Level Range Sheets
 
@@ -40,9 +40,9 @@ The six cropped PNG range sheets are the primary reference-gallery images:
 - `LV.40 - LV.49.png`
 - `LV.50+.png`
 
-They are served through `/assets/gifter-badge-range-sheets/lv-1-9.png`, `lv-10-19.png`, `lv-20-29.png`, `lv-30-39.png`, `lv-40-49.png`, and `lv-50-plus.png` (explicit PNG routes). The uploaded JPG companions remain in the folder for source/reference preservation; the Gifter range gallery uses the PNG files.
+They are served through `/assets/gifter-badge-range-sheets/lv-1-9.png`, `lv-10-19.png`, `lv-20-29.png`, `lv-30-39.png`, `lv-40-49.png`, and `lv-50-plus.png` (explicit PNG routes). The six supplied PNGs are the canonical range-sheet artwork. No JPG companion is required or used by the Gifter range gallery.
 
-These are full range/reference-sheet artwork. Keep them separate from the six milestone-overlay PNGs in `Gifters Badges/Png/` and from the 50 individual badge image files.
+These are full range/reference-sheet artwork. Keep them separate from the six milestone-overlay PNGs in `Gifters Badges/` and from the 50 individual badge image files.
 
 ## 3. Daily Ranking Badges
 
