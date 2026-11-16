@@ -262,3 +262,11 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 | Cache | HTML and service worker share the versioned gift-effects bundle; the shell cache is incremented to invalidate the old bundle. |
 
 The canonical gift code, catalogue data, configured Coin value, active flag, database rows, wallets and transaction flow are unchanged. This asset remains design-review-pending; human approval, rights review and device QA remain open.
+
+## LIVE provider readiness status icons — 2026-11-16
+
+- Added three original 24×24 SVG state marks under `public/assets/icons/live-provider-status/`: ready, not configured and unavailable.
+- `public/app.js` derives the state only from the existing provider response (`status.configured` and `status.connected === true`), retains the existing text label and places an aria-hidden icon inside the status pill.
+- `public/styles.css` sizes the icon at 14×14 and keeps the pill inline-flex; `public/sw.js` caches the icon manifest and all three symbols offline.
+- The unified LIVE asset manifest inventories the pack with three icon records and component usage. Unit coverage checks its files, hashes, state mapping, cache entries and manifest registration.
+- This represents setup/provider readiness, not a real-time LiveKit room connection/reconnect event. Human visual/rights review and physical-device QA remain open.

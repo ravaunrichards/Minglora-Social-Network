@@ -436,3 +436,10 @@ The browser captures establish that all nine bespoke models load and remain visi
 - CI passed **1,249 tests, 0 failures** (run 43806288226). LIVE/MeetWave layout, profile and AI acceptance passed (runs 43806288194, 43806288351 and 43806288243).
 - Chromium WebGL passed **14 gifts × 3 viewports = 42/42 model renders and 42/42 non-empty pixel checks**, 42 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (run 43806288238; artifact `minglora-live-gift-model-render-evidence`, ID `14199075355`, 9,327,718 bytes).
 - The model and artwork remain `design-review-pending`. Human visual acceptance, rights clearance, professional audio review/mastering and physical-device QA remain outstanding. No production activation, database, pricing, wallet, ledger, transaction or deployment change is claimed.
+
+## LIVE provider readiness status icon pack — 2026-11-16
+
+- Added three original 24×24 SVG status assets with a machine-readable manifest: configured-and-connected, not-configured, and configured-but-unavailable.
+- Integrated the icons into the existing LIVE provider readiness pill using the actual provider response; retained the visible status wording and aria-hidden decorative SVG use.
+- Registered the pack in the unified LIVE asset manifest, service-worker offline cache, and unit tests. Fresh current-main verification is required on the resulting PR before completion is claimed.
+- The icons represent provider/setup readiness, not a real-time media-room connectivity/reconnect indicator. Human visual and rights review plus physical-device QA remain outstanding.

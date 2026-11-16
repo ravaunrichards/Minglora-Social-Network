@@ -25,3 +25,10 @@ Track asset identifier, relative path, source, license, content type, dimensions
 - Each standalone SVG record includes path, SHA-256, 24×24 viewBox, component usage, visual-review state and rights-review state.
 - CI validates all 18 room-control icons and all 22 gift-category icons before publishing the generated manifest. The two active-state variants cover stopping screen sharing and exiting fullscreen; the pack still records design/licensing review as pending.
 - The packs are individually addressable UI vector assets; this does not certify premium 3D gift art or human design approval.
+
+## LIVE provider status SVG pack
+
+- Path: `public/assets/icons/live-provider-status/` (`manifest.json`, `provider-ready.svg`, `provider-not-configured.svg`, `provider-unavailable.svg`).
+- These are original Minglora 24×24 outline SVG symbols with inherited `currentColor`; the visible provider-status label remains authoritative.
+- State comes from the existing provider response (`configured` and `connected === true`). The pack describes setup/provider readiness only; it is not a LiveKit room reconnect heartbeat.
+- Human visual and rights review remain pending; generated manifest inventory is not a premium-quality approval.

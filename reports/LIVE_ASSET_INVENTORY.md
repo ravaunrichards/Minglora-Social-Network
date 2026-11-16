@@ -310,3 +310,9 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - Original reference inspected: owner-supplied Library asset `Dewy Red Rose with Golden Bow.png` (1254×1254 RGBA); preserved read-only and not copied into public application assets.
 - The existing Rose model source and generated SVG now include gift-specific golden satin bow geometry/artwork; no new catalogue record or gift price is created.
 - Runtime additions: exact-code `rose-unfurl` motion profile and a synthesized, non-mastered audio cue. Catalogue counts and all other gifts remain unchanged.
+
+## LIVE provider readiness icons — 2026-11-16
+
+- Added `public/assets/icons/live-provider-status/manifest.json` plus `provider-ready.svg`, `provider-not-configured.svg` and `provider-unavailable.svg` (three original 24×24 SVG symbol assets).
+- Consumers: `public/app.js` provider-readiness pill; `public/styles.css`; `public/sw.js` offline shell; `scripts/generate-minglora-live-asset-manifest.mjs`.
+- The pack is included in the unified generated inventory as `minglora-live-provider-status`, with three records. All visual/licensing approval flags remain review-required; this is not a claim of premium-art approval.

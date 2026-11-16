@@ -502,6 +502,13 @@ function buildManifest() {
     "live-tools",
     ["public/app.js", "public/live-tiktok-compact.css"]
   );
+  const liveProviderStatusIconPack = svgIconPackRecord(
+    "public/assets/icons/live-provider-status/manifest.json",
+    "icons",
+    "minglora-live-provider-status",
+    "live-provider-status",
+    ["public/app.js", "public/styles.css"]
+  );
   const activeCount = gifts.filter(gift => gift.active).length;
   const inactiveCount = gifts.length - activeCount;
   return {
@@ -519,7 +526,8 @@ function buildManifest() {
       "public/app.js",
       "public/assets/icons/live-controls/manifest.json",
       "public/assets/icons/live-gift-categories/manifest.json",
-      "public/assets/icons/live-tools/manifest.json"
+      "public/assets/icons/live-tools/manifest.json",
+      "public/assets/icons/live-provider-status/manifest.json"
     ],
     summary: {
       catalogue_gift_count: gifts.length,
@@ -539,9 +547,10 @@ function buildManifest() {
       live_control_icon_count: liveControlIconPack.icon_count,
       live_gift_category_icon_count: liveGiftCategoryIconPack.icon_count,
       live_tools_shortcut_icon_count: liveToolsShortcutIconPack.icon_count,
+      live_provider_status_icon_count: liveProviderStatusIconPack.icon_count,
       required_generated_files_verified: true
     },
-    shared_assets: { icons: [iconSheet, pushIcon, liveControlIconPack, liveGiftCategoryIconPack, liveToolsShortcutIconPack] },
+    shared_assets: { icons: [iconSheet, pushIcon, liveControlIconPack, liveGiftCategoryIconPack, liveToolsShortcutIconPack, liveProviderStatusIconPack] },
     gifts
   };
 }
