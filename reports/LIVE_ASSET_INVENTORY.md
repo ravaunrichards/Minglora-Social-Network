@@ -314,3 +314,14 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - All generated assets remain review-required; the source model sets design-review-pending. No screenshot crop, source-company artwork, trademark, third-party gift artwork or copied sound recording is used.
 - No production Supabase gift row, coin offer, wallet, purchase, transaction, payout, user data or deployment was changed. Existing production activation and asset-review gates remain in force.
 - Generated output, repository tests, CI and isolated Chromium model rendering must pass before this source can be called integrated. Human visual/rights approval and physical-device QA remain separate requirements.
+
+
+## LIVE provider readiness SVG assets — 2026-11-16
+
+| Asset | SVG | UI state |
+|---|---|---|
+| Provider ready | `public/assets/icons/live-provider-status/provider-ready.svg` | LiveKit provider configured and connected |
+| Provider not configured | `public/assets/icons/live-provider-status/provider-not-configured.svg` | Provider configuration is absent |
+| Provider unavailable | `public/assets/icons/live-provider-status/provider-unavailable.svg` | Provider configured but connectivity check failed |
+
+Manifest: `public/assets/icons/live-provider-status/manifest.json`. All are original 24×24 currentColor vector glyphs, loaded from the LIVE setup status pill. Runtime mapping is in `public/app.js`; compact sizing in `public/styles.css`; offline cache entries in `public/sw.js`. All three remain design-review-pending. This pack only covers the existing LIVE setup provider-readiness pill, not the independent LiveKit room's runtime reconnect lifecycle or each control's active/loading/error state.

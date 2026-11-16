@@ -25,3 +25,11 @@ Track asset identifier, relative path, source, license, content type, dimensions
 - Each standalone SVG record includes path, SHA-256, 24×24 viewBox, component usage, visual-review state and rights-review state.
 - CI validates all 18 room-control icons and all 22 gift-category icons before publishing the generated manifest. The two active-state variants cover stopping screen sharing and exiting fullscreen; the pack still records design/licensing review as pending.
 - The packs are individually addressable UI vector assets; this does not certify premium 3D gift art or human design approval.
+
+## LIVE provider status SVG pack
+
+- `public/assets/icons/live-provider-status/` contains original `provider-ready.svg`, `provider-not-configured.svg` and `provider-unavailable.svg` icons with a shared 24×24 viewBox, currentColor stroke and an individual manifest.
+- `public/app.js` selects the icon only from the actual provider response: ready, not configured or connection unavailable. The existing human-readable status remains visible; the decorative SVG is aria-hidden.
+- `public/styles.css` preserves a compact inline icon/text pill.
+- The service worker pre-caches the manifest and all three SVG files.
+- The unified LIVE asset manifest inventories this pack, file hashes and pending design/rights review. Automated SVG validation is not human approval.
