@@ -22,6 +22,9 @@ test("all 50 Gifter levels serve the six uploaded bright cropped badge reference
   assert.match(server, /badgeLevel<=49\s*\?\s*'LV\.40 - LV\.49\.png'/);
   assert.match(server, /'LV\.50\+\.png'/);
   assert.match(server, /'Crop References','Gifters Badges','Png'/);
+  assert.match(server, /gifter-crop-range-sheets\\/lv-1-9\\.png/);
+  assert.match(server, /'Crop References','Gifter level range sheets'/);
+  assert.match(read("public/gifter-progression.js"), /gifter-crop-range-sheets/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
@@ -54,8 +57,9 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v334-crop-reference-assets-1/);
+  assert.match(serviceWorker, /minglora-shell-v335-crop-reference-assets-1/);
   assert.match(html, /app\.js\?v=20261116-crop-reference-integration-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-1/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-crop-bright-earned-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-cropped-range-sheet-references-1/);
 });
