@@ -308,3 +308,14 @@
 
 .league-powerup-btn-icon{display:grid;place-items:center;min-height:28px;margin-bottom:4px}
 .league-powerup-btn-icon .league-powerup-svg-icon{display:block;width:28px;height:28px}
+
+/* LIVE Match Power-Ups: supplied League SVGs, clear availability and touch-safe controls. */
+.live-match-powerups button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:78px;padding:9px 7px;text-align:center;white-space:normal}
+.live-match-powerup-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px}
+.live-match-powerup-icon .league-powerup-svg-icon{display:block;width:32px;height:32px;filter:drop-shadow(0 2px 3px rgba(15,25,45,.18))}
+.live-match-powerups button strong{font-size:10px;line-height:1.2}
+.live-match-powerups button small{font-size:9px;line-height:1.2;color:var(--muted);font-weight:750}
+.live-match-powerups button:disabled{opacity:.58;cursor:not-allowed;border-style:dashed}
+.live-match-powerups button:disabled small{color:var(--muted)}
+@media(max-width:420px){.live-match-powerups button{min-height:74px;padding:7px 5px}.live-match-powerup-icon .league-powerup-svg-icon{width:29px;height:29px}}
+@media(prefers-reduced-motion:reduce){.live-match-powerups button{transition:none!important}}
