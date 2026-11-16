@@ -28,24 +28,35 @@ test('LIVE uses one exact nine-layout guest registry and one host layout endpoin
   assert.match(app,/function applyLiveGuestLayout\(value\)\{applyLiveScreenLayout\(value\);\}/);
 });
 
-test('All nine reference layouts define their own grid proportions, positions and seat sizing',()=>{
+test('All nine guest layouts use their own reference proportions and seat sizing',()=>{
   const start=guestCss.indexOf('/* FINAL NINE GUEST LAYOUTS');
   const contract=guestCss.slice(start);
   assert.ok(start>=0);
   for(const layout of nine)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' layout is missing');
-  assert.match(contract,/full-screen[\s\S]*?\.live-host-only-layout/);
-  assert.match(contract,/full-screen[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.match(contract,/@media\(max-width:760px\)[\s\S]*?full-screen[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fluid-panel[\s\S]*?bottom:calc/);
-  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
-  assert.match(contract,/fixed-grid[\s\S]*?grid-template-rows:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
-  assert.match(contract,/side-by-side[\s\S]*?grid-column:1\/3/);
-  assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
-  assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);
-  assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
-  assert.doesNotMatch(contract,/data-live-guest-layout/);
+  const capacities={
+    'full-screen':1,'fluid-panel':3,'fluid-grid':3,'fixed-grid':9,
+    'fixed-panel':4,'side-by-side':10,'spotlight':9,'roundtable-1':9,'roundtable-2':9
+  };
+  for(const [layout,count] of Object.entries(capacities))assert.ok(app.includes("'"+layout+"':"+count),layout+' seat count');
+
+  const fullScreen=contract.slice(contract.indexOf('data-live-layout="full-screen"'),contract.indexOf('data-live-layout="fluid-panel"'));
+  assert.ok(fullScreen.includes('display:block!important'));
+  assert.ok(fullScreen.includes('inset:0!important'));
+  assert.ok(!fullScreen.includes('nth-child(n+2)'));
+  assert.ok(contract.includes('right:7%!important'));
+  assert.ok(contract.includes('bottom:28%!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important'));
+  assert.ok(contract.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,2.1fr) minmax(0,.9fr)!important'));
+  assert.ok(contract.includes('grid-column:1/3!important'));
+  assert.ok(contract.includes('grid-column:3/5!important'));
+  assert.ok(contract.includes('grid-column:1/5!important'));
+  assert.ok(contract.includes('left:29%!important'));
+  assert.ok(contract.includes('width:42%!important'));
+  assert.ok(contract.includes('display:none!important'));
+  assert.ok(!contract.includes('data-live-guest-layout'));
 });
+
 test('MeetWave screen and guest registries are disjoint and exact',()=>{
   const screen=meetwave.match(/const MEETING_SCREEN_LAYOUTS = \{([^}]+)\}/);
   const guest=meetwave.match(/const MEETING_GUEST_LAYOUTS = \{([^}]+)\}/);

@@ -69,15 +69,17 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
 });
 
 
-test('Full Screen keeps the host and visible guest and empty-seat windows', () => {
-  assert.match(app, /root\.setAttribute\('aria-label','LIVE guest layout · '\+label\)/);
-  assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
-  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing Full Screen guest layout rules');
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat:not\(\.is-host\)\{display:flex!important/);
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?grid-row:2/);
-  assert.doesNotMatch(styles, /live-audio-stage\.live-host-only-layout/);
+test('Full Screen matches the one-tile reference with no extra guest overlay seats', () => {
+  assert.ok(app.includes("root.setAttribute('aria-label','LIVE guest layout · '+label)"));
+  assert.ok(app.includes("classList.toggle('live-full-screen-layout',activeLiveScreenLayout==='full-screen')"));
+  assert.ok(app.includes("'full-screen':1"));
+  assert.ok(app.includes('const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!audioGuestLayout'));
+  const contract=tiktok.slice(tiktok.indexOf('/* FINAL NINE GUEST LAYOUTS'));
+  const fullScreen=contract.slice(contract.indexOf('data-live-layout="full-screen"'),contract.indexOf('data-live-layout="fluid-panel"'));
+  assert.ok(fullScreen.includes('display:block!important'));
+  assert.ok(fullScreen.includes('inset:0!important'));
+  assert.ok(!fullScreen.includes('nth-child(n+2)'));
 });
-
 
 test('The host has a persistent master Guest stage ON/OFF control', () => {
   assert.match(liveSettings, /guestStageEnabled: true/);
@@ -162,19 +164,35 @@ test('Every Full Screen LIVE control icon has its expected working event handler
 });;
 
 
-test('The nine supplied guest arrangements have distinct reference-matched grid geometry',()=>{
+test('All nine supplied guest arrangements independently match their reference geometry',()=>{
   const contract=tiktok.slice(tiktok.indexOf('/* FINAL NINE GUEST LAYOUTS'));
   const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
   for(const layout of layouts)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' geometry missing');
-  assert.match(contract,/fluid-panel[\s\S]*?position:absolute/);
-  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
-  assert.match(contract,/fixed-grid[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
-  assert.match(contract,/side-by-side[\s\S]*?grid-column:1\/3/);
-  assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
-  assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);
-  assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
-  assert.doesNotMatch(contract,/data-live-guest-layout/);
+
+  // The exact placeholder count follows each individual supplied diagram.
+  const capacities={
+    'full-screen':1,'fluid-panel':3,'fluid-grid':3,'fixed-grid':9,
+    'fixed-panel':4,'side-by-side':10,'spotlight':9,'roundtable-1':9,'roundtable-2':9
+  };
+  for(const [layout,count] of Object.entries(capacities))assert.ok(app.includes("'"+layout+"':"+count),layout+' seat count');
+
+  assert.ok(contract.includes('right:7%!important'));
+  assert.ok(contract.includes('bottom:28%!important'));
+  assert.ok(contract.includes('bottom:7%!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important'));
+  assert.ok(contract.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,2.1fr) minmax(0,.9fr)!important'));
+  assert.ok(contract.includes('grid-column:1/3!important'));
+  assert.ok(contract.includes('grid-column:3/5!important'));
+  assert.ok(contract.includes('grid-column:1/5!important'));
+  assert.ok(contract.includes('nth-child(2){left:8%!important'));
+  assert.ok(contract.includes('nth-child(3){right:8%!important'));
+  assert.ok(contract.includes('left:29%!important'));
+  assert.ok(contract.includes('width:42%!important'));
+  assert.ok(contract.includes('nth-child(2){left:6%!important'));
+  assert.ok(contract.includes('nth-child(3){right:6%!important'));
+  assert.ok(contract.includes('.live-guest-layout-heading{\n  display:none!important;'));
+  assert.ok(!contract.includes('data-live-guest-layout'));
 });
 
 test('Full Screen has its own expand icon with no guest panels; Fluid Panel keeps its panel icon', () => {

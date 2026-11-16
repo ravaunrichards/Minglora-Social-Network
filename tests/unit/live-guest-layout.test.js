@@ -8,19 +8,26 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 
-test('Minglora LIVE Full Screen starts host-only and adds seats only for active guest speakers', () => {
-  assert.match(app, /let activeLiveScreenLayout='full-screen'/);
-  assert.match(app, /const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!root\.closest\("\.live-audio-stage"\)/);
-  assert.match(app, /function participantHasLiveStageMedia\(participant\)/);
-  assert.match(app, /isLiveMedia&&\(publication\?\.track\|\|publication\?\.isSubscribed===true\)/);
-  assert.match(app, /if\(role==="guest"&&local&&participantHasLiveStageMedia\(local\)\)guests\.push\(local\)/);
-  assert.match(app, /root\.classList\.toggle\("has-active-guests",fullScreenHostOnly&&guests\.length>0\)/);
-  assert.match(app, /if\(!fullScreenHostOnly\)while\(specs\.length<9\)/);
-  assert.match(app, /if\(fullScreenHostOnly\)root\.replaceChildren\(\.\.\.nodes\)/);
-  assert.match(app, /data-open-guest-panel/);
-  assert.match(app, /#live-guests-toggle/);
+test('Minglora LIVE Full Screen remains the single-tile reference layout', () => {
+  assert.ok(app.includes("let activeLiveScreenLayout='full-screen'"));
+  assert.ok(app.includes('const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!audioGuestLayout'));
+  assert.ok(app.includes('function participantHasLiveStageMedia(participant)'));
+  assert.ok(app.includes('isLiveMedia&&(publication?.track||publication?.isSubscribed===true)'));
+  assert.ok(app.includes('if(role==="guest"&&local&&participantHasLiveStageMedia(local))guests.push(local)'));
+  assert.ok(app.includes("'full-screen':1"));
+  assert.ok(app.includes('guests.slice(0,Math.max(0,stageSeatCount-1))'));
+  assert.ok(app.includes('if(!fullScreenHostOnly)while(specs.length<stageSeatCount)'));
+  assert.ok(app.includes('root.classList.remove("has-active-guests","has-many-guests")'));
+  assert.ok(app.includes('if(header)root.replaceChildren(header,...nodes)'));
+  assert.ok(app.includes('data-open-guest-panel'));
+  assert.ok(app.includes('#live-guests-toggle'));
 });
 
+test('Video LIVE guest placeholders are clean clickable reference tiles; audio retains its speaker header', () => {
+  assert.ok(app.includes('seat.replaceChildren()'));
+  assert.ok(app.includes('const header=audioGuestLayout?document.createElement("div"):null'));
+  assert.ok(app.includes('if(header)root.replaceChildren(header,...nodes)'));
+});
 test('Guest camera tracks attach to their participant seat and disappear on unsubscribe or disconnect', () => {
   assert.match(app, /\.live-guest-seat-media/);
   assert.match(app, /seat\?\.classList\.add\("has-video"\)/);
