@@ -53,6 +53,9 @@ test("League Arena displays the user's original uploaded division, class and fra
   assert.match(league, /league-original-reference-gallery/);
   assert.match(league, /league-original-fragment-references/);
   assert.match(league, /league-progression-reference-image/);
+  assert.match(league, /Original 18-class progression/);
+  assert.match(league, /league-class-ladder league-tier-grid/);
+  assert.doesNotMatch(league, /Screenshot_20261112_020247_TikTok\(1\)\.jpg|league-original-reference--class-order|league-class-order-reference-image|Original class-order reference/);
   assert.doesNotMatch(league, /leagueAssetIcon\("division-/);
   assert.doesNotMatch(league, /leagueAssetIcon\("fragment-/);
   assert.doesNotMatch(league, /leagueAssetIcon\("rank-/);
