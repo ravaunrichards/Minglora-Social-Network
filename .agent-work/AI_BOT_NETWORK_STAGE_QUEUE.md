@@ -563,3 +563,26 @@ Completed draft work: conversation/turn schema and private RPC; per-owner scopin
 Required continuation order: (1) commit on feature branch and open PR, (2) execute focused AI checks and full CI, repair failures, (3) apply migration to existing Minglora Supabase project, verify grants/RLS/function, (4) deploy the existing Edge Function without changing its custom authentication setting and verify version, (5) seek real owner/provider acceptance when a configured credential and authorized browser session are available, (6) merge only after verifications.
 
 Do not seed identities, users, conversations or fake provider results. No autonomous worker, follow, publish, outbound messaging or financial path is enabled. Report the current verified count and tested capacity separately; 10 billion remains architectural only.
+
+## 2026-11-16 — Task 1A1 verification and release gates
+
+**Task ID:** 1A1 — Human-initiated owner-only AI bot conversations  
+**Status:** SOURCE COMMITTED / AI-SPECIFIC CI PASS / NOT PRODUCTION RELEASED
+
+Verified on branch `feat/minglora-supervised-bot-conversations`, PR #394, head `6f012106a8dfe6225412bbac740173f575ab5903`:
+- AI Network syntax and regression checks: PASS.
+- AI Network browser acceptance: PASS.
+- Seven-plus-two LIVE/MeetWave visual QA: PASS.
+- The focused tests check owner scoping, linked Bot Lab identities, the interrupted-turn recovery timeout, private service-role-only access, MFA/admin gates, provider health, memory consent, and token reservations.
+
+Full repository CI is not green. Four failing tests were reproduced on both this PR's merged test revision and current `main` commit `3757c31f3c7ca5fbae534ea89c373f16a6fa39bd`: Gifter reference placement (`lv-1-9.jpg`), LIVE identity display, Full Screen expand icon, and LIVE compact stylesheet version. They are unrelated to Task 1A1 and have not been modified here.
+
+**Existing Supabase verification:**
+- Existing project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY, PostgreSQL 17.11.0.003.
+- `ai_network`: 54 tables, each with RLS enabled; 15 active categories; 20 department templates; 20 position templates.
+- AI identities, profiles, names, email identities, provider accounts/models/assignments, organizations, departments, positions, task queue and approvals: zero live records.
+- The two conversation tables are absent and their migration is not in the production migration history.
+- Existing `minglora-runtime-state` is ACTIVE v131 and does not include `ai_conversation_command`; its custom-auth setting remains unchanged.
+- Runtime control remains paused and execution-disabled with zero concurrent workers.
+
+**Do not mark complete or deploy yet.** Remaining release gates: reconcile the feature branch with current main (4 commits ahead / 162 behind at this checkpoint), resolve current-main CI failures in their separate feature work, review and validate the additive migration outside production or through the approved release process, verify grants/RLS/RPC, deploy the updated existing Edge Function without changing its custom-auth configuration, then perform real owner/MFA and configured-provider acceptance. No production migration, Edge deployment, live AI generation, mailbox provisioning, worker execution, human Auth creation or synthetic data creation has occurred. The 10-billion target remains architectural and has no measured capacity result.
