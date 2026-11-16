@@ -21,12 +21,12 @@
   ]);
 
   const BADGE_RANGE_SHEETS = Object.freeze([
-    { file: "lv-1-9.png", label: "LV.1 – LV.9", alt: "Original Gifter badge range reference, Levels 1 through 9" },
-    { file: "lv-10-19.png", label: "LV.10 – LV.19", alt: "Original Gifter badge range reference, Levels 10 through 19" },
-    { file: "lv-20-29.png", label: "LV.20 – LV.29", alt: "Original Gifter badge range reference, Levels 20 through 29" },
-    { file: "lv-30-39.png", label: "LV.30 – LV.39", alt: "Original Gifter badge range reference, Levels 30 through 39" },
-    { file: "lv-40-49.png", label: "LV.40 – LV.49", alt: "Original Gifter badge range reference, Levels 40 through 49" },
-    { file: "lv-50-plus.png", label: "LV.50+", alt: "Original Gifter badge range reference, Level 50 and above" }
+    { file: "lv-1-9.jpg", label: "LV.1 – LV.9", alt: "Original Gifter badge range reference, Levels 1 through 9" },
+    { file: "lv-10-19.jpg", label: "LV.10 – LV.19", alt: "Original Gifter badge range reference, Levels 10 through 19" },
+    { file: "lv-20-29.jpg", label: "LV.20 – LV.29", alt: "Original Gifter badge range reference, Levels 20 through 29" },
+    { file: "lv-30-39.jpg", label: "LV.30 – LV.39", alt: "Original Gifter badge range reference, Levels 30 through 39" },
+    { file: "lv-40-49.jpg", label: "LV.40 – LV.49", alt: "Original Gifter badge range reference, Levels 40 through 49" },
+    { file: "lv-50-plus.jpg", label: "LV.50+", alt: "Original Gifter badge range reference, Level 50 and above" }
   ]);
 
   function isGifterViewActive() {
@@ -131,7 +131,7 @@
       "<div class='gp-range-reference-grid'>" +
       BADGE_RANGE_SHEETS.map(sheet =>
         "<figure class='gp-reference-figure gp-range-reference-figure'><figcaption><strong>" + esc(sheet.label) + "</strong><span>Original range reference</span></figcaption>" +
-        "<img src='/assets/gifter-crop-range-sheets/" + sheet.file + "' alt='" + esc(sheet.alt) + "' loading='lazy' decoding='async'></figure>"
+        "<img src='/assets/gifter-badge-range-sheets/" + sheet.file + "' alt='" + esc(sheet.alt) + "' loading='lazy' decoding='async'></figure>"
       ).join("") + "</div></section>";
   }
 
