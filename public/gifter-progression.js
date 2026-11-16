@@ -229,8 +229,8 @@
     const track = progressionTrackState(current);
     const earnedStageBadges = track.hasGifterBadge
       ? PROGRESSION_TRACK_STAGES.map((stageLevel, index) => track.level >= stageLevel
-        ? "<img class='gp-progression-range-badge' src='/assets/gifter-badges/level_" +
-          String(stageLevel).padStart(2, "0") + ".png' style='left:" +
+        ? "<img class='gp-progression-range-badge' src='/assets/gifter-crop-badges/range-" +
+          (index + 1) + ".png' style='left:" +
           ((PROGRESSION_TRACK_CENTERS[index] / 1080) * 100).toFixed(3) +
           "%' alt='' aria-hidden='true' loading='eager' decoding='async'>"
         : "").join("")
