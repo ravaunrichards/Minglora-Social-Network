@@ -148,3 +148,12 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - LIVE audio: locally synthesized low body rumble, filtered jaw snap and short descending tones; not a mastered or recorded animal sound
 - Review state: `design-review-pending`; human visual, rights and physical-device approval is not implied
 - Integration: exact canonical gift code only; source catalogue metadata, configured 10-Coin value, active flag, database rows and transaction flow remain unchanged
+
+
+## Rose golden satin bow refinement v3 — 2026-11-16
+
+- Canonical gift: Rose (`rose-4ieccm`); the owner-supplied transparent PNG reference `Dewy Red Rose with Golden Bow.png` was inspected read-only and preserved unchanged.
+- The existing source adds two satin bow loops, two flowing ribbon tails, a central knot, fold details and additional dew; crimson petal materials were deepened to better match the reference.
+- Existing build paths and canonical gift ID, configured price, active flag, production database and transaction flow remain unchanged.
+- LIVE adds exact-code `rose-unfurl` Web Animations choreography and a locally synthesized petal-rustle/celesta-like Web Audio cue; this is not a mastered recording or standalone Lottie/Rive/video asset.
+- Review state remains `design-review-pending`; human art/rights review and physical-device QA are still required.
