@@ -293,3 +293,9 @@ The Rose reference refinement adds distinct satin-ribbon loop surfaces, a centra
 **Automated result:** CI passed 1,249/1,249 tests. The 14-model Chromium matrix passed 42/42 model and 42/42 pixel checks across desktop/tablet/mobile, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (run 43806288238; artifact 14199075355). LIVE/MeetWave layout, profile visual and AI browser suites also passed.
 
 **Acceptance boundary:** these automated checks do not establish human visual/design approval, rights clearance, audio mastering, embedded glTF animation, Lottie/Rive export, texture-map/KTX2 completion or physical-device compatibility. The Rose v3 remains design-review-pending; the audio cue remains synthesized and review-required.
+
+## LIVE provider status SVG pack — 2026-11-16
+
+- Three original same-origin SVG symbols were added for configured-and-connected, not-configured and configured-but-unavailable provider states. All use a 24×24 viewBox, `currentColor` and the established status pill's visual language.
+- Automated review verifies SVG files and manifest paths/hashes, accessible decorative treatment, actual response-based state mapping and service-worker inclusion. The text label remains visible and authoritative.
+- Quality boundary: these are lightweight status indicators, not 3D artwork or animated network-health indicators. Human visual approval, rights sign-off and physical-device verification remain pending.

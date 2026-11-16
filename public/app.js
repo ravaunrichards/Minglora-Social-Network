@@ -1414,6 +1414,7 @@ function bindLiveDirectoryCards(sessions){
 }
 function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   const liveReady=Boolean(status.configured&&status.connected===true);
+  const liveProviderStatusState=!status.configured?"not-configured":liveReady?"ready":"unavailable";
   const liveStatusText=!status.configured?"Live provider not configured":liveReady?"LiveKit ready":"Live provider connection failed";
   const cards=sessions.length?sessions.map(liveSessionCardMarkup).join(""):status.liveDirectoryError
     ?"<section class='card empty-state'><div class='empty-icon'>📡</div><h3>LIVE directory unavailable</h3><p>"+esc(status.liveDirectoryError)+"</p></section>"
@@ -1428,7 +1429,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
   ];
   const modeCards=modeOptions.map(option=>"<label class='live-mode-card'><input type='radio' name='liveMode' value='"+option.value+"' "+(selectedMode===option.value?'checked':'')+"><span class='live-mode-icon'>"+(option.icon==='live'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#live'></use></svg>":option.icon==='microphone'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#microphone'></use></svg>":option.icon==='gamepad'?"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261110-semantic-icons-3d-1#gamepad'></use></svg>":"<svg class='live-format-3d-icon' viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#creator'></use></svg>")+"</span><span><strong>"+option.label+"</strong><small>"+option.detail+"</small></span></label>").join("");
   const boardOptions=[['general','General'],['gaming','Gaming'],['music','Music'],['talk','Talk'],['education','Education'],['beauty','Beauty'],['sports','Sports'],['business','Business'],['lifestyle','Lifestyle']];
-  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<span class='live-status-pill "+(liveReady?"ready":"unavailable")+"'>"+liveStatusText+"</span></div>"+
+  setContent("<div class='page-heading live-page-heading'><div><span class='eyebrow'>Minglora LIVE</span><h1>Go LIVE. Share the moment.</h1><p class='muted'>Choose a mode and set up your audience before you broadcast.</p></div>"+(livePro?.hasAccess?"<button type='button' class='secondary live-pro-open-button' id='live-pro-open'>LIVE Pro Studio</button>":"")+"<span class='live-status-pill "+(liveReady?"ready":"unavailable")+"' data-provider-status='"+liveProviderStatusState+"'>"+liveProviderStatusIcon(liveProviderStatusState)+"<span>"+liveStatusText+"</span></span></div>"+
     "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
     "<div class='live-preflight-fields'>"+
@@ -2376,6 +2377,15 @@ function bindLiveDiscoveryBoards(sessions){
     button.onclick=()=>void loadLiveDiscoveryBoard(button.dataset.liveDiscovery,sessions);
   });
   void loadLiveDiscoveryBoard('daily',sessions);
+}
+const LIVE_PROVIDER_STATUS_ICON_NAMES=Object.freeze({
+  ready:"provider-ready",
+  "not-configured":"provider-not-configured",
+  unavailable:"provider-unavailable"
+});
+function liveProviderStatusIcon(status){
+  const name=LIVE_PROVIDER_STATUS_ICON_NAMES[status]||LIVE_PROVIDER_STATUS_ICON_NAMES.unavailable;
+  return "<svg class='live-provider-status-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'><use href='/assets/icons/live-provider-status/"+name+".svg#icon'></use></svg>";
 }
 const LIVE_CONTROL_ICON_NAMES=Object.freeze(["mic","mic-off","camera","camera-off","flip","multi-guest","cohost","message","screen","screen-stop","fullscreen","fullscreen-exit","gift","volume","volume-off","settings","share","end"]);
 function liveControlIcon(name){
