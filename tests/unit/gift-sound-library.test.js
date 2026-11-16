@@ -11,6 +11,8 @@ const output=path.join(root,"public/assets/gift-sounds");
 const generator=path.join(root,"scripts/generate-minglora-gift-sounds.mjs");
 const fx=readFileSync(path.join(root,"public/gift-effects.js"),"utf8");
 const giftsUi=readFileSync(path.join(root,"public/gifts.js"),"utf8");
+const worker=readFileSync(path.join(root,"public/sw.js"),"utf8");
+const html=readFileSync(path.join(root,"public/index.html"),"utf8");
 const expected=[
  "rose-4ieccm","hibiscus-5-mgl","djembe-master-1v3jzkm","palm-breeze-gknyt0",
  "gamer-otter-100-mgl","live-island-rmn3mc","crystal-crown-1itryeu","phoenix-wep6uk",
@@ -29,6 +31,15 @@ test("gift audio manifest covers all fifteen current bespoke model identities ex
  assert.equal(data.format.codec,"PCM signed 16-bit little-endian");
  assert.equal(data.format.sample_rate_hz,44100);
  assert.equal(data.format.channels,2);
+});
+
+test("Crocodile, Dolphin, Maracas and Pop Parrot use separate sound-design branches",()=>{
+ const source=readFileSync(generator,"utf8");
+ for(const slug of ["crocodile","dolphin","maracas","pop-parrot"])assert.ok(source.includes('g.slug==="'+slug+'"'),"missing unique sound-design branch: "+slug);
+ assert.match(source,/Crocodile/);
+ assert.match(source,/Dolphin/);
+ assert.match(source,/Maracas/);
+ assert.match(source,/Pop Parrot/);
 });
 
 test("every original WAV is valid stereo PCM with unique bytes and a verified manifest hash",()=>{
@@ -55,7 +66,7 @@ test("every original WAV is valid stereo PCM with unique bytes and a verified ma
  }
 });
 
-test("GiftFX loads only local gift WAVs, caches decoded buffers and retains the Web Audio fallback",()=>{
+test("GiftFX preloads selected same-origin WAVs, caches decode and keeps synthesis fallbacks",()=>{
  assert.match(fx,/function preloadGiftSound\(gift\)/);
  assert.match(fx,/function decodeGiftSound\(gift/);
  assert.match(fx,/giftSoundBuffers/);
@@ -66,4 +77,13 @@ test("GiftFX loads only local gift WAVs, caches decoded buffers and retains the 
  assert.match(giftsUi,/preloadGiftSound\?\.\(gift\)/);
  assert.match(giftsUi,/prime\(g\)/);
  assert.match(giftsUi,/prime\(gift\)/);
+ assert.match(fx,/function prime\(gift=null\)/);
+ assert.match(fx,/function loadGiftSoundManifest\(\)/);
+ assert.match(fx,/giftSoundCodes=new Set\(/);
+ assert.match(fx,/giftSoundCodes.has\(code\)/);
+ assert.match(fx,/window.MingloraGiftFX=.*preloadGiftSound/);
+ assert.ok(worker.includes("minglora-gift-sounds-v1"));
+ assert.ok(worker.includes("/gift-effects.js?v=20261116-live-gift-wav-01"));
+ assert.ok(html.includes("/gift-effects.js?v=20261116-live-gift-wav-01"));
+ assert.ok(worker.includes("minglora-shell-v331-self-updating-1"));
 });
