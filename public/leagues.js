@@ -18,7 +18,6 @@
     return "<svg class='league-asset-icon " + esc(className || "") + "' viewBox='0 0 128 128'" + accessibility + " focusable='false'><use href='/assets/league/league-emblems.svg?v=20261116-original-league-svg-assets-1#" + safeSymbol + "'></use></svg>";
   }
   const leagueReferenceAssetNames = new Set([
-    'Screenshot_20261112_020247_TikTok(1).jpg',
     'Screenshot_20261112_020335_TikTok(1).jpg',
     'Screenshot_20261112_020335_TikTok(2).jpg',
     'Screenshot_20261112_020335_TikTok(3).jpg',
@@ -274,9 +273,6 @@
     return "<div class='league-original-reference-gallery league-original-reference-gallery--progression' aria-label='Original Creator League class progression reference'>" +
       "<figure class='league-original-reference league-original-reference--classes'><figcaption>Original 18-class progression</figcaption>" +
       leagueReferenceImage("Screenshot_20261112_020458_TikTok(1).jpg", "league-progression-reference-image", "Original A3 to A1, B5 to B1, C5 to C1 and D5 to D1 class progression") +
-      "</figure>" +
-      "<figure class='league-original-reference league-original-reference--class-order'><figcaption>Original class-order reference</figcaption>" +
-      leagueReferenceImage("Screenshot_20261112_020247_TikTok(1).jpg", "league-class-order-reference-image", "Original uploaded class order: D5 to D1, C5 to C1, B5 to B1 and A3 to A1") +
       "</figure></div>" +
       "<div class='league-class-ladder league-tier-grid' aria-label='Live Creator League class hierarchy'>" + groups + "</div>";
   }
