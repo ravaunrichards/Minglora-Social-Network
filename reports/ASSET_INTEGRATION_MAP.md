@@ -248,3 +248,17 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Runtime: `public/gift-effects.js` selects `crocodile-snap` and local synthesized rumble/snap audio only for this canonical gift code.
 - Output: `public/assets/gifts/catalog/crocodile-tnyf2j.gltf`, `crocodile-tnyf2j.svg`, `crocodile-tnyf2j-icon.svg`.
 - Acceptance: source-specific unit test passed; 14-model/3-viewport Chromium job passed 42/42 model and pixel checks; layout visual QA passed. Human art/rights and physical-device review remain open.
+
+
+## Rose golden-bow reference integration — 2026-11-16
+
+| Layer | Implementation |
+|---|---|
+| Owner reference | `Dewy Red Rose with Golden Bow.png`, inspected read-only from the supplied Library and not served as a public production asset. |
+| 3D source | `assets/3d-assets/gift-models/rose-model.mjs` emits dedicated bow-loop, ribbon-tail and knot meshes. |
+| Vector artwork | `scripts/generate-minglora-gifts.mjs` emits the Rose v3 transparent SVG with a separate `rose-golden-satin-bow-v3` group. |
+| Runtime motion/audio | `public/gift-effects.js` selects `rose-unfurl` and the exact-code Rose Web Audio cue through the existing gift event renderer. |
+| Index/manifest | Motion-index and LIVE asset-manifest generators publish effective motion and synthesized-sound provenance. |
+| Cache | HTML and service worker share the versioned gift-effects bundle; the shell cache is incremented to invalidate the old bundle. |
+
+The canonical gift code, catalogue data, configured Coin value, active flag, database rows, wallets and transaction flow are unchanged. This asset remains design-review-pending; human approval, rights review and device QA remain open.
