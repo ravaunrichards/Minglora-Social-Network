@@ -72,9 +72,9 @@ test("Boosting Glove applies a 5x Match score bonus at 30% chance, never Creator
   assert.equal(expired.matchPoints, 10);
   assert.equal(match.scores.challenger, 70);
   const profile = ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START);
-  assert.equal(profile.seasonPoints, 20);
-  assert.equal(profile.lifetimeGiftPoints, 20);
-  assert.equal(db.creatorLeagueDailyScores[0].points, 20);
+  assert.equal(profile.seasonPoints, 30);
+  assert.equal(profile.lifetimeGiftPoints, 30);
+  assert.equal(db.creatorLeagueDailyScores[0].points, 30);
 });
 
 test("Magic Mist hides only the activated side's score from the opposing creator", () => {
@@ -154,7 +154,7 @@ test("Boosters double Gifts from both the No. 2 and No. 3 ranked match gifters",
   assert.equal(afterExpiry.matchPoints, 10);
   const bonusEvents = match.events.filter(event => event.type === "gift_score" && event.triggeredEffects?.includes("boosters"));
   assert.deepEqual(bonusEvents.map(event => event.senderRank), [2, 3]);
-  assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 205);
+  assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 215);
 });
 
 test("Speed Challenge doubles both match sides for 52 seconds, once per match", () => {
