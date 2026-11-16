@@ -117,12 +117,12 @@ test("original artwork panels are centered, responsive, uncropped and capped at 
 });
 
 
-test("Gifter artwork removes unused outer padding and uses a brighter clean edge", () => {
+test("Gifter sheet wrapper has no black edging while original artwork and sizing stay unchanged", () => {
   const styles = read("public/gifter-progression.css");
-  assert.match(styles, /\.gp-art-panel\{[\s\S]*?max-width:720px[\s\S]*?padding:0[\s\S]*?overflow:hidden[\s\S]*?border:1\.5px solid rgba\(196,216,255,\.88\)/);
+  assert.match(styles, /\.gp-art-panel\{[\s\S]*?max-width:720px[\s\S]*?padding:0[\s\S]*?overflow:hidden[\s\S]*?border:1\.5px solid rgba\(196,216,255,\.88\)[\s\S]*?background:transparent[\s\S]*?box-shadow:none/);
+  assert.doesNotMatch(styles, /\.gp-art-panel\{[^}]*background:#0b1020/);
   assert.match(styles, /\.gp-art-panel>img,[\s\S]*?width:100%[\s\S]*?max-width:none[\s\S]*?height:auto[\s\S]*?transform:scale\(1\.08,1\.05\) translateY\(-\.55%\)/);
   assert.match(styles, /\.gp-art-panel:first-child>img,[\s\S]*?\.gp-art-panel--final>img\{[\s\S]*?transform:scale\(1\.08,1\.10\) translateY\(-2\.5%\)/);
-  assert.match(styles, /box-shadow:[\s\S]*?inset 0 0 0 1px rgba\(245,249,255,\.42\)/);
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.gp-art-panel\{padding:0/);
 });
 
