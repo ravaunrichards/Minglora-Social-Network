@@ -304,7 +304,7 @@ const member = {
   profileStyle: 'facebook',
   profileScreenLayout: 'fluid-panel',
   profileLayout: 'advanced',
-  avatar: '/assets/default-profile-avatar-3d.svg',
+  avatar: '/assets/profile-defaults/enigma.png',
   cover: '/assets/default-profile-cover.svg',
   bio: 'Disposable browser-test session. No production account or record is created.',
   platformRole: 'platform_owner'
