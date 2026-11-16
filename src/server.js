@@ -9709,8 +9709,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
   if(individualGifterBadgeMatch){
     const badgeLevel=Number(individualGifterBadgeMatch[1]);
     if(badgeLevel<1||badgeLevel>50)return json(res,404,{error:'Gifter level badge not found.'});
-    const badgeRangeFile = badgeLevel<=9 ? 'LV.1 - LV.9.png' : badgeLevel<=19 ? 'LV.10 - LV.19.png' : badgeLevel<=29 ? 'LV.20 - LV.29.png' : badgeLevel<=39 ? 'LV.30 - LV.39.png' : badgeLevel<=49 ? 'LV.40 - LV.49.png' : 'LV.50+.png';
-    const assetFile=path.join(__dirname,'..','assets','Crop References','Gifters Badges','Png',badgeRangeFile);
+    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels','Level_Badges_01-50_Individual',`level_${String(badgeLevel).padStart(2,'0')}.png`);
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'Gifter level badge not found.'});
       res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
@@ -9745,6 +9744,23 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'Gifter master badge reference not found.'});
       res.writeHead(200,{'Content-Type':contentType,'Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
+  const gifterCropBadgeFiles = ({
+    '/assets/gifter-crop-badges/range-1.png': 'LV.1 - LV.9.png',
+    '/assets/gifter-crop-badges/range-2.png': 'LV.10 - LV.19.png',
+    '/assets/gifter-crop-badges/range-3.png': 'LV.20 - LV.29.png',
+    '/assets/gifter-crop-badges/range-4.png': 'LV.30 - LV.39.png',
+    '/assets/gifter-crop-badges/range-5.png': 'LV.40 - LV.49.png',
+    '/assets/gifter-crop-badges/range-6.png': 'LV.50+.png'
+  })[p];
+  if(gifterCropBadgeFiles){
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Gifters Badges','Png',gifterCropBadgeFiles);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Cropped Gifter milestone badge not found.'});
+      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
       res.end(data);
     });
     return;
