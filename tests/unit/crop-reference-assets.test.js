@@ -23,7 +23,7 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.match(read("public/gifter-progression.js"), /gifter-crop-badges\/range-/);
 
   assert.match(server, /gifter-badge-range-sheets\/lv-1-9\.jpg/);
-  assert.match(server, /'Gifters Badge Levels'/);
+  assert.match(server, /'Crop References','Gifter level range sheets'/);
   assert.match(read("public/gifter-progression.js"), /file: "lv-1-9\.jpg"/);
   assert.match(serviceWorker, /gifter-badge-range-sheets\/lv-1-9\.jpg/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
