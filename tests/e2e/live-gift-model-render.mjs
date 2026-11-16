@@ -24,7 +24,8 @@ const gifts = [
   { name: 'Dolphin', code: 'dolphin-4bkejj' },
   { name: 'Crocodile', code: 'crocodile-tnyf2j' },
   { name: 'Royal Lions Scepter', code: 'royal-lions-scepter-15000-mgl' },
-  { name: 'Baseball', code: 'baseball-orcdx9' }
+  { name: 'Baseball', code: 'baseball-orcdx9' },
+  { name: 'Pop Parrot', code: 'pop-parrot-alp4e8' }
 ];
 
 const viewports = [

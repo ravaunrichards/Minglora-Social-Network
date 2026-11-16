@@ -146,3 +146,7 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Artwork/model: original armoured Crocodile SVG/transparent icon and bespoke self-contained glTF source; only the exact canonical gift code selects these resources.
 - Test evidence: dedicated Crocodile source unit test passed; 14 bespoke gift models across three viewports passed 42/42 model and pixel checks with 42 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (PR #411 run 43781000444, artifact 14188617258).
 - This is code/render verification only. Human visual review, rights clearance, mastered audio, and physical-device validation remain pending.
+
+## Pop Parrot — dedicated flight choreography
+
+The canonical `pop-parrot-alp4e8` gift uses the exact-code `parrot-swoop` preset. It enters from the left, rises, banks, and settles through the shared `motionElement.animate` lifecycle. The motion index retains the source catalogue preset separately from the effective bespoke override. Reduced-motion preference, duration bounds, gift-event triggers and cleanup remain shared with the runtime. Its gift-specific whistle/chirp is locally synthesized through Web Audio and is not a mastered recording. Human visual/rights review and physical-device acceptance remain pending.

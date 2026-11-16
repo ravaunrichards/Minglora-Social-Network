@@ -443,3 +443,10 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Integrated the icons into the existing LIVE provider readiness pill using the actual provider response; retained the visible status wording and aria-hidden decorative SVG use.
 - Registered the pack in the unified LIVE asset manifest, service-worker offline cache, and unit tests. Fresh current-main verification is required on the resulting PR before completion is claimed.
 - The icons represent provider/setup readiness, not a real-time media-room connectivity/reconnect indicator. Human visual and rights review plus physical-device QA remain outstanding.
+
+## Pop Parrot bespoke LIVE asset — 2026-11-16
+
+- Added a dedicated original GLTF source module, unique primary SVG artwork and transparent icon, routed only by canonical gift code `pop-parrot-alp4e8`.
+- Integrated the `parrot-swoop` entrance/bank/settle motion, reduced-motion support through the existing runtime, and gift-specific locally synthesized chirp/whistle audio. The audio remains explicitly unmastered.
+- Registered source and motion provenance in the build/manifest generators and extended unit and Chromium model-render coverage to include Pop Parrot. Fresh checks for the current-main port must pass before this task is merged or marked verified.
+- Fifteen individual model source modules are now tracked. This is not completion of the full 1,748-gift art catalogue: remaining shared procedural assets, 3D texture/PBR production, human art/rights approvals, mastered recordings and physical-device QA remain outstanding.

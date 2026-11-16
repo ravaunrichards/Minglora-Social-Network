@@ -41,6 +41,7 @@ const GIFT_SPECIFIC_MOTION_PRESET = Object.freeze({
   "phoenix-wep6uk": "phoenix-rise",
   "beach-maracas-1exxoag": "maraca-rhythm",
   "royal-lions-scepter-15000-mgl": "lion-scepter-rise",
+  "pop-parrot-alp4e8": "parrot-swoop",
   "rose-4ieccm": "rose-unfurl"
 });
 
