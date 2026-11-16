@@ -79,14 +79,15 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.match(read("public/gifter-progression.js"), /gifter-crop-badges\/range-/);
 
   assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
+  assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
-  assert.match(progressionStyles, /\.gp-progression-range-badge/);  assert.ok(progressionStyles.includes("brightness(1.48)"));
+  assert.match(progressionStyles, /\.gp-progression-range-badge/);
+  assert.ok(progressionStyles.includes("brightness(1.48)"));
   assert.ok(progressionStyles.includes("gp-progression-milestone-glow"));
 
 });
