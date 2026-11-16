@@ -248,3 +248,13 @@ Two additional canonical catalogue records now have individually authored source
 Both model outputs are self-contained glTF 2.0 with embedded geometry buffers, named mesh parts, per-mesh normals/accessors, material factors and finite bounds. CI built the canonical 1,748-record gift set and both new source-specific unit assertions passed. Chromium WebGL evidence for PR #411 run 43779388045: **39/39 model renders, 39/39 pixel checks and 39 screenshots**, with zero page errors, HTTP failures, request failures or cancellations (artifact 14187976230).
 
 This verifies generated asset loading and non-empty browser pixels, not premium visual acceptance. Both models/artworks remain `design-review-pending`; no high-resolution texture-map pack, embedded glTF animation channels, mastered audio recordings, human rights clearance or physical-device QA are claimed. The rest of the catalogue remains largely category-template/procedural output.
+
+
+## Latest PR-head Chromium verification — 2026-11-16
+
+- Verified exact PR head: `3d681c144518c901dcbf0e851f67cf205407b897`.
+- Workflow: [Minglora LIVE gift model browser render QA, run 43780028073](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43780028073).
+- Final job conclusion: **SUCCESS**. All 13 gift models passed desktop/tablet/mobile rendering: **39/39 model checks and 39/39 pixel-render checks**; 39 screenshots uploaded; asset generation, Chromium setup, render and artifact upload all succeeded.
+- Evidence artifact: `minglora-live-gift-model-render-evidence`, ID `14188351024`, 8,799,594 bytes.
+- The same PR head's LIVE/MeetWave layout visual QA passed. Standard CI remains red on the same five non-LIVE baseline tests present on main; both Maracas and Dolphin source unit assertions and the Gifter badge suite pass.
+- This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
