@@ -215,18 +215,23 @@
       : "<span class='league-avatar league-avatar-fallback" + ring + "' aria-hidden='true'>" + esc((member?.name || "M").slice(0,1).toUpperCase()) + "</span>";
   }
   function podiumMarkup(leaderboard) {
+    const positionalTopThree = [leaderboard[0], leaderboard[1], leaderboard[2]];
     const byPosition = new Map(leaderboard.map((member, index) => [
       Number(member.position || index + 1), member
     ]));
+    positionalTopThree.forEach((member, index) => {
+      const place = index + 1;
+      if (member && !byPosition.has(place)) byPosition.set(place, member);
+    });
     const ranked = [2, 1, 3].map(place => ({ member: byPosition.get(place), place }))
       .filter(entry => entry.member && entry.member.id);
     if (!ranked.length) return "";
-    return "<div class='league-podium' aria-label='Top three Creator League podium'>" + ranked.map(({member, place}) =>
-      "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
+    return "<div class='league-top-three-list league-podium' aria-label='Top three Creator League podium'>" + ranked.map(({member, place}) =>
+      "<button type='button' class='league-podium-member league-top-three-row is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
         "<span class='league-podium-art' aria-label='Rank " + place + " profile badge'>" +
           "<img class='league-podium-rank-frame' src='/assets/daily-ranking-badges/place-" + place + ".png' alt='' loading='lazy' decoding='async'>" +
           "<span class='league-podium-avatar'>" + image(member, "ml-creator-ring ml-creator-ring--league") + "</span></span>" +
-        "<span class='league-podium-place-label'>No. " + place + "</span>" +
+        "<span class='league-podium-place-label league-rank-pill league-rank-pill--place-" + place + "'>No. " + place + "</span>" +
         "<strong>" + esc(member.name || "Minglora creator") + "</strong>" +
         "<small>@" + esc(member.username || "creator") + "</small>" +
         "<span class='league-podium-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</span>" +
@@ -239,7 +244,10 @@
       return position >= 1 && position <= 20;
     });
     if (!ranked.length) return "<div class='league-empty-inline'>No creators have earned confirmed LIVE Gift points for this division and period yet.</div>";
-    const remaining = ranked.filter(item => Number(item.position || 0) > 3).map(item => {
+    const remaining = leaderboard.slice(3).filter(item => {
+      const position = Number(item.position || 0);
+      return position > 3 && position <= 20;
+    }).map(item => {
       const position = Number(item.position || 0);
       const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
       const bandMarkup = award
