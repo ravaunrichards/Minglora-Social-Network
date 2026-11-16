@@ -257,3 +257,16 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - PWA: the gift-effects asset version and service-worker shell cache reference were advanced for the updated runtime and motion index.
 - Verification: CI 1,251/1,251 passed; Chromium model QA 45/45 model and pixel checks across three viewports, 45 screenshots, zero page errors and zero request cancellations. Evidence artifact 14200011992.
 - Acceptance: design, licensing, mastered audio and physical-device checks remain pending. Catalogue source metadata is not a production offering; no production catalogue, price, wallet or transaction data changed.
+
+
+## LIVE provider status icon integration — 2026-11-16
+
+- `public/assets/icons/live-provider-status/manifest.json` maps `provider-ready`, `provider-not-configured` and `provider-unavailable` to distinct original SVG files.
+- `public/app.js` maps the existing provider status object to one of those three states and renders the SVG beside its unchanged readable text label.
+- `public/styles.css` formats the pill as a compact inline flex row and gives the symbol a 14×14 footprint.
+- `public/index.html` versions app/style URLs with `20261116-live-provider-status-icons-01`.
+- `public/sw.js` shell cache is v331 and pre-caches the manifest plus three symbols.
+- `scripts/generate-minglora-live-asset-manifest.mjs` indexes the pack with file hashes and a separate three-icon summary count.
+- `tests/unit/live-provider-status-icons.test.js` validates SVGs, exact status mapping, text and offline references. `tests/unit/live-asset-manifest.test.js` checks manifest registration and hashes.
+
+Only the actual preflight provider readiness status is covered. There is no new signal inferred about the active media-room connection. No LiveKit provider credentials, status endpoint, database, production feature, wallet or gift transaction flow was altered.
