@@ -25,7 +25,7 @@
 | `assets/Gifts/` | 131 capture PNGs plus 1 reference-sheet JPEG (132 image files total) | Read-only source captures |
 | `assets/Artwork/` | 1,509 extracted PNG records | Review-only, not cleared for production |
 | `assets/Guests Layout/` | 9 JPEG layout diagrams | Read-only layout references; all 9 individually visually inspected |
-| `assets/Gifters Badge Levels/` | 78 raster image files (58 PNG, 20 JPEG; 77 unique image contents because one progression-strip JPEG is duplicated at two paths) | Badge/level source references; full visual and rights review pending |
+| `assets/Gifters Badge Levels/` | 66 raster image files (52 PNG, 14 JPEG; 65 unique contents because one progression-strip JPEG is duplicated at two paths) | Badge/level source references; the six cropped range sheets are catalogued separately under Crop References |
 | `public/assets/gifter-badge-progression-art.jpg` | 1 JPEG (uploaded original badge-tier progression strip; byte-identical to the supplied source image) | Public production asset; served uncropped on the Gifter Progression page |
 | `assets/League/` | 20 JPEG reference captures | League/rules references; full visual review pending |
 | `public/assets/gifts/` | 45 standalone original Minglora GLTF models | Existing original gift models; retained |
@@ -339,3 +339,8 @@ PR #439 CI run 43821480523 (test job 133145316730) completed the read-only heade
 - Pixel alpha was not decoded, JPEG EXIF orientation was not applied, and the scan did not make visual, quality, rights or production-approval decisions.
 - The per-file report was uploaded as artifact `minglora-live-image-metadata-audit-13700` (ID 14204652494); the generated per-gift manifest was uploaded as `minglora-live-asset-manifest-13700` (ID 14205036251).
 - Source files were read-only and unchanged by the audit. The 1,509 extracted artwork crops remain unapproved and must not be treated as cleared original production assets.
+
+
+## Gifter range-sheet source consolidation — 2026-11-16
+
+The six cropped range-sheet JPGs are now stored only under `assets/Crop References/Gifter level range sheets/`. The six padded PNG copies and six prior root JPG copies were removed from `assets/Gifters Badge Levels/` after the existing cropped JPG blobs were moved, not duplicated. The historical raster metadata table above predates this relocation; it is retained as the original CI snapshot and is not presented as a post-move scan.
