@@ -26,7 +26,8 @@ const gifts = [
   { name: 'Royal Lions Scepter', code: 'royal-lions-scepter-15000-mgl' },
   { name: 'Baseball', code: 'baseball-orcdx9' },
   { name: 'Carnival Music', code: 'carnival-music-14x4zts' },
-  { name: 'Toucan', code: 'toucan-1ovzxjb' }
+  { name: 'Toucan', code: 'toucan-1ovzxjb' },
+  { name: 'Signature Jet', code: 'signature-jet-exds0m' }
 ];
 
 const viewports = [
