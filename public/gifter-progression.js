@@ -195,9 +195,8 @@
   }
 
 
-  // The original supplied strip is the complete layout. The single white marker
-  // shows the member's current server-confirmed level; no extra circles or lines
-  // are drawn over the artwork because its own symbols and spacing are authoritative.
+  // The original supplied strip remains the layout. The six uploaded crop badges
+  // replace its muted milestone symbols only after the member earns each stage.
   const PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50]);
   const PROGRESSION_TRACK_CENTERS = Object.freeze([95, 272, 450, 628, 806, 984]);
 
@@ -228,18 +227,27 @@
 
   function renderProgressionTrack(current) {
     const track = progressionTrackState(current);
+    const earnedStageBadges = track.hasGifterBadge
+      ? PROGRESSION_TRACK_STAGES.map((stageLevel, index) => track.level >= stageLevel
+        ? "<img class='gp-progression-range-badge' src='/assets/gifter-badges/level_" +
+          String(stageLevel).padStart(2, "0") + ".png' style='left:" +
+          ((PROGRESSION_TRACK_CENTERS[index] / 1080) * 100).toFixed(3) +
+          "%' alt='' aria-hidden='true' loading='eager' decoding='async'>"
+        : "").join("")
+      : "";
     const marker = track.hasGifterBadge
       ? "<span class='gp-progression-level-marker' style='left:" +
         ((track.markerX / 1080) * 100).toFixed(3) + "%' aria-hidden='true' title='Current Gifter Level " +
         track.level + "'></span>"
       : "";
     const description = track.hasGifterBadge
-      ? "Gifter Level " + track.level + " of 50. The white marker follows your live level progress."
+      ? "Gifter Level " + track.level + " of 50. Earned milestone badges light up along the original progression path; the white marker follows your current level."
       : "No Gifter level yet. Send your first confirmed gift to activate badge tracking.";
 
     return "<figure class='gp-progression-art-frame'>" +
       "<div class='gp-live-progression-track' role='img' aria-label='" + esc(description) + "'>" +
       "<img src='/assets/gifter-badge-progression-art.jpg' alt='Original Minglora Gifter badge progression path' loading='eager' decoding='async'>" +
+      earnedStageBadges +
       marker +
       "</div></figure>";
   }
