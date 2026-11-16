@@ -401,3 +401,22 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [ ] Merge only after CI and database/runtime rollout checks pass.
 
 **Current status:** implementation draft, not yet committed, deployed or production-accepted. Existing production AI identity count remains zero. Global execution remains paused, `execution_enabled=false`, `max_concurrent_workers=0`. The 10-billion identity goal is architecture-only; no capacity test is claimed.
+
+## 2026-11-16 — Task 1A1 conversation verification checkpoint
+
+- [x] Committed the supervised, human-initiated bot-conversation slice on `feat/minglora-supervised-bot-conversations`; PR #394 remains open, unmerged and un-deployed. Latest checked head: `6f012106a8dfe6225412bbac740173f575ab5903`.
+- [x] Corrected three brittle regression assertions without weakening the expected behavior: the two-minute interrupted-turn recovery check, the AI route boundary, and the owner-scoped bot lookup/link-state checks.
+- [x] AI Network syntax and regression workflow passed on the checked head (run #43846693344).
+- [x] AI Network browser acceptance passed on the checked head (run #43846693376).
+- [x] Seven-plus-two LIVE/MeetWave layout visual QA passed on the checked head (run #43846693426).
+- [x] Confirmed the full repository CI failure is also present on current `main` commit `3757c31f3c7ca5fbae534ea89c373f16a6fa39bd`; this AI slice did not introduce those failures.
+- [ ] Full repository CI remains blocked by four existing baseline failures: Gifter range gallery reference placement (`lv-1-9.jpg`), LIVE viewer/guest/directory/leaderboard identity rendering, Full Screen expand icon path, and the LIVE compact stylesheet version. These belong to separate Gifter/LIVE work and were not changed in this AI-only slice.
+- [ ] Production migration remains unapplied. Live catalog verification confirms `ai_bot_conversations` and `ai_bot_conversation_turns` do not exist in the existing project; the conversation migration is not present in migration history.
+- [ ] The existing `minglora-runtime-state` Edge Function remains ACTIVE at version 131 and does not contain `ai_conversation_command`. Its established custom-auth configuration remains unchanged; no deployment was performed.
+- [ ] Current live project status: `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003. The `ai_network` schema has 54 tables and 54/54 have RLS enabled; there are 15 active AI categories and 20 department plus 20 position templates.
+- [ ] Live AI identity/profile/name/email/provider/organization/department/position/task/approval record counts remain zero. No test identities, human Auth accounts, mailboxes, provider credentials, conversation records or external activity were created.
+- [ ] Global runtime remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- [ ] No real designated-owner MFA session or configured live provider credential is available for production acceptance. No live model generation is claimed.
+- [ ] The PR branch is 4 commits ahead and 162 commits behind current `main` at this checkpoint (GitHub reports mergeable); reconcile against current main and rerun checks before any merge.
+  
+**Current status:** source and focused AI workflows verified; full-repository CI is blocked by unrelated current-main failures; database/runtime rollout and owner/provider acceptance are outstanding. Task 1A1 is not production-complete. The master accepted checklist remains 2/19 by task count; 10-billion identity and simultaneous execution capacity remain unmeasured design objectives.
