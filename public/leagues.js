@@ -271,9 +271,12 @@
           "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + esc(item) + "</span>"
         ).join("") + "</div></article>";
     }).join("");
-    return "<div class='league-original-reference-gallery league-original-reference-gallery--progression' aria-label='Original Creator League class progression reference'>" +
+    return "<div class='league-original-reference-gallery league-original-reference-gallery--progression' aria-label='Original Creator League progression references'>" +
       "<figure class='league-original-reference league-original-reference--classes'><figcaption>Original 18-class progression</figcaption>" +
       leagueReferenceImage("Screenshot_20261112_020458_TikTok(1).jpg", "league-progression-reference-image", "Original A3 to A1, B5 to B1, C5 to C1 and D5 to D1 class progression") +
+      "</figure>" +
+      "<figure class='league-original-reference league-original-reference--class-order'><figcaption>Original class-order reference</figcaption>" +
+      leagueReferenceImage("Screenshot_20261112_020247_TikTok(1).jpg", "league-class-order-reference-image", "Original uploaded class order: D5 to D1, C5 to C1, B5 to B1 and A3 to A1") +
       "</figure></div>" +
       "<div class='league-class-ladder league-tier-grid' aria-label='Live Creator League class hierarchy'>" + groups + "</div>";
   }
@@ -294,6 +297,44 @@
       "<p>These are the original placement thresholds from your uploaded League references. Each class keeps its own fragment bands.</p></div><span class='league-reference-status'>REFERENCE ONLY</span></div>" +
       "<div class='league-original-fragment-references' aria-label='Original League A, B, C, D1 and D2–D5 fragment rule references'>" + cards + "</div>" +
       "<p class='league-fragment-reference-note'>Four accumulated fragments promote one tier. Four lost fragments demote one tier where fragment loss applies. A League Shield automatically protects one fragment loss, does not expire, and the balance is capped at 10. D2–D5 have no fragment-loss penalty. These images document the reference bands; live placement remains calculated by Minglora's League service.</p></section>";
+  }
+  function rankingReferenceMarkup() {
+    const groups = [
+      {
+        title: "Leaderboard row layouts",
+        items: [
+          { file: "Screenshot_20261112_020827_TikTok(2).jpg", title: "Original top-three rank rows", alt: "Uploaded League reference for No. 1, No. 2 and No. 3 leaderboard rows" },
+          { file: "Screenshot_20261112_020853_TikTok(1).jpg", title: "Original numbered leaderboard", alt: "Uploaded League reference showing numbered top-three standings and score values" }
+        ]
+      },
+      {
+        title: "First, second and third place",
+        items: [
+          { file: "Screenshot_20261112_020839_TikTok(1).jpg", title: "No. 1 creator rank card", alt: "Uploaded original No. 1 creator rank card reference" },
+          { file: "Screenshot_20261112_021224_TikTok(1).jpg", title: "No. 1 award artwork", alt: "Uploaded original first-place gold rank badge and profile-card reference" },
+          { file: "Screenshot_20261112_021224_TikTok(2).jpg", title: "No. 2 award artwork", alt: "Uploaded original second-place silver-blue rank badge and profile-card reference" },
+          { file: "Screenshot_20261112_021309_TikTok(1).jpg", title: "No. 3 award artwork", alt: "Uploaded original third-place bronze rank badge and profile-card reference" },
+          { file: "Screenshot_20261112_021309_TikTok(2).jpg", title: "No. 1 placement layout", alt: "Uploaded original No. 1 placement card layout" },
+          { file: "Screenshot_20261112_021333_TikTok(1).jpg", title: "No. 2 placement layout", alt: "Uploaded original No. 2 placement card layout" },
+          { file: "Screenshot_20261112_021343_TikTok(1).jpg", title: "No. 3 placement layout", alt: "Uploaded original No. 3 placement card layout" }
+        ]
+      },
+      {
+        title: "Top-ten and top-twenty recognition",
+        items: [
+          { file: "Screenshot_20261112_021355_TikTok(1).jpg", title: "Ranks 4–10", alt: "Uploaded original recognition reference for creators ranked No. 4 through No. 10" },
+          { file: "Screenshot_20261112_021407_TikTok(1).jpg", title: "Ranks 11–20", alt: "Uploaded original recognition reference for creators ranked No. 11 through No. 20" }
+        ]
+      }
+    ];
+    return "<details class='card league-ranking-reference-guide' id='league-ranking-reference-guide'>" +
+      "<summary>View your original uploaded ranking references</summary>" +
+      "<p class='league-ranking-reference-intro'>These are the exact source images you uploaded. Live standings above continue to use real Minglora member profiles, placement, scores and profile links.</p>" +
+      groups.map(group => "<section class='league-ranking-reference-group'><h3>" + esc(group.title) + "</h3><div class='league-ranking-reference-grid'>" +
+        group.items.map(item => "<figure class='league-ranking-reference-card'><figcaption>" + esc(item.title) + "</figcaption>" +
+          leagueReferenceImage(item.file, "league-ranking-reference-image", item.alt) + "</figure>").join("") +
+        "</div></section>").join("") +
+      "</details>";
   }
   function rankingControlsMarkup(overview) {
     const availableClasses = (overview.classes || []).slice().reverse();
@@ -319,6 +360,9 @@
     const period = state.rankingPeriod === "daily" ? "daily" : "weekly";
     const leagueClass = state.rankingClass || state.overview?.profile?.leagueClass || "";
     if (status) status.textContent = "Loading " + period + " " + leagueClass + " rankings…";
+    results.innerHTML = "<div class='league-ranking-loading-reference'>" +
+      leagueReferenceImage("Screenshot_20261112_020827_TikTok(1).jpg", "league-ranking-loading-image", "Original uploaded League ranking loading reference") +
+      "</div>";
     try {
       const data = await request("/leagues/leaderboard?period=" + encodeURIComponent(period) + "&class=" + encodeURIComponent(leagueClass));
       if (token !== leaderboardLoadToken || !isLeagueViewActive()) return;
@@ -402,7 +446,7 @@
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
       "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Live scores update automatically.</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
-      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" +
+      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" + rankingReferenceMarkup() +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
       "<p class='league-footnote'>Minglora uses its own branding and assets with a TikTok LIVE-style Creator League structure. Daily class placement controls fragment movement; weekly and lifetime gift totals remain reporting statistics and do not directly promote a class.</p></div>";
