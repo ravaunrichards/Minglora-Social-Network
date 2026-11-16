@@ -132,6 +132,47 @@ export function createRoseModel() {
     add(name, positions, normals, indices, color, metallic, 0.48);
   }
 
+
+  function satinRibbon(name, centerline, halfWidth, widthProfile = () => 1) {
+    const steps=64,across=10,positions=[],normals=[],indices=[];
+    const point=(u,v)=>{
+      const t=Math.max(0,Math.min(1,u)),center=centerline(t);
+      const before=centerline(Math.max(0,t-.0002)),after=centerline(Math.min(1,t+.0002));
+      const tangent=unit(after[0]-before[0],after[1]-before[1],after[2]-before[2]);
+      const lateral=unit(-tangent[1],tangent[0],0),w=halfWidth*widthProfile(t)*v;
+      const lift=.012*(1-v*v)*Math.sin(Math.PI*t);
+      return [center[0]+lateral[0]*w,center[1]+lateral[1]*w,center[2]+lateral[2]*w+lift];
+    };
+    for(let i=0;i<=steps;i++)for(let j=0;j<=across;j++)positions.push(...point(i/steps,j/across*2-1));
+    for(let i=0;i<=steps;i++)for(let j=0;j<=across;j++){
+      const u=i/steps,v=j/across*2-1;
+      const a=point(Math.max(0,u-.0005),v),b=point(Math.min(1,u+.0005),v);
+      const c=point(u,Math.max(-1,v-.008)),d=point(u,Math.min(1,v+.008));
+      const du=b.map((x,k)=>x-a[k]),dv=d.map((x,k)=>x-c[k]);
+      let nx=du[1]*dv[2]-du[2]*dv[1],ny=du[2]*dv[0]-du[0]*dv[2],nz=du[0]*dv[1]-du[1]*dv[0];
+      if(nz<0){nx=-nx;ny=-ny;nz=-nz;}
+      normals.push(...unit(nx,ny,nz));
+    }
+    for(let i=0;i<steps;i++)for(let j=0;j<across;j++){const a=i*(across+1)+j,b=a+across+1;indices.push(a,b,a+1,a+1,b,b+1);}
+    add(name,positions,normals,indices,"#dca43e",.84,.23);
+  }
+  const cubicRibbon=(p0,p1,p2,p3)=>t=>{
+    const q=1-t;return [0,1,2].map(k=>q*q*q*p0[k]+3*q*q*t*p1[k]+3*q*t*t*p2[k]+t*t*t*p3[k]);
+  };
+  const bowLoop=side=>t=>{const angle=TAU*t;return [side*(.14+.14*Math.cos(angle)),-.18+.105*Math.sin(angle),.125+.012*Math.cos(angle*2)];};
+  satinRibbon("Rose golden satin bow left loop",bowLoop(-1),.035);
+  satinRibbon("Rose golden satin bow right loop",bowLoop(1),.035);
+  const leftBowTail=cubicRibbon([-.025,-.225,.17],[-.16,-.295,.19],[-.16,-.44,.16],[-.30,-.55,.125]);
+  const rightBowTail=cubicRibbon([.025,-.225,.17],[.16,-.295,.19],[.16,-.43,.16],[.29,-.52,.125]);
+  const tailWidth=t=>.38+.62*Math.sin(Math.PI*t);
+  satinRibbon("Rose golden satin bow left ribbon tail",leftBowTail,.055,tailWidth);
+  satinRibbon("Rose golden satin bow right ribbon tail",rightBowTail,.055,tailWidth);
+  ellipsoid("Rose golden satin bow knot",0,-.185,.205,.064,.052,.035,"#f1c15b",.2);
+  tubeNetwork("Rose golden satin bow knot folds",[
+    [[-.035,-.18,.235],[-.018,-.198,.24],[0,-.205,.24]],
+    [[.035,-.18,.235],[.018,-.198,.24],[0,-.205,.24]]
+  ],.0032,"#fff0bb",.26);
+
   stem("Rose stem", -0.1, 0.023, 0.014, 0.9, "#1d6034");
   stem("Stem collar", -0.535, 0.041, 0.041, 0.042, "#a77d36", 0.72);
   surfacePetal("Lower leaf - left", -2.42, -0.31, 0.31, 0.078, 0.012, 0.05, "#1b6538", 18, 12, 0.5, {color: "#3d8a50", radius: 0.0022, branches: [0.28, 0.47, 0.66], lift: 0.0018});
@@ -146,9 +187,9 @@ export function createRoseModel() {
   surfacePetal("Stem thorn two", Math.PI + 0.12, -0.08, 0.08, 0.022, 0.005, -0.025, "#286b3e", 7, 5, 0.52);
 
   for (let i = 0; i < 5; i++) surfacePetal("Rose sepal " + (i + 1), i * TAU / 5, 0.33, 0.19, 0.052, 0.008, -0.065, "#226b3d", 18, 12, 0.52);
-  for (let i = 0; i < 7; i++) surfacePetal("Velvet outer petal " + (i + 1), i * TAU / 7, 0.38, 0.3, 0.142, 0.025, 0.31, "#95153f", 20, 14, 0.39, {color: "#a83b5f", radius: 0.00125, branches: [0.42, 0.67], lift: 0.00125});
-  for (let i = 0; i < 6; i++) surfacePetal("Satin middle petal " + (i + 1), (i + 0.5) * TAU / 6, 0.48, 0.22, 0.118, 0.016, 0.33, "#bf2452", 18, 14, 0.36, {color: "#d85170", radius: 0.0011, branches: [0.51], lift: 0.0012});
-  for (let i = 0; i < 5; i++) surfacePetal("Silk inner petal " + (i + 1), (i + 0.15) * TAU / 5, 0.58, 0.145, 0.088, 0.008, 0.34, "#e84d76", 18, 12, 0.33);
+  for (let i = 0; i < 7; i++) surfacePetal("Velvet outer petal " + (i + 1), i * TAU / 7, 0.38, 0.3, 0.142, 0.025, 0.31, "#b20d28", 20, 14, 0.39, {color: "#a83b5f", radius: 0.00125, branches: [0.42, 0.67], lift: 0.00125});
+  for (let i = 0; i < 6; i++) surfacePetal("Satin middle petal " + (i + 1), (i + 0.5) * TAU / 6, 0.48, 0.22, 0.118, 0.016, 0.33, "#d01a36", 18, 14, 0.36, {color: "#d85170", radius: 0.0011, branches: [0.51], lift: 0.0012});
+  for (let i = 0; i < 5; i++) surfacePetal("Silk inner petal " + (i + 1), (i + 0.15) * TAU / 5, 0.58, 0.145, 0.088, 0.008, 0.34, "#ed314b", 18, 12, 0.33);
 
   ellipsoid("Rose heart", 0, 0.68, 0, 0.086, 0.084, 0.078, "#7e1235");
   const stamenPaths = [];
@@ -161,6 +202,8 @@ export function createRoseModel() {
   tubeNetwork("Rose golden stamen filaments", stamenPaths, 0.0025, "#e5b858", 0.42);
   ellipsoid("Rose heart highlight", -0.025, 0.735, 0.055, 0.022, 0.018, 0.012, "#e5a4b5", 0.34);
   ellipsoid("Dew drop", 0.235, 0.65, 0.04, 0.02, 0.026, 0.016, "#f4d7df", 0.18);
+  ellipsoid("Rose leaf dew drop left", -0.17, -0.275, 0.052, 0.014, 0.019, 0.012, "#d8f7ff", 0.12);
+  ellipsoid("Rose leaf dew drop right", 0.18, -0.19, 0.048, 0.012, 0.017, 0.011, "#d8f7ff", 0.12);
 
   const chunks = [], views = [], accessors = [], primitives = [], materials = [];
   let offset = 0;
@@ -193,9 +236,9 @@ export function createRoseModel() {
   const binary = Buffer.concat(chunks);
   return {
     asset: {version: "2.0", generator: "Minglora Gift Studio", extras: {
-      mingloraAssetId: "gift-rose-3d-v1",
+      mingloraAssetId: "gift-rose-3d-v3",
       source: "assets/3d-assets/gift-models/rose-model.mjs",
-      artDirection: "upright layered rose bloom with cupped velvet outer petals, raised midribs and branching leaf venation, fitted green calyx, tapered thorned stem, three attached leaves, golden stamens and dew detail",
+      artDirection: "upright deep-crimson dewy rose with cupped layered velvet petals, raised midribs and branching leaf venation, fitted green calyx, tapered thorned stem, three attached leaves, golden stamens, twin sculpted golden satin bow loops, a central knot and two flowing ribbon tails",
       reviewStatus: "design-review-pending"
     }},
     scene: 0, scenes: [{nodes: [0]}], nodes: [{mesh: 0, name: "Minglora Rose - Botanical Sculpture"}],

@@ -91,7 +91,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 ## Gift-specific botanical model sources
 | Source | Canonical item | Model art direction | Review state |
 |---|---|---|---|
-| assets/3d-assets/gift-models/rose-model.mjs | Rose | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
+| assets/3d-assets/gift-models/rose-model.mjs | Rose | Deep-crimson layered petals, sculpted leaves, dew and twin golden satin bow loops, knot and flowing tails | Design review pending |
 | assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build tests passed in merged PR #339 validation set |
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
@@ -303,3 +303,10 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - Chromium QA: PASS — 14 bespoke models × desktop/tablet/mobile = **42/42 model renders and 42/42 non-empty pixel checks**, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (PR #411 run 43781000444, artifact 14188617258).
 - LIVE/MeetWave layout QA: PASS on the corrected Crocodile commit. Overall CI remains red with 1,239 passing and 5 unrelated baseline failures; the same five-failure total exists on main.
 - Review remains design-review-pending. Render and code verification are not human visual/rights acceptance or real-device validation.
+
+
+## Rose golden-bow reference refinement — 2026-11-16
+
+- Original reference inspected: owner-supplied Library asset `Dewy Red Rose with Golden Bow.png` (1254×1254 RGBA); preserved read-only and not copied into public application assets.
+- The existing Rose model source and generated SVG now include gift-specific golden satin bow geometry/artwork; no new catalogue record or gift price is created.
+- Runtime additions: exact-code `rose-unfurl` motion profile and a synthesized, non-mastered audio cue. Catalogue counts and all other gifts remain unchanged.

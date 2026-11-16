@@ -416,3 +416,14 @@ The browser captures establish that all nine bespoke models load and remain visi
 - LIVE/MeetWave visual layout QA: passed. Supabase Auth acceptance: passed.
 - Standard test suite: **1,239 passed / 5 failed** (1,244 total). Mainline's latest independent run also had five failures (1,236 passed / 5 failed); unrelated failures are outside this LIVE asset task. The PR is not merged or deployed.
 - Code review/approval still needed for premium visual and rights sign-off. No physical device testing or mastered audio recording is claimed.
+
+
+## Rose golden-bow reference-alignment checkpoint — 2026-11-16
+
+- Added bow loops, central knot, two ribbon tails, satin highlights and additional dew to the existing Rose glTF model source; generated SVG now includes matching original golden-bow vector art.
+- Connected the canonical Rose gift code to `rose-unfurl` LIVE animation and a Web Audio petal-rustle/celesta-like cue; updated motion-index and asset-manifest expectations.
+- Bumped the effect-script URL in HTML and service worker. Added regression tests and asset documentation.
+- The original Library reference was inspected and kept unchanged; no TikTok/third-party brand artwork was copied.
+- Catalogue record, price, active flag, offers, balances, wallet/transaction behavior and production database were not modified.
+- Acceptance is pending CI on this branch. The model remains design-review-pending; audio is synthesized and not mastered; human art/rights approval and physical-device testing remain open.
+- Overall mission remains **PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE**. This increment does not close other missing gift assets, reference reviews, full-device QA or remaining LIVE requirements.
