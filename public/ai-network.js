@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', chatBotId: '', chatConversationId: '', chatMessages: [], chatError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -70,6 +70,8 @@
       esc(bot.name) + '</strong><div class="ai-network-meta">' + pill('AI BOT', 'ai') + ' ' + pill(bot.status, bot.status === 'active' ? 'success' : 'neutral') +
       '</div><p>' + esc(bot.purpose) + '</p><small>' + esc(bot.tone) + ' · ' + esc(list(bot.languages).join(', ')) + ' · ' + esc(list(bot.traits).join(', ')) + '</small></div></div>' +
       '<div class="ai-network-row-actions">' +
+      (bot.identityId && Array.isArray(bot.capabilities) && bot.capabilities.includes('conversation') && !['paused','archived'].includes(bot.status)
+        ? '<button type="button" class="secondary" data-ai-action="bot-chat" data-id="' + esc(bot.id) + '">Open chat</button>' : '') +
       (bot.status === 'active'
         ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause</button>'
         : bot.status !== 'archived'
@@ -78,6 +80,27 @@
       (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
       '</div></article>'
     ).join('') + '</div>';
+  }
+
+  function renderBotChat(bots) {
+    if (!state.chatBotId) return '';
+    const bot = list(bots).find(item => item.id === state.chatBotId);
+    if (!bot || !bot.identityId || !Array.isArray(bot.capabilities) || !bot.capabilities.includes('conversation')) return '';
+    const messages = list(state.chatMessages);
+    const transcript = messages.map(message =>
+      '<article class="ai-network-list-row"><div><div class="ai-network-meta">' +
+      pill(message.role === 'assistant' ? bot.name + ' · AI BOT' : 'You', message.role === 'assistant' ? 'ai' : 'neutral') +
+      '</div><p class="ai-network-chat-message">' + esc(message.content) + '</p><small>' + esc(date(message.created_at)) + '</small></div></article>'
+    ).join('');
+    return card('Chat with ' + bot.name, 'OWNER-STARTED · PRIVATE AI CONVERSATION',
+      '<p>This is a private conversation with a clearly identified AI bot. Messages are moderated; the bot cannot publish, message other members, follow accounts or take external actions. Memory is used only when separately enabled for this identity.</p>' +
+      (state.chatError ? '<div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(state.chatError) + '</div>' : '') +
+      '<div class="ai-network-list">' + (transcript || empty('No messages in this conversation yet.')) + '</div>' +
+      '<form class="ai-network-form" data-ai-form="bot-chat" data-bot-id="' + esc(bot.id) + '">' +
+      '<label>Your message<textarea name="message" required minlength="1" maxlength="4000" rows="3" placeholder="Write a message to ' + esc(bot.name) + '…"></textarea></label>' +
+      '<button class="primary" type="submit">Send message</button>' +
+      '</form><p class="ai-network-note">AI-generated responses are labelled and require human judgement. Conversation history is private to this Minglora owner.</p>',
+      'ai-network-span-2');
   }
 
   const identityStatusTransitions = Object.freeze({
@@ -1447,7 +1470,7 @@
       (state.adminAccess ? renderAITaskQueueCenter() : '') +
       (state.adminAccess ? renderAIOrganizationCenter() : '') +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks. Every Bot Lab creation is also registered as an individually addressable, private AI identity in Minglora.</p>' +
-        renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
+        renderBotRows(bots) + renderBotChat(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
         '<div class="ai-network-form-grid"><label>AI first name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
         '<label>AI last name<input name="lastName" required maxlength="80" autocomplete="off"></label>' +
         '<label>Middle name (optional)<input name="middleName" maxlength="80" autocomplete="off"></label>' +
@@ -1470,8 +1493,9 @@
         '<fieldset><legend>Allowed capabilities</legend><div class="ai-network-check-grid">' +
         [{id:'draft_content',label:'Draft content'},{id:'summarize_public_content',label:'Summarize public content'},
           {id:'translate_user_provided_content',label:'Translate my content'},{id:'suggest_replies',label:'Suggest replies'},
-          {id:'organize_creator_tasks',label:'Organize creator tasks'},{id:'prepare_event_material',label:'Prepare event material'}].map((item,index) =>
-          '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.id + '"' + (index === 0 ? ' checked' : '') + '><span>' + item.label + '</span></label>'
+          {id:'organize_creator_tasks',label:'Organize creator tasks'},{id:'prepare_event_material',label:'Prepare event material'},
+          {id:'conversation',label:'Respond in owner-started private chat'}].map((item,index) =>
+          '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.id + '"' + (index === 0 || item.id === 'conversation' ? ' checked' : '') + '><span>' + item.label + '</span></label>'
         ).join('') + '</div></fieldset><p class="ai-network-note">The AI identity is created in the relational registry with separate first and last names. It starts private and the bot remains a draft requiring human review.</p>' +
         '<button class="primary" type="submit" ' + (!botCategoryOptions.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create AI bot and relational identity</button></form>', 'ai-network-span-2') +
       card('Bot Teams', '02 · TEAM WORK', '<p>Coordinate your own specialist bots with human-reviewed plans and separate identities.</p>' + renderTeams(teams,bots)) +
@@ -1578,7 +1602,22 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'memory-settings') {
+    if (kind === 'bot-chat') {
+      const botId = form.dataset.botId || '';
+      const message = value('message');
+      if (!botId || !state.chatConversationId) throw new Error('Open a conversation before sending a message.');
+      form.dataset.requestKey = form.dataset.requestKey || window.crypto.randomUUID();
+      const result = await request('/bots/' + encodeURIComponent(botId) + '/chat', {
+        method:'POST',
+        body:{ message, conversationId:state.chatConversationId, requestKey:form.dataset.requestKey }
+      });
+      state.chatMessages = list(result.messages);
+      state.chatError = '';
+      form.reset();
+      delete form.dataset.requestKey;
+      await refresh('AI reply received, moderated and saved to the private conversation.');
+      return;
+    } else if (kind === 'memory-settings') {
       const identityId = form.dataset.identityId || '';
       if (!identityId) throw new Error('Choose an AI identity before updating its memory settings.');
       path = '/identities/' + encodeURIComponent(identityId) + '/memory/settings';
@@ -2363,6 +2402,23 @@
         await loadAIDiscovery(state.discoveryFilters);
       }
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'bot-chat') {
+        const result = await request('/bots/' + encodeURIComponent(id) + '/conversations');
+        const current = result.current || null;
+        if (current?.conversation_id) {
+          state.chatConversationId = current.conversation_id;
+          state.chatMessages = list(current.messages);
+        } else {
+          const created = await request('/bots/' + encodeURIComponent(id) + '/conversations', {
+            method:'POST', body:{ title:'Private chat' }
+          });
+          state.chatConversationId = created.conversation?.conversation_id || '';
+          state.chatMessages = [];
+        }
+        if (!state.chatConversationId) throw new Error('Minglora could not open a private conversation for this AI bot.');
+        state.chatBotId = id;
+        state.chatError = '';
+      }
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });

@@ -51,6 +51,7 @@ import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_J
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
+import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1644,6 +1645,21 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const runAIConversationCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI conversations require Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_conversation_command', {
+          actorUserId: user.id,
+          aiAction,
+          payload
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI conversations are unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+
       const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const aiMediaBucketForSlot = slot => slot === 'avatar' || slot === 'cover' ? 'minglora-ai-profile-media' : '';
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
@@ -2853,6 +2869,186 @@ async function route(req, res) {
           throw error;
         }
       }
+      const getOwnedChatBot = botId => {
+        const bot = (db.aiBots || []).find(item => item.id === botId && item.ownerId === user.id);
+        if (!bot || !bot.identityId) {
+          throw Object.assign(new Error('Choose an AI bot linked to your own Minglora identity.'), { status: 404 });
+        }
+        if (!Array.isArray(bot.capabilities) || !bot.capabilities.includes('conversation')) {
+          throw Object.assign(new Error('Conversation is not an enabled capability for this AI bot.'), { status: 403 });
+        }
+        if (['paused','archived'].includes(bot.status)) {
+          throw Object.assign(new Error('This AI bot is paused or archived and cannot receive new conversations.'), { status: 409 });
+        }
+        return bot;
+      };
+
+      const assertAIIdentityCanStartConversation = async bot => {
+        const identity = await runAIIdentityCommand('get', { identity_id: bot.identityId });
+        const lifecycleStatus = String(identity?.identity?.status || '').toLowerCase();
+        if (!['created','approved','active'].includes(lifecycleStatus)) {
+          throw Object.assign(
+            new Error('This AI identity is not cleared for a new conversation. Its lifecycle status is ' + (lifecycleStatus || 'unavailable') + '.'),
+            { status: 409 }
+          );
+        }
+        return identity;
+      };
+
+      if (method === 'GET' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversations') {
+        const bot = getOwnedChatBot(parts[1]);
+        const listed = await runAIConversationCommand('list_sessions', { identity_id: bot.identityId });
+        const conversations = Array.isArray(listed?.conversations) ? listed.conversations : [];
+        const current = conversations[0]
+          ? await runAIConversationCommand('get_session', {
+            identity_id: bot.identityId,
+            conversation_id: conversations[0].conversation_id
+          })
+          : null;
+        return json(res, 200, { conversations, current });
+      }
+
+      if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversations') {
+        const bot = getOwnedChatBot(parts[1]);
+        await assertAIIdentityCanStartConversation(bot);
+        const input = await body(req, 4000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => key !== 'title')) {
+          throw Object.assign(new Error('Only a conversation title can be supplied. Bot prompts and provider settings are server-controlled.'), { status: 400 });
+        }
+        const title = String(input.title || ('Chat with ' + bot.name)).trim().slice(0, 120) || ('Chat with ' + bot.name);
+        const conversation = await runAIConversationCommand('create_session', {
+          identity_id: bot.identityId,
+          title
+        });
+        return json(res, 201, { conversation });
+      }
+
+      if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'chat') {
+        const bot = getOwnedChatBot(parts[1]);
+        await assertAIIdentityCanStartConversation(bot);
+        const input = await body(req, 10000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !['message','conversationId','requestKey'].includes(key))) {
+          throw Object.assign(new Error('Chat accepts only a message, conversation ID and retry-safe request key.'), { status: 400 });
+        }
+        const message = String(input.message || '').trim();
+        const conversationId = String(input.conversationId || '');
+        const requestKey = String(input.requestKey || '');
+        if (!message || message.length > 4000) {
+          throw Object.assign(new Error('Messages must contain between 1 and 4,000 characters.'), { status: 400 });
+        }
+        if (!aiIdentityIdPattern.test(conversationId) || !aiIdentityIdPattern.test(requestKey)) {
+          throw Object.assign(new Error('Open or create a conversation before sending a message.'), { status: 400 });
+        }
+        const currentProviderStatus = getAIProviderStatus();
+        if (!currentProviderStatus.manualDraftsAvailable) {
+          throw Object.assign(new Error('AI chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment. No reply was generated.'), { status: 503 });
+        }
+
+        const providerHealth = await probeOpenAIProvider();
+        if (!providerHealth.connected) {
+          throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note + ' No reply was generated.'), { status: 503 });
+        }
+
+        const conversation = await runAIConversationCommand('get_session', {
+          identity_id: bot.identityId,
+          conversation_id: conversationId
+        });
+        if (!conversation || conversation.status !== 'active') {
+          throw Object.assign(new Error('The selected conversation is not active.'), { status: 409 });
+        }
+        const history = Array.isArray(conversation.messages) ? conversation.messages : [];
+        const ownerSettings = getAISettings(db, user.id);
+        let memory = null;
+        try {
+          const candidateMemory = await runAIMemoryCommand('list', { identity_id: bot.identityId });
+          if (candidateMemory?.settings?.memory_enabled === true) memory = candidateMemory;
+        } catch (error) {
+          // Memory is optional. A failed memory lookup never bypasses owner/provider checks
+          // and the message proceeds without memory context.
+          memory = null;
+        }
+
+        const historyCharacters = history.slice(-12).reduce((total, item) =>
+          total + (typeof item?.content === 'string' ? item.content.length : 0), 0);
+        const memoryCharacters = memory?.entries?.reduce((total, item) =>
+          total + String(item?.summary || '').length, 0) || 0;
+        const estimatedInputTokens = Math.ceil((message.length + historyCharacters + memoryCharacters) / 3) + 900;
+        const reservedTokens = Math.min(10000, Math.max(128, estimatedInputTokens + 700));
+        const started = await runAIConversationCommand('begin_exchange', {
+          identity_id: bot.identityId,
+          conversation_id: conversationId,
+          request_key: requestKey,
+          user_message: message,
+          reserved_tokens: reservedTokens,
+          daily_limit: Number(ownerSettings.dailyTokenBudget) || 10000
+        });
+        if (started?.status === 'completed') {
+          const latest = await runAIConversationCommand('get_session', {
+            identity_id: bot.identityId,
+            conversation_id: conversationId
+          });
+          return json(res, 200, {
+            conversationId, messages: latest?.messages || [], reused: true,
+            aiDisclosureRequired: true, humanReviewRequired: true
+          });
+        }
+        if (started?.status !== 'processing') {
+          throw Object.assign(new Error('This conversation request is already being processed. Wait for that response before retrying.'), { status: 409 });
+        }
+
+        try {
+          const generated = await generateOpenAIBotReply({
+            message,
+            history: history.slice(-12).map(item => ({ role: item.role, content: item.content })),
+            bot,
+            memory,
+            env: process.env,
+            maxOutputTokens: Math.min(700, Math.max(128, reservedTokens - 256))
+          });
+          const usage = generated.usage || {};
+          const measuredTokens = Number.isSafeInteger(usage.totalTokens) && usage.totalTokens >= 0
+            ? usage.totalTokens : reservedTokens;
+          await runAIConversationCommand('complete_exchange', {
+            identity_id: bot.identityId,
+            conversation_id: conversationId,
+            request_key: requestKey,
+            assistant_message: generated.text,
+            provider: generated.provider,
+            model: generated.model,
+            response_id: generated.responseId,
+            input_tokens: usage.inputTokens,
+            output_tokens: usage.outputTokens,
+            total_tokens: measuredTokens
+          });
+        } catch (error) {
+          try {
+            await runAIConversationCommand('fail_exchange', {
+              identity_id: bot.identityId,
+              conversation_id: conversationId,
+              request_key: requestKey,
+              error_code: String(error?.code || 'provider_error').slice(0, 80)
+            });
+          } catch {
+            // Keep the original provider/database failure for the caller; the request lease expires safely.
+          }
+          throw error;
+        }
+
+        const completedConversation = await runAIConversationCommand('get_session', {
+          identity_id: bot.identityId,
+          conversation_id: conversationId
+        });
+        return json(res, 200, {
+          conversationId,
+          messages: completedConversation?.messages || [],
+          aiDisclosureRequired: true,
+          humanReviewRequired: true,
+          externalActionTaken: false
+        });
+      }
+
       if (method === 'GET' && sub === 'schedules') {
         const result = await runAIScheduleCommand('list_schedules');
         return json(res, 200, result || { schedules: [] });

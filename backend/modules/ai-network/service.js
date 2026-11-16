@@ -13,7 +13,8 @@ export const AI_BOT_CAPABILITIES = Object.freeze([
   'translate_user_provided_content',
   'suggest_replies',
   'organize_creator_tasks',
-  'prepare_event_material'
+  'prepare_event_material',
+  'conversation'
 ]);
 export const AI_BOT_TASK_TYPES = Object.freeze([
   'content_outline',

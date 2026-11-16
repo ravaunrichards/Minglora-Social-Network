@@ -551,3 +551,60 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Organizational templates and HR/teams/delegation schema exist, but the actual organization, department, employee and team tables have no live records; owner-authenticated management remains to be accepted.
 - **10-billion identities remain a design objective only**. Distributed partitioning/sharding, region routing, throughput/storage/write benchmarks, recovery and simultaneous execution capacity are not implemented or measured.
 - Current accepted checklist remains **2/19 = 10.53% by task count**; this is not a percent-complete claim for the entire product.
+
+
+## Owner-started AI bot conversation runtime checkpoint — 2026-11-15
+
+**Scope:** Minglora Social Network only. Feature branch: `feat/ai-owner-bot-conversations-20261115`. This is one implementation slice within the existing AI Network plan; it does not change the wider 2/19 accepted checklist or claim full AI Network completion.
+
+### Subtask register
+
+- [x] **AI-CHAT-01 — Provider adapter and capability:** added the human-triggered OpenAI Responses adapter with input/output moderation, `store:false`, bounded history, optional memory context only after explicit memory opt-in, and no tools or external actions. Added the explicit `conversation` bot capability. Commits: `4ec3c86df98fed5fd5eef5ba6379791e00d16dbd`, `0baea9f94652f1865c12ca435c6198fff4e4121d`, `9df21a62de253f7e0480405b1faa5ac82d6993c9`.
+- [x] **AI-CHAT-02 — Private persistence and gateway:** added owner-scoped conversation sessions/messages, request idempotency, five-minute leases, daily token reservations/usage, RLS and service-role-only grants; added the private Edge Function action. Commits: `1cb83d17f09b143d190f9a84037893fc8db2a31f`, `412dc924e94d6d591805396c8d31dcad53085cc1`.
+- [x] **AI-CHAT-03 — Authenticated Node API:** added owner-bot/conversation checks, provider re-probe, token reservation, generated-reply moderation and transcript persistence. Commit: `3ee7558b138327008a4db159be5805e529392403`.
+- [x] **AI-CHAT-04 — Admin UI and documentation:** added the explicit capability selector, private Chat control, transcript and owner-started message form; recorded module documentation. Commits: `03f3c5ce40ce9bb4f825a338cf7fd1d80aa37b41`, `5cfec4b87095f3dad671dd9102c0e2dbd36110c3`.
+- [ ] **AI-CHAT-05 — Verification and release:** automated verification is GREEN on code commit `df0c57b26bfdabb4f61aa5fc1ffcada126e35333` (CI 1,222/1,222, AI Network 157/157, browser acceptance and layout visual QA passed). Remaining release gates: non-production Supabase migration validation (project has no development branch; branch creation requires cost approval), real provider health/inference using the private server environment, authenticated owner/device acceptance, confirmed Minglora Render target and deployment verification.
+
+### Safety and live-state evidence
+
+- Production Supabase project remains `gzycobgbasnqqhnympkr`; no separate database created.
+- The read-only live registry count was **0 AI identities** at inspection. No test identity, human Auth user, bot, conversation or message was created in production.
+- Existing AI task runtime remained `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. This feature adds no autonomous worker or scheduler execution.
+- The conversation migration and Edge Function handler are **source-only**; no production schema change or Edge Function deployment was made. No isolated Supabase development branch was available in this execution, so the migration must be validated/deployed through an approved non-production target before production rollout.
+- The last durable repository checkpoint reported no live provider inference. The current request path performs a fresh read-only OpenAI model probe and refuses to create a response if the private provider environment is not configured. No credentials are read into the UI or accepted in request bodies.
+- The 10,000,000,000 identity objective remains an architectural target only; it is not a live identity count or measured scale result.
+
+**Current task status:** AI-CHAT-01 through AI-CHAT-04 are source-committed on the isolated feature branch. AI-CHAT-05 is the next unfinished task. Do not merge, apply the new migration to production, deploy the Edge Function, enable workers or claim successful inference until the outstanding verification and release gates pass.
+
+
+### Follow-up verification checkpoint — 2026-11-15
+
+- Latest previously verified head `67cb283f9191095158ea74673e8dd25ba47f0478`: GitHub Actions **CI, AI Network checks, AI Network browser acceptance, and seven-plus-two layout visual QA all passed**. These results cover the conversation adapter, source migration, API, browser UI, and regression tests as of that commit.
+- A final lifecycle hardening change followed: conversation creation and new replies now read the linked relational identity and allow only `created`, `approved`, or `active` status. The live lifecycle RPC confirms that restricted, suspended, archived, retired and under-review are separate statuses. A disabled new identity in status `created` remains eligible for human-started chat; autonomous workers remain disabled.
+- Added a regression assertion for the linked identity lifecycle gate and documented it. The latest branch head is being revalidated; do not transfer the previous head's green status to the new head until its new CI run completes.
+- Current Supabase read-only verification: **0 production AI identities**; no development branches; no conversation tables/RPC deployed. No production records were inserted and no production migrations were applied.
+- Supabase Security Advisor currently lists existing project-wide RLS/no-policy INFO findings and other pre-existing authentication warnings. The new conversation tables are source-only and therefore do not yet appear in production advisor results. Do not attribute the project-wide findings to this un-deployed migration.
+- PR #363 remains open, draft, unmerged. Non-production migration validation, private provider health and real inference, signed-in owner/device acceptance and Render deployment verification remain release blockers.
+
+
+### Verified code checkpoint — 2026-11-15 (final automated run)
+
+- Latest tested code commit: `df0c57b26bfdabb4f61aa5fc1ffcada126e35333`.
+- GitHub Actions results on that code commit: 
+  - Full CI run `43745818450`: **1,222 passed, 0 failed**.
+  - AI Network checks run `43745818444`: **157 passed, 0 failed**. This includes moderated bot chat adapter, owner/MFA API checks, identity lifecycle guard, private Edge RPC allowlist and UI assertions.
+  - AI Network browser acceptance run `43745818463`: **passed**.
+  - Seven-plus-two layout visual QA run `43745818484`: **passed**.
+- GitHub PR #363 is open, draft, unmerged and currently reported mergeable. The PR description has been updated with these verified outcomes.
+- No code changes occurred after the tested code commit; this appended checkpoint is documentation-only.
+- Remaining external acceptance gates: non-production Supabase migration validation (no development branch exists; branch creation requires cost approval), private provider credential/health and live inference, signed-in owner/device acceptance, and correct Render service selection/deployment verification.
+- Production AI identity count remains **0**. No bots, profiles, Auth accounts, conversations or messages have been inserted; no production SQL migration or Edge Function deployment was performed; task workers remain globally paused and disabled.
+- The 10-billion identity target remains a design objective, not an operational or benchmarked capacity.
+
+
+### Next master-task checkpoint after conversation source verification
+
+- The broader ordered tracker still records Task 3 (individual AI identity creation, names, profile and safe lifecycle) as **PARTIAL / ACTIVE / external acceptance blocker**. The relational create/list/get/edit/bulk RPC and source/UI contracts exist, but no signed-in owner session is available here for real profile creation, private avatar/cover upload and device acceptance.
+- Do not create an artificial Auth user or sample AI identity to bypass the owner acceptance requirement. Current production AI identity count is still zero.
+- Provider/email infrastructure remains metadata-only until a genuine provider credential/service is connected and verified. Do not report a mailbox, model inference or operational bot without evidence.
+- The new owner-started chat slice is automated-test green but remains a draft PR and source-only until its non-production migration, provider and real-owner release gates are completed.
