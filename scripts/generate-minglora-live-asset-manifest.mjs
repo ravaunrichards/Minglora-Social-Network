@@ -76,6 +76,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized low lion-like formant growl, sub impact, five-note brass-like ceremonial fanfare and high-frequency jewel shimmer",
     layers: ["bandpass_growl_noise_sweep", "low_frequency_staff_impact", "five_note_regal_fanfare_196_294_392_587_784hz", "highpass_jewel_shimmer"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "rose-4ieccm": Object.freeze({
+    sound_design_id: "rose-golden-bow-petal-rustle-and-celesta-v3",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized petal-rustle sweep and five softly enveloped celesta-like notes with seeded stereo placement; not a mastered recording",
+    layers: ["filtered_petal_rustle_sweep", "five_note_celesta_like_chime_523_659_784_1047_1319hz", "seeded_stereo_note_placement"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
 });
 
