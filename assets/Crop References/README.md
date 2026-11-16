@@ -79,7 +79,7 @@ Nine layout previews:
 
 **Application routes:** `/assets/live-guest-layouts/full-screen.png`, `fluid-panel.png`, `fluid-grid.png`, `fixed-grid.png`, `fixed-panel.png`, `side-by-side.png`, `spotlight.png`, `roundtable-1.png`, and `roundtable-2.png`.
 
-These images are layout previews, not replacements for the responsive LIVE layout implementation. The set represents seven host-selectable layouts and the two separately selectable Roundtable guest-box layouts.
+These nine original crops are the canonical visual references for both LIVE and MeetWave guest layouts. Each option is individually selectable and must retain the panel/grid arrangement shown in its matching crop. LIVE and MeetWave serve these same source files through the application routes above; do not create duplicate copies or alter the originals. Responsive sizing may adapt to the device while preserving each layout's distinct composition.
 
 ## 5. Default Profile Picture
 
