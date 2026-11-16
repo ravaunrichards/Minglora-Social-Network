@@ -447,8 +447,9 @@ body:has(#live-player-shell) .live-tools-content [data-live-tools-panel][hidden]
     display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;
   }
   body:has(#live-player-shell) .live-layout-option{
-    min-width:0!important;min-height:42px!important;padding:6px!important;font-size:9px!important;
+    min-width:0!important;min-height:62px!important;padding:6px!important;font-size:9px!important;
   }
+  .live-layout-option .live-layout-preview{flex-basis:38px!important;width:38px!important;height:48px!important;max-width:38px!important;}
 }
 @media(max-width:520px){
   body:has(#live-player-shell) #live-player-shell>.live-player-header{height:43px!important;min-height:43px!important;max-height:43px!important;padding-inline:8px!important}
