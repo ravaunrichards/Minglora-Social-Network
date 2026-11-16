@@ -14,6 +14,8 @@ const rankingStyles = read("public/styles.css");
 const progressionStyles = read("public/gifter-progression.css");
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
+const leagues = read("public/leagues.js");
+const leagueStyles = read("public/leagues.css");
 
 
 test("Crop References use canonical folders and contain no duplicate image files", () => {
@@ -81,7 +83,7 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-png-no-white-tracker-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
@@ -132,11 +134,11 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v343-self-updating-1/);
-  assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
+  assert.match(serviceWorker, /minglora-shell-v345-self-updating-1/);
+  assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-overlay-alignment-1/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-png-no-white-tracker-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-png-no-white-tracker-1/);
 });
 
 
@@ -153,3 +155,22 @@ test("earned Gifter milestone overlays cover original tracker symbols at matchin
   assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\[index\]\.y/);
   assert.match(progression, /track\.level >= stageLevel/);
 });
+
+test("Daily LIVE ranking serves the complete Top 100 with source-matched podium and medal bands", () => {
+  assert.match(server, /\.slice\(0,100\)/);
+  assert.match(app, /items\.filter\(item=>Number\(item\.position\|\|0\)>3\)/);
+  assert.match(app, /live-daily-podium-stage/);
+  assert.match(app, /daily-ranking-badges\/place-/);
+  assert.match(rankingStyles, /live-ranking-medal--top-ten/);
+  assert.match(rankingStyles, /live-ranking-medal--top-twenty/);
+});
+
+test("Creator League displays the first 20 ranks with original first/second/third frames", () => {
+  assert.match(leagues, /\[2, 1, 3\]/);
+  assert.match(leagues, /leaderboard\.filter\(item =>/);
+  assert.match(leagues, /position <= 20/);
+  assert.match(leagues, /daily-ranking-badges\/place-/);
+  assert.match(leagueStyles, /league-podium-rank-frame/);
+  assert.match(leagueStyles, /league-ranking-medal--top-twenty/);
+});
+
