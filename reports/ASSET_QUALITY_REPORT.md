@@ -236,3 +236,45 @@ The existing Jamaican culture gift-category placeholder has been replaced by ori
 The exact canonical Baseball record now has an individually authored model source rather than shared sports-category geometry. The model uses an ivory full-grain shell, two curved seam paths with recessed channels, raised scarlet seam cords, separate hand-sewn stitch strands/thread highlights and subtle grain flecks. Its vector artwork uses a leather-shaded sphere and individually drawn curved seam/stitch details; the same subject-specific illustration is emitted in the primary SVG and transparent gift icon.
 
 The GLTF declares self-contained embedded geometry buffers, per-part material records, accessor bounds and `design-review-pending` provenance. The browser-render matrix covers desktop, tablet and mobile; final workflow outcome is pending at the time this record was added. This structural/artwork source inspection is not human visual approval, licensing clearance, final premium art acceptance or physical-device certification. No catalogue Coin value, source active flag, production offer, wallet, transaction or payout was changed.
+
+
+## Maracas and Dolphin bespoke model quality checkpoints — 2026-11-16
+
+Two additional canonical catalogue records now have individually authored source modules rather than shared category meshes:
+
+- **Maracas** (`maracas-1wegi7n`, music, configured 1 Coin) — matched coral/lagoon gourd pair with hardwood handles, spiral wraps, painted seed inlays and PBR glTF materials; matching subject-specific SVG and transparent icon; dedicated rhythmic shaker Web Audio effect and `maraca-rhythm` motion.
+- **Dolphin** (`dolphin-4bkejj`, animals, configured 10 Coins) — bottlenose body, tapered rostrum, countershading, dorsal and pectoral fins, split tail flukes, eye/gill/blowhole details and sea-spray droplets; matching original SVG and transparent icon; dedicated `dolphin-leap` motion and locally synthesized ocean/splash sound.
+
+Both model outputs are self-contained glTF 2.0 with embedded geometry buffers, named mesh parts, per-mesh normals/accessors, material factors and finite bounds. CI built the canonical 1,748-record gift set and both new source-specific unit assertions passed. Chromium WebGL evidence for PR #411 run 43779388045: **39/39 model renders, 39/39 pixel checks and 39 screenshots**, with zero page errors, HTTP failures, request failures or cancellations (artifact 14187976230).
+
+This verifies generated asset loading and non-empty browser pixels, not premium visual acceptance. Both models/artworks remain `design-review-pending`; no high-resolution texture-map pack, embedded glTF animation channels, mastered audio recordings, human rights clearance or physical-device QA are claimed. The rest of the catalogue remains largely category-template/procedural output.
+
+
+## Latest PR-head Chromium verification — 2026-11-16
+
+- Verified exact PR head: `3d681c144518c901dcbf0e851f67cf205407b897`.
+- Workflow: [Minglora LIVE gift model browser render QA, run 43780028073](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43780028073).
+- Final job conclusion: **SUCCESS**. All 13 gift models passed desktop/tablet/mobile rendering: **39/39 model checks and 39/39 pixel-render checks**; 39 screenshots uploaded; asset generation, Chromium setup, render and artifact upload all succeeded.
+- Evidence artifact: `minglora-live-gift-model-render-evidence`, ID `14188351024`, 8,799,594 bytes.
+- The same PR head's LIVE/MeetWave layout visual QA passed. Standard CI remains red on the same five non-LIVE baseline tests present on main; both Maracas and Dolphin source unit assertions and the Gifter badge suite pass.
+- This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
+
+
+## Crocodile model quality gate — 2026-11-16
+
+The new Crocodile model is a dedicated low-poly/high-detail mesh assembly with individually named and separately materialized components (torso, belly, armor scutes, tail, dorsal keel, skull, jaws, teeth, eyes, nostrils, legs, toes and claws). The self-contained glTF output carries normals, per-mesh accessors, PBR factors and finite position bounds. A subject-specific SVG and transparent icon are generated from the same exact gift code.
+
+Quality verification remains pending: the source-level unit test, canonical catalogue build and three-viewport Chromium model/pixel matrix must pass before the asset is called verified. Human visual/rights approval, mastered audio and physical-device testing remain outstanding.
+
+
+## Crocodile bespoke model quality checkpoint — 2026-11-16
+
+The Crocodile model is a separate named mesh assembly (armoured torso, counter-shaded belly, osteoderm plates, tapering tail and keel, upper/lower jaws, individually meshed teeth, amber eyes and brows, nostrils, cheek scales, four webbed legs, toes and claws). Its self-contained glTF output contains per-mesh positions/normals/accessors, named components, PBR material factors and finite position bounds. Subject-specific original SVG and transparent icon outputs are routed from the exact canonical gift code.
+
+**Verification:** the canonical generator built all 1,748 gift SVG/icon/glTF outputs, motion index and asset manifest; the Crocodile unit test passed; the 14-model Chromium matrix passed **42/42 model renders and 42/42 non-empty pixel checks** and uploaded 42 screenshots, with zero page errors, HTTP failures, request failures or cancellations (run 43781000444; artifact 14188617258). LIVE/MeetWave layout QA passed on the corrected branch head.
+
+### Legacy Dolphin file inspected and preserved
+
+The earlier `public/assets/gifts/minglora_dolphin.gltf` file remains untouched. Its manifest record (`minglora-dolphin`) identifies a historical `Ocean Dolphin` record with code `dolphin`, source migration 021, historical 650-Coin value, and active-at-migration state. The current production database snapshot marks that record absent. Technical metadata records 10 meshes, 5 materials, no textures, no images and no embedded animations; visual review, technical render review and rights review remain pending, and `production_eligible=false`. This is not the current active catalogue record `dolphin-4bkejj` (10 Coins). The newly-authored Dolphin source targets only that current canonical code; the legacy model has been preserved, not overwritten or promoted.
+
+This browser evidence is not premium visual acceptance. Human visual/rights review for all fourteen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,734 catalogue rows continue to use shared procedural category/name geometry.

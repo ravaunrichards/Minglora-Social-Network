@@ -228,5 +228,23 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Generated model: `public/assets/gifts/catalog/baseball-orcdx9.gltf`, self-contained glTF 2.0 with embedded geometry buffers, named leather/seam/stitch mesh parts and PBR material factors.
 - Original artwork: the generator emits `baseball-original-v1` into both `baseball-orcdx9.svg` and the transparent `baseball-orcdx9-icon.svg`; both retain canonical per-gift path conventions.
 - Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
-- QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
+- The updated isolated Chromium matrix includes 13 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 39 model/viewport renders. PR #411 workflow run 43779388045 passed all 39 model renders and 39 non-empty pixel checks and uploaded 39 screenshots; zero page errors, HTTP failures, request failures or cancellations were recorded.
 - Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.
+
+
+## Crocodile exact-code runtime mapping — 2026-11-16
+
+- Source module: `assets/3d-assets/gift-models/crocodile-model.mjs`.
+- Model route: `scripts/generate-minglora-gifts.mjs` maps only `crocodile-tnyf2j` to `createCrocodileModel()` and the original `crocodile-original-v1` vector artwork.
+- Output paths: `public/assets/gifts/catalog/crocodile-tnyf2j.gltf`, `crocodile-tnyf2j.svg`, `crocodile-tnyf2j-icon.svg`.
+- Runtime: `public/gift-effects.js` maps the exact code to the custom synthesized sound and snap visual entrance. Catalogue category, 10-Coin source value and active flag are preserved.
+- QA: **PASS** — PR #411 run 43781000444 rendered 14 bespoke models across desktop/tablet/mobile: 42/42 model and pixel checks, 42 screenshots, zero page errors, HTTP failures, request failures or cancellations. Artifact 14188617258.
+
+
+## Crocodile exact-code integration and verified QA — 2026-11-16
+
+- Source: `assets/3d-assets/gift-models/crocodile-model.mjs`; canonical code `crocodile-tnyf2j`, unchanged source value 10 Coins and `active=true`.
+- Generator: exact import and routes for the unique glTF model and `crocodile-original-v1` main SVG / transparent icon.
+- Runtime: `public/gift-effects.js` selects `crocodile-snap` and local synthesized rumble/snap audio only for this canonical gift code.
+- Output: `public/assets/gifts/catalog/crocodile-tnyf2j.gltf`, `crocodile-tnyf2j.svg`, `crocodile-tnyf2j-icon.svg`.
+- Acceptance: source-specific unit test passed; 14-model/3-viewport Chromium job passed 42/42 model and pixel checks; layout visual QA passed. Human art/rights and physical-device review remain open.

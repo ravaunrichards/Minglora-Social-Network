@@ -510,3 +510,123 @@ test("Baseball uses an original full-grain leather model and subject-specific Mi
   assert.ok(svg.includes('data-gift-artwork="baseball-original-v1"'), "the primary SVG must carry original Baseball artwork provenance");
   assert.ok(icon.includes('data-gift-artwork="baseball-original-v1"'), "the transparent gift icon must preserve the original Baseball artwork");
 });
+
+
+
+test("Maracas uses a bespoke original 3D pair, transparent artwork and its own LIVE shake sound", () => {
+  const maracas = gifts.find(gift => gift.code === "maracas-1wegi7n");
+  assert.ok(maracas, "Maracas must remain in the canonical gift catalogue");
+  assert.equal(maracas.name, "Maracas");
+  assert.equal(maracas.category, "music");
+  assert.equal(maracas.coin_price, 1, "the configured Coin value must remain unchanged");
+  assert.equal(maracas.active, true, "the source catalogue publication flag must remain unchanged");
+
+  const model = JSON.parse(readFileSync(path.join(assetRoot, maracas.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-maracas-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/maracas-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /matched pair.*coral and lagoon maracas.*sculpted calabash gourds.*hardwood handles.*diamond seed inlays/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 35, "the pair must expose independently named shells, handles, grips, bands and surface inlays");
+  const partNames = model.meshes?.[0]?.primitives?.map(primitive => primitive.extras?.mingloraPartName) || [];
+  assert.ok(partNames.some(name => name?.includes("Maracas coral lacquered gourd shell")));
+  assert.ok(partNames.some(name => name?.includes("Maracas lagoon lacquered gourd shell")));
+  assert.ok(partNames.some(name => name?.includes("sculpted hardwood handle")));
+  assert.ok(partNames.some(name => name?.includes("spiral-wrapped hardwood handle")));
+  assert.ok(partNames.some(name => name?.includes("painted diamond seed inlay")));
+  assert.ok(partNames.some(name => name?.includes("radial sunburst inlay")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Maracas must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 90, "the model must expose per-mesh positions and normals");
+  for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
+    assert.ok(accessor.min.every(Number.isFinite) && accessor.max.every(Number.isFinite), "Maracas mesh bounds must contain finite coordinates");
+  }
+
+  const svg = readFileSync(path.join(assetRoot, maracas.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, maracas.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="maracas-original-v1"'), "the primary SVG must carry original Maracas artwork provenance");
+  assert.ok(icon.includes('data-gift-artwork="maracas-original-v1"'), "the transparent icon must preserve the original Maracas artwork");
+
+  assert.match(giftEffectsSource, /gift\.code==="maracas-1wegi7n"\)return playMaracas/, "the gift audio event must trigger the dedicated shaker sound");
+  assert.match(giftEffectsSource, /gift\.code==="maracas-1wegi7n"\?"maraca-rhythm"/, "the LIVE gift must use the rhythmic shake choreography");
+});
+
+
+
+
+test("Dolphin uses a bespoke original 3D marine model, transparent artwork and dedicated LIVE leap effects", () => {
+  const dolphin = gifts.find(gift => gift.code === "dolphin-4bkejj");
+  assert.ok(dolphin, "Dolphin must remain in the canonical gift catalogue");
+  assert.equal(dolphin.name, "Dolphin");
+  assert.equal(dolphin.category, "animals");
+  assert.equal(dolphin.coin_price, 10, "the configured Coin value must remain unchanged");
+  assert.equal(dolphin.active, true, "the source catalogue publication flag must remain unchanged");
+
+  const model = JSON.parse(readFileSync(path.join(assetRoot, dolphin.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-dolphin-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/dolphin-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /streamlined blue-grey bottlenose dolphin.*pearl countershading.*sculpted dorsal fin.*split tail flukes/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 25, "the dolphin must expose distinct body, rostrum, fins, flukes, eyes, gills and water details");
+  const partNames = model.meshes?.[0]?.primitives?.map(primitive => primitive.extras?.mingloraPartName) || [];
+  assert.ok(partNames.some(name => name?.includes("Dolphin streamlined blue-grey body shell")));
+  assert.ok(partNames.some(name => name?.includes("Dolphin sculpted dorsal fin")));
+  assert.ok(partNames.some(name => name?.includes("Dolphin near pectoral flipper")));
+  assert.ok(partNames.some(name => name?.includes("Dolphin upper tail fluke")));
+  assert.ok(partNames.some(name => name?.includes("Dolphin lower tail fluke")));
+  assert.ok(partNames.some(name => name?.includes("Dolphin gill groove")));
+  assert.ok(partNames.some(name => name?.includes("Dolphin suspended sea spray")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Dolphin must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 50, "the dolphin must expose per-mesh positions and normals");
+  for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
+    assert.ok(accessor.min.every(Number.isFinite) && accessor.max.every(Number.isFinite), "Dolphin mesh bounds must contain finite coordinates");
+  }
+
+  const svg = readFileSync(path.join(assetRoot, dolphin.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, dolphin.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="dolphin-original-v1"'), "the primary SVG must carry original Dolphin artwork provenance");
+  assert.ok(icon.includes('data-gift-artwork="dolphin-original-v1"'), "the transparent gift icon must preserve the original Dolphin artwork");
+
+  assert.match(giftEffectsSource, /gift\.code==="dolphin-4bkejj"\)return playDolphin/, "the LIVE gift playback event must trigger its dedicated water sound");
+  assert.match(giftEffectsSource, /gift\.code==="dolphin-4bkejj"\?"dolphin-leap"/, "the LIVE gift must use the dedicated leap choreography");
+});
+
+
+
+test("Crocodile uses a bespoke original 3D reptile model, transparent artwork and dedicated LIVE snap effects", () => {
+  const crocodile = gifts.find(gift => gift.code === "crocodile-tnyf2j");
+  assert.ok(crocodile, "Crocodile must remain in the canonical gift catalogue");
+  assert.equal(crocodile.name, "Crocodile");
+  assert.equal(crocodile.category, "animals");
+  assert.equal(crocodile.coin_price, 10, "the configured Coin value must remain unchanged");
+  assert.equal(crocodile.active, true, "the source catalogue publication flag must remain unchanged");
+
+  const model = JSON.parse(readFileSync(path.join(assetRoot, crocodile.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-crocodile-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/crocodile-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /broad olive-green crocodile.*segmented belly.*tooth-lined jaws.*amber vertical-pupil eyes.*four webbed clawed feet/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 70, "the crocodile must expose distinct torso, armour, tail, jaws, teeth, eye assemblies, limbs, toes and claws");
+  const parts = model.meshes?.[0]?.primitives?.map(primitive => primitive.extras?.mingloraPartName) || [];
+  assert.ok(parts.some(name => name?.includes("Crocodile powerful olive-green torso")));
+  assert.ok(parts.some(name => name?.includes("Crocodile dorsal armor row")));
+  assert.ok(parts.some(name => name?.includes("Crocodile sweeping muscular tail")));
+  assert.ok(parts.some(name => name?.includes("Crocodile upper ivory tooth")));
+  assert.ok(parts.some(name => name?.includes("Crocodile amber eye")));
+  assert.ok(parts.some(name => name?.includes("Crocodile front near upper leg")));
+  assert.ok(parts.some(name => name?.includes("Crocodile front near dark claw")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Crocodile must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 140, "the crocodile must expose per-mesh positions and normals");
+  for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
+    assert.ok(accessor.min.every(Number.isFinite) && accessor.max.every(Number.isFinite), "Crocodile mesh bounds must contain finite coordinates");
+  }
+
+  const svg = readFileSync(path.join(assetRoot, crocodile.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, crocodile.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="crocodile-original-v1"'), "the primary SVG must carry original Crocodile artwork provenance");
+  assert.ok(icon.includes('data-gift-artwork="crocodile-original-v1"'), "the transparent gift icon must preserve original Crocodile artwork");
+
+  assert.match(giftEffectsSource, /gift\.code==="crocodile-tnyf2j"\)return playCrocodile/, "the LIVE gift event must trigger dedicated crocodile audio");
+  assert.match(giftEffectsSource, /gift\.code==="crocodile-tnyf2j"\?"crocodile-snap"/, "the LIVE gift must use dedicated snap choreography");
+});

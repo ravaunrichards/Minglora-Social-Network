@@ -355,3 +355,64 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+
+## Maracas asset addition — implementation pending verification — 2026-11-15
+
+- A new original model source and catalogue-specific artwork have been authored for the existing Maracas record (`maracas-1wegi7n`, category `music`, configured value 1 Coin, source active flag true).
+- Exact-code generator wiring, original SVG artwork, rhythmic LIVE motion/audio handling, source-level tests and desktop/tablet/mobile renderer coverage have been prepared on an isolated feature branch.
+- Status remains **IN PROGRESS** until the pull-request build, unit tests, gift-asset generation and 36-view Chromium renderer matrix are checked on the final branch head.
+- Model/artwork review remains `design-review-pending`; rights clearance, human visual review, mastered recording and physical-device QA are not claimed.
+- No production catalogue, wallet, payment, transaction or deployment change is part of this addition.
+
+
+## Maracas CI verification — 2026-11-15
+
+- Pull request: [#411](https://github.com/ravaunrichards/Minglora-Social-Network/pull/411)
+- Implementation commit: `710d5207508a03bf96a79383b5d216517d235567`
+- Gift build: **PASS** — 1,748 primary SVG artworks, 1,748 transparent SVG icons and 1,748 self-contained GLTF models generated.
+- Maracas regression: **PASS** — the new bespoke Maracas model, SVG/icon provenance, canonical one-Coin price and source active flag, geometry/accessor bounds and dedicated LIVE audio/motion route all passed `tests/unit/gift-catalog.test.js`.
+- Dedicated browser renderer: **PASS** — 12 gifts × 3 Chromium viewports; 36/36 render checks, 36/36 pixel render checks and 36 screenshots; zero page errors, HTTP failures, request failures or request cancellations. Evidence artifact: `minglora-live-gift-model-render-evidence` (GitHub artifact 14187500566; run 43777989066).
+- LIVE/MeetWave layout visual QA: **PASS** — run 43777989036, including successful screenshot upload.
+- Supabase Auth acceptance: **PASS** — run 43777989138. No production Auth configuration was changed by this asset task.
+- Overall standard CI: **FAIL** — 1,234 passed, 5 failed; For You functional navigation: 14 passed, 1 failed. The same five standard-suite test failures and same For You stylesheet assertion were already present on the base `main` run 43777940421 before PR #411. Failures are in API test fixture expectation, Creator League sync/podium/ranking tests, and For You story stylesheet version expectation. No unrelated files were changed to mask these failures.
+- Merge state: **BLOCKED / NOT MERGED** — GitHub reports the PR mergeable for conflicts but overall state `unstable` because standard checks are red. Do not bypass required checks.
+- Review status remains `design-review-pending`; no human visual approval, rights clearance, mastered sound recording or physical-device QA is claimed.
+- Production Supabase gift rows, Coin values, wallet balances, purchases, ledger entries, payouts and deployments remain untouched.
+
+
+## Dolphin asset addition — implementation and browser verification passed — 2026-11-16
+
+- A new dedicated original PBR glTF source and canonical gift artwork are being added for the existing Dolphin record (`dolphin-4bkejj`, category `animals`, configured value 10 Coins, source `active=true`).
+- Exact-code generator routing, transparent SVG icon generation, a dedicated leap motion, locally synthesized water audio, source regression assertions and a 13-model desktop/tablet/mobile renderer matrix are included in this implementation.
+- **VERIFIED IMPLEMENTATION:** the canonical gift build passed, the Dolphin-specific unit test passed, and Chromium completed 39/39 model renders plus 39/39 non-empty pixel checks across desktop/tablet/mobile; 39 screenshots were uploaded with zero page errors, HTTP failures, request failures or cancellations (run 43779388045, artifact 14187976230).
+- Artwork/model remain `design-review-pending`; rights clearance, human visual approval, mastered recording and physical-device QA are not claimed.
+- No production catalogue, Coin price, wallet, payment, transaction or deployment change is part of this asset addition.
+
+
+## Latest PR-head Chromium verification — 2026-11-16
+
+- Verified exact PR head: `3d681c144518c901dcbf0e851f67cf205407b897`.
+- Workflow: [Minglora LIVE gift model browser render QA, run 43780028073](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43780028073).
+- Final job conclusion: **SUCCESS**. All 13 gift models passed desktop/tablet/mobile rendering: **39/39 model checks and 39/39 pixel-render checks**; 39 screenshots uploaded; asset generation, Chromium setup, render and artifact upload all succeeded.
+- Evidence artifact: `minglora-live-gift-model-render-evidence`, ID `14188351024`, 8,799,594 bytes.
+- The same PR head's LIVE/MeetWave layout visual QA passed. Standard CI remains red on the same five non-LIVE baseline tests present on main; both Maracas and Dolphin source unit assertions and the Gifter badge suite pass.
+- This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
+
+
+## Crocodile asset addition — implementation and browser verification passed — 2026-11-16
+
+- Added dedicated source geometry `assets/3d-assets/gift-models/crocodile-model.mjs` for canonical record `crocodile-tnyf2j` (Animals; configured 10 Coins; source active true).
+- Added code-specific model and original SVG artwork generator routes, dedicated transparent icon provenance, low rumble/jaw-snap synthesized LIVE sound, subject-specific snap choreography, unit coverage and a 14-model desktop/tablet/mobile Chromium renderer target.
+- **VERIFIED:** canonical gift build passed for all 1,748 SVG/icon/glTF records; the Crocodile-specific unit test passed; 14-model desktop/tablet/mobile Chromium matrix completed 42/42 model renders and 42/42 non-empty pixel checks, with 42 screenshots and zero page errors, HTTP failures, request failures or cancellations (run 43781000444, artifact 14188617258).
+- Review remains `design-review-pending`; no human visual approval, rights clearance, mastered sound or physical-device testing is claimed. Production Coin values and DB/wallet/payout data are unchanged.
+
+
+## Crocodile final verification summary — 2026-11-16
+
+- Unit regression: Crocodile, Maracas and Dolphin bespoke geometry/artwork/effects tests passed in the same branch CI test job.
+- Gifter Badge regression: all 11 detailed original JPG panels, matched individual level references, all 50 distinct original PNG badge files and LIVE/profile leaderboard styling tests passed.
+- Chromium model QA: 42/42 checks and 42/42 pixel checks, 42 screenshots; zero page/network errors or cancellations (run 43781000444; artifact 14188617258).
+- LIVE/MeetWave visual layout QA: passed. Supabase Auth acceptance: passed.
+- Standard test suite: **1,239 passed / 5 failed** (1,244 total). Mainline's latest independent run also had five failures (1,236 passed / 5 failed); unrelated failures are outside this LIVE asset task. The PR is not merged or deployed.
+- Code review/approval still needed for premium visual and rights sign-off. No physical device testing or mastered audio recording is claimed.

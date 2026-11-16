@@ -108,3 +108,41 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Sound design ID: royal-lions-scepter-roar-and-regal-fanfare-v1. The existing Web Audio path synthesizes a low band-pass lion-like growl, a short low-frequency impact, five brass-like fanfare tones (196, 293.66, 392, 587.33 and 783.99 Hz) and a restrained high-pass jewel shimmer.
 - Audio is generated locally by Web Audio and is not a mastered/recorded sound asset. Existing sound opt-out behavior and reduced-motion handling remain active.
 - No Lottie/Rive file, GLTF skeletal animation track, mastered sound recording, licensing clearance, human design approval or physical-device QA is claimed. No catalogue pricing, activation, wallet or transaction state was changed.
+
+
+## Maracas dedicated LIVE choreography and sound — 2026-11-15
+
+- Canonical gift: `maracas-1wegi7n` (Maracas; configured `music-12` sound profile; price/status unchanged).
+- Visual choreography: the existing `maraca-rhythm` Web Animations keyframes are now selected for this exact gift code, rather than the generic music entrance.
+- Audio: an original locally synthesized high-pass shaker-noise sequence with six short rhythmic pulses and three quiet pitched accents is called from the normal gift playback path.
+- Artwork/model: the matching custom glTF and SVG gift pair is loaded through the canonical generated catalogue asset paths.
+- These sound effects are generated locally by Web Audio; they are not mastered recordings. The model and art remain design-review-pending; human visual, rights and physical-device review are still required.
+
+
+## Dolphin leap and synthesized ocean-splash effect — 2026-11-16
+
+- Canonical gift: `dolphin-4bkejj` (Dolphin; animals; configured 10 Coins; source active status unchanged).
+- Visual choreography: exact-code selection of `dolphin-leap` in `public/gift-effects.js`; the animal rises into a short arc, turns through a crest, then returns to its settled position. It uses the existing Web Animations event layer and overlay cleanup.
+- Sound: a locally synthesized low-pass ocean wash, delayed high-pass splash and three soft rising sine tones on the existing confirmed gift playback path. It is a Web Audio effect, not a mastered recording.
+- Artwork/model: original Dolphin SVG/icon artwork and the dedicated `dolphin-model.mjs` glTF source are selected by exact canonical code.
+- Test evidence: Dolphin unit assertions passed; Chromium 13-gift matrix passed 39/39 render and pixel checks with 39 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (run 43779388045, artifact 14187976230).
+- Sound opt-out and reduced-motion handling remain governed by the existing runtime. Human timing/mix review, rights clearance, mastered audio and physical-device validation remain pending.
+
+
+## Crocodile snap and synthesized jaw/rumble effect — 2026-11-16
+
+- Canonical gift: `crocodile-tnyf2j` (Crocodile; animals; configured 10 Coins; source active flag unchanged).
+- Visual choreography: exact-code selection of `crocodile-snap`, with a short forward lunge, sharp snap accent and controlled recovery using the existing reduced-motion-aware Web Animations host.
+- Audio: locally synthesized low-pass rumble, band-pass snap transient and descending low tones using the existing Web Audio playback path; this is not a recorded wildlife sound.
+- Artwork/model: original armoured crocodile SVG/transparent icon and bespoke self-contained glTF geometry; only the exact canonical gift code selects these resources.
+- Human art/rights review and sound mastering remain pending; no physical-device acceptance is claimed.
+
+
+## Crocodile snap and synthesized jaw/rumble effect — verified 2026-11-16
+
+- Canonical gift: `crocodile-tnyf2j` (Crocodile; animals; configured 10 Coins; source active flag unchanged).
+- Visual choreography: exact-code selection of `crocodile-snap`, with a short forward lunge, sharp snap accent and controlled recovery through the existing reduced-motion-aware Web Animations host.
+- Audio: locally synthesized low-pass rumble, band-pass snap transient and descending low tones through the existing Web Audio playback path; not a recorded wildlife sound.
+- Artwork/model: original armoured Crocodile SVG/transparent icon and bespoke self-contained glTF source; only the exact canonical gift code selects these resources.
+- Test evidence: dedicated Crocodile source unit test passed; 14 bespoke gift models across three viewports passed 42/42 model and pixel checks with 42 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (PR #411 run 43781000444, artifact 14188617258).
+- This is code/render verification only. Human visual review, rights clearance, mastered audio, and physical-device validation remain pending.
