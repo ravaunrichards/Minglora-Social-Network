@@ -72,7 +72,7 @@ test("All 20 uploaded source images are allowlisted, served, precached and prese
     const bytes = await readFile(new URL("assets/League/" + filename, repository));
     assert.ok(bytes.length > 1000, "source image missing or unexpectedly small: " + filename);
   }
-  assert.match(sw, /minglora-shell-v\\d+-self-updating-1/);
+  assert.match(sw, /minglora-shell-v\d+-self-updating-1/);
 });
 
 test("Leaderboard top-three rows follow the supplied No.1/No.2/No.3 layout with live profile data", () => {
