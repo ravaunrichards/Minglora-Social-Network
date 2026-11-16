@@ -286,3 +286,10 @@ The canonical source record `pop-parrot-alp4e8` now routes to the dedicated `ass
 **Automated verification:** full CI passed 1,251/1,251 tests; the 15-model Chromium 141/model-viewer renderer completed 45/45 desktop/tablet/mobile model renders and 45/45 non-empty pixel checks and uploaded 45 screenshots. The job reported zero page errors and zero request cancellations (run 43809576362; artifact 14200011992). LIVE/MeetWave layout visual QA also passed.
 
 **Acceptance boundary:** automated geometry, build, test and browser evidence do not establish premium human visual approval, rights clearance, mastered audio, texture-map/KTX2 completion, embedded GLTF animation channels, or physical-device QA. The model and sound remain pending review. The remaining 1,733 of the 1,748 source-catalogue rows still use the shared procedural category/name builder; this one bespoke asset does not complete the catalogue-wide artwork mission.
+
+
+## LIVE provider readiness icon quality and acceptance — 2026-11-16
+
+Three new original outline SVGs provide a clear check, configuration warning and unavailable/network-off mark for the existing provider readiness pill. Each has a 24×24 viewBox, shared `icon` symbol, currentColor vector strokes, canonical filename/path and manifest state. The generated inventory records file SHA-256 and component usage; unit tests check structure, no emoji, status-to-glyph mapping, text preservation, icon sizing and service-worker precache.
+
+Automated structural checks do not establish premium artistic quality, human visual approval, accessibility user testing, or rights clearance. All three remain `design-review-pending`. Runtime room connection recovery, host/guest states and the missing beauty/filter, battle, ranking and moderation icon sets remain separate outstanding inventory items.
