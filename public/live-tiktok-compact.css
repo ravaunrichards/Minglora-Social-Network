@@ -682,7 +682,7 @@ body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]>
 }
 
 
-/* FINAL NINE GUEST LAYOUTS — direct parity with assets/Guests Layout/*.jpg.
+/* FINAL NINE GUEST LAYOUTS — direct parity with assets/Crop References/Guests Layout/png/*.png.
    This block loads last, so older experimental presets above cannot override it. */
 body:has(#live-player-shell) #live-video-stage #live-guest-layout.live-guest-layout{
   position:relative!important;box-sizing:border-box!important;display:grid!important;
@@ -744,30 +744,28 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(8){left:calc(8px + 64.19999999999999%)!important}
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(9){left:calc(8px + 74.89999999999999%)!important}
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]{
-  grid-template-columns:minmax(0,1fr)!important;grid-template-rows:22px minmax(0,1fr)!important;
+  grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;
 }
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-layout-heading{
-  grid-column:1/-1!important;grid-row:1!important;
+  position:absolute!important;top:5px!important;left:6px!important;z-index:6!important;
 }
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{
-  grid-column:1!important;grid-row:2!important;
+  grid-column:1!important;grid-row:1!important;width:100%!important;height:100%!important;
 }
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
-  position:absolute!important;z-index:4!important;bottom:9px!important;top:auto!important;
-  width:clamp(64px,9vw,104px)!important;height:clamp(78px,15vh,124px)!important;
-  min-height:0!important;border:1px solid rgba(255,255,255,.26)!important;
+  position:absolute!important;z-index:5!important;right:8px!important;left:auto!important;top:auto!important;
+  width:clamp(50px,17%,116px)!important;height:clamp(38px,7.5%,66px)!important;
+  min-height:0!important;border:1px solid rgba(255,255,255,.28)!important;
   box-shadow:0 4px 14px rgba(0,0,0,.28)!important;
 }
-
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{width:clamp(50px,16%,118px)!important;height:clamp(58px,13vh,104px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(3){left:8px!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(4){left:calc(8px + 17%)!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(5){left:calc(8px + 34%)!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(6){left:calc(8px + 51%)!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(7){left:8px!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(8){left:calc(8px + 17%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(9){left:calc(8px + 34%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(10){left:calc(8px + 51%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(3){bottom:8px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(4){bottom:56px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(5){bottom:104px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(6){bottom:152px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(7){bottom:200px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(8){bottom:248px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(9){bottom:296px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(10){bottom:344px!important}
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-grid"]{
   grid-template-columns:minmax(0,2.05fr) minmax(94px,.95fr)!important;
   grid-template-rows:22px repeat(8,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
@@ -856,3 +854,26 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
   body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-meta small{display:none!important}
 }
 /* END FINAL NINE GUEST LAYOUTS. */
+
+/* FLUID PANEL CROP CORRECTION — one dominant main panel with the compact guest
+   stack anchored to the lower-right edge, matching the authoritative cropped PNG. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]{
+  grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:1!important;width:100%!important;height:100%!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
+  position:absolute!important;right:8px!important;left:auto!important;top:auto!important;
+  width:clamp(50px,17%,116px)!important;height:clamp(38px,7.5%,66px)!important;
+  min-height:0!important;z-index:5!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(3){bottom:8px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(4){bottom:56px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(5){bottom:104px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(6){bottom:152px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(7){bottom:200px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(8){bottom:248px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(9){bottom:296px!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(10){bottom:344px!important}
+/* END FLUID PANEL CROP CORRECTION. */
