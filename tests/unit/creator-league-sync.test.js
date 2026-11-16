@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   ensureCreatorLeagueProfile,
   recordLiveGiftForLeagues,
+  settleCreatorLeagueDay,
   settleScheduledCreatorLeagueDays
 } from "../../backend/modules/leagues/service.js";
 
@@ -18,6 +19,21 @@ function makeDb() {
     creatorLeagueEvents: []
   };
 }
+
+test("an inactive creator stays in the starting class through empty daily settlements", () => {
+  const db = makeDb();
+  const now = new Date("2026-11-15T12:00:00.000Z");
+  const profile = ensureCreatorLeagueProfile(db, "inactive-creator", "GLOBAL", now);
+
+  for (let day = 1; day <= 7; day += 1) {
+    const dayKey = "2026-11-" + String(day).padStart(2, "0");
+    const result = settleCreatorLeagueDay(db, dayKey, now);
+    assert.equal(result.settled, true);
+    assert.equal(profile.leagueClass, "D5");
+    assert.equal(profile.fragments, 0);
+    assert.equal(profile.leagueShields, 0);
+  }
+});
 
 test("daily League placement awards the supplied fragment thresholds independently of lifetime totals", () => {
   const db = makeDb();
