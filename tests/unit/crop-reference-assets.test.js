@@ -27,8 +27,11 @@ test("Crop References use canonical folders and contain no duplicate image files
     "Screenshot_20261112_021309_TikTok(1).png",
     "Screenshot_20261112_021309_TikTok(2).png",
     "Screenshot_20261112_021333_TikTok(1).png",
-    "Screenshot_20261112_021343_TikTok(1).png"
+    "Screenshot_20261112_021343_TikTok(1).png",
+    "Screenshot_20261112_021355_TikTok(1).png",
+    "Screenshot_20261112_021407_TikTok(1).png"
   ];
+  const unassignedRankingNames = rankingNames.slice(-2);
   const guestNames = [
     "Full Screen.png", "Fluid Panel.png", "Fluid Grid.png",
     "Fixed Grid.png", "Fixed Panel.png", "Side by Side.png",
@@ -48,7 +51,13 @@ test("Crop References use canonical folders and contain no duplicate image files
     assert.ok(!hashes.has(hash), relativePath + " duplicates " + hashes.get(hash));
     hashes.set(hash, relativePath);
   }
-  assert.equal(sourceFiles.length, 28);
+  assert.equal(rankingNames.length, 8, "all eight supplied Daily Ranking PNGs are tracked");
+  assert.equal(sourceFiles.length, 30, "all 30 canonical Crop References PNGs are audited");
+  for (const name of unassignedRankingNames) {
+    const sourcePath = path.join(root, "assets", "Crop References", "Daily Ranking Badge", "png", name);
+    assert.ok(fs.existsSync(sourcePath), name + " remains preserved in the canonical source folder");
+    assert.ok(!server.includes(name), name + " must not be assigned to an invented ranking position");
+  }
 });
 
 test("all 50 Gifter levels keep unique artwork while six crop badges light milestone stages", () => {
