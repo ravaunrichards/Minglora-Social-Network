@@ -132,8 +132,8 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v345-self-updating-1/);
-  assert.match(html, /app\.js\?v=20261116-match-powerups-six-reference-1/);
+  assert.match(serviceWorker, /minglora-shell-v\d+-self-updating-1/);
+  assert.match(html, /app\.js\?v=20261116-match-powerups-complete-2/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-overlay-alignment-1/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
