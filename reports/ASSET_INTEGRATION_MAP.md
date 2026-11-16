@@ -230,3 +230,13 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
 - QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
 - Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.
+
+
+## Djembe Master refinement — PR #400
+Exact gift code `djembe-master-1v3jzkm` retains its existing generator route and viewer path. Its model now has 18 named grain inlays; focused test, 33 viewport renders and layout QA passed. The visual standard remains pending because the shell still needs convincing natural-wood texture and human approval. No catalogue or database status changed.
+## Toucan model and artwork route — PR #406
+- Exact code `toucan-1ovzxjb` dispatches to `createToucanModel()` in the existing generator.
+- Exact-code `premiumSvgShape` emits original primary and transparent SVG art with `toucan-rainforest-original-v1`.
+- Generated outputs use the existing `public/assets/gifts/catalog/{code}.gltf`, `{code}.svg`, and `{code}-icon.svg` paths; no new viewer or endpoint was added.
+- The Chromium test includes Toucan, expanding the matrix to 12 models × desktop/tablet/mobile. The previous profile revision passed 36/36; latest stripe/material edits await rerun.
+- No canonical catalogue, money, wallet, transaction, payout or database state was modified.

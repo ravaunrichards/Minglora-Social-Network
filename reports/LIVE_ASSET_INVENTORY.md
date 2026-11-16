@@ -267,3 +267,19 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 - Geometry: full-grain ivory leather sphere, recessed curved seam channels, raised scarlet cotton seams, individual hand-sewn stitches and subtle leather-grain flecks.
 - Exact canonical source metadata: Baseball / sports / 1 Coin / source active true; unchanged by this asset implementation.
 - Artwork and model review: design-review-pending; no human visual, legal or physical device acceptance is implied.
+
+
+## Djembe Master mahogany refinement — 2026-11-15 (PR #400)
+- Source: `assets/3d-assets/gift-models/djembe-model.mjs`; code `djembe-master-1v3jzkm`.
+- Adds 18 named flowing mahogany inlays using lightweight seven-point tube meshes. Existing shell, hide head, 16 tension cords, woven diamond lacing, rim bindings and carved detail remain.
+- Focused regression test passed; 11 gifts × 3 Chromium viewports passed (33 screenshots, zero page/HTTP/request failures or cancellations); independent layout QA passed.
+- Manual review still found the wood surface visually too uniform for premium approval. Model remains `design-review-pending`; real authored wood texture/material and human sign-off are outstanding.
+- PR #400 remains draft/unmerged. No catalogue price, active flag, wallet, transaction or database value changed.
+## Toucan bespoke animal gift — 2026-11-15 (PR #406)
+- Canonical code/category: `toucan-1ovzxjb` / `animals`. Catalogue record, Coin value, active flag, sound/animation keys and all other fields were read-only.
+- Source: `assets/3d-assets/gift-models/toucan-model.mjs`, a bespoke glTF 2.0 model with individual named anatomy meshes, embedded buffer and per-part PBR materials.
+- Generator: `scripts/generate-minglora-gifts.mjs` routes exact code `toucan-1ovzxjb` to `createToucanModel()`; original primary SVG and transparent icon carry `toucan-rainforest-original-v1`.
+- Unit test: `tests/unit/toucan-gift-model.test.js` checks catalogue preservation, named anatomy, materials, bounds, buffer, horizontal bill projection, matte plumage and orange stripe.
+- Browser matrix was expanded to 12 gifts × 3 viewports. A profile revision passed 36/36 pixel renders with zero browser/HTTP/request failures or cancellations, but screenshots still showed washed plumage and hidden orange blaze.
+- The latest code adds a camera-facing orange bill-stripe mesh and darker matte non-metallic body/wing finishes. These latest source/test changes require a fresh CI run and screenshot inspection before acceptance.
+- PR #406 is open draft. Artwork remains `design-review-pending`; rights clearance, human art review, mastered sound/animation and physical-device QA remain outstanding.

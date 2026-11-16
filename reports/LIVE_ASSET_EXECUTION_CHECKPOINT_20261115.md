@@ -180,3 +180,16 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
 
 **Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.
+
+
+## Djembe recovery checkpoint — 2026-11-15
+PR #400 (`feat/minglora-djembe-mahogany-grain-20261115`) remains open draft. The 18-inlay source, focused unit test, 33 WebGL renders and layout QA passed. Visual review did not meet premium wood-quality sign-off; keep `design-review-pending`. No catalogue activation or monetary/database mutation occurred.
+
+## Toucan continuation checkpoint — 2026-11-15
+- Project: Minglora Social Network only. Branch `feat/minglora-toucan-live-gift-model-20261115`; PR #406 is open draft: https://github.com/ravaunrichards/Minglora-Social-Network/pull/406.
+- Source: `assets/3d-assets/gift-models/toucan-model.mjs`; generator `scripts/generate-minglora-gifts.mjs`; unit test `tests/unit/toucan-gift-model.test.js`; browser test `tests/e2e/live-gift-model-render.mjs`.
+- Latest code/test head before this documentation/main sync: `ce838d3ff8f8a622d10e05d91be0a89397844a8a`.
+- Previous profile head passed Toucan unit, layout QA, and 36/36 WebGL pixel renders; screenshots showed side profile but grey-looking plumage and hidden orange. Latest source adds a raised exposed orange bill stripe and near-black matte PBR values, with new test assertions; those exact final edits have not yet been rerun.
+- Mainline changes since the Toucan branch base affect only Gifter progression, index/service-worker references and associated tests; none overlaps the four Toucan code paths. Sync the latest main without overwriting those files.
+- Last complete unit suite was 1,233 passed / 5 failed: API grade assertion, Creator League sync, For You stylesheet assertion, League podium and League rankings. Supabase Auth and layout independence passed. These failures are outside Toucan paths and were not modified.
+- Keep `design-review-pending`. No canonical price, active flag, wallet, transaction, payout or production DB mutation.
