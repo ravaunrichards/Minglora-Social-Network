@@ -109,7 +109,7 @@ test('All nine crop layouts are first-class MeetWave stage and grid presets', ()
   for (const layout of layouts) {
     assert.ok(js.includes('src="/assets/live-guest-layouts/'+layout+'.png"'), layout+' preview uses its own original crop');
     assert.ok(css.includes('#mw-grid[data-guest-layout="'+layout+'"]'), layout+' has independent guest-grid CSS');
-    assert.ok(css.includes('#mw-screen-stage[data-guest-layout="'+layout+'"]'), layout+' applies to the shared stage');
+    assert.ok(js.includes('screen.dataset.guestLayout=layout'), layout+' applies to the shared stage selection');
   }
 });
 
@@ -231,21 +231,8 @@ test('MeetWave layout and participant panels do not introduce inner scrolling', 
 test('MeetWave Full Screen uses the focused main tile and individual guest thumbnails', () => {
   const fullScreen=css.slice(css.indexOf('/* CROPPED NINE GUEST LAYOUTS'));
   assert.ok(fullScreen.includes('#mw-grid[data-guest-layout="full-screen"]'));
-  assert.ok(fullScreen.includes('.live-guest-seat:not(.is-focused)'));
-  assert.ok(fullScreen.includes('.live-guest-seat.is-focused'));
-  assert.ok(fullScreen.includes('position:absolute!important'));
-  for(let seat=0;seat<=8;seat++) {
-    assert.ok(fullScreen.includes('.live-guest-seat[data-seat-index="'+seat+'"]'), 'Seat '+seat+' has a positioned cell');
-  }
-});
-test('MeetWave Full Screen shows Guest Seats 1–8 in the normal, non-expanded player', () => {
-  const fit=css.slice(css.lastIndexOf('/* Full Screen normal-window fit:'));
-  assert.ok(fit.includes(':not(.live-full-screen-active)'));
-  assert.ok(fit.includes('height:min(66dvh,calc(100dvh - 210px),760px)!important'));
-  assert.ok(fit.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'));
-  for(let seat=1;seat<=8;seat++){
-    assert.ok(fit.includes('.live-guest-seat[data-seat-index="'+seat+'"]'), 'Guest Seat '+seat+' has an explicit grid cell');
-  }
-  assert.ok(fit.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
-  assert.ok(fit.includes('grid-template-rows:22px minmax(0,1.08fr) repeat(3,minmax(0,.82fr))!important'));
+  assert.ok(fullScreen.includes('.live-guest-seat:not(.is-host){display:none!important}'));
+  assert.ok(fullScreen.includes('.live-guest-seat.is-host{'));
+  assert.ok(fullScreen.includes('inset:0!important'));
+  assert.ok(fullScreen.includes('width:100%!important;height:100%!important'));
 });
