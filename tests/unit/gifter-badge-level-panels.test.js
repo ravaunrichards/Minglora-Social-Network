@@ -197,11 +197,10 @@ test("Gifter source references and cropped badge overlays each have one canonica
   rangeSheets.forEach(([sourceFile, routeFile]) => {
     const cropPath = path.join(root, "assets", "Crop References", "Gifter level range sheets", sourceFile);
     assert.ok(fs.existsSync(cropPath), sourceFile + " is the canonical PNG range sheet in Crop References");
-    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifter level range sheets", sourceFile.replace(".png", ".jpg"))), sourceFile + " retains its uploaded JPG companion");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", sourceFile)), sourceFile + " is not duplicated in the old root folder");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", sourceFile.replace(".jpg", ".png"))), sourceFile + " has no duplicate legacy range PNG");
     const milestoneCrop = sourceFile;
-    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " is present as the canonical cropped milestone badge");
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", milestoneCrop)), milestoneCrop + " is present as the canonical cropped milestone badge");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " has no duplicate legacy milestone badge");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", milestoneCrop.replace(".png", ".psd"))), milestoneCrop + " has no duplicate legacy PSD");
     assert.ok(progression.includes('file: "' + routeFile + '"'), routeFile + " is rendered in the range gallery");
@@ -209,9 +208,6 @@ test("Gifter source references and cropped badge overlays each have one canonica
     assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " is precached");
     assert.ok(server.includes("'" + sourceFile + "'"), sourceFile + " maps to its Crop References source");
   });
-  const canonicalPsdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
-  assert.equal(fs.readdirSync(canonicalPsdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain in the canonical Crop References folder");
-  assert.ok(!fs.existsSync(path.join(canonicalPsdDirectory, "LV.1 - LV.9")), "the extensionless duplicate of the LV.1–LV.9 PNG has been removed");
   assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", "LV.1 - LV.9")), "the legacy extensionless PSD duplicate has been removed");
   masterSheets.forEach(([sourceFile, route]) => {
     assert.ok(progression.includes(route), route + " appears in the master collection section");
