@@ -6636,7 +6636,7 @@ async function route(req, res) {
         }
         const leaderboard=[...totals.entries()]
           .sort((a,b)=>b[1].points-a[1].points||b[1].giftsSent-a[1].giftsSent)
-          .slice(0,50)
+          .slice(0,100)
           .map(([userId,score],index)=>{
             const member=db.users.find(candidate=>candidate.id===userId);
             return member&&!blockedBetween(user.id,member.id)?{
