@@ -212,7 +212,7 @@ test("Gifter source references and cropped badge overlays each have one canonica
   assert.equal(fs.readdirSync(canonicalPsdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain in the canonical Crop References folder");
   assert.ok(!fs.existsSync(path.join(canonicalPsdDirectory, "LV.1 - LV.9")), "the extensionless duplicate of the LV.1–LV.9 PNG has been removed");
   assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", "LV.1 - LV.9")), "the legacy extensionless PSD duplicate has been removed");
-    masterSheets.forEach(([sourceFile, route]) => {
+  masterSheets.forEach(([sourceFile, route]) => {
     assert.ok(progression.includes(route), route + " appears in the master collection section");
     assert.ok(server.includes("'" + route + "'"), route + " has an explicit server route");
     assert.ok(sw.includes("'" + route + "'"), route + " is precached");
