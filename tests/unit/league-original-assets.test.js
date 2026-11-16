@@ -101,6 +101,6 @@ test("Match Power-Ups retain their existing IDs and original behavior", () => {
   assert.match(league, /data-powerup-select=/);
   assert.match(league, /activateSelectedPowerup/);
   assert.match(assetReadme, /not used as a substitute for the uploaded division/i);
-  assert.match(index, /leagues\.css\?v=20261116-league-original-reference-assets-1/);
+  assert.match(index, /leagues\.js\?v=20261115-remove-class-order-reference-1/);
   assert.match(index, /leagues\.js\?v=20261116-league-original-reference-assets-1/);
 });
