@@ -83,7 +83,7 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-png-no-white-tracker-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
@@ -137,8 +137,8 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(serviceWorker, /minglora-shell-v345-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-overlay-alignment-1/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-png-no-white-tracker-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-png-no-white-tracker-1/);
 });
 
 
