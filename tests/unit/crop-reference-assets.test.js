@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,8 +11,45 @@ const server = read("src/server.js");
 const app = read("public/app.js");
 const topGifters = read("public/top-gifters.js");
 const rankingStyles = read("public/styles.css");
+const progressionStyles = read("public/gifter-progression.css");
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
+
+
+test("Crop References use canonical folders and contain no duplicate image files", () => {
+  const rangeNames = [
+    "LV.1 - LV.9.png", "LV.10 - LV.19.png", "LV.20 - LV.29.png",
+    "LV.30 - LV.39.png", "LV.40 - LV.49.png", "LV.50+.png"
+  ];
+  const rankingNames = [
+    "Screenshot_20261112_021224_TikTok(1).png",
+    "Screenshot_20261112_021224_TikTok(2).png",
+    "Screenshot_20261112_021309_TikTok(1).png",
+    "Screenshot_20261112_021309_TikTok(2).png",
+    "Screenshot_20261112_021333_TikTok(1).png",
+    "Screenshot_20261112_021343_TikTok(1).png"
+  ];
+  const guestNames = [
+    "Full Screen.png", "Fluid Panel.png", "Fluid Grid.png",
+    "Fixed Grid.png", "Fixed Panel.png", "Side by Side.png",
+    "Spotlight.png", "Roundtable 1.png", "Roundtable 2.png"
+  ];
+  const sourceFiles = [
+    ...rangeNames.map(name => path.join("assets", "Crop References", "Gifters Badges", "Png", name)),
+    ...rangeNames.map(name => path.join("assets", "Crop References", "Gifter level range sheets", name)),
+    ...rankingNames.map(name => path.join("assets", "Crop References", "Daily Ranking Badge", "png", name)),
+    ...guestNames.map(name => path.join("assets", "Crop References", "Guests Layout", "png", name)),
+    path.join("assets", "Crop References", "Profile Picture", "ENIGMA.png")
+  ];
+  const hashes = new Map();
+  for (const relativePath of sourceFiles) {
+    const bytes = fs.readFileSync(path.join(root, relativePath));
+    const hash = createHash("sha256").update(bytes).digest("hex");
+    assert.ok(!hashes.has(hash), relativePath + " duplicates " + hashes.get(hash));
+    hashes.set(hash, relativePath);
+  }
+  assert.equal(sourceFiles.length, 28);
+});
 
 test("all 50 Gifter levels keep unique artwork while six crop badges light milestone stages", () => {
   assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual/);
