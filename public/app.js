@@ -2360,7 +2360,15 @@ async function loadLiveDiscoveryBoard(tab,sessions){
       const data=await api('/live/rankings/daily');
       const items=Array.isArray(data.leaderboard)?data.leaderboard:[];
       root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Ranked by confirmed Coins sent today · "+esc(data.dayKey||'today')+"</small></div>"+
-        (items.length?items.slice(0,10).map(item=>"<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(item.user?.id||'')+"'><span class='live-ranking-position'>#"+Number(item.position||0)+"</span><img src='"+avatar(item.user||{})+"' alt=''><span><small>@"+esc(item.user?.username||'member')+"</small><strong>"+esc(item.user?.name||item.user?.username||'Minglora member')+liveGifterBadgeMarkup(item.user,"compact")+"</strong></span><b>"+liveCompactCount(item.points||0)+" pts</b></button>").join(''):"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
+        (items.length?items.slice(0,10).map(item=>{
+          const position=Number(item.position||0);
+          const member=item.user||{};
+          const avatarUrl=avatar(member);
+          const podium=position>=1&&position<=3
+            ? "<span class='live-daily-podium' role='img' aria-label='Daily ranking position "+position+"'><img class='live-daily-podium-frame' src='/assets/daily-ranking-badges/place-"+position+".png' alt='' loading='lazy' decoding='async'><img class='live-daily-podium-avatar' src='"+avatarUrl+"' alt='' loading='lazy'></span>"
+            : "<span class='live-ranking-position'>#"+position+"</span><img src='"+avatarUrl+"' alt=''>";
+          return "<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(member.id||'')+"'>"+podium+"<span><small>@"+esc(member.username||'member')+"</small><strong>"+esc(member.name||member.username||'Minglora member')+liveGifterBadgeMarkup(member,"compact")+"</strong></span><b>"+liveCompactCount(item.points||0)+" pts</b></button>";
+        }).join(''):"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
       root.querySelectorAll('[data-live-ranking-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.liveRankingProfile)));
     }else{
       const data=await api('/leagues/overview');
