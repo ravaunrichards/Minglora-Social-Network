@@ -148,3 +148,13 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - LIVE audio: locally synthesized low body rumble, filtered jaw snap and short descending tones; not a mastered or recorded animal sound
 - Review state: `design-review-pending`; human visual, rights and physical-device approval is not implied
 - Integration: exact canonical gift code only; source catalogue metadata, configured 10-Coin value, active flag, database rows and transaction flow remain unchanged
+
+## Carnival Music v1
+
+- Source: `carnival-music-model.mjs`
+- Target: canonical catalogue item `carnival-music-14x4zts` (Carnival Music; music; configured value 999 Coins)
+- Output: generated self-contained glTF 2.0, subject-specific primary SVG and transparent icon at the canonical gift paths
+- Geometry: brushed steelpan barrel and hammered dish, eight tuned note fields, crossed maple mallets, three-foot support, brass trim and eleven individually shaped satin carnival plumes/quills
+- Integration: exact-code route in `scripts/generate-minglora-gifts.mjs`; existing `grand-entry` animation preset and music-category synthesized sound remain in use
+- Review: `design-review-pending`; human art review, rights clearance and physical-device QA remain outstanding
+- Economy: canonical name/category/999-Coin value/active flag remain unchanged; no production database, wallet or transaction records are changed
