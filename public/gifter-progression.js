@@ -199,6 +199,17 @@
   // replace its muted milestone symbols only after the member earns each stage.
   const PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50]);
   const PROGRESSION_TRACK_CENTERS = Object.freeze([95, 272, 450, 628, 806, 984]);
+  // The six supplied PNG crops have transparent canvas padding. These measured
+  // offsets center the visible badge pixels (not the full PNG canvas) over the
+  // six original tracker symbols at every responsive width.
+  const PROGRESSION_TRACK_OVERLAY_ALIGNMENT = Object.freeze([
+    { x: 0.18, y: 2.71 },
+    { x: 0.28, y: 3.77 },
+    { x: 0.43, y: 0.29 },
+    { x: 0.25, y: 1.11 },
+    { x: 0.16, y: 0.48 },
+    { x: 0.10, y: 0.29 }
+  ]);
 
   function progressionTrackState(current = {}) {
     const level = Math.max(0, Math.min(50, Math.floor(Number(current.level) || 0)));
@@ -230,8 +241,10 @@
     const earnedStageBadges = track.hasGifterBadge
       ? PROGRESSION_TRACK_STAGES.map((stageLevel, index) => track.level >= stageLevel
         ? "<img class='gp-progression-range-badge' src='/assets/gifter-crop-badges/range-" +
-          (index + 1) + ".png' style='left:" +
-          ((PROGRESSION_TRACK_CENTERS[index] / 1080) * 100).toFixed(3) +
+          (index + 1) + ".png' style='left:calc(" +
+          ((PROGRESSION_TRACK_CENTERS[index] / 1080) * 100).toFixed(3) + "% - " +
+          PROGRESSION_TRACK_OVERLAY_ALIGNMENT[index].x.toFixed(3) + "%);top:" +
+          (55 + PROGRESSION_TRACK_OVERLAY_ALIGNMENT[index].y).toFixed(2) +
           "%' alt='' aria-hidden='true' loading='eager' decoding='async'>"
         : "").join("")
       : "";

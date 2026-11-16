@@ -81,7 +81,7 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
@@ -132,9 +132,24 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v341-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v342-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-cropped-badges-bright-1/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-cropped-badges-bright-1/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-overlay-alignment-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
+});
+
+
+test("earned Gifter milestone overlays cover original tracker symbols at matching visible size and alignment", () => {
+  const progression = read("public/gifter-progression.js");
+  const styles = read("public/gifter-progression.css");
+  const overlayRule = styles.match(/\\.gp-live-progression-track>\\.gp-progression-range-badge\\{([^}]+)\\}/)?.[1] || "";
+  assert.match(overlayRule, /width:10%;min-width:0;max-width:none/);
+  assert.match(overlayRule, /transform:translate\\(-50%,-50%\\) scale\\(1\\.35\\)/);
+  assert.match(overlayRule, /z-index:1/);
+  assert.match(progression, /PROGRESSION_TRACK_STAGES = Object\\.freeze\\(\\[1, 10, 20, 30, 40, 50\\]\\)/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT = Object\\.freeze\\(\\[/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\\[index\\]\\.x/);
+  assert.match(progression, /PROGRESSION_TRACK_OVERLAY_ALIGNMENT\\[index\\]\\.y/);
+  assert.match(progression, /track\\.level >= stageLevel/);
 });

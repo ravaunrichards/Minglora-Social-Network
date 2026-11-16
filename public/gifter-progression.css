@@ -534,9 +534,9 @@
   box-shadow:0 0 0 1px rgba(255,255,255,.38),0 1px 3px rgba(35,21,50,.36);
   transition:left .35s cubic-bezier(.2,.75,.25,1);
 }
-/* Bright cropped milestone badges sit directly over the matching muted symbols. */
+/* The supplied PNGs contain transparent canvas padding. Size the visible crop pixels to the original tracker-symbol footprint so the earned overlay fully conceals the muted symbol beneath it. */
 .gp-live-progression-track>.gp-progression-range-badge{
-  position:absolute;top:55%;z-index:1;display:block;width:5.8%;min-width:20px;max-width:68px;
+  position:absolute;top:55%;z-index:1;display:block;width:10%;min-width:0;max-width:none;
   height:auto;aspect-ratio:1;object-fit:contain;object-position:center;
   transform:translate(-50%,-50%) scale(1.35);border-radius:0;pointer-events:none;
   filter:brightness(1.48) saturate(1.3) contrast(1.12)
