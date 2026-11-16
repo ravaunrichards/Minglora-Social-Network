@@ -181,9 +181,10 @@ test('Full Screen has its own expand icon with no guest panels; Fluid Panel keep
   assert.ok(app.includes("value:'full-screen',label:'Full Screen',icon:'fullscreen'"));
   assert.ok(app.includes("value:'fluid-panel',label:'Fluid Panel',icon:'fluidPanel'"));
   const iconMap=app.slice(app.indexOf('function liveLayoutIcon'),app.indexOf('function applyLiveScreenLayout'));
-  const fullScreenIcon=iconMap.match(/fullscreen:"([^"]+)"/)?.[1]||'';
-  assert.ok(fullScreenIcon.includes("M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5"));
-  assert.doesNotMatch(fullScreenIcon, /<rect/);
+  assert.ok(iconMap.includes("fullscreen:'full-screen'"), "Full Screen maps to its own supplied preview");
+  assert.ok(iconMap.includes("fluidPanel:'fluid-panel'"), "Fluid Panel maps to its own supplied preview");
+  assert.match(iconMap, /src='\/assets\/live-guest-layouts\/"\+reference\+"\.png'/);
+  assert.ok(iconMap.includes("class='live-layout-preview'"), "layout previews use the shared preview image renderer");
 });
 
 test('Full Screen keeps the compact centered host stage and visible guest seats', () => {
