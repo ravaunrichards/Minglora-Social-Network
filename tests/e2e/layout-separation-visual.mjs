@@ -93,7 +93,10 @@ function stateInPage(product){
       columnStart:c.gridColumnStart,columnEnd:c.gridColumnEnd,rowStart:c.gridRowStart,rowEnd:c.gridRowEnd};
   };
   const gr=grid.getBoundingClientRect();
-  return {display:getComputedStyle(grid).display,columns:columnCount(getComputedStyle(grid).gridTemplateColumns),
+  const gridStyle=getComputedStyle(grid);
+  const tracks=String(gridStyle.gridTemplateColumns||'').trim();
+  const columns=!tracks||tracks==='none'?0:tracks.split(/\\s+/).length;
+  return {display:gridStyle.display,columns,
     grid:{x:gr.x,y:gr.y,width:gr.width,height:gr.height},visibleSeats:tiles.filter(t=>getComputedStyle(t).display!=='none').length,
     seats:tiles.map(getTile),stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height]};
 }
