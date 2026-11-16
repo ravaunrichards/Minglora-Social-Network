@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "boosting_glove", selectedMatchId: "", selectedBoosterRank: 2, rankingPeriod: "weekly", rankingClass: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
+  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "boosting_glove", selectedMatchId: "", rankingPeriod: "weekly", rankingClass: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
   let refreshController = null;
   let refreshInFlight = false;
   let viewGeneration = 0;
@@ -104,7 +104,6 @@
       "<div class='league-powerup-selected-details'>" +
       "<h3 id='league-powerup-selected-title'>" + esc(selected?.name || "Choose a power-up") + "</h3>" +
       "<p id='league-powerup-selected-description'>" + esc(selected?.description || "Select one of the available Match Power-Ups.") + "</p>" +
-      (selected?.id === "boosters" ? "<label class='league-powerup-rank-control'>Eligible gifter<select id='league-powerup-booster-rank'><option value='2'" + (state.selectedBoosterRank === 2 ? " selected" : "") + ">No. 2 ranked gifter</option><option value='3'" + (state.selectedBoosterRank === 3 ? " selected" : "") + ">No. 3 ranked gifter</option></select></label>" : "") +
       "<div class='league-powerup-selected-meta'><span id='league-powerup-selected-duration'>" + (selected ? esc(powerupDurationLabel(selected)) : "—") + "</span>" +
       "<span id='league-powerup-selected-usage'>" + esc(powerupUsageLabel(selected)) + "</span></div>" +
       "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Choose a power-up from one of your live matches to prepare an activation.</p>" +
@@ -160,7 +159,7 @@
     if (status) status.textContent = "Activating " + power.name + " for this match…";
     try {
       await request("/leagues/matches/" + encodeURIComponent(match.id) + "/powerups", {
-        method: "POST", body: JSON.stringify({ powerupId: power.id, boosterRank: state.selectedBoosterRank })
+        method: "POST", body: JSON.stringify({ powerupId: power.id })
       });
       toast("Match power-up activated.");
       await render();
@@ -529,13 +528,6 @@
         $("#league-powerup-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
       });
     });
-    const boosterRank = $("#league-powerup-booster-rank");
-    if (boosterRank && boosterRank.dataset.actionBound !== "true") {
-      boosterRank.dataset.actionBound = "true";
-      boosterRank.addEventListener("change", () => {
-        state.selectedBoosterRank = Number(boosterRank.value) === 3 ? 3 : 2;
-      });
-    }
     const activatePowerup = $("#league-powerup-activate");
     if (activatePowerup && !activatePowerup.dataset.actionBound) {
       activatePowerup.dataset.actionBound = "true";
