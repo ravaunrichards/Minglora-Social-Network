@@ -426,8 +426,16 @@
         const timeMakerLimit = power.id === "time_maker" && Number(match.timeMakerUses || 0) >= 3;
         const speedChallengeUsed = power.id === "speed_challenge" && Boolean(match.speedChallenge);
         const restriction = power.usedToday ? "Used today" : timeMakerLimit ? "3 uses reached" : speedChallengeUsed ? "Used this match" : power.id === "time_maker" ? (3 - Number(match.timeMakerUses || 0)) + " uses left" : power.id === "speed_challenge" ? "One round per match" : "Available once daily";
+        const icon = {
+          "boosting_glove": "powerup-glove",
+          "magic_mist": "powerup-mist",
+          "stun_hammer": "powerup-hammer",
+          "time_maker": "powerup-time-maker",
+          "boosters": "powerup-boosters",
+          "speed_challenge": "powerup-speed"
+        }[power.id];
         return "<button type='button' class='league-powerup-btn' data-match-powerup-select='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' aria-label='Select " + esc(power.name) + " for this match'>" +
-          "<span aria-hidden='true'>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + restriction + "</small></button>";
+          "<span class='league-powerup-btn-icon' aria-hidden='true'>" + (icon ? leagueAssetIcon(icon,"league-powerup-svg-icon") : esc(power.symbol)) + "</span><strong>" + esc(power.name) + "</strong><small>" + restriction + "</small></button>";
       }).join("");
       controls = "<div class='league-powerup-grid'>" + powers + "</div>";
     } else if (match.status === "live" && !isParticipant) {
