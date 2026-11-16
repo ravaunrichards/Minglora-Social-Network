@@ -8,7 +8,7 @@ This directory is the **single source of truth** for the supplied cropped refere
 - The application exposes versionable image routes from `src/server.js`; those routes read these original files directly.
 - `public/sw.js` caches the application-facing routes. Update the relevant cache/version entry and the asset regression test whenever a route or source file changes.
 - Preserve the originals. Do not recolor, stretch, crop again, add a border, or replace a source file unless a separately approved edited reference is supplied.
-- The two Gifter groups intentionally use the same six level-range labels in **different folders** for different purposes: milestone overlays are PNG files; broad level-range reference sheets are JPG files. They are separate source images, not duplicates.
+- The two Gifter groups intentionally use the same six level-range labels in **different folders** for different purposes: milestone overlays are PNG files; full level-range reference sheets are also PNG files, stored separately. They are distinct original assets, not interchangeable duplicates.
 
 ## 1. Gifter Badge Progression
 
@@ -31,18 +31,18 @@ Six cropped milestone badge PNG images:
 
 **Source folder:** `Gifter level range sheets/`
 
-The six cropped JPG range sheets (not the PNG milestone badges) are:
+The six cropped PNG range sheets are the primary reference-gallery images:
 
-- `LV.1 - LV.9.jpg`
-- `LV.10 - LV.19.jpg`
-- `LV.20 - LV.29.jpg`
-- `LV.30 - LV.39.jpg`
-- `LV.40 - LV.49.jpg`
-- `LV.50+.jpg`
+- `LV.1 - LV.9.png`
+- `LV.10 - LV.19.png`
+- `LV.20 - LV.29.png`
+- `LV.30 - LV.39.png`
+- `LV.40 - LV.49.png`
+- `LV.50+.png`
 
-They are served through `/assets/gifter-badge-range-sheets/lv-1-9.jpg`, `lv-10-19.jpg`, `lv-20-29.jpg`, `lv-30-39.jpg`, `lv-40-49.jpg`, and `lv-50-plus.jpg` (explicit JPEG routes).
+They are served through `/assets/gifter-badge-range-sheets/lv-1-9.png`, `lv-10-19.png`, `lv-20-29.png`, `lv-30-39.png`, `lv-40-49.png`, and `lv-50-plus.png` (explicit PNG routes). The uploaded JPG companions remain in the folder for source/reference preservation; the Gifter range gallery uses the PNG files.
 
-These are range/reference-sheet artwork stored in this folder exactly once. Keep them separate from the six milestone-overlay PNGs and from the 50 individual badge image files.
+These are full range/reference-sheet artwork. Keep them separate from the six milestone-overlay PNGs in `Gifters Badges/Png/` and from the 50 individual badge image files.
 
 ## 3. Daily Ranking Badges
 
