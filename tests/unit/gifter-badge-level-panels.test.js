@@ -156,7 +156,7 @@ test("Gifter progression uses the original ordered Level panels as its primary a
 });
 
 
-test("all 70 remaining Gifter reference images are placed at their correct Rewards locations", () => {
+test("Gifter source references and cropped badge overlays each have one canonical location", () => {
   const progression = read("public/gifter-progression.js");
   const gifts = read("public/gifts.js");
   const server = read("src/server.js");
@@ -198,7 +198,10 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
     const cropPath = path.join(root, "assets", "Crop References", "Gifter level range sheets", sourceFile);
     assert.ok(fs.existsSync(cropPath), sourceFile + " is stored once in Crop References");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", sourceFile)), sourceFile + " is not duplicated in the old root folder");
-    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", sourceFile.replace(".jpg", ".png"))), sourceFile + " has no duplicate legacy PNG");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifter level range sheets", sourceFile.replace(".jpg", ".png"))), sourceFile + " has no duplicate legacy range PNG");
+    const milestoneCrop = sourceFile.replace(".jpg", ".png");
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " is present as the canonical cropped milestone badge");
+    assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", milestoneCrop)), milestoneCrop + " has no duplicate legacy milestone badge");
     assert.ok(progression.includes('file: "' + routeFile + '"'), routeFile + " is rendered in the range gallery");
     assert.ok(server.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " has an explicit server allow-list route");
     assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " is precached");
