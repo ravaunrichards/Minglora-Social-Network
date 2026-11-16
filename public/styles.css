@@ -4884,7 +4884,9 @@ button.live-host-profile{appearance:none;-webkit-appearance:none;text-align:left
 .live-gift-button:disabled{cursor:not-allowed}
 .live-discovery-board{display:grid;gap:10px;margin:10px 0 16px;padding:12px}
 .live-discovery-tabs{display:flex;gap:7px;flex-wrap:wrap;border-bottom:1px solid var(--border,rgba(150,160,180,.2));padding-bottom:9px}
-.live-discovery-tabs button{padding:8px 13px;border:1px solid var(--border,rgba(150,160,180,.2));border-radius:999px;color:var(--muted,#9aa2b2);background:transparent;font-weight:800;cursor:pointer}
+.live-discovery-tabs button{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--border,rgba(150,160,180,.2));border-radius:999px;color:var(--muted,#9aa2b2);background:transparent;font-weight:800;cursor:pointer}
+.live-discovery-tab-icon{display:block;flex:0 0 16px;width:16px;height:16px}
+.live-discovery-tabs button>span{min-width:0}
 .live-discovery-tabs button.active{color:var(--text,#fff);border-color:rgba(255,80,116,.55);background:rgba(255,80,116,.13)}
 .live-discovery-content{min-width:0}
 .live-ranking-heading{display:grid;gap:3px;padding:4px 2px 10px}
