@@ -267,3 +267,12 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 - Geometry: full-grain ivory leather sphere, recessed curved seam channels, raised scarlet cotton seams, individual hand-sewn stitches and subtle leather-grain flecks.
 - Exact canonical source metadata: Baseball / sports / 1 Coin / source active true; unchanged by this asset implementation.
 - Artwork and model review: design-review-pending; no human visual, legal or physical device acceptance is implied.
+
+
+## Uploaded Gifter badge progression crops — 2026-11-15
+
+- Source: `public/assets/gifter-badge-progression-art.jpg`, the uploaded original 1080×167 JPEG.
+- Added six independent SVG crop windows at `public/assets/gifter-badge-progression-crops/tier-01.svg` through `tier-06.svg`.
+- Each crop references the original JPEG and selects only its matching tier emblem using a dedicated SVG viewBox; the source image itself remains unchanged.
+- The six crops are presented in the Gifter Progression page beneath the uncropped source strip and are included in the PWA shell cache.
+- The separate 50 numbered Gifter PNGs remain the per-level identity artwork; no generated 3D crest is used by the badge helper.
