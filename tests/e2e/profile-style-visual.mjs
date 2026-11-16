@@ -97,7 +97,7 @@ function profileMarkup(style, layout) {
   ).join('');
   const friendNames = ['Ari', 'Mia', 'Noah', 'Zoe', 'Jay', 'Kai'];
   const friends = friendNames.map(name =>
-    '<article class="profile-friend-card"><img src="/assets/default-profile-avatar-3d.svg?v=20261106-profile-defaults-2" alt=""><strong>' + name + '</strong></article>'
+    '<article class="profile-friend-card"><img src="/assets/profile-defaults/enigma.png?v=20261116-enigma-default-avatar-1" alt=""><strong>' + name + '</strong></article>'
   ).join('');
   const about = [
     ['Intro', 'A short introduction visible on the profile.'],
@@ -112,7 +112,7 @@ function profileMarkup(style, layout) {
     '<section class="card profile-header-card profile-layout-advanced profile-header-card--owner" style="padding:0">' +
       cover +
       '<div class="profile-info">' +
-        '<div class="profile-avatar-edit-wrap"><img class="avatar" src="/assets/default-profile-avatar-3d.svg?v=20261106-profile-defaults-2" alt="Profile picture"></div>' +
+        '<div class="profile-avatar-edit-wrap"><img class="avatar" src="/assets/profile-defaults/enigma.png?v=20261116-enigma-default-avatar-1" alt="Profile picture"></div>' +
         '<div class="profile-info-main"><h1 class="profile-name-with-badges"><span>Minglora Creator</span></h1><p class="profile-username-line">@minglora_creator</p></div>' +
         actions +
         '<div class="profile-counts" aria-label="Profile counts">' + metricMarkup(style) + '</div>' +
@@ -174,7 +174,7 @@ function visualQaApiResponse(pathname) {
     profileStyle: activeVisualProfileCase.style,
     profileScreenLayout: activeVisualProfileCase.layout,
     profileLayout: 'advanced',
-    avatar: '/assets/default-profile-avatar-3d.svg',
+    avatar: '/assets/profile-defaults/enigma.png',
     cover: '/assets/default-profile-cover.svg',
     bio: 'A browser-only sample account for validating Minglora profile layouts.',
     platformRole: 'member'
