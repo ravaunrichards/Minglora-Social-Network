@@ -195,25 +195,22 @@
   }
 
 
-  // The supplied six-symbol progression strip represents the complete 50-level
-  // journey. Its white marker is a live position indicator, not a Level 0 badge.
+  // The original supplied strip is the complete layout. The single white marker
+  // shows the member's current server-confirmed level; no extra circles or lines
+  // are drawn over the artwork because its own symbols and spacing are authoritative.
   const PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50]);
   const PROGRESSION_TRACK_CENTERS = Object.freeze([95, 272, 450, 628, 806, 984]);
-  const PROGRESSION_TRACK_LINKS = Object.freeze([
-    [145, 222], [322, 400], [500, 578], [678, 756], [856, 934]
-  ]);
 
   function progressionTrackState(current = {}) {
     const level = Math.max(0, Math.min(50, Math.floor(Number(current.level) || 0)));
     const hasGifterBadge = Boolean(current.hasUnlockedBadge && level > 0);
-    if (!hasGifterBadge) return { level, hasGifterBadge: false, markerX: null, stages: [], links: [] };
+    if (!hasGifterBadge) return { level, hasGifterBadge: false, markerX: null };
 
     const withinLevel = level < 50
       ? Math.max(0, Math.min(1, Number(current.progressPercent || 0) / 100))
       : 0;
     const effectiveLevel = Math.min(50, level + withinLevel);
     let markerX = PROGRESSION_TRACK_CENTERS[PROGRESSION_TRACK_CENTERS.length - 1];
-    let activeStageIndex = PROGRESSION_TRACK_STAGES.length - 1;
 
     for (let index = 0; index < PROGRESSION_TRACK_STAGES.length - 1; index += 1) {
       const startLevel = PROGRESSION_TRACK_STAGES[index];
@@ -222,51 +219,15 @@
         const fraction = Math.max(0, Math.min(1, (effectiveLevel - startLevel) / (endLevel - startLevel)));
         markerX = PROGRESSION_TRACK_CENTERS[index] +
           ((PROGRESSION_TRACK_CENTERS[index + 1] - PROGRESSION_TRACK_CENTERS[index]) * fraction);
-        activeStageIndex = index;
         break;
       }
     }
 
-    return {
-      level,
-      hasGifterBadge: true,
-      markerX,
-      effectiveLevel,
-      activeStageIndex,
-      stages: PROGRESSION_TRACK_STAGES.map((requiredLevel, index) => ({
-        requiredLevel,
-        unlocked: level >= requiredLevel,
-        current: index === activeStageIndex
-      })),
-      links: PROGRESSION_TRACK_STAGES.slice(0, -1).map((requiredLevel, index) => {
-        const nextLevel = PROGRESSION_TRACK_STAGES[index + 1];
-        const fraction = Math.max(0, Math.min(1,
-          (effectiveLevel - requiredLevel) / (nextLevel - requiredLevel)));
-        return {
-          start: PROGRESSION_TRACK_LINKS[index][0],
-          end: PROGRESSION_TRACK_LINKS[index][1],
-          length: PROGRESSION_TRACK_LINKS[index][1] - PROGRESSION_TRACK_LINKS[index][0],
-          fraction
-        };
-      })
-    };
+    return { level, hasGifterBadge: true, markerX, effectiveLevel };
   }
 
   function renderProgressionTrack(current) {
     const track = progressionTrackState(current);
-    const stageGlow = track.stages.map((stage, index) =>
-      stage.unlocked
-        ? "<circle class='gp-progression-stage-glow" + (stage.current ? " is-current" : "") +
-          "' cx='" + PROGRESSION_TRACK_CENTERS[index] + "' cy='82' r='25'/>"
-        : ""
-    ).join("");
-    const linkGlow = track.links.map(link => {
-      const offset = link.length * (1 - link.fraction);
-      return link.fraction > 0
-        ? "<line class='gp-progression-link' x1='" + link.start + "' y1='83' x2='" + link.end +
-          "' y2='83' stroke-dasharray='" + link.length + "' stroke-dashoffset='" + offset.toFixed(2) + "'/>"
-        : "";
-    }).join("");
     const marker = track.hasGifterBadge
       ? "<span class='gp-progression-level-marker' style='left:" +
         ((track.markerX / 1080) * 100).toFixed(3) + "%' aria-hidden='true' title='Current Gifter Level " +
@@ -279,11 +240,7 @@
     return "<figure class='gp-progression-art-frame'>" +
       "<div class='gp-live-progression-track' role='img' aria-label='" + esc(description) + "'>" +
       "<img src='/assets/gifter-badge-progression-art.jpg' alt='Original Minglora Gifter badge progression path' loading='eager' decoding='async'>" +
-      "<span class='gp-progression-marker-cover' aria-hidden='true'></span>" +
-      (track.hasGifterBadge
-        ? "<svg class='gp-progression-glow-overlay' viewBox='0 0 1080 153' preserveAspectRatio='none' aria-hidden='true'>" +
-          linkGlow + stageGlow + "</svg>" + marker
-        : "") +
+      marker +
       "</div></figure>";
   }
 

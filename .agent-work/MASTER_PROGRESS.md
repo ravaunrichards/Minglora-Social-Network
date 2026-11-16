@@ -178,3 +178,10 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Repository-wide CI is not green: five unrelated API startup/registration, Home Stories and Creator League tests remain failing; those areas were not modified. Supabase Auth acceptance passed.
 - Post-merge source verification on `main` confirmed the tracker logic, CSS, HTML asset references and service-worker shell cache versions are present.
 - Render deployment was not verified because the Render connection had no workspace selected. No manual deployment was triggered.
+
+### Gifter Progression artwork alignment correction — 2026-11-15
+- Task branch: `fix/gifter-original-art-marker-only-20261115`.
+- Removed the misaligned generated SVG glow circles and connector lines from the supplied progression strip. Removed the black cover dot previously placed over the Level 1 starting position.
+- Retained only the single white current-level marker, positioned by the server-calculated level and within-level progress. The original supplied strip remains the complete layout; no new shapes are drawn over its symbols or spacing.
+- Preserved all 50 original numbered badge PNGs, their locked/earned/admin-awarded/current states, Coin thresholds, gift ledger, refunds, admin awards, wallet balances and confirmed-gift refresh behavior.
+- Updated regression assertions, asset version strings and PWA shell cache version to v328. Validation/CI and merge/deployment status remain pending.
