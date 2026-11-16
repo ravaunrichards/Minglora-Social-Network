@@ -598,3 +598,7 @@
       drop-shadow(0 0 20px rgba(163,110,255,.86));
   }
 }
+
+
+/* Respect reduced-motion preferences after the premium current-level pulse rule. */
+@media(prefers-reduced-motion:reduce){.gp-level-index-item.is-current .gp-level-index-art{animation:none}}
