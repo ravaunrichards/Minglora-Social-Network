@@ -2023,13 +2023,13 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   root.classList.toggle("has-many-guests",fullScreenHostOnly&&guests.length>4);
   root.dataset.activeGuestCount=String(guests.length);
   const specs=[{
-    key:"host",identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true
+    key:"host",identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true,seatIndex:0
   }];
   guests.slice(0,8).forEach((person,index)=>specs.push({
     key:"guest:"+String(person.identity||index),identity:String(person.identity||""),name:person.name||person.identity||"Minglora guest",
-    person,isHost:false
+    person,isHost:false,seatIndex:index+1
   }));
-  if(!fullScreenHostOnly)while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
+  if(!fullScreenHostOnly)while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length,seatIndex:specs.length});
   const previous=new Map(Array.from(root.children).filter(node=>node.dataset?.seatKey).map(node=>[node.dataset.seatKey,node]));
   const header=document.createElement("div");
   header.className="live-guest-layout-heading";
@@ -2038,6 +2038,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     if(spec.empty){
       const seat=previous.get(spec.key)||document.createElement("button");
       seat.type="button";seat.className="live-guest-seat empty";seat.dataset.seatKey=spec.key;
+      seat.dataset.seatIndex=String(spec.seatIndex??spec.seatNumber??0);seat.style.order=String(spec.seatIndex??spec.seatNumber??0);
       seat.removeAttribute("data-participant");seat.setAttribute("data-open-guest-panel","");
       seat.setAttribute("aria-label","Open guest seat "+(spec.seatNumber));
       seat.innerHTML="<span class='live-guest-seat-plus' aria-hidden='true'>+</span><strong>Guest seat</strong><small>"+(role==="host"?"Invite a speaker":"Open seat")+"</small>";
@@ -2054,7 +2055,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     const status=speaking?"Speaking":connected?(muted?"Microphone muted":"Microphone connected"):spec.isHost?"Waiting for host":"Connecting to stage";
     const hasVideo=Boolean(media.querySelector(".live-video-element"));
     seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
-    seat.dataset.seatKey=spec.key;seat.dataset.participant=identity;
+    seat.dataset.seatKey=spec.key;seat.dataset.seatIndex=String(spec.seatIndex??0);seat.style.order=String(spec.seatIndex??0);seat.dataset.participant=identity;
     seat.setAttribute("aria-label",name+" · "+(spec.isHost?"Host":"Guest speaker")+" · "+status);
     seat.innerHTML="<span class='live-guest-seat-tag'>"+(spec.isHost?"HOST":"GUEST")+"</span>"+
       "<span class='live-guest-seat-avatar' aria-hidden='true'>"+esc(initials)+"</span>"+
@@ -2770,7 +2771,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['voiceRings','Voice rings',true,'Play a short tone for new guest requests']
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
-  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Guest layout</strong><small>Choose one of the nine supplied guest-stage arrangements. Each layout has its own participant grid, tile proportions and guest positions.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE guest layout'>"+LIVE_GUEST_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Full Screen')+" guest layout selected.</p></section>":"";
+  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Guest layout</strong><small>Choose one of the nine supplied guest-stage arrangements. Each layout has its own participant grid, tile proportions and guest positions.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE guest layout'>"+LIVE_GUEST_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>+"<img class='live-layout-preview' src='/assets/live-guest-layouts/"+option.value+".png' alt='' loading='lazy' decoding='async'><span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Full Screen')+" guest layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveTopGiftersTools="<section id='live-top-gifters-panel' class='live-tools-card live-top-gifters-panel' data-live-tools-panel='top-gifters'><div class='live-panel-title'><strong>Top Gifters</strong><small>Ranked by confirmed Coins sent in this LIVE</small></div><div id='live-top-gifters-list' class='live-top-gifters-list'><p class='muted'>Loading this room’s gifter ranking…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
