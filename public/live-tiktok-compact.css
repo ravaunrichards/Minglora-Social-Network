@@ -991,3 +991,16 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]{
   height:100%!important;min-height:100%!important;
 }
+
+
+/* Force Fluid Panel's two thumbnail positions above legacy nth-child rules. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest[data-seat-index="1"]:nth-child(n){
+  display:grid!important;position:absolute!important;inset:auto 7px calc(7px + 22%) auto!important;
+  width:29%!important;height:21%!important;min-width:0!important;min-height:0!important;
+  margin:0!important;grid-column:auto!important;grid-row:auto!important;transform:none!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest[data-seat-index="2"]:nth-child(n){
+  display:grid!important;position:absolute!important;inset:auto 7px 7px auto!important;
+  width:29%!important;height:21%!important;min-width:0!important;min-height:0!important;
+  margin:0!important;grid-column:auto!important;grid-row:auto!important;transform:none!important;
+}
