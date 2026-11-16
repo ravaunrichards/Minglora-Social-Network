@@ -212,7 +212,7 @@ async function restoreLastView(){
 window.addEventListener('pagehide',persistCurrentView);
 const LIVE_ROOM_THEME_OPTIONS=[{value:'studio',label:'Creator Studio'},{value:'ocean',label:'Ocean Stage'},{value:'tropical',label:'Tropical Party'},{value:'royal',label:'Royal Lounge'},{value:'neon',label:'Neon Arena'},{value:'sunset',label:'Sunset Spotlight'},{value:'garden',label:'Garden Glow'},{value:'social',label:'Soft Social'}];
 window.addEventListener('minglora:settings-loaded',event=>{state.settings=event.detail||null;const sort=$('#feed-sort');if(sort&&state.view==='feed'){sort.value=state.settings?.preferences?.feedSort==='oldest'?'old':'new';sort.dispatchEvent(new Event('change'));}renderPaletteSwitcher();});
-const DEFAULT_PROFILE_AVATAR='/assets/default-profile-avatar-3d.svg?v=20261107-member-default-profile-picture-2';
+const DEFAULT_PROFILE_AVATAR='/assets/profile-defaults/enigma.png?v=20261116-enigma-default-avatar-1';
 const DEFAULT_PROFILE_COVER='/assets/default-profile-cover.svg?v=20261106-profile-defaults-1';
 const fallbackAvatar = () => DEFAULT_PROFILE_AVATAR;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1317,18 +1317,19 @@ function normalizeLiveScreenLayout(value){
 }
 function normalizeLiveGuestLayout(value){return normalizeLiveScreenLayout(value);}
 function liveLayoutIcon(name){
-  const paths={
-    fullscreen:"<path d='M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'/>",
-    fluidPanel:"<rect x='2.5' y='2.5' width='19' height='19' rx='2'/><rect x='4.5' y='4.5' width='12' height='15' rx='1'/><rect x='18' y='5' width='2' height='4' rx='.5'/><rect x='18' y='11' width='2' height='4' rx='.5'/><rect x='18' y='17' width='2' height='2' rx='.5'/>",
-    fluidGrid:"<rect x='2.5' y='2.5' width='12' height='19' rx='1'/><rect x='16.5' y='2.5' width='5' height='5' rx='1'/><rect x='16.5' y='9.5' width='5' height='5' rx='1'/><rect x='16.5' y='16.5' width='5' height='5' rx='1'/>",
-    fixedGrid:"<rect x='2.5' y='2.5' width='6' height='6' rx='.8'/><rect x='9' y='2.5' width='6' height='6' rx='.8'/><rect x='15.5' y='2.5' width='6' height='6' rx='.8'/><rect x='2.5' y='9' width='6' height='6' rx='.8'/><rect x='9' y='9' width='6' height='6' rx='.8'/><rect x='15.5' y='9' width='6' height='6' rx='.8'/><rect x='2.5' y='15.5' width='6' height='6' rx='.8'/><rect x='9' y='15.5' width='6' height='6' rx='.8'/><rect x='15.5' y='15.5' width='6' height='6' rx='.8'/>",
-    fixedPanel:"<rect x='2.5' y='2.5' width='12' height='19' rx='1'/><rect x='16.5' y='2.5' width='5' height='3' rx='.6'/><rect x='16.5' y='7' width='5' height='3' rx='.6'/><rect x='16.5' y='11.5' width='5' height='3' rx='.6'/><rect x='16.5' y='16' width='5' height='3' rx='.6'/>",
-    sideBySide:"<rect x='2.5' y='2.5' width='9' height='11' rx='1'/><rect x='12.5' y='2.5' width='9' height='11' rx='1'/><path d='M2.5 16h19'/><rect x='2.5' y='17' width='4' height='4' rx='.6'/><rect x='7.5' y='17' width='4' height='4' rx='.6'/><rect x='12.5' y='17' width='4' height='4' rx='.6'/><rect x='17.5' y='17' width='4' height='4' rx='.6'/>",
-    spotlight:"<rect x='2.5' y='2.5' width='19' height='10' rx='1'/><rect x='2.5' y='14' width='4' height='7.5' rx='.6'/><rect x='7.5' y='14' width='4' height='7.5' rx='.6'/><rect x='12.5' y='14' width='4' height='7.5' rx='.6'/><rect x='17.5' y='14' width='4' height='7.5' rx='.6'/>",
-    roundtable1:"<rect x='2.5' y='3' width='5' height='5' rx='.7'/><rect x='2.5' y='10' width='5' height='5' rx='.7'/><rect x='2.5' y='17' width='5' height='4' rx='.7'/><rect x='9' y='7' width='6' height='10' rx='1'/><rect x='16.5' y='3' width='5' height='5' rx='.7'/><rect x='16.5' y='10' width='5' height='5' rx='.7'/><rect x='16.5' y='17' width='5' height='4' rx='.7'/>",
-    roundtable2:"<rect x='2.5' y='3' width='4' height='5' rx='.7'/><rect x='2.5' y='10' width='4' height='5' rx='.7'/><rect x='2.5' y='17' width='4' height='4' rx='.7'/><rect x='7.5' y='7' width='9' height='10' rx='1'/><rect x='17.5' y='3' width='4' height='5' rx='.7'/><rect x='17.5' y='10' width='4' height='5' rx='.7'/><rect x='17.5' y='17' width='4' height='4' rx='.7'/>"
+  const references={
+    fullscreen:'full-screen',
+    fluidPanel:'fluid-panel',
+    fluidGrid:'fluid-grid',
+    fixedGrid:'fixed-grid',
+    fixedPanel:'fixed-panel',
+    sideBySide:'side-by-side',
+    spotlight:'spotlight',
+    roundtable1:'roundtable-1',
+    roundtable2:'roundtable-2'
   };
-  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.fixedGrid)+"</svg>";
+  const reference=references[name]||'full-screen';
+  return "<img class='live-layout-preview' src='/assets/live-guest-layouts/"+reference+".png' alt='' loading='lazy' decoding='async'>";
 }
 function applyLiveScreenLayout(value){
   activeLiveScreenLayout=normalizeLiveScreenLayout(value);
