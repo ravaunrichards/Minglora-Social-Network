@@ -248,3 +248,12 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Runtime: `public/gift-effects.js` selects `crocodile-snap` and local synthesized rumble/snap audio only for this canonical gift code.
 - Output: `public/assets/gifts/catalog/crocodile-tnyf2j.gltf`, `crocodile-tnyf2j.svg`, `crocodile-tnyf2j-icon.svg`.
 - Acceptance: source-specific unit test passed; 14-model/3-viewport Chromium job passed 42/42 model and pixel checks; layout visual QA passed. Human art/rights and physical-device review remain open.
+
+## Pop Parrot exact-code LIVE integration — 2026-11-16
+
+- Source: `assets/3d-assets/gift-models/pop-parrot-model.mjs`; canonical source record `pop-parrot-alp4e8` (Pop Parrot, animals, configured 400 Coins; source active flag preserved).
+- Build: `scripts/generate-minglora-gifts.mjs` imports and selects `createPopParrotModel()` only for the canonical gift code. It emits `pop-parrot-alp4e8.gltf`, `pop-parrot-alp4e8.svg` and `pop-parrot-alp4e8-icon.svg` under `public/assets/gifts/catalog/`. The motion-index and asset-manifest generators include the subject-specific motion/audio identity and source provenance.
+- Runtime: `public/gift-effects.js` selects the `parrot-swoop` motion and the dedicated locally synthesized Pop Parrot whistle/chirp sound by exact code through the existing gift-effect lifecycle. Existing sound opt-out and reduced-motion behavior are preserved; this does not introduce a new transaction or gift-event route.
+- PWA: the gift-effects asset version and service-worker shell cache reference were advanced for the updated runtime and motion index.
+- Verification: CI 1,251/1,251 passed; Chromium model QA 45/45 model and pixel checks across three viewports, 45 screenshots, zero page errors and zero request cancellations. Evidence artifact 14200011992.
+- Acceptance: design, licensing, mastered audio and physical-device checks remain pending. Catalogue source metadata is not a production offering; no production catalogue, price, wallet or transaction data changed.
