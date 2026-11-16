@@ -6731,7 +6731,8 @@ async function route(req, res) {
           }
           match=(db.creatorLeagueMatches||[]).find(item=>item.id===match.id)||match;
           await saveStore();
-          return json(res,200,{match});
+          const publicMatch=listCreatorLeagueMatches(db,db.users,user.id,new Date()).find(item=>item.id===match.id);
+          return json(res,200,{match:publicMatch});
         }catch(error){
           return json(res,error.status||400,{error:error.message||'The League Match action could not be completed.'});
         }
