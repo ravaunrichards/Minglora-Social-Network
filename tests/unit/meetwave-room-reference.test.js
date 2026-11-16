@@ -34,7 +34,7 @@ test('All nine crop-backed guest layouts apply to the MeetWave stage and video g
     assert.ok(css.includes('#mw-grid[data-guest-layout="'+layout+'"]'), layout+' has a dedicated guest-grid presentation');
     assert.ok(js.includes('/assets/live-guest-layouts/'+layout+'.png'), layout+' displays its original crop reference');
   }
-  assert.equal((js.match(/data-mw-guest-layout="/g') || []).length, 9);
+  assert.equal((js.match(/data-mw-guest-layout="/g) || []).length, 9);
   assert.ok(js.includes('screen.dataset.guestLayout=layout'));
   assert.ok(js.includes('grid.dataset.guestLayout=layout'));
   assert.ok(js.includes("grid.dataset.gridRole='host-eight-guest-seats'"));
@@ -105,7 +105,7 @@ test('All nine crop layouts are first-class MeetWave stage and grid presets', ()
   const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
   assert.ok(js.includes('const MEETING_SCREEN_LAYOUTS = MEETING_GUEST_LAYOUTS'));
   assert.ok(js.includes('function applyMeetingGuestLayout(layout)'));
-  assert.equal((js.match(/data-mw-guest-layout="/g') || []).length, layouts.length);
+  assert.equal((js.match(/data-mw-guest-layout="/g) || []).length, layouts.length);
   for (const layout of layouts) {
     assert.ok(js.includes('src="/assets/live-guest-layouts/'+layout+'.png"'), layout+' preview uses its own original crop');
     assert.ok(css.includes('#mw-grid[data-guest-layout="'+layout+'"]'), layout+' has independent guest-grid CSS');
