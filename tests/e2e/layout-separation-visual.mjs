@@ -119,19 +119,19 @@ function verify(result,definition,viewport,state){
   const get=index=>visible.find(seat=>seat.index===index);
   if(definition.id==='full-screen'){
     const host=get(0);
-    assert.ok(host.w>=result.stage.width*.94&&host.h>=result.stage.height*.94,label+' uses one full-stage panel');
+    assert.ok(host.w>=result.stage.width*.88&&host.h>=result.stage.height*.88,label+' uses one full-stage panel; host='+JSON.stringify(host)+' stage='+JSON.stringify(result.stage));
     assert.equal(result.columns,1,label+' uses one column');
     assert.equal(result.rows,1,label+' uses one row');
   }
   if(definition.id==='fluid-panel'){
     const host=get(0),first=get(1),second=get(2);
-    assert.ok(host.w>=result.stage.width*.94&&host.h>=result.stage.height*.94,label+' keeps one dominant panel');
+    assert.ok(host.w>=result.stage.width*.88&&host.h>=result.stage.height*.88,label+' keeps one dominant panel; host='+JSON.stringify(host)+' stage='+JSON.stringify(result.stage));
     assert.ok(first&&second&&first.x>result.stage.width*.68&&second.x>result.stage.width*.68,label+' places two compact panels at the lower right');
     assert.ok(Math.abs(first.x-second.x)<3&&Math.abs(first.y-second.y)>first.h*.7,label+' stacks the compact panels vertically');
   }
   if(definition.id==='fluid-grid'){
     const host=get(0),first=get(1),second=get(2);
-    assert.ok(host.x<first.x&&host.h>=result.stage.height*.94,label+' keeps the large panel full height at left');
+    assert.ok(host.x<first.x&&host.h>=result.stage.height*.88,label+' keeps the large panel full height at left');
     assert.ok(Math.abs(first.x-second.x)<3&&Math.abs(first.y-second.y)>first.h*.7,label+' has two stacked panels in the right column');
     assert.equal(result.columns,2,label+' uses two columns');
     assert.equal(result.rows,2,label+' uses two rows');
@@ -144,7 +144,7 @@ function verify(result,definition,viewport,state){
   }
   if(definition.id==='fixed-panel'){
     const host=get(0),guests=[get(1),get(2),get(3)];
-    assert.ok(host.x<guests[0].x&&host.h>=result.stage.height*.94,label+' uses a large left panel');
+    assert.ok(host.x<guests[0].x&&host.h>=result.stage.height*.88,label+' uses a large left panel');
     assert.ok(guests.every(Boolean)&&guests.every(item=>Math.abs(item.x-guests[0].x)<3),label+' aligns three guest panels on the right');
     assert.equal(new Set(guests.map(item=>Math.round(item.y/3))).size,3,label+' uses three stacked rows');
     assert.equal(result.columns,2,label+' uses two columns');

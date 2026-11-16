@@ -5,7 +5,7 @@
   const endpoint = id => '/meetwave/rooms/' + encodeURIComponent(id);
   const MEETWAVE_GUEST_LIMIT = 8;
   const MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1;
-  const MEETING_SCREEN_LAYOUTS = { 'full-screen':'Full Screen', 'fluid-panel':'Fluid Panel', 'fluid-grid':'Fluid Grid', 'fixed-grid':'Fixed Grid', 'fixed-panel':'Fixed Panel', 'side-by-side':'Side by Side', spotlight:'Spotlight', 'roundtable-1':'Roundtable 1', 'roundtable-2':'Roundtable 2' };
+  const MEETING_SCREEN_LAYOUTS = { 'full-screen':'Full Screen', 'fluid-panel':'Fluid Panel', 'fluid-grid':'Fluid Grid', 'fixed-grid':'Fixed Grid', 'fixed-panel':'Fixed Panel', 'side-by-side':'Side by Side', 'spotlight':'Spotlight', 'roundtable-1':'Roundtable 1', 'roundtable-2':'Roundtable 2' };
   const note = (message, error=false) => { const target=$('#mw-status')||$('#mw-room-status'); if(target){target.textContent=message;target.classList.toggle('is-error',error);} };
   function setRoomControlState(id,active,caption,actionLabel){
     const button=$('#'+id);

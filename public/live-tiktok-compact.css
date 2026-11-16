@@ -682,7 +682,7 @@ body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]>
 }
 
 
-/* NINE COMPLETE GUEST LAYOUTS — each selector follows its own supplied crop.
+/* FINAL NINE GUEST LAYOUTS — each selector follows its own supplied crop.
    Original sources: assets/Crop References/Guests Layout/png/*.png
    All participant nodes stay mounted; each crop determines which seat panels
    are shown on the stage and their exact row/column arrangement. */
