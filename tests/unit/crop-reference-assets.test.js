@@ -10,7 +10,7 @@ const server = read("src/server.js");
 const app = read("public/app.js");
 const topGifters = read("public/top-gifters.js");
 const rankingStyles = read("public/styles.css");
-const progressionStyles = read("public/gifter-progression.css");
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-1/);
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
 
@@ -24,12 +24,12 @@ test("all 50 Gifter levels serve the six uploaded bright cropped badge reference
   assert.match(server, /'Crop References','Gifters Badges','Png'/);
   assert.match(server, /gifter-crop-range-sheets\/lv-1-9\.png/);
   assert.match(server, /'Crop References','Gifter level range sheets'/);
-  assert.match(read("public/gifter-progression.js"), /gifter-crop-range-sheets/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
-  assert.match(read("public/gifter-progression.js"), /gp-progression-range-badge/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-1/);
   assert.match(progressionStyles, /\.gp-progression-range-badge/);
 
 });
@@ -67,6 +67,6 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(serviceWorker, /minglora-shell-v337-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-1/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-crop-bright-earned-1/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-cropped-range-sheet-references-1/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-1/);
 });
