@@ -27,7 +27,7 @@ const artifacts=path.join(root,'artifacts/layout-separation-visual');
 fs.mkdirSync(artifacts,{recursive:true});
 const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css')+'\n'+read('public/live-tiktok-compact.css');
 const meetwaveCss=read('public/meetwave.css');
-const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;color:#fff;font-family:Arial,sans-serif}body{padding:8px;box-sizing:border-box}#live-player-shell{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}#live-video-stage,#mw-screen-stage{position:relative!important;display:block!important;width:100%!important;height:min(66dvh,calc(100dvh - 210px),760px)!important;min-height:min(340px,calc(100dvh - 210px))!important;max-height:min(760px,calc(100dvh - 210px))!important;box-sizing:border-box!important;overflow:hidden!important}.mw-meeting{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}';
+const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;color:#fff;font-family:Arial,sans-serif}body{padding:0;box-sizing:border-box}';
 const report={
   result:'pending',
   originalCropDirectory:'assets/Crop References/Guests Layout/png/',
@@ -56,9 +56,10 @@ function seatMarkup(product,state){
 function markup(product,state){
   const heading='<div class="live-guest-layout-heading"><strong>'+product.toUpperCase()+' STAGE</strong><small>Original-crop visual QA</small></div>';
   const seats=heading+seatMarkup(product,state);
-  return product==='LIVE'
-    ?'<main id="live-player-shell"><section id="live-video-stage" class="live-video-stage"><div id="live-guest-layout" class="live-guest-layout live-video-stage">'+seats+'</div></section></main>'
-    :'<main class="mw-meeting"><section id="mw-screen-stage" class="mw-screen-stage"><div id="mw-grid" class="mw-video-grid live-guest-layout live-video-stage" data-grid-role="host-eight-guest-seats">'+seats+'</div></section></main>';
+  if(product==='LIVE'){
+    return '<section id="live-player-shell" class="live-player-shell live-mode-video_audio"><header class="live-player-header"><strong>MINGLORA LIVE</strong></header><div class="live-player-layout"><div class="live-video-column"><section id="live-video-stage" class="live-video-stage live-mode-video_audio"><div id="live-guest-layout" class="live-guest-layout">'+seats+'</div><div id="live-screen-share-stage" class="live-screen-share-stage" aria-label="Shared screen"></div></section><div class="live-player-controls live-icon-controls" role="group" aria-label="LIVE controls"></div></div><aside id="live-fullscreen-chat-slot" class="live-fullscreen-chat-slot"></aside></div></section>';
+  }
+  return '<section class="mw-meeting live-player-shell"><header class="mw-meeting-head live-player-header"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Visual QA room</h1></div><b id="mw-count" class="mw-meeting-count">9 seats</b></header><div class="mw-meeting-layout live-player-layout"><section class="mw-stage-column live-video-column"><div id="mw-screen-stage" class="mw-screen-stage" data-screen-layout="fluid-grid"><div id="mw-grid" class="mw-video-grid live-guest-layout live-video-stage" data-grid-role="host-eight-guest-seats" data-layout="fluid-grid">'+seats+'</div><div id="mw-screen-share-stage" class="mw-screen-share-stage" hidden></div></div><div id="mw-audio" class="mw-audio"></div><div class="mw-controls live-player-controls live-icon-controls" role="group" aria-label="MeetWave controls"></div></section><aside id="mw-chat-panel" class="mw-chat-panel"></aside></div></section>';
 }
 async function buildPage(browser,product,viewport,state){
   const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height},deviceScaleFactor:1});
