@@ -106,3 +106,24 @@ test('the service worker no longer preloads or specifically caches Match Power-U
   assert.doesNotMatch(sw, /minglora_(?:momentum_boost|shield|time_boost|score_multiplier)\.gltf/);
   assert.doesNotMatch(sw, /url\.pathname\.startsWith\('\/assets\/match-powerups\/'\)/);
 });
+
+test('LIVE Match Power-Ups use supplied SVG artwork and disable used or exhausted activations', () => {
+  assert.match(app, /const usedPowerupsToday=new Set\(Array\.isArray\(match\.usedPowerupsToday\)/);
+  for (const [id, icon] of [
+    ['boosting_glove','powerup-glove'],
+    ['magic_mist','powerup-mist'],
+    ['stun_hammer','powerup-hammer'],
+    ['time_maker','powerup-time-maker'],
+    ['boosters','powerup-boosters'],
+    ['speed_challenge','powerup-speed']
+  ]) {
+    assert.ok(app.includes("id:'" + id + "'"), id + ' appears in the LIVE action panel');
+    assert.ok(app.includes("icon:'" + icon + "'"), id + ' uses its original SVG artwork');
+  }
+  assert.match(app, /disabled\?' disabled':''/);
+  assert.match(app, /'Used today'/);
+  assert.match(app, /'3 uses reached'/);
+  assert.match(app, /'Used this match'/);
+  assert.match(app, /TIME MAKER · \+ /);
+  assert.match(styles, /\.live-match-powerup-icon/);
+});
