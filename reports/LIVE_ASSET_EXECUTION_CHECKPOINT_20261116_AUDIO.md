@@ -73,3 +73,18 @@ Crocodile, Dolphin, Maracas and Pop Parrot have distinct subject-specific proced
 3. Fix any failures on this branch and rerun, no more than two retries per failing operation.
 4. Update checkpoint with exact final PR head, test counts, artifact ID and workflow results.
 5. Human listening/mix review, mastering and physical-device audio QA remain release gates; no deployment or production gift activation.
+
+## Verified execution result — 2026-11-16
+
+- CI run: 43814539145 — all jobs completed successfully.
+- Main test job: 1,255 tests, 1,255 passed, 0 failed, 0 cancelled, 0 skipped.
+- For You functional-navigation job: success.
+- Supabase Auth provider acceptance job: success.
+- Gift WAV output upload: success.
+- Generated audio artifact: minglora-live-gift-audio-13581, ID 14201787369, 3,291,339 bytes (not expired at verification time).
+- The same workflow also uploaded the unified LIVE asset manifest and raster metadata audit.
+- The generated WAV test verified all 15 canonical identities, per-cue unique bytes and hashes, RIFF/WAVE PCM headers, 44.1 kHz stereo/16-bit properties, file lengths, manifest URLs/checksums, duration bounds, unique Crocodile/Dolphin/Maracas/Pop Parrot sound-design branches and runtime/PWA integration.
+- Current final implementation head before this verification-document commit: bc5542b42bf61b979ad7701d6132f843e844decd.
+- The audio PR is #429 and intentionally stacks on PR #428's Pop Parrot branch. Its base is not main yet; PR mergeability is not expected until the parent is accepted.
+
+The audio assets remain generated-review-required. Human listening, mix/loudness, mastering, accessibility and physical-device audio acceptance remain outstanding. This checkpoint does not claim production deployment or publication.
