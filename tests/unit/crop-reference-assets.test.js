@@ -27,8 +27,11 @@ test("Crop References use canonical folders and contain no duplicate image files
     "Screenshot_20261112_021309_TikTok(1).png",
     "Screenshot_20261112_021309_TikTok(2).png",
     "Screenshot_20261112_021333_TikTok(1).png",
-    "Screenshot_20261112_021343_TikTok(1).png"
+    "Screenshot_20261112_021343_TikTok(1).png",
+    "Screenshot_20261112_021355_TikTok(1).png",
+    "Screenshot_20261112_021407_TikTok(1).png"
   ];
+  const unassignedRankingNames = rankingNames.slice(-2);
   const guestNames = [
     "Full Screen.png", "Fluid Panel.png", "Fluid Grid.png",
     "Fixed Grid.png", "Fixed Panel.png", "Side by Side.png",
@@ -48,7 +51,13 @@ test("Crop References use canonical folders and contain no duplicate image files
     assert.ok(!hashes.has(hash), relativePath + " duplicates " + hashes.get(hash));
     hashes.set(hash, relativePath);
   }
-  assert.equal(sourceFiles.length, 28);
+  assert.equal(rankingNames.length, 8, "all eight supplied Daily Ranking PNGs are tracked");
+  assert.equal(sourceFiles.length, 30, "all 30 canonical Crop References PNGs are audited");
+  for (const name of unassignedRankingNames) {
+    const sourcePath = path.join(root, "assets", "Crop References", "Daily Ranking Badge", "png", name);
+    assert.ok(fs.existsSync(sourcePath), name + " remains preserved in the canonical source folder");
+    assert.ok(!server.includes(name), name + " must not be assigned to an invented ranking position");
+  }
 });
 
 test("all 50 Gifter levels keep unique artwork while six crop badges light milestone stages", () => {
@@ -58,15 +67,19 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.match(server, /'Crop References','Gifters Badges','Png'/);
   assert.match(read("public/gifter-progression.js"), /PROGRESSION_TRACK_STAGES\.map\(\(stageLevel, index\) => track\.level >= stageLevel/);
   assert.match(read("public/gifter-progression.js"), /gifter-crop-badges\/range-/);
+  const cropProgression = read("public/gifter-progression.js");
+  assert.ok(cropProgression.includes("class='gp-progression-range-badge'") && cropProgression.includes("<img src='/assets/gifter-crop-badges/range-"));
+  assert.ok(progressionStyles.includes("gp-live-progression-track>.gp-progression-range-badge{") && progressionStyles.includes("overflow:hidden"));
+  assert.ok(progressionStyles.includes("gp-live-progression-track>.gp-progression-range-badge>img{") && progressionStyles.includes("width:330%"));
 
   assert.match(server, /gifter-crop-range-sheets\/lv-1-9\.png/);
   assert.match(server, /'Crop References','Gifter level range sheets'/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-3-crop-window/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-3-crop-window/);
   assert.match(progressionStyles, /\.gp-progression-range-badge/);
 
 });
@@ -111,9 +124,9 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v340-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v341-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-2/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-3-crop-window/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-3-crop-window/);
 });

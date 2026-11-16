@@ -534,12 +534,16 @@
   box-shadow:0 0 0 1px rgba(255,255,255,.38),0 1px 3px rgba(35,21,50,.36);
   transition:left .35s cubic-bezier(.2,.75,.25,1);
 }
-/* Bright cropped milestone badges sit directly over the matching muted symbols. */
+/* The supplied PNGs are wide capture canvases with the bright emblem centered inside.
+   Clip the empty margins instead of shrinking the whole canvas over the muted milestone. */
 .gp-live-progression-track>.gp-progression-range-badge{
-  position:absolute;top:55%;z-index:1;display:block;width:4.8%;min-width:16px;max-width:58px;
-  height:auto;aspect-ratio:1;object-fit:contain;object-position:center;
-  transform:translate(-50%,-50%);border-radius:0;pointer-events:none;
-  filter:drop-shadow(0 1px 3px rgba(255,218,122,.34));
+  position:absolute;top:55%;z-index:1;display:block;width:5.2%;min-width:26px;max-width:58px;
+  aspect-ratio:1;transform:translate(-50%,-50%);overflow:hidden;pointer-events:none;
+}
+.gp-live-progression-track>.gp-progression-range-badge>img{
+  position:absolute;left:50%;top:50%;display:block;width:330%;max-width:none;height:auto;
+  transform:translate(-51.5%,-46.5%);object-fit:contain;object-position:center;
+  filter:brightness(1.04) saturate(1.08) drop-shadow(0 1px 3px rgba(255,218,122,.48));
 }
 
 @media(max-width:480px){
