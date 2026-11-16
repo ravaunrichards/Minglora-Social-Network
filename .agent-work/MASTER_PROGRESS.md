@@ -165,3 +165,13 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 
 - PR merge-preparation correction: restored a byte-identical deployed copy at `public/assets/gifter-badge-progression-art.jpg`; the canonical upload remains at `assets/Gifters Badge Progressions/Gifters Badge Progressions.jpg`. The server route now reads this deployable public file.
 - Fixed the PWA shell to precache both current Gifter progression CSS and JS URLs (not only the image) after CI found stale shell references. Updated the source-file test to verify the public uploaded image path.
+
+
+### Uploaded Gifter progression strip — individual source crops and original-only renderer
+- Task branch: `feature/gifter-badge-progression-art-upload-20261115`; PR #410.
+- Confirmed the uploaded strip is 1080×167 and contains six tier emblems. Added six separate, responsive SVG viewBox crop assets under `public/assets/gifter-badge-progression-crops/`; each crop references the original JPEG and does not redraw the art.
+- Added an ordered six-emblem crop gallery directly beneath the uncropped source strip on the Gifter Progression page.
+- Replaced the dormant procedural 3D crest renderer with a helper that uses the matching original `level_01.png`–`level_50.png` source route. Removed the obsolete 3D crest/orbit/crown CSS while preserving LIVE and non-LIVE identity styling.
+- Preserved the 50 original numbered PNGs, all other reference images, the removed Gifters Level Up Coin chart state, Coin thresholds, gift ledger, wallet and progression logic.
+- Updated asset cache keys and PWA shell to v327; added regression tests for all 50 original image mappings, six tier-stage boundaries, crop provenance and image sizing.
+- Pending PR CI and merge; no production deployment is claimed.
