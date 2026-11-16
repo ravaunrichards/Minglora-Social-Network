@@ -56,7 +56,7 @@ test("Crop References use canonical folders and contain no duplicate image files
   }
   assert.equal(sourceFiles.length, 28);
   for (const name of milestoneNames) {
-    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", "Png", name)), name + " is in the canonical milestone folder");
+    assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", name)), name + " is in the canonical milestone folder");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", name)), name + " has no legacy PNG duplicate");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", name.replace(".png", ".psd"))), name + " has no legacy PSD duplicate");
   }
@@ -135,7 +135,7 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(serviceWorker, /minglora-shell-v346-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-png-no-white-tracker-1/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-unified-badge-quality-1/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
 });
 
