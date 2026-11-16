@@ -11,9 +11,9 @@
   "theme_color": "#1769e0",
   "icons": [
     {
-      "src": "/assets/Logo/Logo.jpg",
+      "src": "/assets/profile-defaults/enigma.png?v=20261116-enigma-brand-1",
       "sizes": "any",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     }
   ]
