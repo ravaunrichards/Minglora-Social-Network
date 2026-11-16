@@ -136,3 +136,15 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - LIVE audio: locally synthesized ocean wash, water splash and three soft rising tones; not a recorded or mastered audio file
 - Review state: `design-review-pending`; human visual, rights and physical-device approval are not implied
 - Integration: exact canonical gift code only; source catalogue metadata, configured coin value, publication flag, database rows and LIVE transaction flow are unchanged
+
+
+## Crocodile v1
+
+- Source: `crocodile-model.mjs`
+- Canonical target: `crocodile-tnyf2j` (Crocodile; animals; configured value 10 Coins; source active flag preserved)
+- Output: generated self-contained glTF 2.0 with named mesh primitives and a subject-specific primary SVG and transparent icon
+- Geometry: low-slung olive torso, counter-shaded segmented belly, rows of raised osteoderm scutes, keel-backed tapering tail, broad skull, long upper/lower jaws, individually meshed ivory teeth, amber vertical-pupil eyes, nostrils, cheek scales and four webbed clawed feet
+- LIVE motion: exact-code selection of the dedicated `crocodile-snap` entrance/lunge choreography
+- LIVE audio: locally synthesized low body rumble, filtered jaw snap and short descending tones; not a mastered or recorded animal sound
+- Review state: `design-review-pending`; human visual, rights and physical-device approval is not implied
+- Integration: exact canonical gift code only; source catalogue metadata, configured 10-Coin value, active flag, database rows and transaction flow remain unchanged

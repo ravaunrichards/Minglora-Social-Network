@@ -81,6 +81,15 @@
       {offset:.84,opacity:1,transform:"translate3d(2px,0,0) rotateZ(-.7deg) scale(1.015)",filter:"none"},
       neutral
     ];
+    if(preset==="crocodile-snap")return [
+      {offset:0,opacity:0,transform:"translate3d(-9px,18px,0) rotateZ(-5deg) scale(.88)",filter:"brightness(.78) saturate(.86)"},
+      {offset:.22,opacity:1,transform:"translate3d(10px,-3px,0) rotateZ(3deg) scale(1.1)",filter:"brightness(1.25) saturate(1.18)"},
+      {offset:.34,opacity:1,transform:"translate3d(19px,2px,0) rotateZ(-2deg) scale(1.13)",filter:"brightness(1.38) saturate(1.28)"},
+      {offset:.48,opacity:1,transform:"translate3d(-8px,5px,0) rotateZ(2deg) scale(.98)",filter:"brightness(1.12)"},
+      {offset:.7,opacity:1,transform:"translate3d(4px,-2px,0) rotateZ(-1deg) scale(1.04)",filter:"none"},
+      {offset:.86,opacity:1,transform:"translate3d(0,1px,0) rotateZ(0deg) scale(1.01)",filter:"none"},
+      neutral
+    ];
     if(preset==="dolphin-leap")return [
       {offset:0,opacity:0,transform:"translate3d(-12px,22px,0) rotateZ(-7deg) scale(.82)",filter:"brightness(.82) saturate(.88)"},
       {offset:.18,opacity:1,transform:"translate3d(3px,-12px,0) rotateZ(4deg) scale(1.1)",filter:"brightness(1.24) saturate(1.2)"},
@@ -375,6 +384,37 @@
     });
     return true;
   }
+  function playCrocodile(c,now,seed){
+    const body=c.createBufferSource(),bodyFilter=c.createBiquadFilter(),bodyGain=c.createGain();
+    body.buffer=createGiftNoise(c,seed, .72);
+    bodyFilter.type="lowpass";bodyFilter.frequency.setValueAtTime(560,now);bodyFilter.Q.setValueAtTime(.8,now);
+    bodyGain.gain.setValueAtTime(.0001,now);
+    bodyGain.gain.linearRampToValueAtTime(.046,now+.035);
+    bodyGain.gain.exponentialRampToValueAtTime(.0001,now+.34);
+    body.connect(bodyFilter);bodyFilter.connect(bodyGain);bodyGain.connect(c.destination);
+    body.start(now);body.stop(now+.38);
+
+    const snap=c.createBufferSource(),snapFilter=c.createBiquadFilter(),snapGain=c.createGain();
+    snap.buffer=createGiftNoise(c,seed^0x6ac4, .28);
+    snapFilter.type="bandpass";snapFilter.frequency.setValueAtTime(1450,now+.16);snapFilter.Q.setValueAtTime(1.2,now+.16);
+    snapGain.gain.setValueAtTime(.0001,now+.16);
+    snapGain.gain.linearRampToValueAtTime(.052,now+.176);
+    snapGain.gain.exponentialRampToValueAtTime(.0001,now+.31);
+    snap.connect(snapFilter);snapFilter.connect(snapGain);snapGain.connect(c.destination);
+    snap.start(now+.16);snap.stop(now+.34);
+
+    [0,.075,.29].forEach((delay,index)=>{
+      const start=now+.16+delay,osc=c.createOscillator(),gain=c.createGain();
+      osc.type=index===2?"triangle":"square";
+      osc.frequency.setValueAtTime(index===2?92:138+index*27,start);
+      osc.frequency.exponentialRampToValueAtTime(index===2?58:78,start+.085);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(index===2?.022:.009,start+.012);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.13);
+      osc.connect(gain);gain.connect(c.destination);osc.start(start);osc.stop(start+.15);
+    });
+    return true;
+  }
   function playDolphin(c,now,seed){
     const ocean=c.createBufferSource(),lowpass=c.createBiquadFilter(),wash=c.createGain();
     ocean.buffer=createGiftNoise(c,seed,1.12);
@@ -492,6 +532,7 @@
       if(gift.code==="live-island-rmn3mc")return playLiveIsland(c,now,seed);
       if(gift.code==="crystal-crown-1itryeu")return playCrystalCrown(c,now,seed);
       if(gift.code==="phoenix-wep6uk")return playPhoenix(c,now,seed);
+      if(gift.code==="crocodile-tnyf2j")return playCrocodile(c,now,seed);
       if(gift.code==="dolphin-4bkejj")return playDolphin(c,now,seed);
       if(gift.code==="maracas-1wegi7n")return playMaracas(c,now,seed);
       if(gift.code==="beach-maracas-1exxoag")return playBeachMaracas(c,now,seed);
@@ -619,7 +660,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
+      const visualPreset=gift.code==="crocodile-tnyf2j"?"crocodile-snap":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),

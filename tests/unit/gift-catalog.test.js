@@ -590,3 +590,43 @@ test("Dolphin uses a bespoke original 3D marine model, transparent artwork and d
   assert.match(giftEffectsSource, /gift\.code==="dolphin-4bkejj"\)return playDolphin/, "the LIVE gift playback event must trigger its dedicated water sound");
   assert.match(giftEffectsSource, /gift\.code==="dolphin-4bkejj"\?"dolphin-leap"/, "the LIVE gift must use the dedicated leap choreography");
 });
+
+
+
+test("Crocodile uses a bespoke original 3D reptile model, transparent artwork and dedicated LIVE snap effects", () => {
+  const crocodile = gifts.find(gift => gift.code === "crocodile-tnyf2j");
+  assert.ok(crocodile, "Crocodile must remain in the canonical gift catalogue");
+  assert.equal(crocodile.name, "Crocodile");
+  assert.equal(crocodile.category, "animals");
+  assert.equal(crocodile.coin_price, 10, "the configured Coin value must remain unchanged");
+  assert.equal(crocodile.active, true, "the source catalogue publication flag must remain unchanged");
+
+  const model = JSON.parse(readFileSync(path.join(assetRoot, crocodile.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-crocodile-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/crocodile-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /broad olive-green crocodile.*segmented belly.*tooth-lined jaws.*amber vertical-pupil eyes.*four webbed clawed feet/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 70, "the crocodile must expose distinct torso, armour, tail, jaws, teeth, eye assemblies, limbs, toes and claws");
+  const parts = model.meshes?.[0]?.primitives?.map(primitive => primitive.extras?.mingloraPartName) || [];
+  assert.ok(parts.some(name => name?.includes("Crocodile powerful olive-green torso")));
+  assert.ok(parts.some(name => name?.includes("Crocodile dorsal armor row")));
+  assert.ok(parts.some(name => name?.includes("Crocodile sweeping muscular tail")));
+  assert.ok(parts.some(name => name?.includes("Crocodile upper ivory tooth")));
+  assert.ok(parts.some(name => name?.includes("Crocodile amber eye")));
+  assert.ok(parts.some(name => name?.includes("Crocodile near front upper leg")));
+  assert.ok(parts.some(name => name?.includes("Crocodile near front dark claw")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Crocodile must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 140, "the crocodile must expose per-mesh positions and normals");
+  for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
+    assert.ok(accessor.min.every(Number.isFinite) && accessor.max.every(Number.isFinite), "Crocodile mesh bounds must contain finite coordinates");
+  }
+
+  const svg = readFileSync(path.join(assetRoot, crocodile.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, crocodile.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="crocodile-original-v1"'), "the primary SVG must carry original Crocodile artwork provenance");
+  assert.ok(icon.includes('data-gift-artwork="crocodile-original-v1"'), "the transparent gift icon must preserve original Crocodile artwork");
+
+  assert.match(giftEffectsSource, /gift\.code==="crocodile-tnyf2j"\)return playCrocodile/, "the LIVE gift event must trigger dedicated crocodile audio");
+  assert.match(giftEffectsSource, /gift\.code==="crocodile-tnyf2j"\?"crocodile-snap"/, "the LIVE gift must use dedicated snap choreography");
+});

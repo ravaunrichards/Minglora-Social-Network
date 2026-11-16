@@ -127,3 +127,12 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Artwork/model: original Dolphin SVG/icon artwork and the dedicated `dolphin-model.mjs` glTF source are selected by exact canonical code.
 - Test evidence: Dolphin unit assertions passed; Chromium 13-gift matrix passed 39/39 render and pixel checks with 39 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (run 43779388045, artifact 14187976230).
 - Sound opt-out and reduced-motion handling remain governed by the existing runtime. Human timing/mix review, rights clearance, mastered audio and physical-device validation remain pending.
+
+
+## Crocodile snap and synthesized jaw/rumble effect — 2026-11-16
+
+- Canonical gift: `crocodile-tnyf2j` (Crocodile; animals; configured 10 Coins; source active flag unchanged).
+- Visual choreography: exact-code selection of `crocodile-snap`, with a short forward lunge, sharp snap accent and controlled recovery using the existing reduced-motion-aware Web Animations host.
+- Audio: locally synthesized low-pass rumble, band-pass snap transient and descending low tones using the existing Web Audio playback path; this is not a recorded wildlife sound.
+- Artwork/model: original armoured crocodile SVG/transparent icon and bespoke self-contained glTF geometry; only the exact canonical gift code selects these resources.
+- Human art/rights review and sound mastering remain pending; no physical-device acceptance is claimed.

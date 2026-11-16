@@ -258,3 +258,10 @@ This verifies generated asset loading and non-empty browser pixels, not premium 
 - Evidence artifact: `minglora-live-gift-model-render-evidence`, ID `14188351024`, 8,799,594 bytes.
 - The same PR head's LIVE/MeetWave layout visual QA passed. Standard CI remains red on the same five non-LIVE baseline tests present on main; both Maracas and Dolphin source unit assertions and the Gifter badge suite pass.
 - This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
+
+
+## Crocodile model quality gate — 2026-11-16
+
+The new Crocodile model is a dedicated low-poly/high-detail mesh assembly with individually named and separately materialized components (torso, belly, armor scutes, tail, dorsal keel, skull, jaws, teeth, eyes, nostrils, legs, toes and claws). The self-contained glTF output carries normals, per-mesh accessors, PBR factors and finite position bounds. A subject-specific SVG and transparent icon are generated from the same exact gift code.
+
+Quality verification remains pending: the source-level unit test, canonical catalogue build and three-viewport Chromium model/pixel matrix must pass before the asset is called verified. Human visual/rights approval, mastered audio and physical-device testing remain outstanding.

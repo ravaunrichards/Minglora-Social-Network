@@ -229,3 +229,13 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - Evidence artifact: `minglora-live-gift-model-render-evidence`, ID `14188351024`, 8,799,594 bytes.
 - The same PR head's LIVE/MeetWave layout visual QA passed. Standard CI remains red on the same five non-LIVE baseline tests present on main; both Maracas and Dolphin source unit assertions and the Gifter badge suite pass.
 - This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
+
+
+## Crocodile bespoke LIVE asset continuation — 2026-11-16
+
+- Canonical source record confirmed: `crocodile-tnyf2j`, Crocodile, category `animals`, configured 10 Coins, `active=true`. Source catalogue record is unchanged.
+- Created original GLTF source `assets/3d-assets/gift-models/crocodile-model.mjs` with torso, segmented underside, raised osteoderm armour, keel-backed tail, separate upper/lower jaw, meshed teeth, amber vertical-pupil eyes, four webbed feet, toes and claws.
+- Added original main/transparent SVG artwork and exact-code model selection, dedicated `crocodile-snap` motion and locally synthesized low rumble/jaw snap audio.
+- Source unit assertions and renderer target expanded to 14 bespoke gift models across three viewports (42 captures expected).
+- Verification pending final branch-head asset build and Chromium browser matrix; design/rights review and device tests are not complete.
+- Previous verified 13-model branch head passed 39/39 Chromium model and pixel renders (run 43780028073; artifact 14188351024). The Crocodile extension is not yet included in that verification.

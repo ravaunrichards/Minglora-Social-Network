@@ -398,3 +398,11 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Evidence artifact: `minglora-live-gift-model-render-evidence`, ID `14188351024`, 8,799,594 bytes.
 - The same PR head's LIVE/MeetWave layout visual QA passed. Standard CI remains red on the same five non-LIVE baseline tests present on main; both Maracas and Dolphin source unit assertions and the Gifter badge suite pass.
 - This confirms generated asset loading and non-empty browser pixels only. Human visual/rights review, mastered audio files and physical-device QA remain outstanding; the PR is not merged or deployed.
+
+
+## Crocodile asset addition — implementation pending verification — 2026-11-16
+
+- Added dedicated source geometry `assets/3d-assets/gift-models/crocodile-model.mjs` for canonical record `crocodile-tnyf2j` (Animals; configured 10 Coins; source active true).
+- Added code-specific model and original SVG artwork generator routes, dedicated transparent icon provenance, low rumble/jaw-snap synthesized LIVE sound, subject-specific snap choreography, unit coverage and a 14-model desktop/tablet/mobile Chromium renderer target.
+- **IN PROGRESS** until the 1,748-gift build, Crocodile unit assertions and 42-view browser render matrix pass on the final PR head.
+- Review remains `design-review-pending`; no human visual approval, rights clearance, mastered sound or physical-device testing is claimed. Production Coin values and DB/wallet/payout data are unchanged.
