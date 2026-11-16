@@ -67,15 +67,19 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.match(server, /'Crop References','Gifters Badges','Png'/);
   assert.match(read("public/gifter-progression.js"), /PROGRESSION_TRACK_STAGES\.map\(\(stageLevel, index\) => track\.level >= stageLevel/);
   assert.match(read("public/gifter-progression.js"), /gifter-crop-badges\/range-/);
+  const cropProgression = read("public/gifter-progression.js");
+  assert.ok(cropProgression.includes("class='gp-progression-range-badge'") && cropProgression.includes("<img src='/assets/gifter-crop-badges/range-"));
+  assert.ok(progressionStyles.includes("gp-live-progression-track>.gp-progression-range-badge{") && progressionStyles.includes("overflow:hidden"));
+  assert.ok(progressionStyles.includes("gp-live-progression-track>.gp-progression-range-badge>img{") && progressionStyles.includes("width:330%"));
 
   assert.match(server, /gifter-crop-range-sheets\/lv-1-9\.png/);
   assert.match(server, /'Crop References','Gifter level range sheets'/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-3-crop-window/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-3-crop-window/);
   assert.match(progressionStyles, /\.gp-progression-range-badge/);
 
 });
@@ -123,6 +127,6 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(serviceWorker, /minglora-shell-v340-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-2/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-2/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-3-crop-window/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-bright-stage-badge-overlays-3-crop-window/);
 });
