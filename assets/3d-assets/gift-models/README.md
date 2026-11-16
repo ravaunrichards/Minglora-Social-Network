@@ -157,3 +157,13 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Existing build paths and canonical gift ID, configured price, active flag, production database and transaction flow remain unchanged.
 - LIVE adds exact-code `rose-unfurl` Web Animations choreography and a locally synthesized petal-rustle/celesta-like Web Audio cue; this is not a mastered recording or standalone Lottie/Rive/video asset.
 - Review state remains `design-review-pending`; human art/rights review and physical-device QA are still required.
+
+## Pop Parrot v1
+
+- Source: `pop-parrot-model.mjs`.
+- Canonical target: `pop-parrot-alp4e8` (Pop Parrot; Animals; source catalogue value 400 Coins; source `active=true`, preserved without production activation).
+- Output: canonical self-contained glTF model plus individually generated primary SVG artwork and transparent icon.
+- Geometry: scarlet-feathered torso/head, golden breast, ivory cheek masks, amber eye rings, hooked graphite beak, five-colour swept crest, layered cobalt/teal/gold flight feathers, seven sculpted tail feathers, scaled legs and curled talons.
+- Motion: exact-code `parrot-swoop` Web Animations sequence; shared reduced-motion and lifecycle controls remain in use.
+- Sound: `pop-parrot-rainbow-whistle-chirp-v1` is local Web Audio synthesis, not a mastered recording.
+- Review status: `design-review-pending`; human visual approval, rights clearance, mastered audio and physical-device approval remain open.

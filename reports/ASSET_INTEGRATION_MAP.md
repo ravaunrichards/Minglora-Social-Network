@@ -270,3 +270,11 @@ The canonical gift code, catalogue data, configured Coin value, active flag, dat
 - `public/styles.css` sizes the icon at 14×14 and keeps the pill inline-flex; `public/sw.js` caches the icon manifest and all three symbols offline.
 - The unified LIVE asset manifest inventories the pack with three icon records and component usage. Unit coverage checks its files, hashes, state mapping, cache entries and manifest registration.
 - This represents setup/provider readiness, not a real-time LiveKit room connection/reconnect event. Human visual/rights review and physical-device QA remain open.
+
+## Pop Parrot bespoke LIVE gift — 2026-11-16
+
+- `assets/3d-assets/gift-models/pop-parrot-model.mjs` exports `createPopParrotModel()`; `scripts/generate-minglora-gifts.mjs` routes only canonical gift `pop-parrot-alp4e8` to the bespoke GLTF source and original Pop Parrot SVG/icon artwork.
+- `scripts/generate-live-gift-motion-index.mjs` maps the exact gift code to `parrot-swoop`; `public/gift-effects.js` supplies subject-specific entrance/banking/settle frames and locally synthesized whistle/chirp audio.
+- `public/index.html` and `public/sw.js` advance only the effects runtime cache key; the service worker cache name follows the canonical versioned `minglora-shell-v<number>-self-updating-1` format. Current Rose reveal, provider-status icon, Gifter progression and League references are preserved.
+- Unit tests cover model provenance/mesh structure, artwork, motion mapping, sound metadata and event wiring; the Chromium gift-model matrix includes Pop Parrot.
+- Source catalogue identity, Animals category, 400-Coin configured value and source active flag remain unchanged; no production catalogue, wallet, price, transaction or activation change is included. Human visual/rights review and physical-device checks remain pending.

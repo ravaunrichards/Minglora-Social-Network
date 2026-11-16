@@ -152,3 +152,11 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 - Crocodile (`crocodile-tnyf2j`) is an active Animals record with configured value 10 Coins. It now has a distinct authored source module, original vector gift artwork, transparent icon, exact-code glTF route, custom snap motion and synthesized snap/rumble sound.
 - The catalogue source value and active flag were not changed. Both Crocodile and the 13 preceding bespoke models passed the 14×3 Chromium matrix: 42/42 model renders, 42/42 pixel checks, 42 screenshots and zero page/network errors (PR #411 run 43781000444; artifact 14188617258).
 - This is browser/build verification, not design or licensing approval. The remaining 1,734 catalogue gifts still rely on shared procedural/category geometry and need bespoke artwork/model review where premium individual assets are required.
+
+## Pop Parrot bespoke gift entry — 2026-11-16
+
+- Canonical source record: `pop-parrot-alp4e8` (Pop Parrot), Animals category, configured source value **400 Coins**, source `active=true`. These source fields are preserved; no production gift was activated.
+- Dedicated source: `assets/3d-assets/gift-models/pop-parrot-model.mjs`; the canonical build generates a self-contained glTF 2.0 model, bespoke primary SVG and transparent icon.
+- Named model groups include the five-colour crest, hooked beak, ivory cheek masks, layered flight feathers, seven tail feathers, scaled feet and gripping talons. The exact LIVE motion is `parrot-swoop`; sound ID `pop-parrot-rainbow-whistle-chirp-v1` is synthesized Web Audio, not mastered audio.
+- The source catalogue contains 1,748 gift records. This adds a fifteenth individual model source; 1,733 records remain on shared procedural/category model routes until further bespoke work is completed.
+- Human visual/design approval, rights review, mastered audio and physical-device QA remain open. Coin balance, purchase, transaction, earnings, payout and production activation data were not modified.
