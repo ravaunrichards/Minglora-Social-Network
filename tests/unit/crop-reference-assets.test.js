@@ -29,6 +29,9 @@ test("all 50 Gifter levels serve the six uploaded bright cropped badge reference
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
+  assert.match(read("public/gifter-progression.js"), /gp-progression-range-badge/);
+  assert.match(progressionStyles, /\\.gp-progression-range-badge/);
+
 });
 
 test("Daily top-three ranking uses the supplied cropped first, second and third place frames", () => {
@@ -61,7 +64,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v336-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v337-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-1/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-crop-bright-earned-1/);
