@@ -208,5 +208,7 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Verified the 50 individual PNGs remain unique and level-specific; 11 detail panels and separate reference sheets remain intact. No progression calculation, stage assignment, Coin threshold, confirmed-gift ledger, refund, wallet, balance, transaction, admin award or database record was changed.
 - Checkpoint commits on this task branch: `a38655bbc07e252f578c42153d3e367906c7bbce` (test source-path correction) and `1ce936e896cef07a568a50550a8098fb996e0840` (Gifter source-reference documentation). The latter is the verified head before this checkpoint entry.
 - Verification at this checkpoint: full CI run #14181 passed all jobs; Auth provider acceptance passed; For You functional navigation passed; seven-plus-two layout visual QA passed; browser acceptance passed. Profile visual QA was still running when this checkpoint was written.
-- PR #454 remains open and mergeable, based on current `main` with 0 commits behind. Merge and deployment are not claimed; no deployment was triggered.
-- Next action: confirm remaining PR checks, then merge PR #454 only after all required checks pass; verify the merge commit and post-merge `main` state.
+- PR #454 was squash-merged into `main` at `2026-11-16T23:30:26Z`; verified merge commit and `main` HEAD: `d4b276373115434625810c3142c9cb145e6836b9`.
+- All five PR workflows passed on the final PR head. Post-merge push CI run `43979864906` also passed: 1,268 tests, 1,268 passed, 0 failed; Supabase Auth provider acceptance and For You navigation jobs succeeded.
+- No manual Render deployment was triggered or independently verified. The source merge and repository CI are confirmed; runtime deployment status remains unverified.
+- Final task status: implementation, regression checks, documentation, merge and post-merge CI are VERIFIED.
