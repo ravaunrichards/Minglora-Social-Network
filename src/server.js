@@ -48,9 +48,10 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, getCreatorLeagueLeaderboard, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
-import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
+import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2738,6 +2739,93 @@ async function route(req, res) {
         }
         if (!settingsExisted) await saveStore();
         return json(res, 200, snapshot);
+      }
+      if (method === 'GET' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversation') {
+        const chatState = getAIBotConversation(db, user.id, parts[1], null);
+        const verifiedIdentity = await runAIIdentityCommand('get', { identity_id: chatState.bot.identityId });
+        if (String(verifiedIdentity?.identity?.identity_id || '') !== chatState.bot.identityId) {
+          throw Object.assign(new Error('The bot’s relational Minglora AI identity could not be verified.'), { status: 409 });
+        }
+        return json(res, 200, chatState);
+      }
+      if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'chat') {
+        const input = await body(req, 10000);
+        const allowedKeys = new Set(['message', 'conversationId', 'requestId']);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !allowedKeys.has(key)) ||
+            typeof input.message !== 'string' || typeof input.requestId !== 'string') {
+          throw Object.assign(new Error('Bot chat accepts only message, optional conversationId and requestId. Credentials and provider overrides are not accepted.'), { status: 400 });
+        }
+        const chatState = getAIBotConversation(db, user.id, parts[1], input.conversationId || null);
+        const verifiedIdentity = await runAIIdentityCommand('get', { identity_id: chatState.bot.identityId });
+        if (String(verifiedIdentity?.identity?.identity_id || '') !== chatState.bot.identityId) {
+          throw Object.assign(new Error('The bot’s relational Minglora AI identity could not be verified.'), { status: 409 });
+        }
+        const request = beginAIBotChatRequest(db, user.id, {
+          botId: chatState.bot.id,
+          identityId: chatState.bot.identityId,
+          conversationId: chatState.conversation?.id || null,
+          requestId: input.requestId,
+          message: input.message
+        });
+        await saveStore();
+        if (request.reused) {
+          const previous = getAIBotConversation(db, user.id, parts[1], request.conversationId);
+          return json(res, 200, { ...previous, reused: true });
+        }
+        try {
+          const currentProviderStatus = getAIProviderStatus();
+          if (!currentProviderStatus.botChatAvailable) {
+            throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'), { status: 503 });
+          }
+          const creatorSettings = getAISettings(db, user.id);
+          const dailyUsage = getAICreatorDailyUsage(db, user.id);
+          const dailyTokenLimit = Math.max(0, Math.floor(Number(creatorSettings.dailyTokenBudget) || 0));
+          const availableDailyTokens = dailyTokenLimit - dailyUsage.tokensUsed;
+          const history = (Array.isArray(chatState.messages) ? chatState.messages : []).slice(-10).map(item => ({ role: item.role, content: item.content }));
+          const contextLength = history.reduce((sum, item) => sum + String(item.content || '').length, 0);
+          const estimatedInputReserve = Math.ceil((String(input.message).length + contextLength) / 3) + 500;
+          const allowedOutputTokens = Math.min(700, availableDailyTokens - estimatedInputReserve);
+          if (allowedOutputTokens < 128) {
+            throw Object.assign(new Error('This conversation would exceed the remaining daily AI token budget. No provider generation request was sent.'), { status: 429 });
+          }
+          const providerHealth = await probeOpenAIProvider();
+          if (!providerHealth.connected) {
+            throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+          }
+          const generated = await generateOpenAIBotReply({
+            bot: chatState.bot,
+            identity: verifiedIdentity.identity,
+            message: input.message,
+            history,
+            env: process.env,
+            maxOutputTokens: allowedOutputTokens
+          });
+          const saved = completeAIBotChatRequest(db, user.id, input.requestId, {
+            userMessage: input.message,
+            assistantMessage: generated.output,
+            provider: generated.provider,
+            model: generated.model,
+            responseId: generated.responseId,
+            providerRequestId: generated.requestId,
+            usage: generated.usage,
+            moderation: generated.moderation
+          });
+          await saveStore();
+          return json(res, 200, saved);
+        } catch (error) {
+          const safeMessage = error?.safeForClient
+            ? String(error.message || 'The AI bot could not complete this reply.')
+            : 'The AI bot could not complete this reply. No unmoderated output was saved.';
+          failAIBotChatRequest(db, user.id, input.requestId, safeMessage, { providerFailure: error });
+          await saveStore();
+          return json(res, Number(error?.status) || 502, {
+            error: safeMessage,
+            requestId: input.requestId,
+            retryable: true,
+            providerUsageRecorded: Boolean(error?.provider === 'openai' && Number(error?.usage?.total_tokens) > 0)
+          });
+        }
       }
       if (method === 'POST' && sub === 'bots') {
         const input = await body(req, 20000);
