@@ -83,7 +83,7 @@ test("updated progression assets and all original JPG panels are included in the
   const html = read("public/index.html");
   const sw = read("public/sw.js");
   assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261116-bright-stage-badge-overlays-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261116-bright-stage-badge-overlays-2"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
