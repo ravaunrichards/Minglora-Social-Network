@@ -1309,6 +1309,18 @@ const LIVE_GUEST_LAYOUT_OPTIONS=Object.freeze([
 // Kept as an internal alias so existing LIVE screen integrations can migrate safely.
 // The user-facing control and persisted choice are one nine-layout guest-stage setting.
 const LIVE_SCREEN_LAYOUT_OPTIONS=LIVE_GUEST_LAYOUT_OPTIONS;
+// Visual capacity follows the individual supplied layout diagrams, not one forced nine-seat grid.
+const LIVE_GUEST_LAYOUT_SEAT_COUNTS=Object.freeze({
+  'full-screen':1,
+  'fluid-panel':3,
+  'fluid-grid':3,
+  'fixed-grid':9,
+  'fixed-panel':4,
+  'side-by-side':10,
+  'spotlight':9,
+  'roundtable-1':9,
+  'roundtable-2':9
+});
 let activeLiveScreenLayout='full-screen';
 let activeLiveGuestLayout='full-screen';
 function normalizeLiveScreenLayout(value){
@@ -2009,7 +2021,9 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
   const hostIdentity=String(hostParticipant?.identity||session?.hostId||"minglora-host");
   const hostName=hostParticipant?.name||session?.host?.name||(role==="host"?state.user?.name:"Minglora host")||"Minglora host";
-  const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!root.closest(".live-audio-stage");
+  const audioGuestLayout=Boolean(root.closest(".live-audio-stage"));
+  const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!audioGuestLayout;
+  const stageSeatCount=audioGuestLayout?9:(LIVE_GUEST_LAYOUT_SEAT_COUNTS[activeLiveScreenLayout]||9);
   const guests=[];
   if(role==="guest"&&local&&participantHasLiveStageMedia(local))guests.push(local);
   for(const person of remotes){
@@ -2017,28 +2031,31 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     if(!guests.some(item=>item.identity===person.identity))guests.push(person);
   }
   root.classList.toggle("live-host-only-layout",fullScreenHostOnly);
-  root.classList.toggle("has-active-guests",fullScreenHostOnly&&guests.length>0);
-  root.classList.toggle("has-many-guests",fullScreenHostOnly&&guests.length>4);
+  // Full Screen is the one-tile reference. Do not float guest tiles over it.
+  root.classList.remove("has-active-guests","has-many-guests");
   root.dataset.activeGuestCount=String(guests.length);
   const specs=[{
     key:"host",identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true
   }];
-  guests.slice(0,8).forEach((person,index)=>specs.push({
+  guests.slice(0,Math.max(0,stageSeatCount-1)).forEach((person,index)=>specs.push({
     key:"guest:"+String(person.identity||index),identity:String(person.identity||""),name:person.name||person.identity||"Minglora guest",
     person,isHost:false
   }));
-  if(!fullScreenHostOnly)while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
+  if(!fullScreenHostOnly)while(specs.length<stageSeatCount)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
   const previous=new Map(Array.from(root.children).filter(node=>node.dataset?.seatKey).map(node=>[node.dataset.seatKey,node]));
-  const header=document.createElement("div");
-  header.className="live-guest-layout-heading";
-  header.innerHTML="<strong>Multi-guest stage</strong><small>"+(guests.length+1)+" / 9 seats</small>";
+  const header=audioGuestLayout?document.createElement("div"):null;
+  if(header){
+    header.className="live-guest-layout-heading";
+    header.innerHTML="<strong>Audio LIVE speakers</strong><small>"+(guests.length+1)+" / 9 seats</small>";
+  }
   const nodes=specs.map(spec=>{
     if(spec.empty){
       const seat=previous.get(spec.key)||document.createElement("button");
       seat.type="button";seat.className="live-guest-seat empty";seat.dataset.seatKey=spec.key;
       seat.removeAttribute("data-participant");seat.setAttribute("data-open-guest-panel","");
       seat.setAttribute("aria-label","Open guest seat "+(spec.seatNumber));
-      seat.innerHTML="<span class='live-guest-seat-plus' aria-hidden='true'>+</span><strong>Guest seat</strong><small>"+(role==="host"?"Invite a speaker":"Open seat")+"</small>";
+      // Keep the reference's clean, empty placeholder shape; the seat remains actionable.
+      seat.replaceChildren();
       return seat;
     }
     const seat=previous.get(spec.key)||document.createElement("article");
@@ -2060,8 +2077,8 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     media.className="live-guest-seat-media";seat.append(media);
     return seat;
   });
-  if(fullScreenHostOnly)root.replaceChildren(...nodes);
-  else root.replaceChildren(header,...nodes);
+  if(header)root.replaceChildren(header,...nodes);
+  else root.replaceChildren(...nodes);
 }
 
 function renderLiveViewerPanel(room,role,session){
