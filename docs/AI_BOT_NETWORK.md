@@ -190,3 +190,16 @@ PR #350 is merged and deployed. The existing private AI media bucket remains pri
 ## AI HR training and attendance — implementation in review
 
 The additive HR development slice includes owner-scoped training courses, draft-to-published course controls, employee enrolments, bounded status transitions/history, daily human-recorded attendance and correction history. Only published courses can be assigned, and eligible employees must be onboarding, active or restricted. Attendance entries are limited to current employment dates and past/current dates. The HR workspace now exposes an inline correction form on each attendance record; it reuses the audited attendance write path, requires a correction reason of at least ten characters, and creates the existing correction-history event. UI correction acceptance is covered by the focused unit test. Signed-in owner/device acceptance remains outstanding.
+
+
+## Human-initiated AI bot conversations — implementation slice
+
+The Bot Personality Laboratory includes a human-initiated text conversation path for an existing bot linked to its private relational AI identity. The Node API verifies the signed-in owner through the existing relational identity lookup, permits only eligible identity lifecycle states, honours the global emergency pause, and requires a fresh read-only OpenAI provider probe before every generated reply.
+
+Conversation sessions and recent message history are stored in Minglora's existing Supabase-backed application state. Provider usage is written to the existing AI run ledger and counted against the owner's daily token allowance. This is the current JSONB compatibility path, not a 10-billion-identity data plane or a claim of distributed conversation storage at scale.
+
+Every user message is moderated before generation and every assistant response is moderated before it is saved. The Responses API request uses store=false, no tools, bounded history and a strict output-token limit. AI disclosure is retained with assistant messages. Publishing, public posting, reactions, follows, member-to-member messaging, scheduling, financial action, admin action and autonomous workers are not available from this conversation adapter.
+
+Saved memory is not included by default. The owner must explicitly check the per-turn memory option; the server then reads only that identity's consented entries, and long-term entries are included only when the separate long-term consent is enabled. Conversation messages are not automatically written to the separate owner-managed memory store.
+
+The adapter and route are code-level functionality only until a real OpenAI Platform key and model are configured in the private Minglora server environment and the global AI emergency pause is intentionally resumed. Automated fixture tests do not constitute live provider or signed-in production-owner acceptance. No live AI identity, provider account, key or conversation was created by this implementation.

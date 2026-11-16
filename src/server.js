@@ -48,9 +48,10 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, getCreatorLeagueLeaderboard, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
-import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, startAIBotConversationTurn, completeAIBotConversationTurn, failAIBotConversationTurn, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
+import { generateOpenAIBotConversationReply } from '../backend/modules/ai-network/openai-bot-conversations.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -58,6 +59,7 @@ const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
+const aiBotConversationOwnerLocks = new Set();
 if (process.env.NODE_ENV === 'production' &&
     (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
   throw new Error('Production startup requires SESSION_SECRET to contain at least 32 characters.');
@@ -2920,6 +2922,97 @@ async function route(req, res) {
         await saveStore();
         return json(res, 200, { schedule });
       }
+      if (method === 'POST' && parts[0] === 'bots' && parts[2] === 'conversation' && parts.length === 3) {
+        const input = await body(req, 10000);
+        const allowedKeys = new Set(['message', 'conversationId', 'idempotencyKey', 'includeSavedMemory']);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !allowedKeys.has(key))) {
+          throw Object.assign(new Error('Conversation requests accept only message, conversationId, idempotencyKey and includeSavedMemory.'), { status:400 });
+        }
+        const message = String(input.message || '').trim();
+        const idempotencyKey = String(input.idempotencyKey || '').trim();
+        const conversationId = input.conversationId ? String(input.conversationId).trim() : '';
+        if (!message || message.length > 4000) throw Object.assign(new Error('Enter a message between 1 and 4,000 characters.'), { status:400 });
+        if (!/^[A-Za-z0-9_-]{8,128}$/.test(idempotencyKey)) throw Object.assign(new Error('A valid retry-safe conversation request key is required.'), { status:400 });
+        if (input.includeSavedMemory !== undefined && typeof input.includeSavedMemory !== 'boolean') {
+          throw Object.assign(new Error('Saved-memory selection must be true or false.'), { status:400 });
+        }
+        const bot = (db.aiBots || []).find(item => item.id === parts[1] && item.ownerId === user.id);
+        if (!bot || !bot.identityId || bot.status === 'archived') throw Object.assign(new Error('Choose an existing, linked AI bot that is not archived.'), { status:404 });
+        const settings = getAISettings(db, user.id);
+        if (settings.globalPaused) throw Object.assign(new Error('The Minglora AI Network is emergency-paused. Resume it in the authorized Command Center before starting a conversation.'), { status:409 });
+        if (aiBotConversationOwnerLocks.has(user.id)) throw Object.assign(new Error('An AI bot response is already being generated for this administrator account.'), { status:409 });
+        aiBotConversationOwnerLocks.add(user.id);
+        let started = null;
+        try {
+          const identityResult = await runAIIdentityCommand('get', { identity_id:bot.identityId });
+          const identity = identityResult?.identity ? identityResult : null;
+          const identityId = String(identity?.identity?.identity_id || '');
+          const identityStatus = String(identity?.identity?.status || identity?.identity?.identity_status || '').toLowerCase();
+          if (!identity || identityId !== bot.identityId) throw Object.assign(new Error('The selected bot identity could not be verified for this Minglora owner.'), { status:404 });
+          if (!['proposed','created','under_review','approved','active'].includes(identityStatus)) {
+            throw Object.assign(new Error('This AI identity is not eligible for a human-initiated conversation in its current lifecycle state.'), { status:409 });
+          }
+          const currentProviderStatus = getAIProviderStatus();
+          if (!currentProviderStatus.botConversationsAvailable) {
+            throw Object.assign(new Error('OpenAI AI-bot conversations are not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment. No response was generated.'), { status:503 });
+          }
+          const providerHealth = await probeOpenAIProvider();
+          if (!providerHealth.connected) throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status:503 });
+
+          let savedMemoryContext = '';
+          if (input.includeSavedMemory === true) {
+            const memorySettings = await runAIMemoryCommand('get_settings', { identity_id:bot.identityId });
+            if (memorySettings?.memory_enabled !== true) throw Object.assign(new Error('Saved memory is disabled for this AI identity. Enable memory through its explicit owner consent settings first.'), { status:409 });
+            const memoryResult = await runAIMemoryCommand('list', { identity_id:bot.identityId });
+            const entries = Array.isArray(memoryResult?.entries) ? memoryResult.entries : [];
+            const allowedEntries = entries.filter(entry => entry?.memory_type === 'short_term' ||
+              (entry?.memory_type === 'long_term' && memorySettings.long_term_enabled === true)).slice(0,20);
+            savedMemoryContext = allowedEntries.map(entry => {
+              const summary = String(entry.summary || '').trim().slice(0,1000);
+              const content = entry.content && typeof entry.content === 'object' && !Array.isArray(entry.content) ? JSON.stringify(entry.content).slice(0,500) : '';
+              return summary + (content ? ' | ' + content : '');
+            }).filter(Boolean).join('\n').slice(0,3500);
+          }
+
+          const usage = getAICreatorDailyUsage(db, user.id);
+          const availableTokens = Math.max(0, Math.floor(Number(settings.dailyTokenBudget) || 0) - usage.tokensUsed);
+          const sessionForEstimate = conversationId ? (db.aiBotConversationSessions || []).find(session =>
+            session.id === conversationId && session.ownerId === user.id && session.botId === bot.id) : null;
+          const historyCharacters = (Array.isArray(sessionForEstimate?.messages) ? sessionForEstimate.messages : [])
+            .slice(-10).reduce((sum,item) => sum + String(item.content || '').length, 0);
+          const estimatedInputReserve = Math.ceil((historyCharacters + message.length + savedMemoryContext.length) / 3) + 500;
+          const outputTokenLimit = Math.min(900, availableTokens - estimatedInputReserve);
+          if (outputTokenLimit < 128) throw Object.assign(new Error('This conversation would exceed the remaining daily AI token budget. No generation request was sent.'), { status:429 });
+
+          started = startAIBotConversationTurn(db,user.id,bot.id,{conversationId,idempotencyKey});
+          if (started.reused) return json(res,200,{session:started.session,reused:true,aiDisclosureRequired:true,externalActionTaken:false});
+          await saveStore();
+          try {
+            const generated = await generateOpenAIBotConversationReply({
+              bot,identity,messages:[...started.history,{role:'user',content:message}],
+              memoryContext:savedMemoryContext,env:process.env,maxOutputTokens:outputTokenLimit
+            });
+            const completed = completeAIBotConversationTurn(db,user.id,started.run.id,message,generated);
+            await saveStore();
+            return json(res,200,{
+              session:completed.session,
+              run:{id:completed.run.id,status:completed.run.status,provider:completed.run.provider,model:completed.run.model,usage:completed.run.providerUsage},
+              aiDisclosureRequired:true,humanInitiated:true,externalActionTaken:false,toolsUsed:false
+            });
+          } catch (error) {
+            if (started?.run?.id) {
+              const safeMessage = error?.safeForClient ? String(error.message || 'OpenAI conversation failed.') :
+                'The AI provider request failed. No assistant response was saved; check server logs without exposing credentials.';
+              failAIBotConversationTurn(db,user.id,started.run.id,safeMessage,{providerFailure:error});
+              await saveStore();
+            }
+            throw error;
+          }
+        } finally {
+          aiBotConversationOwnerLocks.delete(user.id);
+        }
+      }
+
       if (method === 'POST' && sub === 'creator-jobs') {
         const job = createAICreatorJob(db, user.id, await body(req, 16000));
         await saveStore();
