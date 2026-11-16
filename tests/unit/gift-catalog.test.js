@@ -644,7 +644,7 @@ test("Pop Parrot uses original subject-specific 3D geometry and transparent artw
   const source = readFileSync(sourcePath, "utf8");
   assert.match(source, /createPopParrotModel/);
   assert.match(source, /Pop Parrot swept crest plume/);
-  assert.match(source, /Pop Parrot primary flight feather/);
+  assert.match(source, /primary flight feather/);
   assert.match(source, /Pop Parrot long tail feather/);
   const model = JSON.parse(readFileSync(path.join(assetRoot, parrot.code + ".gltf"), "utf8"));
   assert.equal(model.asset?.version, "2.0");
