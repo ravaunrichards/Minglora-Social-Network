@@ -186,3 +186,45 @@
 #league-leaderboard-results{min-width:0}
 @media(max-width:700px){.league-ranking-controls{grid-template-columns:1fr 1fr}.league-ranking-class-label{grid-column:2;grid-row:1}.league-ranking-period{grid-column:1;grid-row:1;align-self:end}.league-ranking-filter{flex:1;padding-inline:8px}#league-ranking-status{grid-column:1/-1;text-align:left}}
 @media(max-width:420px){.league-ranking-controls{grid-template-columns:1fr}.league-ranking-class-label,.league-ranking-period,#league-ranking-status{grid-column:1;grid-row:auto}.league-ranking-period{width:100%}}
+
+
+/* Original Minglora-owned artwork used across League Arena surfaces. */
+.league-asset-icon{display:block;width:100%;height:100%;flex:0 0 auto;overflow:visible}
+.league-hero-emblem{gap:0;padding:7px 10px}
+.league-hero-emblem-icon{width:76px;height:76px;filter:drop-shadow(0 5px 5px rgba(12,20,40,.24))}
+.league-hero-emblem small{margin-top:-2px}
+.league-tier-emblem{width:58px;height:58px;flex:0 0 58px;clip-path:none;background:transparent;filter:none;isolation:auto}
+.league-tier-emblem:before{display:none}
+.league-tier-emblem-icon{width:100%;height:100%;filter:drop-shadow(0 4px 4px rgba(12,20,40,.2))}
+.league-class-step{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:38px;padding:8px 7px;white-space:nowrap}
+.league-class-step-icon{width:16px;height:16px;opacity:.96}
+.league-class-step>span{line-height:1}
+.league-fragment-tier-mark{width:36px;height:38px;clip-path:none;background:transparent;filter:none}
+.league-fragment-tier-icon{width:100%;height:100%;filter:drop-shadow(0 2px 3px rgba(15,25,40,.2))}
+.league-fragment-rule-step{gap:2px}
+.league-fragment-step-icon{width:21px;height:21px;flex:0 0 21px;margin-bottom:-1px}
+.league-podium-crown{display:grid;place-items:center;min-height:54px;font-size:0;line-height:1}
+.league-podium-crown-icon{width:56px;height:56px;filter:drop-shadow(0 4px 5px rgba(12,20,40,.2))}
+.league-ranking-medal{width:25px;height:25px;clip-path:none;background:transparent;filter:none;text-shadow:none}
+.league-ranking-medal-icon{width:100%;height:100%;filter:drop-shadow(0 2px 3px rgba(12,20,40,.2))}
+.league-ranking-medal--top-ten,.league-ranking-medal--top-twenty{background:transparent}
+.league-powerup-card-symbol{display:grid;place-items:center;min-height:52px}
+.league-powerup-svg-icon{width:48px;height:48px;filter:drop-shadow(0 3px 4px rgba(15,25,45,.2))}
+@media(max-width:760px){
+  .league-hero-emblem-icon{width:54px;height:54px}
+  .league-tier-emblem{width:48px;height:48px;flex-basis:48px}
+  .league-class-step{min-height:34px;gap:3px;padding:7px 5px}
+  .league-class-step-icon{width:14px;height:14px}
+  .league-podium-crown{min-height:46px}
+  .league-podium-crown-icon{width:46px;height:46px}
+}
+@media(max-width:600px){
+  .league-hero-emblem{padding:5px 7px}
+  .league-hero-emblem-icon{width:47px;height:47px}
+  .league-fragment-tier-mark{width:31px;height:33px}
+  .league-fragment-step-icon{width:18px;height:18px;flex-basis:18px}
+  .league-powerup-svg-icon{width:42px;height:42px}
+}
+@media(prefers-reduced-motion:reduce){
+  .league-asset-icon{animation:none!important;transition:none!important}
+}
