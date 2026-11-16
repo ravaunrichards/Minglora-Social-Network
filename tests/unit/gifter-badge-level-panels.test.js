@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -82,8 +83,8 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-edge-alpha-mask-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261116-gifter-range-edge-alpha-mask-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
@@ -129,8 +130,8 @@ test("Gifter sheet wrapper has no black edging while original artwork and sizing
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-edge-alpha-mask-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-edge-alpha-mask-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -150,8 +151,8 @@ test("Gifter progression uses the original ordered Level panels as its primary a
   assert.ok(!progression.includes("gifters-level-up.png"));
   assert.ok(!progression.includes("gp-level-up-reference-note"));
   assert.ok(styles.includes(".gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px"));
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-edge-alpha-mask-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-edge-alpha-mask-1"));
   assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
 
@@ -213,10 +214,10 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
   assert.ok(progression.includes("src='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "every original PNG is visibly previewed on its matching level card");
   assert.ok(!progression.includes("gp-level-index-original"), "level cards do not add a duplicate PNG thumbnail");
   assert.match(styles, /\.gp-reference-figure img\{display:block;width:100%[^}]*height:auto[^}]*object-fit:contain/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-no-black-edge-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
-  assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-edge-alpha-mask-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261116-gifter-range-edge-alpha-mask-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-edge-alpha-mask-1"));
+  assert.ok(sw.includes("/gifter-progression.js?v=20261116-gifter-range-edge-alpha-mask-1"));
 });
 
 test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
@@ -226,4 +227,48 @@ test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
   assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/lv-1-9.jpg'"));
   assert.ok(sw.includes("'/assets/gifter-badge-reference/master-sheet.png'"));
   assert.ok(sw.includes("'/assets/gifter-badge-progression-art.jpg'"), "the new progression art is precached");
+});
+
+
+test("range-sheet cleanup removes only edge-connected dark pixels and preserves touching badge artwork", () => {
+  const progression = read("public/gifter-progression.js");
+  const styles = read("public/gifter-progression.css");
+  const helperStart = progression.indexOf("  function removeRangeSheetOuterDarkEdgePixels(");
+  const helperEnd = progression.indexOf("  function cleanRangeSheetImage(", helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, "the targeted edge-mask helper exists");
+  const helperSource = progression.slice(helperStart, helperEnd);
+  const sandbox = {};
+  vm.runInNewContext(helperSource + String.fromCharCode(10) + "globalThis.runEdgeMask = removeRangeSheetOuterDarkEdgePixels;", sandbox);
+
+  const width = 8;
+  const height = 8;
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let index = 0; index < width * height; index += 1) {
+    data.set([132, 96, 188, 255], index * 4);
+  }
+  for (let x = 0; x < width; x += 1) {
+    data.set([12, 9, 34, 255], x * 4);
+    data.set([12, 9, 34, 255], ((height - 1) * width + x) * 4);
+  }
+  for (let y = 0; y < height; y += 1) {
+    data.set([12, 9, 34, 255], (y * width) * 4);
+    data.set([12, 9, 34, 255], (y * width + width - 1) * 4);
+  }
+
+  const gemTip = 3 * 4;
+  data.set([250, 248, 255, 255], gemTip);
+  const isolatedDarkInterior = (3 * width + 3) * 4;
+  data.set([12, 9, 34, 255], isolatedDarkInterior);
+
+  const removed = sandbox.runEdgeMask({ data }, width, height);
+  assert.equal(removed, 27, "the connected outer border except the bright badge tip is cleared");
+  assert.equal(data[gemTip + 3], 255, "a bright badge tip touching the image boundary stays intact");
+  assert.equal(data[isolatedDarkInterior + 3], 255, "dark pixels inside the artwork are not removed");
+  assert.equal(data[(1 * width + 1) * 4 + 3], 255, "the image interior remains opaque");
+
+  assert.ok(progression.includes('root.querySelectorAll(".gp-range-reference-figure img").forEach(cleanRangeSheetImage)'));
+  assert.ok(progression.includes('context.getImageData(0, 0, width, height)'));
+  assert.ok(progression.includes('context.putImageData(pixels, 0, 0)'));
+  assert.ok(styles.includes(".gp-range-reference-figure{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}"));
+  assert.ok(styles.includes(".gp-range-reference-figure img{border-radius:0}"));
 });
