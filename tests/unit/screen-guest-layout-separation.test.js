@@ -67,6 +67,9 @@ test('MeetWave renders nine independently-defined guest panel/grid arrangements'
   }
   assert.ok(contract.includes('#mw-grid[data-guest-layout="fluid-panel"]>.live-guest-seat[data-seat-index="1"]'));
   assert.ok(contract.includes('#mw-grid[data-guest-layout="fluid-panel"]>.live-guest-seat[data-seat-index="2"]'));
+  assert.ok(contract.includes('Force the two Fluid Panel thumbnail seats'));
+  assert.ok(contract.includes('inset:auto 7px calc(7px + 22%) auto!important'));
+  assert.ok(contract.includes('inset:auto 7px 7px auto!important'));
   assert.ok(contract.includes('#mw-grid[data-guest-layout="fluid-grid"]{\n  grid-template-columns:minmax(0,1.25fr) minmax(0,.9fr)'));
   assert.ok(contract.includes('#mw-grid[data-guest-layout="fixed-grid"]{\n  grid-template-columns:repeat(3,minmax(0,1fr))'));
   assert.ok(contract.includes('#mw-grid[data-guest-layout="fixed-panel"]>.live-guest-seat[data-seat-index="3"]'));
