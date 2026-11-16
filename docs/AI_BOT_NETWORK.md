@@ -190,3 +190,14 @@ PR #350 is merged and deployed. The existing private AI media bucket remains pri
 ## AI HR training and attendance — implementation in review
 
 The additive HR development slice includes owner-scoped training courses, draft-to-published course controls, employee enrolments, bounded status transitions/history, daily human-recorded attendance and correction history. Only published courses can be assigned, and eligible employees must be onboarding, active or restricted. Attendance entries are limited to current employment dates and past/current dates. The HR workspace now exposes an inline correction form on each attendance record; it reuses the audited attendance write path, requires a correction reason of at least ten characters, and creates the existing correction-history event. UI correction acceptance is covered by the focused unit test. Signed-in owner/device acceptance remains outstanding.
+
+
+## Human-initiated AI bot conversations — implementation slice (2026-11-15)
+
+The supervised conversation slice adds owner-scoped conversation and turn records to the existing private `ai_network` schema. Conversations are linked to a Bot Personality Lab bot and its private relational AI identity; every API remains behind the designated Minglora administrator's active MFA session. A conversation is not an AI identity, does not create a member/Auth account and does not activate a bot.
+
+Each request is explicitly initiated by the owner. The provider adapter uses the existing OpenAI server credential and model configuration, checks provider health before generation, moderates both the incoming message and generated response, disables provider storage, passes no tools, and rejects incomplete or flagged output. Only memory that has been separately enabled by the owner may be supplied as bounded context. Conversation history and opted-in memory are treated as untrusted input. The bot cannot publish, schedule, contact members, change accounts, access coins or finance, or take external actions.
+
+Conversations are persisted separately from long-term memory. Database commands are owner-scoped, service-role-only, SECURITY INVOKER and use an empty locked search path. The two tables have RLS enabled with direct browser-role access revoked. Turns use idempotency keys, a maximum of 200 turns per conversation, a 4,000-character input cap, a 12,000-character output cap, per-owner daily token reservations, serialized budget writes, and stale-running-turn recovery after two minutes. Archived conversations are read-only.
+
+**Operational status:** the provider adapter and UI do not make a provider operational. Until a real private `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL` are configured and verified, sending a message remains disabled. Do not create synthetic bots or test owner records. Global execution remains paused, workers remain disabled and the 10-billion identity target remains an architectural objective, not tested capacity.
