@@ -73,6 +73,14 @@
       {offset:.58,opacity:1,transform:"translate3d(0,-2px,0) rotateZ(1deg) scale(1.035)",filter:"none"},
       neutral
     ];
+    if(preset==="toucan-glide")return [
+      {offset:0,opacity:0,transform:"translate3d(0,17px,0) rotateZ(-4deg) scale(.86)",filter:"brightness(.84) saturate(.9)"},
+      {offset:.17,opacity:1,transform:"translate3d(-8px,-12px,0) rotateZ(3deg) scale(1.075)",filter:"brightness(1.22) saturate(1.2)"},
+      {offset:.36,opacity:1,transform:"translate3d(7px,-4px,0) rotateZ(-2.2deg) scale(1.035)",filter:"brightness(1.12) saturate(1.12)"},
+      {offset:.57,opacity:1,transform:"translate3d(-5px,2px,0) rotateZ(1.5deg) scale(1.045)",filter:"brightness(1.08)"},
+      {offset:.79,opacity:1,transform:"translate3d(3px,-1px,0) rotateZ(-.8deg) scale(1.015)",filter:"none"},
+      neutral
+    ];
     if(preset==="island-tide")return [
       {offset:0,opacity:0,transform:"translate3d(0,20px,0) rotateZ(-3deg) scale(.84)",filter:"brightness(.82) saturate(.86)"},
       {offset:.2,opacity:1,transform:"translate3d(-6px,-8px,0) rotateZ(2.3deg) scale(1.08)",filter:"brightness(1.24) saturate(1.14)"},
@@ -288,6 +296,39 @@
     rimGain.gain.setValueAtTime(.0001,now+.018);rimGain.gain.exponentialRampToValueAtTime(.045,now+.025);
     rimGain.gain.exponentialRampToValueAtTime(.0001,now+.12);
     rim.connect(rimGain);rimGain.connect(c.destination);rim.start(now+.018);rim.stop(now+.14);
+    return true;
+  }
+  function playToucan(c,now,seed){
+    // Original, locally synthesised rainforest call: three short rising/falling
+    // chime-like chirps over a very soft filtered leaf-rustle bed.
+    const calls=[1244.51,1661.22,1480],delays=[0,.145,.365];
+    calls.forEach((frequency,index)=>{
+      const start=now+delays[index],osc=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      const variation=1+(((seed>>>((index*5)%24))%9)-4)*.0018;
+      const peak=frequency*variation;
+      osc.type=index===1?"triangle":"sine";
+      osc.frequency.setValueAtTime(peak,start);
+      osc.frequency.exponentialRampToValueAtTime(peak*(index===1?.79:1.16),start+.105);
+      osc.frequency.exponentialRampToValueAtTime(peak*.92,start+.19);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(index===1?.043:.036,start+.012);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.205);
+      if(pan){
+        pan.pan.setValueAtTime((index-1)*.22,start);
+        osc.connect(gain);gain.connect(pan);pan.connect(c.destination);
+      }else{
+        osc.connect(gain);gain.connect(c.destination);
+      }
+      osc.start(start);osc.stop(start+.22);
+    });
+    const rustle=c.createBufferSource(),filter=c.createBiquadFilter(),rustleGain=c.createGain();
+    rustle.buffer=createGiftNoise(c,seed^0x51f15e,0.43);
+    filter.type="bandpass";filter.frequency.setValueAtTime(1850,now);filter.Q.setValueAtTime(.48,now);
+    rustleGain.gain.setValueAtTime(.0001,now);
+    rustleGain.gain.exponentialRampToValueAtTime(.012,now+.055);
+    rustleGain.gain.exponentialRampToValueAtTime(.0001,now+.41);
+    rustle.connect(filter);filter.connect(rustleGain);rustleGain.connect(c.destination);
+    rustle.start(now);rustle.stop(now+.43);
     return true;
   }
   function playPalmBreeze(c,now,seed){
@@ -527,6 +568,7 @@
       if(c.state==="suspended")void c.resume();
       const seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),now=c.currentTime;
       if(gift.code==="djembe-master-1v3jzkm")return playDjembe(c,now,seed);
+      if(gift.code==="toucan-1ovzxjb")return playToucan(c,now,seed);
       if(gift.code==="palm-breeze-gknyt0")return playPalmBreeze(c,now,seed);
       if(gift.code==="gamer-otter-100-mgl")return playGamerOtter(c,now,seed);
       if(gift.code==="live-island-rmn3mc")return playLiveIsland(c,now,seed);
@@ -660,7 +702,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="crocodile-tnyf2j"?"crocodile-snap":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
+      const visualPreset=gift.code==="crocodile-tnyf2j"?"crocodile-snap":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.code==="toucan-1ovzxjb"?"toucan-glide":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),

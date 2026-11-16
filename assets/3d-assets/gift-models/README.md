@@ -158,3 +158,13 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Integration: exact-code route in `scripts/generate-minglora-gifts.mjs`; existing `grand-entry` animation preset and music-category synthesized sound remain in use
 - Review: `design-review-pending`; human art review, rights clearance and physical-device QA remain outstanding
 - Economy: canonical name/category/999-Coin value/active flag remain unchanged; no production database, wallet or transaction records are changed
+
+
+## Toucan v1
+
+- Source: `toucan-model.mjs`
+- Target: canonical catalogue record `toucan-1ovzxjb` in the animals category; canonical Coin value and active flag are read-only.
+- Output: self-contained glTF 2.0 with distinct anatomy/feather/perch meshes and per-part PBR materials, plus subject-specific primary SVG and transparent icon.
+- Art direction: three-quarter-profile keel-billed rainforest toucan, near-black matte plumage, golden throat/chest, turquoise eye skin, orange bill-blaze stripe, lime curved bill, red/blue bill tips, layered wings, scarlet undertail, zygodactyl feet and natural perch.
+- Runtime: exact-code model/artwork route; `toucan-glide` motion preset; locally synthesized bird-call chimes and filtered leaf-rustle sound.
+- Review: `design-review-pending`; human visual review, licensing/rights clearance, mastered audio and physical-device QA remain outstanding.
