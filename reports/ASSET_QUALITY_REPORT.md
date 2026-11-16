@@ -286,3 +286,7 @@ The canonical source record `pop-parrot-alp4e8` now routes to the dedicated `ass
 **Automated verification:** full CI passed 1,251/1,251 tests; the 15-model Chromium 141/model-viewer renderer completed 45/45 desktop/tablet/mobile model renders and 45/45 non-empty pixel checks and uploaded 45 screenshots. The job reported zero page errors and zero request cancellations (run 43809576362; artifact 14200011992). LIVE/MeetWave layout visual QA also passed.
 
 **Acceptance boundary:** automated geometry, build, test and browser evidence do not establish premium human visual approval, rights clearance, mastered audio, texture-map/KTX2 completion, embedded GLTF animation channels, or physical-device QA. The model and sound remain pending review. The remaining 1,733 of the 1,748 source-catalogue rows still use the shared procedural category/name builder; this one bespoke asset does not complete the catalogue-wide artwork mission.
+
+## LIVE discovery ranking tab icon quality — 2026-11-16
+
+Three original vector icons now distinguish the existing Daily, Popular LIVE and League discovery tabs. Each has a 24×24 viewBox, named `icon` symbol and currentColor stroke. Dedicated tests verify exact icon-to-destination mapping, visible text labels, existing tab click and active-state code, compact 16×16 rendering, file presence, manifest checksums and offline cache references. The icons remain design-review-pending; these source/CI checks do not establish human visual approval, accessibility user testing or rights clearance.
