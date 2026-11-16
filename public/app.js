@@ -2358,17 +2358,41 @@ async function loadLiveDiscoveryBoard(tab,sessions){
       }));
     }else if(tab==='daily'){
       const data=await api('/live/rankings/daily');
-      const items=Array.isArray(data.leaderboard)?data.leaderboard:[];
-      root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Ranked by confirmed Coins sent today · "+esc(data.dayKey||'today')+"</small></div>"+
-        (items.length?items.slice(0,10).map(item=>{
-          const position=Number(item.position||0);
-          const member=item.user||{};
-          const avatarUrl=avatar(member);
-          const podium=position>=1&&position<=3
-            ? "<span class='live-daily-podium' role='img' aria-label='Daily ranking position "+position+"'><img class='live-daily-podium-frame' src='/assets/daily-ranking-badges/place-"+position+".png' alt='' loading='lazy' decoding='async'><img class='live-daily-podium-avatar' src='"+avatarUrl+"' alt='' loading='lazy'></span>"
-            : "<span class='live-ranking-position'>#"+position+"</span><img src='"+avatarUrl+"' alt=''>";
-          return "<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(member.id||'')+"'>"+podium+"<span><small>@"+esc(member.username||'member')+"</small><strong>"+esc(member.name||member.username||'Minglora member')+liveGifterBadgeMarkup(member,"compact")+"</strong></span><b>"+liveCompactCount(item.points||0)+" pts</b></button>";
-        }).join(''):"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
+      const items=Array.isArray(data.leaderboard)?data.leaderboard.filter(item=>{
+        const position=Number(item.position||0);
+        return position>=1&&position<=100;
+      }):[];
+      const byPosition=new Map(items.map(item=>[Number(item.position||0),item]));
+      const placeLabel=place=>place===1?'1ST':place===2?'2ND':'3RD';
+      const podiumMarkup=[2,1,3].map(position=>{
+        const item=byPosition.get(position);
+        if(!item)return '';
+        const member=item.user||{};
+        const avatarUrl=avatar(member);
+        return "<button type='button' class='live-daily-podium-card is-place-"+position+"' data-live-ranking-profile='"+esc(member.id||'')+"' aria-label='Open "+esc(member.name||member.username||'Minglora member')+" profile, ranked number "+position+"'>"+
+          "<span class='live-daily-podium'><img class='live-daily-podium-frame' src='/assets/daily-ranking-badges/place-"+position+".png' alt='' loading='lazy' decoding='async'><img class='live-daily-podium-avatar' src='"+avatarUrl+"' alt='' loading='lazy'></span>"+
+          "<span class='live-daily-podium-place'>"+placeLabel(position)+" PLACE</span>"+
+          "<strong>"+esc(member.name||member.username||'Minglora member')+"</strong>"+
+          "<small>@"+esc(member.username||'member')+"</small>"+
+          "<b>"+liveCompactCount(item.points||0)+" pts</b></button>";
+      }).join('');
+      const remainingMarkup=items.filter(item=>Number(item.position||0)>3).map(item=>{
+        const position=Number(item.position||0);
+        const member=item.user||{};
+        const award=position>=4&&position<=10?'top-ten':position>=11&&position<=20?'top-twenty':'';
+        const avatarMarkup=award
+          ? "<span class='live-ranking-avatar-wrap'><img src='"+avatar(member)+"' alt='' loading='lazy'><span class='live-ranking-medal live-ranking-medal--"+award+"' aria-label='Rank "+position+"'>"+position+"</span></span>"
+          : "<span class='live-ranking-position'>#"+position+"</span><img src='"+avatar(member)+"' alt='' loading='lazy'>";
+        const bandMarkup=award
+          ? "<span class='live-ranking-band live-ranking-band--"+award+"'>"+(award==='top-ten'?'TOP 10':'TOP 20')+"</span>"
+          : "";
+        return "<button type='button' class='live-ranking-row"+(award?" live-ranking-row--"+award:"")+"' data-live-ranking-profile='"+esc(member.id||'')+"' aria-label='Open "+esc(member.name||member.username||'Minglora member')+" profile, rank "+position+"'>"+
+          avatarMarkup+
+          "<span><small>@"+esc(member.username||'member')+"</small><strong>"+esc(member.name||member.username||'Minglora member')+liveGifterBadgeMarkup(member,"compact")+"</strong>"+bandMarkup+"</span>"+
+          "<b>"+liveCompactCount(item.points||0)+" pts</b></button>";
+      }).join('');
+      root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Top 100 · Confirmed Coins sent today · "+esc(data.dayKey||'today')+"</small></div>"+
+        (items.length?(podiumMarkup?"<div class='live-daily-podium-stage' aria-label='First, second and third place podium'>"+podiumMarkup+"</div>":"")+remainingMarkup:"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
       root.querySelectorAll('[data-live-ranking-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.liveRankingProfile)));
     }else{
       const data=await api('/leagues/overview');
