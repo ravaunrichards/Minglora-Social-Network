@@ -70,12 +70,14 @@ Minglora provides six match-only Power-Ups. They are activated by a participatin
 | --- | --- | --- |
 | Boosting Glove | For 30 seconds, each eligible Gift has a 30% chance to score 5× match points | One activation per creator per UTC day |
 | Magic Mist | Hides the activating side's score from the opposing creator for 30 seconds; the creator and neutral viewers can still see it | One activation per creator per UTC day |
-| Stun Hammer | Shows a temporary opponent-side visual stun indicator for 30 seconds; it does not interrupt the video stream, mute anyone, or disable controls | One activation per creator per UTC day |
+| Stun Hammer | Applies a temporary pulsing visual overlay to the opposing creator's LIVE match panel for 30 seconds; it never intercepts controls, interrupts video, or mutes anyone | One activation per creator per UTC day |
 | Time Maker | Adds 10 seconds to the match clock | Three uses shared by both sides per match |
 | Boosters | Doubles eligible Gifts sent by both the No. 2 and No. 3 ranked gifters on the activating side | One activation per creator per UTC day; ranks use confirmed match Gift totals |
 | Speed Challenge | Starts a 52-second round in which eligible Gifts from both sides score 2× match points | One activation per match |
 
 Boosters ranks are calculated from confirmed, eligible Gift value recorded for each sender on that side of the current match. Gift multipliers affect the match scoreboard only; the original confirmed Gift value is recorded unchanged in the official Creator League daily, weekly, and lifetime totals.
+
+Magic Mist is enforced in the opposing creator's match response: the hidden score and score-bearing Gift/support event details are omitted from that view, while the canonical stored events remain intact and the activating creator and neutral viewers retain score visibility. LIVE quick-action buttons use the original League SVG artwork, display each Power-Up's effect and availability, and disable daily-used or match-exhausted activations.
 
 The daily and weekly leaderboard views remain available for standings and reporting. Daily class placement is the input to fragment movement; weekly and lifetime totals are informational.
 
