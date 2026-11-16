@@ -290,3 +290,7 @@ The canonical source record `pop-parrot-alp4e8` now routes to the dedicated `ass
 ## LIVE discovery ranking tab icon quality — 2026-11-16
 
 Three original vector icons now distinguish the existing Daily, Popular LIVE and League discovery tabs. Each has a 24×24 viewBox, named `icon` symbol and currentColor stroke. Dedicated tests verify exact icon-to-destination mapping, visible text labels, existing tab click and active-state code, compact 16×16 rendering, file presence, manifest checksums and offline cache references. The icons remain design-review-pending; these source/CI checks do not establish human visual approval, accessibility user testing or rights clearance.
+
+## LIVE discovery ranking icons — CI evidence — 2026-11-16
+
+PR #434 head `c7b0db86d8648db30d9d50e3aef3ae7f3f1429cd` passed CI run 43818819598: 1,254 tests passed, 0 failed, 0 cancelled, 0 skipped; For You navigation and Auth/OAuth acceptance passed. The build validated the unified manifest and uploaded a 663,671-byte manifest artifact (ID 14203508088) and a 154,001-byte raster metadata audit (ID 14203647369). This validates file existence, hashes, integration references and application tests, not human design approval, visual usability, rights clearance or physical hardware.
