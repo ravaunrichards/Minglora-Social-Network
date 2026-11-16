@@ -35,7 +35,7 @@ test('conversation RPC scopes every command by owner and linked Bot Lab identity
   assert.match(migration, /p\.extra_profile_data->>'bot_id' = v_conversation\.bot_id::text/);
   assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /failure_code = 'interrupted'[\s\S]*started_at < now\(\) - interval '2 minutes'/);
-  assert.match(migration, /where c\\.conversation_id = v_conversation_id and c\\.owner_user_id = p_actor_user_id\\s+for update/i);
+  assert.match(migration, /where c\.conversation_id = v_conversation_id and c\.owner_user_id = p_actor_user_id\s+for update/i);
   assert.match(migration, /reserved_tokens/);
   assert.match(migration, /daily AI token budget/i);
   assert.match(migration, /length\(v_user_message\) > 4000/);
