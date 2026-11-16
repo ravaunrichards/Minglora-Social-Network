@@ -60,7 +60,22 @@ A refund remains recorded in the gift audit ledger. If it affects a day that has
 
 Only confirmed main-host LIVE Gift value contributes to Creator League placement. Coin purchases, direct profile gifts, social gifts, match viewer support, and match power-up bonuses do not grant Creator League fragments.
 
-LIVE League Matches remain a separate head-to-head feature. They can record results, winner, and win/loss/draw history, but they do not create a Bronze-to-Grandmaster rank or change Creator League classes. Match Power-Ups affect only the active match score.
+LIVE League Matches remain a separate head-to-head feature. They can record results, winner, and win/loss/draw history, but they do not create a Bronze-to-Grandmaster rank or change Creator League classes. Match Power-Ups affect only the active match score or match-only display and never alter the Coin ledger or official Creator League points.
+
+### LIVE Match Power-Ups
+
+Minglora provides six match-only Power-Ups. They are activated by a participating creator during a live match:
+
+| Power-Up | Match effect | Limit |
+| --- | --- | --- |
+| Boosting Glove | For 30 seconds, each eligible Gift has a 30% chance to score 5× match points | One activation per creator per UTC day |
+| Magic Mist | Hides the activating side's score from the opposing creator for 30 seconds; the creator and neutral viewers can still see it | One activation per creator per UTC day |
+| Stun Hammer | Shows a temporary opponent-side visual stun indicator for 30 seconds; it does not interrupt the video stream, mute anyone, or disable controls | One activation per creator per UTC day |
+| Time Maker | Adds 10 seconds to the match clock | Three uses shared by both sides per match |
+| Boosters | Doubles eligible Gifts sent by both the No. 2 and No. 3 ranked gifters on the activating side | One activation per creator per UTC day; ranks use confirmed match Gift totals |
+| Speed Challenge | Starts a 52-second round in which eligible Gifts from both sides score 2× match points | One activation per match |
+
+Boosters ranks are calculated from confirmed, eligible Gift value recorded for each sender on that side of the current match. Gift multipliers affect the match scoreboard only; the original confirmed Gift value is recorded unchanged in the official Creator League daily, weekly, and lifetime totals.
 
 The daily and weekly leaderboard views remain available for standings and reporting. Daily class placement is the input to fragment movement; weekly and lifetime totals are informational.
 
