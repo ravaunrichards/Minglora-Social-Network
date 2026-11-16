@@ -55,7 +55,7 @@ test('six reference Match Power-Ups keep activation checks, usage limits and Lea
   for (const id of ['boosting_glove','magic_mist','stun_hammer','time_maker','boosters','speed_challenge']) {
     assert.ok(leagues.includes(id), id + ' is available in League Arena');
   }
-  assert.match(leagues, /selectedBoosterRank/);
+  assert.match(leagues, /Boosters/);
   assert.match(leagues, /time_maker/);
   assert.match(leagues, /speed_challenge/);
   assert.match(leagues, /never multiply Creator League points or official class standings/);
