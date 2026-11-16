@@ -74,7 +74,8 @@ test('Full Screen matches the one-tile reference with no extra guest overlay sea
   assert.ok(app.includes("classList.toggle('live-full-screen-layout',activeLiveScreenLayout==='full-screen')"));
   assert.ok(app.includes("'full-screen':1"));
   assert.ok(app.includes('const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!audioGuestLayout'));
-  const fullScreen=tiktok.slice(tiktok.indexOf('data-live-layout="full-screen"'),tiktok.indexOf('data-live-layout="fluid-panel"'));
+  const contract=tiktok.slice(tiktok.indexOf('/* FINAL NINE GUEST LAYOUTS'));
+  const fullScreen=contract.slice(contract.indexOf('data-live-layout="full-screen"'),contract.indexOf('data-live-layout="fluid-panel"'));
   assert.ok(fullScreen.includes('display:block!important'));
   assert.ok(fullScreen.includes('inset:0!important'));
   assert.ok(!fullScreen.includes('nth-child(n+2)'));
