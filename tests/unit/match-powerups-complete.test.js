@@ -65,7 +65,12 @@ test("Boosting Glove applies a 5x Match score bonus at 30% chance, never Creator
   });
   assert.equal(hit.matchPoints, 50);
   assert.equal(miss.matchPoints, 10);
-  assert.equal(match.scores.challenger, 60);
+  const expired = gift(db, {
+    id: "glove-expired", senderId: "gifter-c", points: 10,
+    at: new Date(START.getTime() + 31000), random: () => 0.01
+  });
+  assert.equal(expired.matchPoints, 10);
+  assert.equal(match.scores.challenger, 70);
   const profile = ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START);
   assert.equal(profile.seasonPoints, 20);
   assert.equal(profile.lifetimeGiftPoints, 20);
@@ -88,6 +93,8 @@ test("Magic Mist hides only the activated side's score from the opposing creator
   assert.equal(opponentView.scoreVisibility.challenger, false);
   assert.equal(spectatorView.scores.challenger, 25);
   assert.equal(spectatorView.scoreVisibility.challenger, true);
+  const afterExpiry = listCreatorLeagueMatches(db, db.users, "host-b", new Date(START.getTime() + 32000))[0];
+  assert.equal(afterExpiry.scoreVisibility.challenger, true);
 });
 
 test("Stun Hammer applies a 30-second opponent-side visual effect without changing scores", () => {
@@ -98,6 +105,8 @@ test("Stun Hammer applies a 30-second opponent-side visual effect without changi
   assert.ok(view.matchEffects.some(effect =>
     effect.type === "stun_hammer" && effect.side === "challenger" && effect.targetSide === "opponent"
   ));
+  const afterExpiry = listCreatorLeagueMatches(db, db.users, "host-b", new Date(START.getTime() + 31000))[0];
+  assert.equal(afterExpiry.matchEffects.some(effect => effect.type === "stun_hammer"), false);
   assert.equal(MATCH_POWERUPS.find(item => item.id === "stun_hammer").durationMs, 30000);
 });
 
@@ -138,6 +147,11 @@ test("Boosters double Gifts from both the No. 2 and No. 3 ranked match gifters",
   assert.equal(second.matchPoints, 20);
   assert.equal(third.matchPoints, 20);
   assert.equal(fourth.matchPoints, 10);
+  const afterExpiry = gift(db, {
+    id: "rank-two-after-expiry", senderId: "gifter-2", points: 10,
+    at: new Date(START.getTime() + 31000)
+  });
+  assert.equal(afterExpiry.matchPoints, 10);
   const bonusEvents = match.events.filter(event => event.type === "gift_score" && event.triggeredEffects?.includes("boosters"));
   assert.deepEqual(bonusEvents.map(event => event.senderRank), [2, 3]);
   assert.equal(ensureCreatorLeagueProfile(db, "host-a", "GLOBAL", START).seasonPoints, 205);
