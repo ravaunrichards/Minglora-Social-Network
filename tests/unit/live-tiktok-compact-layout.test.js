@@ -12,8 +12,8 @@ const compact = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'
 
 test('LIVE compact presentation is scoped to the active room and loaded after existing layout styles', () => {
   assert.match(compact, /body:has\(#live-player-shell\)/);
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261115-nine-guest-layout-reference-parity-1'));
-  assert.ok(worker.includes("SHELL.push('/live-tiktok-compact.css?v=20261115-nine-guest-layout-reference-parity-1')"));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261115-live-guest-reference-fit-2'));
+  assert.ok(worker.includes("SHELL.push('/live-tiktok-compact.css?v=20261115-live-guest-reference-fit-2')"));
 });
 
 test('Phones and portrait tablets use one immersive stage with overlays, not stacked video and chat rows', () => {
@@ -56,6 +56,20 @@ test('The nine supplied guest layout IDs use one selector and one live layout at
   assert.match(compact,/FINAL NINE GUEST LAYOUTS/);
   assert.match(compact,/data-live-layout="roundtable-1"/);
   assert.match(compact,/data-live-layout="roundtable-2"/);
+});
+
+test('LIVE reference layouts place occupied and empty guest seats in the same fixed cells', () => {
+  const start=compact.lastIndexOf('/* FINAL NINE GUEST LAYOUTS');
+  assert.ok(start>=0,'missing final reference-locked layout block');
+  const contract=compact.slice(start);
+  assert.match(contract,/\.live-guest-seat:not\(\.is-host\)/);
+  assert.match(contract,/data-live-layout="fluid-grid"[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
+  assert.match(contract,/data-live-layout="roundtable-1"[\s\S]*?\.live-guest-seat:nth-child\(10\)/);
+  assert.match(contract,/data-live-layout="roundtable-2"[\s\S]*?\.live-guest-seat:nth-child\(10\)/);
+  assert.match(contract,/data-live-layout="side-by-side"[\s\S]*?\.live-guest-seat:nth-child\(10\)/);
+  assert.match(contract,/data-live-layout="spotlight"[\s\S]*?grid-column:1\/\-1/);
+  assert.doesNotMatch(contract,/grid-template-rows:22px/,'reference layouts must not reserve a blank heading row');
+  assert.match(contract,/#live-video-stage:not\(\.live-audio-stage\)/,'video layout correction must not override audio-only LIVE');
 });
 
 test('Compact tools remain usable as a bottom sheet on touch devices and respect reduced motion', () => {

@@ -28,15 +28,16 @@ test('LIVE uses one exact nine-layout guest registry and one host layout endpoin
   assert.match(app,/function applyLiveGuestLayout\(value\)\{applyLiveScreenLayout\(value\);\}/);
 });
 
-test('All nine reference layouts define their own grid proportions, positions and seat sizing',()=>{
+test('All nine reference layouts define proportional seat maps that remain stable when expanded',()=>{
   const start=guestCss.indexOf('/* FINAL NINE GUEST LAYOUTS');
   const contract=guestCss.slice(start);
   assert.ok(start>=0);
   for(const layout of nine)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' layout is missing');
   assert.match(contract,/full-screen[\s\S]*?\.live-host-only-layout/);
-  assert.match(contract,/full-screen[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.match(contract,/@media\(max-width:760px\)[\s\S]*?full-screen[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fluid-panel[\s\S]*?bottom:calc/);
+  assert.match(contract,/full-screen[^}]*position:absolute!important;inset:0/);
+  assert.match(contract,/full-screen[\s\S]*?width:10\.5%!important;height:18%!important/);
+  assert.match(contract,/fluid-panel[\s\S]*?position:absolute/);
+  assert.match(contract,/fluid-panel[\s\S]*?\.live-guest-seat:nth-child\(10\)/);
   assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
   assert.match(contract,/fixed-grid[\s\S]*?grid-template-rows:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
@@ -44,6 +45,12 @@ test('All nine reference layouts define their own grid proportions, positions an
   assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
   assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);
   assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
+  assert.match(contract,/\.live-guest-seat:not\(\.is-host\)/,'unoccupied invite seats must use the same positions as connected guests');
+  assert.match(contract,/\.live-guest-seat:nth-child\(10\)/,'the last non-host seat must have an explicit position where the reference requires it');
+  assert.match(contract,/@media\(max-width:760px\)[\s\S]*?gap:3px!important/);
+  assert.doesNotMatch(contract,/@media\(max-width:760px\)[\s\S]*?grid-template-(columns|rows)/,'mobile must not reorder or reshape the reference seat map');
+  assert.doesNotMatch(contract,/grid-template-rows:22px/,'no empty heading row may consume stage height');
+  assert.match(contract,/#live-video-stage:not\(\.live-audio-stage\)/,'video layout rules must remain isolated from audio-only LIVE');
   assert.doesNotMatch(contract,/data-live-guest-layout/);
 });
 test('MeetWave screen and guest registries are disjoint and exact',()=>{
