@@ -271,5 +271,5 @@ test("manifest generation is part of startup, CI and documentation", () => {
   assert.match(workflow, /minglora-live-asset-manifest/);
   assert.match(integration, /live-asset-manifest\.json/);
   assert.match(integration, /live-tools\/manifest\.json/);
-  assert.match(integration, /live-provider-status\\/manifest\\.json/);
+  assert.ok(integration.includes("live-provider-status/manifest.json"));
 });
