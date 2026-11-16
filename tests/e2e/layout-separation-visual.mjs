@@ -95,12 +95,18 @@ async function applyLayout(page,product,layout){
       };
     });
     const computed=getComputedStyle(grid);
+    const gridBounds=grid.getBoundingClientRect();
+    const liveSelector='body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="'+args.layout+'"]';
     return {
       product:args.product,layout:args.layout,
       stage:{width:bounds.width,height:bounds.height},
+      grid:{x:gridBounds.x-bounds.x,y:gridBounds.y-bounds.y,width:gridBounds.width,height:gridBounds.height},
+      layoutAttribute:grid.getAttribute(args.product==='LIVE'?'data-live-layout':'data-layout'),
+      productionSelectorMatches:args.product==='LIVE'?document.querySelectorAll(liveSelector).length:document.querySelectorAll('.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="'+args.layout+'"]').length,
       columns:computed.gridTemplateColumns.trim().split(/\s+/).length,
       rows:computed.gridTemplateRows.trim().split(/\s+/).length,
       columnTemplate:computed.gridTemplateColumns,rowTemplate:computed.gridTemplateRows,
+      display:computed.display,
       seats
     };
   },{product,layout});
@@ -211,6 +217,7 @@ try{
       const productResults=[];
       for(const definition of layouts){
         const result=await applyLayout(page,product,definition.id);
+        report.lastMeasurement=result;
         const summary=verify(result,definition,viewport,'occupied');
         report.occupiedSeatChecks.push(summary);
         signatures.add(signature(result));
