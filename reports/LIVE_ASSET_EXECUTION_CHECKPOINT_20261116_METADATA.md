@@ -50,7 +50,7 @@ The six new Gifter sheet originals and their measured dimensions are recorded in
 ## Checkpoint state
 
 - LIVE-ASSET-16A metadata scan: VERIFIED.
-- Durable documentation update: PR #439, validation passed; merge remains pending.
+- Durable documentation update: PR #439 merged into `main` at `056c37f246ca6571f249e102b21fd3398085a1cf`; post-merge main CI run 43823177068 completed successfully.
 - Overall LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.
 
 ## Next unfinished work
