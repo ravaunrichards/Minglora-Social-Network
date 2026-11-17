@@ -2367,7 +2367,7 @@
   box-shadow:0 4px 14px rgba(0,0,0,.28)!important
 }
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1%,8px)!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(46px,10%,120px) + clamp(4px,1.5%,8px))!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(46px,20%,120px) + clamp(4px,1.5%,8px))!important}
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(n+5){display:none!important}
 
 /* 3. FLUID GRID — one full-height left panel and exactly two right-hand panels. */
