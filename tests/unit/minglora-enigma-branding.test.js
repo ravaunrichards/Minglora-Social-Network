@@ -39,7 +39,7 @@ test("Enigma replaces the old M artwork across all active Minglora brand surface
   assert.ok(adminCss.includes("object-fit:cover;"));
   assert.ok(adminCss.includes("object-position:center 12%;"));
   assert.ok(manifest.includes('"type": "image/png"'));
-  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v353-self-updating-1'"));
+  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v354-self-updating-1'"));
   assert.ok(serviceWorker.includes("icon:'" + brandUrl + "'"));
   assert.ok(serviceWorker.includes("badge:'" + brandUrl + "'"));
 });
