@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -70,16 +70,41 @@
       esc(bot.name) + '</strong><div class="ai-network-meta">' + pill('AI BOT', 'ai') + ' ' + pill(bot.status, bot.status === 'active' ? 'success' : 'neutral') +
       '</div><p>' + esc(bot.purpose) + '</p><small>' + esc(bot.tone) + ' · ' + esc(list(bot.languages).join(', ')) + ' · ' + esc(list(bot.traits).join(', ')) + '</small></div></div>' +
       '<div class="ai-network-row-actions">' +
+      (bot.status !== 'archived' && bot.identityLinkStatus === 'linked'
+        ? '<button type="button" class="secondary" data-ai-action="bot-chat-open" data-id="' + esc(bot.id) + '">Chat</button>'
+        : '') +
       (bot.status === 'active'
         ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause</button>'
         : bot.status !== 'archived'
-          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" disabled title="Provider execution is not enabled">Activate</button>'
+          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" disabled title="Autonomous execution remains disabled">Activate</button>'
           : '') +
       (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
       '</div></article>'
     ).join('') + '</div>';
   }
 
+  function renderAIBotChat() {
+    const chat = state.botChat;
+    if (!chat?.bot || chat.bot.id !== state.selectedBotChatId) {
+      return '<p class="ai-network-note">Select Chat on a linked AI bot to start an owner-initiated conversation. Bot status stays unchanged; autonomous workers remain paused.</p>';
+    }
+    const messages = list(chat.messages).map(item =>
+      '<article class="ai-network-chat-message ai-network-chat-message--' + (item.role === 'assistant' ? 'assistant' : 'user') + '">' +
+      '<div class="ai-network-chat-message-heading"><strong>' + (item.role === 'assistant' ? esc(chat.bot.name) + ' · AI' : 'You') + '</strong> ' +
+      (item.role === 'assistant' ? pill('AI', 'ai') : '') + '</div><p>' + esc(item.content) + '</p>' +
+      '<small>' + esc(date(item.createdAt)) + '</small></article>'
+    ).join('');
+    const canChat = Boolean(state.snapshot?.providerStatus?.botChatAvailable);
+    const error = state.botChatError ? '<p class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.botChatError) + '</p>' : '';
+    return '<section class="ai-network-bot-chat" aria-label="AI bot conversation"><div class="ai-network-bot-chat-heading"><div><strong>Chat with ' +
+      esc(chat.bot.name) + '</strong><p>' + esc(chat.bot.purpose) + '</p></div><button type="button" class="secondary" data-ai-action="bot-chat-close">Close</button></div>' +
+      error + '<div class="ai-network-chat-thread" aria-live="polite">' +
+      (messages || empty('No messages yet. Send a question to start this private AI conversation.')) +
+      '</div><form class="ai-network-form" data-ai-form="bot-chat" data-bot-id="' + esc(chat.bot.id) + '" data-conversation-id="' + esc(chat.conversation?.id || '') + '">' +
+      '<label>Message ' + esc(chat.bot.name) + '<textarea name="message" required minlength="1" maxlength="4000" rows="3" placeholder="Ask your AI bot a question…" ' + (!canChat ? 'disabled' : '') + '></textarea></label>' +
+      '<p class="ai-network-note">Your message and the AI reply are checked by content moderation. This bot can answer and help draft text only; it cannot post, message other members, schedule, spend money or perform admin actions.</p>' +
+      '<button class="primary" type="submit" ' + (!canChat ? 'disabled title="Configure a healthy OpenAI provider in the private server environment first."' : '') + '>Send to AI bot</button></form></section>';
+  }
   const identityStatusTransitions = Object.freeze({
     proposed: ['created'],
     created: ['under_review','suspended'],
@@ -1447,7 +1472,7 @@
       (state.adminAccess ? renderAITaskQueueCenter() : '') +
       (state.adminAccess ? renderAIOrganizationCenter() : '') +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks. Every Bot Lab creation is also registered as an individually addressable, private AI identity in Minglora.</p>' +
-        renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
+        renderBotRows(bots) + renderAIBotChat() + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
         '<div class="ai-network-form-grid"><label>AI first name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
         '<label>AI last name<input name="lastName" required maxlength="80" autocomplete="off"></label>' +
         '<label>Middle name (optional)<input name="middleName" maxlength="80" autocomplete="off"></label>' +
@@ -1578,7 +1603,17 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'memory-settings') {
+    if (kind === 'bot-chat') {
+      const botId = form.dataset.botId || '';
+      if (!botId) throw new Error('Choose a valid linked AI bot before sending a message.');
+      const message = value('message');
+      if (!message || message.length > 4000) throw new Error('Enter a message between 1 and 4,000 characters.');
+      form.dataset.requestId = form.dataset.requestId || window.crypto.randomUUID();
+      path = '/bots/' + encodeURIComponent(botId) + '/chat';
+      payload.message = message;
+      payload.requestId = form.dataset.requestId;
+      if (form.dataset.conversationId) payload.conversationId = form.dataset.conversationId;
+    } else if (kind === 'memory-settings') {
       const identityId = form.dataset.identityId || '';
       if (!identityId) throw new Error('Choose an AI identity before updating its memory settings.');
       path = '/identities/' + encodeURIComponent(identityId) + '/memory/settings';
@@ -2172,6 +2207,11 @@
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
+    if (kind === 'bot-chat') {
+      state.botChat = result;
+      state.selectedBotChatId = result.bot?.id || form.dataset.botId || '';
+      state.botChatError = '';
+    }
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
       const selectedMedia = [
@@ -2190,6 +2230,7 @@
       }
     }
     form.reset();
+    if (kind === 'bot-chat') delete form.dataset.requestId;
     if (kind === 'category') {
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
@@ -2363,6 +2404,17 @@
         await loadAIDiscovery(state.discoveryFilters);
       }
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'bot-chat-open') {
+        const result = await request('/bots/' + encodeURIComponent(id) + '/conversation');
+        state.botChat = result;
+        state.selectedBotChatId = result.bot?.id || id;
+        state.botChatError = '';
+      }
+      else if (action === 'bot-chat-close') {
+        state.botChat = null;
+        state.selectedBotChatId = '';
+        state.botChatError = '';
+      }
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
@@ -2384,6 +2436,9 @@
           state.error = refreshError.message || error.message;
           paintSnapshot();
         }
+      } else if (action === 'bot-chat-open' || action === 'bot-chat-close') {
+        state.botChatError = error.message;
+        paintSnapshot();
       } else {
         state.error = error.message;
         paintSnapshot();

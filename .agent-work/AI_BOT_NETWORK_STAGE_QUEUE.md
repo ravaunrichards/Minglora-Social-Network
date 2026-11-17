@@ -551,3 +551,25 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Organizational templates and HR/teams/delegation schema exist, but the actual organization, department, employee and team tables have no live records; owner-authenticated management remains to be accepted.
 - **10-billion identities remain a design objective only**. Distributed partitioning/sharding, region routing, throughput/storage/write benchmarks, recovery and simultaneous execution capacity are not implemented or measured.
 - Current accepted checklist remains **2/19 = 10.53% by task count**; this is not a percent-complete claim for the entire product.
+
+
+## Owner-initiated bot conversation continuation — 2026-11-16
+
+- A clean continuation branch, `feat/minglora-ai-network-owner-chat-20261116`, was created from current `main`; stale 178–572-commit-behind AI branches were not merged or deployed.
+- The branch adds an owner/MFA-protected conversation endpoint for bots already linked to their canonical relational AI identity, an OpenAI-only server adapter with input/output moderation, no provider-side storage (`store:false`), no tools, no external-action authority, owner-scoped conversation records, idempotent request retries, measured token usage and a responsive conversation panel.
+- A successful send now clears its browser request ID so the next message gets a new idempotency key; failed sends retain their key for a safe retry. The current server process serializes one active chat per owner to reduce budget races.
+- Conversation/message/request/usage records currently use the existing runtime-state compatibility document; the server persistence layer revision-checks and queues writes in one process. This is **not** the required normalized/partitioned conversation data plane or a distributed lock. Dedicated transactional tables, atomic shared budget reservations, distributed leases and multi-instance tests remain mandatory before public or large-scale traffic.
+- The chat path does not use or write the separate AI memory service; it sends only a bounded recent conversation history. OpenAI is the only adapter in this slice; no live credential, production inference, email mailbox or model health result has been verified.
+- New service/provider tests and desktop/mobile styling are on the branch. CI and live signed-in owner acceptance are pending. No production migration, AI identity creation, worker activation, provider setting change, deployment or production data mutation has occurred.
+- Runtime controls remain unchanged and paused: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Current production identity/profile/email/provider assignment counts remain zero. The accepted master checklist remains **2/19 = 10.53% by task count** until actual production acceptance; this is not an overall product-completion estimate.
+- Detailed endpoint, security and storage boundaries: [AI Bot Conversation Runtime](AI_BOT_CHAT_RUNTIME.md).
+
+
+## Current-main continuation checkpoint — 2026-11-17 (owner-initiated bot chat port)
+
+- Earlier owner-chat PR #445 was 75 commits behind current main at inspection. Its dedicated AI Network checks, browser acceptance and layout visual QA passed; its full-suite job failed four unrelated stale LIVE/Gifter assertions (1,268 passed / 4 failed). The old branch was not merged or force-updated.
+- All 26 patch hunks across the 10 changed files from PR #445 applied uniquely to current main at fb574cd5cb1ccf89efa2dee3fe1b08d008635959; no conflicting hunk was overwritten. This continuation branch was created directly from that current main commit.
+- The port retains owner/MFA-only conversation endpoints, canonical linked-identity checks, bounded conversation context, OpenAI Responses with store:false and no tools, input/output moderation, usage recording, idempotent retries, owner isolation, budget checks and no external-action permissions.
+- Remaining blockers: no live provider credential or generation acceptance; signed-in owner/MFA end-to-end acceptance; separate AI memory retrieval/injection remains deliberately unimplemented (memory remains off by default and owner-managed); conversation/message/request/usage records remain on the single-process JSONB runtime-state compatibility adapter and are not approved for multi-instance/public scale. No migration, production data, Auth user, provider secret, worker or deployment was changed.
+- Verification: original PR focused AI checks/browser acceptance/layout visual QA passed; old-branch full-suite result is 1,268/1,272. This current-main continuation requires fresh full CI and browser acceptance before merge. Keep runtime paused (global_paused=true, execution_enabled=false, max_concurrent_workers=0).
+- Next action: verify fresh CI/browser acceptance, then address normalized transactional conversation storage and consent-gated memory retrieval as separate reviewed slices. Do not deploy or activate workers.
