@@ -225,3 +225,14 @@ test('Side by Side preserves all ten supplied positions while Spotlight starts w
   assert.match(contract,/roundtable-1[\s\S]*?grid-template-rows:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(contract,/roundtable-2[\s\S]*?grid-template-rows:repeat\(4,minmax\(0,1fr\)\)/);
 });
+
+
+test('Fluid Panel guest overlays stay clear of the host stage right and bottom borders',()=>{
+  const safeZone=tiktok.slice(tiktok.lastIndexOf('/* Fluid Panel guest safe zone'));
+  assert.match(safeZone,/right:clamp\\(20px,3vw,30px\\)!important/);
+  assert.match(safeZone,/bottom:clamp\\(18px,2\\.5vw,22px\\)!important/);
+  assert.match(safeZone,/right:clamp\\(32px,3\\.5vw,48px\\)!important/);
+  assert.match(safeZone,/bottom:clamp\\(24px,2\\.5vw,34px\\)!important/);
+  assert.match(safeZone,/clamp\\(12px,1\\.2vw,16px\\)/);
+  assert.doesNotMatch(safeZone,/right:2px!important|bottom:2px!important/);
+});
