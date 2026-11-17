@@ -428,7 +428,8 @@ try{
         assert.ok(metrics.follow&&metrics.follow.width>0,label+' viewer follow action is present');
         assert.ok(metrics.follow.x>=metrics.identity.right-1,label+' follow/Heart Me is separate from host identity and likes');
         if(state.followed){
-          assert.equal(metrics.follow.width,27,label+' after-follow Heart Me remains the compact orange heart');
+          const expectedHeartSize=viewport.width>900?29:27;
+          assert.equal(metrics.follow.width,expectedHeartSize,label+' after-follow Heart Me retains the compact device-sized orange heart');
         }else{
           assert.ok(metrics.follow.width>=34,label+' before-follow action retains a readable Follow label at compact phone width');
         }
