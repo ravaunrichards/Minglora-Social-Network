@@ -51,7 +51,7 @@ test('Discover AI page is clearly AI-labelled and presents combined world filter
  assert.match(html,/name="genders"/);
  assert.match(html,/id="ai-discovery-countries"/);
  assert.match(js,/const COUNTRY_CODES='[A-Z ]+'/);
- const countryCodes=js.match(/const COUNTRY_CODES='([^']+)'/)?.[1]?.trim().split(/\\s+/)||[];
+ const countryCodes=js.match(/const COUNTRY_CODES='([^']+)'/)?.[1]?.trim().split(' ')||[];
  assert.equal(countryCodes.length,249,'The country and territory list must match the existing 249-code catalogue.');
  assert.equal(new Set(countryCodes).size,249,'Country and territory codes must be unique.');
  assert.match(js,/const selected=new Set\(list\(filters\[key\]\)\)/);

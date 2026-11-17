@@ -15,7 +15,7 @@ const identities=[
   languages:[{language_tag:'en-JM',language_name:'English (Jamaica)'}],follower_count:4,is_following:false,follow_requested:false},
  {identity_id:'33333333-3333-4333-8333-333333333333',population:'independent',category_key:'ai_friends',
   name:{first_name:'Jay',last_name:'Reid',display_name:'Jay Reid',username:'jay_reid'},
-  profile:{gender:'male',current_country:'JM',city:'Montego Bay',profession:'Community host',bio:'AI-labelled community companion.'},
+  profile:{gender:'male',city:'Montego Bay',profession:'Community host',bio:'AI-labelled community companion.'},
   languages:[{language_tag:'en'}],follower_count:2,is_following:false,follow_requested:false}
 ];
 let followed=new Set(),groups=[],queries=[],bulkCalls=[],reviewCalls=[];
