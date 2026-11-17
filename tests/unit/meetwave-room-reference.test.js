@@ -258,7 +258,7 @@ test('MeetWave stage heading owns a dedicated row and cannot cover the host or g
 
 test('MeetWave Side by Side matches two top seats and eight equally arranged lower invitation seats', () => {
   const correction=css.slice(css.lastIndexOf('/* MeetWave stage-safe layout corrections'));
-  assert.match(correction, /data-layout="side-by-side"\}\{[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important;[\s\S]*?grid-template-rows:22px minmax\(0,1\.55fr\) repeat\(2,minmax\(0,\.72fr\)\)!important/);
+  assert.match(correction, /data-layout="side-by-side"\]\{[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important;[\s\S]*?grid-template-rows:22px minmax\(0,1\.55fr\) repeat\(2,minmax\(0,\.72fr\)\)!important/);
   assert.match(correction, /data-layout="side-by-side"\]>.live-guest-seat\.is-host\{grid-column:1\/3!important;grid-row:2!important\}/);
   assert.match(correction, /data-layout="side-by-side"\][\s\S]*?nth-child\(3\)\{grid-column:3\/5!important;grid-row:2!important\}/);
   assert.ok(js.includes("layout==='side-by-side'&&!sideBySideExtra"));

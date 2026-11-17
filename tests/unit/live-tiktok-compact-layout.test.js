@@ -81,7 +81,7 @@ test('LIVE multi-guest stage reserves its heading row instead of covering the ho
   const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
   assert.match(correction, /#live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?position:relative!important[\s\S]*?grid-row:1!important/);
   assert.match(correction, /data-live-layout="fluid-panel"\]\{\s*grid-template-rows:22px minmax\(0,1fr\)!important/);
-  assert.match(correction, /data-live-layout="fluid-grid"\}\{[\s\S]*?grid-template-rows:22px repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(correction, /data-live-layout="fluid-grid"\]\{[\s\S]*?grid-template-rows:22px repeat\(2,minmax\(0,1fr\)\)!important/);
 });
 
 test('LIVE Fluid Panel guest seats are inset and size-clamped inside the video-stage border', () => {
