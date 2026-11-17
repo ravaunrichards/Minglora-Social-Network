@@ -87,8 +87,10 @@ test('AI bot chat migration indexes every child-side foreign key lookup', () => 
   assert.ok(migration.includes('create index if not exists ai_bot_conversations_owner_user_idx\n on ai_network.ai_bot_conversations(owner_user_id);'));
 });
 
-test('documentation does not claim the new migration or Edge runtime is deployed', () => {
-  assert.match(doc, /have \*\*not\*\* been applied or deployed/i);
+test('documentation records the applied production foundation and outstanding acceptance gates', () => {
+  assert.match(doc, /migration is applied in production/i);
+  assert.match(doc, /ACTIVE version 132/i);
+  assert.match(doc, /service-role-only EXECUTE/i);
   assert.match(doc, /Creator Studio usage is still reported as a baseline/i);
   assert.match(doc, /no 10-billion or multi-region capacity is claimed/i);
 });
