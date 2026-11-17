@@ -84,7 +84,7 @@ test('AI bot chat migration indexes every child-side foreign key lookup', () => 
   for (const name of indexes) {
     assert.ok(migration.includes('create index if not exists ' + name), 'missing covering index ' + name);
   }
-  assert.match(migration, /ai_bot_conversations_owner_user_idx[\\s\\S]*?on ai_network\\.ai_bot_conversations\\(owner_user_id\\)/i);
+  assert.ok(migration.includes('create index if not exists ai_bot_conversations_owner_user_idx\n on ai_network.ai_bot_conversations(owner_user_id);'));
 });
 
 test('documentation does not claim the new migration or Edge runtime is deployed', () => {
