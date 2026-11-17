@@ -12,7 +12,7 @@ const migration = fs.readFileSync(
   path.join(root, 'supabase/migrations/20261115110000_minglora_ai_finance_governance.sql'),
   'utf8'
 );
-const databaseUrl = process.env.AI_NETWORK_TEST_DATABASE_URL;
+const databaseUrl = process.env.AI_NETWORK_FINANCE_TEST_DATABASE_URL;
 let pool;
 
 async function installFixture() {
@@ -103,6 +103,21 @@ async function serviceTransaction(callback) {
   }
 }
 
+
+async function expectPgError(client, action, expectedCode) {
+  await client.query('SAVEPOINT expected_finance_error');
+  try {
+    await action();
+    assert.fail('Expected PostgreSQL error ' + expectedCode);
+  } catch (error) {
+    if (error.code === 'ERR_ASSERTION') throw error;
+    assert.equal(error.code, expectedCode);
+  } finally {
+    await client.query('ROLLBACK TO SAVEPOINT expected_finance_error');
+    await client.query('RELEASE SAVEPOINT expected_finance_error');
+  }
+}
+
 async function finance(client, action, actorId, payload = {}) {
   const result = await client.query(
     'SELECT public.minglora_ai_finance_command($1,$2,$3::jsonb) AS result',
@@ -185,9 +200,9 @@ test('finance RPC writes owner-scoped budget history and immutable measured usag
     assert.equal(first.reused, false);
     const duplicate = await finance(client, 'record_usage', ownerId, payload);
     assert.equal(duplicate.reused, true);
-    await assert.rejects(
-      finance(client, 'record_usage', ownerId, { ...payload, actual_cost_usd: 0.126 }),
-      error => error.code === '23505'
+    await expectPgError(client,
+      () => finance(client, 'record_usage', ownerId, { ...payload, actual_cost_usd: 0.126 }),
+      '23505'
     );
 
     const report = await finance(client, 'list_usage', ownerId, {
@@ -201,23 +216,20 @@ test('finance RPC writes owner-scoped budget history and immutable measured usag
 
     const otherBudgets = await finance(client, 'list_budgets', otherOwnerId);
     assert.equal(otherBudgets.policy_count, 0);
-    await assert.rejects(
-      finance(client, 'record_usage', otherOwnerId, {
+    await expectPgError(client,
+      () => finance(client, 'record_usage', otherOwnerId, {
         ...payload,
         source_event_id: 'finance-ci-source-0002'
       }),
-      error => error.code === '42501'
+      '42501'
     );
 
-    await assert.rejects(
-      client.query(
-        `UPDATE ai_network.ai_finance_usage_ledger
-            SET actual_cost_usd = 0.25
-          WHERE owner_user_id = $1 AND source_event_id = $2`,
-        [ownerId, payload.source_event_id]
-      ),
-      error => error.code === '42501'
-    );
+    await expectPgError(client, () => client.query(
+      `UPDATE ai_network.ai_finance_usage_ledger
+          SET actual_cost_usd = 0.25
+        WHERE owner_user_id = $1 AND source_event_id = $2`,
+      [ownerId, payload.source_event_id]
+    ), '42501');
   });
   const { rows } = await pool.query(
     'SELECT count(*)::integer AS events FROM ai_network.ai_finance_usage_ledger WHERE source_event_id = $1',
@@ -231,26 +243,26 @@ test('finance task trigger enforces daily tokens, monthly spend, concurrency and
   await serviceTransaction(async client => {
     await finance(client, 'set_budget', ownerId, ownerBudget({ max_concurrent_tasks: 2 }));
 
-    await assert.rejects(
-      insertTask(client, ownerId, identityId, 'finance-ci-over-token-budget', { tokens: 1001 }),
-      error => error.code === '22023'
+    await expectPgError(client,
+      () => insertTask(client, ownerId, identityId, 'finance-ci-over-token-budget', { tokens: 1001 }),
+      '22023'
     );
-    await assert.rejects(
-      insertTask(client, ownerId, identityId, 'finance-ci-over-spend-budget', { tokens: 1, cost: 30 }),
-      error => error.code === '22023'
+    await expectPgError(client,
+      () => insertTask(client, ownerId, identityId, 'finance-ci-over-spend-budget', { tokens: 1, cost: 30 }),
+      '22023'
     );
 
     await insertTask(client, ownerId, identityId, 'finance-ci-within-cap-1');
     await insertTask(client, ownerId, identityId, 'finance-ci-within-cap-2');
-    await assert.rejects(
-      insertTask(client, ownerId, identityId, 'finance-ci-concurrency-cap', { tokens: 1, cost: 0.01 }),
-      error => error.code === '22023'
+    await expectPgError(client,
+      () => insertTask(client, ownerId, identityId, 'finance-ci-concurrency-cap', { tokens: 1, cost: 0.01 }),
+      '22023'
     );
 
     await finance(client, 'set_budget', ownerId, ownerBudget({ policy_status: 'paused' }));
-    await assert.rejects(
-      insertTask(client, ownerId, identityId, 'finance-ci-paused-policy', { tokens: 1, cost: 0.01 }),
-      error => error.code === '42501'
+    await expectPgError(client,
+      () => insertTask(client, ownerId, identityId, 'finance-ci-paused-policy', { tokens: 1, cost: 0.01 }),
+      '42501'
     );
   });
 
