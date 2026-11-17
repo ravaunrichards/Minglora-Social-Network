@@ -89,6 +89,7 @@ declare
   v_limit integer;
   v_offset integer;
   v_recipient_count integer;
+  v_requested_to text[];
   v_subject text;
   v_text_body text;
   v_email ai_network.ai_emails%rowtype;
@@ -323,6 +324,7 @@ begin
       raise exception using errcode = 'P0002', message = 'The AI mailbox is not active and provisioned.';
     end if;
 
+    v_requested_to := array(select lower(trim(value)) from jsonb_array_elements_text(v_payload->'to_addresses') as item(value));
     v_message_id := null;
     select m.* into v_message
     from ai_network.ai_email_messages m
@@ -330,6 +332,11 @@ begin
       and m.client_idempotency_key=left(coalesce(v_payload->>'idempotency_key',''),180)
     limit 1;
     if found then
+      if v_message.to_addresses is distinct from v_requested_to
+         or v_message.subject is distinct from v_subject
+         or v_message.text_body is distinct from v_text_body then
+        raise exception using errcode = '23505', message = 'This email request ID was already used with different recipients or message content.';
+      end if;
       if v_message.status <> 'sent' then
         update ai_network.ai_email_messages set status='queued',last_error=null,updated_at=now()
         where message_id=v_message.message_id returning * into v_message;
@@ -353,7 +360,7 @@ begin
     values (
       v_identity_id,v_email_id,'outbound','queued','resend',
       left(trim(v_payload->>'idempotency_key'),180),v_email.email_address,
-      array(select lower(trim(value)) from jsonb_array_elements_text(v_payload->'to_addresses') as item(value)),
+      v_requested_to,
       v_subject,v_text_body
     )
     returning * into v_message;
