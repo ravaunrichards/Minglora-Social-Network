@@ -528,3 +528,15 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - PR #489 remains open and unmerged. No source migration from this worker slice has been applied to production, and no Edge Function or Node/Render deployment has been performed for it.
 - Live Supabase readback remains unchanged: no worker-principal tables exist yet; AI identities, provider assignments, email identity records, organizations, departments and task queue rows remain zero. Runtime still global_paused=true, execution_enabled=false, max_concurrent_workers=0.
 - This verifies bounded worker identity and task leasing only. No worker polling service, autonomous provider execution, real provider credentials/inference, real mailbox provisioning, 10-billion capacity benchmark, or production owner/MFA and device acceptance is claimed.
+
+
+## Worker principal admission and credential-lifecycle hardening — 2026-11-17
+
+- Latest source commit: `809166248295df98286ffb88d52131c2ee25555e` on the existing feature branch and open PR #489.
+- Fixed expired worker credential handling: the private runtime RPC now records `status='expired'`, clears the credential digest and appends the expiry audit event before returning an explicit unauthenticated result. The Node worker endpoint maps that result to HTTP 401. Returning normally is required so PostgreSQL commits the revocation/audit changes instead of rolling them back with an exception.
+- Fixed global worker-cap admission: worker claims now take an exclusive lock on the single persisted runtime-control row before checking active leases. This serializes claims from different worker principals so they cannot both observe and consume the same final global concurrency slot.
+- Added PostgreSQL 17 two-session integration coverage. The test holds the first worker's lease transaction open, verifies the second backend is waiting on the runtime-control lock, commits the first lease and confirms the second claim is rejected with `global_worker_limit_reached` when the global cap is one. Added expiry persistence/audit assertions as a separate regression test.
+- Latest verified checks on this commit: AI Network syntax/regression workflow **SUCCESS** (run 500); worker principal PostgreSQL 17 lifecycle + global concurrency workflow **SUCCESS** (run 13); full repository CI **SUCCESS** (run 14826); Supabase Auth acceptance **SUCCESS**; For You functional navigation **SUCCESS**.
+- Latest AI identity/discovery browser acceptance and nine-layout visual QA were still in progress at this checkpoint; do not mark those device/UI gates complete until their runs finish.
+- No production worker migration, Edge Function or Node/Render deployment was performed. Live worker tables remain absent. Live runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- This source/test checkpoint does not verify signed-in owner/MFA HTTP acceptance, real provider credentials/inference, worker poll-loop hosting, email mailbox provisioning, production multi-session traffic, backup/restore, distributed storage or 10-billion identity capacity. PR #489 remains open and unmerged.
