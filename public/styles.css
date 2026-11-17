@@ -4897,8 +4897,8 @@ button.live-ranking-row{cursor:pointer}
 .live-ranking-row img{width:36px;height:36px;flex:none;border-radius:50%;object-fit:cover}
 .live-ranking-row>span:not(.live-ranking-position):not(.live-daily-podium){display:grid;gap:2px;min-width:0;flex:1}
 .live-daily-podium{position:relative;display:block;flex:0 0 46px;width:46px;height:52px;isolation:isolate}
-.live-daily-podium .live-daily-podium-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;border-radius:0;object-fit:contain}
-.live-daily-podium .live-daily-podium-avatar{position:absolute;z-index:1;left:50%;top:43%;display:block;width:26px;height:26px;transform:translate(-50%,-50%);border:1.5px solid rgba(255,255,255,.92);border-radius:50%;object-fit:cover;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.live-daily-podium .live-daily-podium-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;border-radius:0;object-fit:contain;pointer-events:none}
+.live-daily-podium .live-daily-podium-avatar{position:absolute;z-index:1;left:50%;top:43%;display:block;width:21px;height:21px;box-sizing:border-box;transform:translate(-50%,-50%);border:1.5px solid rgba(255,255,255,.92);border-radius:50%;object-fit:cover;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 .live-ranking-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
 .live-ranking-row small{color:var(--muted,#9aa2b2);font-size:10px}
 .live-ranking-row b{flex:none;font-size:11px;font-variant-numeric:tabular-nums}
@@ -6604,8 +6604,8 @@ button.live-ranking-row{cursor:pointer}
 .minglora-gifter-periods button.is-active{border-color:rgba(255,185,83,.58);background:rgba(255,185,83,.13);color:var(--text,#fff)}
 .minglora-gifter-list{display:grid;gap:0}
 .minglora-gifter-podium{position:relative;display:block;flex:0 0 46px;width:46px;height:52px;isolation:isolate}
-.minglora-gifter-podium .minglora-gifter-rank-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;border-radius:0;object-fit:contain}
-.minglora-gifter-podium .minglora-gifter-rank-avatar,.minglora-gifter-podium .minglora-gifter-rank-fallback{position:absolute;z-index:1;left:50%;top:43%;display:grid;place-items:center;width:26px;height:26px;transform:translate(-50%,-50%);border:1.5px solid rgba(255,255,255,.9);border-radius:50%;object-fit:cover;background:#e8edf5;color:#263449;font-size:11px;font-weight:900;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.minglora-gifter-podium .minglora-gifter-rank-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;border-radius:0;object-fit:contain;pointer-events:none}
+.minglora-gifter-podium .minglora-gifter-rank-avatar,.minglora-gifter-podium .minglora-gifter-rank-fallback{position:absolute;z-index:1;left:50%;top:43%;display:grid;place-items:center;width:21px;height:21px;box-sizing:border-box;transform:translate(-50%,-50%);border:1.5px solid rgba(255,255,255,.9);border-radius:50%;object-fit:cover;background:#e8edf5;color:#263449;font-size:10px;font-weight:900;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 
 .minglora-gifter-row{display:flex;align-items:center;gap:9px;min-width:0;min-height:64px;padding:8px 4px;border-bottom:1px solid var(--border,rgba(150,160,180,.15))}
 .minglora-gifter-rank{width:25px;flex:none;color:#ffbd65;font-size:13px;font-weight:950;text-align:center}
@@ -7543,11 +7543,11 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 }
 .live-daily-podium-card .live-daily-podium-frame{
   position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;
-  max-width:none;border:0;border-radius:0;object-fit:cover;object-position:center;
+  max-width:none;border:0;border-radius:0;object-fit:contain;object-position:center;pointer-events:none;
 }
 .live-daily-podium-card .live-daily-podium-avatar{
   position:absolute;z-index:1;left:50%;top:42%;display:block;
-  width:42%;height:42%;max-width:none;transform:translate(-50%,-50%);
+  width:36%;height:36%;max-width:none;box-sizing:border-box;transform:translate(-50%,-50%);
   border:2px solid rgba(255,255,255,.95);border-radius:50%;object-fit:cover;
   box-shadow:0 2px 7px rgba(0,0,0,.24);
 }
