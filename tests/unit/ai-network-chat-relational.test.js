@@ -89,14 +89,18 @@ test('AI bot chat migration indexes every child-side foreign key lookup', () => 
 });
 
 test('chat messages use stable per-conversation sequence numbers instead of timestamp or UUID ordering', () => {
-  assert.match(messageOrderMigration, /add column if not exists sequence_no bigint/i);
-  assert.match(messageOrderMigration, /row_number\\(\\) over/i);
-  assert.match(messageOrderMigration, /unique \\(conversation_id,sequence_no\\)/i);
-  assert.match(messageOrderMigration, /v_conversation\\.message_count::bigint\\+1,'user'/i);
-  assert.match(messageOrderMigration, /v_conversation\\.message_count::bigint\\+2,'assistant'/i);
-  assert.match(messageOrderMigration, /order by m\\.sequence_no desc limit 20/i);
-  assert.match(messageOrderMigration, /jsonb_agg\\(q\\.item order by q\\.sequence_no\\)/i);
-  assert.match(messageOrderMigration, /'sequenceNo',m\\.sequence_no/i);
+  for (const fragment of [
+    'add column if not exists sequence_no bigint',
+    'row_number() over',
+    'unique (conversation_id,sequence_no)',
+    "v_conversation.message_count::bigint+1,'user'",
+    "v_conversation.message_count::bigint+2,'assistant'",
+    'order by m.sequence_no desc limit 20',
+    'jsonb_agg(q.item order by q.sequence_no)',
+    "'sequenceNo',m.sequence_no"
+  ]) {
+    assert.ok(messageOrderMigration.includes(fragment), 'missing sequence-order migration fragment: ' + fragment);
+  }
 });
 
 test('documentation records the applied production foundation and outstanding acceptance gates', () => {
