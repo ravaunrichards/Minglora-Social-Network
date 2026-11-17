@@ -119,6 +119,39 @@ create index if not exists ai_bot_usage_identity_date_idx
 create index if not exists ai_bot_reservations_owner_date_status_idx
  on ai_network.ai_bot_daily_token_reservations(owner_user_id,usage_date,status);
 
+-- Child-side covering indexes for every foreign key and owner lookup.
+-- The owner-only conversation index is deliberately non-partial so closed and
+-- archived conversations are also covered by the profile foreign key.
+create index if not exists ai_bot_conversations_identity_idx
+ on ai_network.ai_bot_conversations(identity_id);
+create index if not exists ai_bot_conversations_owner_user_idx
+ on ai_network.ai_bot_conversations(owner_user_id);
+
+create index if not exists ai_bot_chat_requests_identity_idx
+ on ai_network.ai_bot_chat_requests(identity_id);
+create index if not exists ai_bot_chat_requests_conversation_owner_bot_identity_idx
+ on ai_network.ai_bot_chat_requests(conversation_id,owner_user_id,bot_id,identity_id);
+create index if not exists ai_bot_chat_requests_requested_conversation_owner_bot_identity_idx
+ on ai_network.ai_bot_chat_requests(requested_conversation_id,owner_user_id,bot_id,identity_id);
+
+create index if not exists ai_bot_conversation_messages_identity_idx
+ on ai_network.ai_bot_conversation_messages(identity_id);
+create index if not exists ai_bot_conversation_messages_conversation_owner_bot_identity_idx
+ on ai_network.ai_bot_conversation_messages(conversation_id,owner_user_id,bot_id,identity_id);
+create index if not exists ai_bot_conversation_messages_request_owner_bot_identity_idx
+ on ai_network.ai_bot_conversation_messages(request_id,owner_user_id,bot_id,identity_id);
+
+create index if not exists ai_bot_usage_events_conversation_owner_bot_identity_idx
+ on ai_network.ai_bot_usage_events(conversation_id,owner_user_id,bot_id,identity_id);
+create index if not exists ai_bot_usage_events_request_owner_bot_identity_idx
+ on ai_network.ai_bot_usage_events(request_id,owner_user_id,bot_id,identity_id);
+
+create index if not exists ai_bot_daily_token_reservations_identity_idx
+ on ai_network.ai_bot_daily_token_reservations(identity_id);
+create index if not exists ai_bot_daily_token_reservations_request_owner_bot_identity_idx
+ on ai_network.ai_bot_daily_token_reservations(request_id,owner_user_id,bot_id,identity_id);
+
+
 alter table ai_network.ai_bot_conversations enable row level security;
 alter table ai_network.ai_bot_chat_requests enable row level security;
 alter table ai_network.ai_bot_conversation_messages enable row level security;
