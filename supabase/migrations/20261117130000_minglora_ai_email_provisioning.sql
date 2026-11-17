@@ -220,12 +220,12 @@ begin
     v_address := left(v_address, 43) || '-' || left(replace(v_identity_id::text,'-',''), 12) || '@' || v_domain;
     insert into ai_network.ai_emails (
       identity_id,email_address,email_type,is_primary,verification_status,email_provider,
-      provisioning_status,management_reference,email_status,mailbox_enabled,mailbox_domain,provisioned_at
+      provisioning_status,management_reference,email_status,mailbox_enabled,mailbox_domain,provisioned_at,last_verified_at
     )
     values (
       v_identity_id,v_address,'work',
       not exists(select 1 from ai_network.ai_emails where identity_id=v_identity_id and is_primary),
-      'unverified','resend','provisioned','resend-domain:'||v_domain,'active',true,v_domain,now()
+      'verified','resend','provisioned','resend-domain:'||v_domain,'active',true,v_domain,now(),now()
     )
     returning * into v_email;
 
@@ -262,7 +262,7 @@ begin
           'email_provider',e.email_provider,'provisioning_status',e.provisioning_status,
           'email_status',e.email_status,'mailbox_enabled',e.mailbox_enabled,
           'mailbox_domain',e.mailbox_domain,'provisioned_at',e.provisioned_at,
-          'last_received_at',e.last_received_at,'last_sent_at',e.last_sent_at
+          'last_verified_at',e.last_verified_at,'last_received_at',e.last_received_at,'last_sent_at',e.last_sent_at
         ) order by e.mailbox_enabled desc,e.is_primary desc,e.created_at)
         from ai_network.ai_emails e where e.identity_id=v_identity_id
       ),'[]'::jsonb)
