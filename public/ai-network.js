@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', pendingIdentityBulkRetryItems: [] };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -376,7 +376,7 @@
       '<div class="ai-network-form-title">Bulk import AI identities (1–100 per batch)</div>' +
       '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Every item gets its own record; failed rows are reported and can be retried with the same idempotency key. ' +
       (state.adminAccess ? 'Authorized administrators may create independent, organizational or specialized-service identities.' : 'Member batches may contain independent AI identities only.') + '</p>' +
-      '<label>Identity batch JSON<textarea name="items" required rows="8" maxlength="180000" spellcheck="false" placeholder=\'[{"population":"independent","category_key":"ai_friends","idempotency_key":"import-row-000001","name":{"first_name":"Ava","last_name":"Morgan","username":"ava_morgan_01"},"profile":{"gender":"female"}}]\'></textarea></label>' +
+      '<label>Identity batch JSON<textarea name="items" required rows="8" maxlength="180000" spellcheck="false" placeholder=\'[{"population":"independent","category_key":"ai_friends","idempotency_key":"import-row-000001","name":{"first_name":"Ava","last_name":"Morgan","username":"ava_morgan_01"},"profile":{"gender":"female"}}]\'>' + esc(Array.isArray(state.pendingIdentityBulkRetryItems) && state.pendingIdentityBulkRetryItems.length ? JSON.stringify(state.pendingIdentityBulkRetryItems) : '') + '</textarea></label>' +
       '<button class="primary" type="submit" ' + (!categories.length ? 'disabled' : '') + '>Import identity batch</button>' +
       '</form>';
     return card('AI Identity & Profile Registry', 'RELATIONAL IDENTITY FOUNDATION',
@@ -2328,14 +2328,11 @@
       message += ' ' + summaries.join(' · ') + remaining;
       if (batchRetryItems.length) message += ' Failed rows are retained in the batch editor for retry.';
     }
+    if (kind === 'identity-bulk') state.pendingIdentityBulkRetryItems = batchRetryItems;
     await refresh(message);
     if (batchFailures.length) {
       setNotice(message, 'warning');
       paintSnapshot();
-    }
-    if (batchRetryItems.length) {
-      const retryField = host.querySelector('form[data-ai-form="' + kind + '"] textarea[name="items"]');
-      if (retryField) retryField.value = JSON.stringify(batchRetryItems);
     }
   }
 
