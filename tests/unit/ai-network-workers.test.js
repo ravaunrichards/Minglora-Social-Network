@@ -17,7 +17,7 @@ test('worker principal records store only credential digests and remain private'
     assert.ok(migration.includes('alter table ai_network.' + table + ' enable row level security'));
   }
   assert.ok(migration.includes('credential_sha256 text unique'));
-  assert.ok(migration.includes("credential_sha256 is null or credential_sha256 ~ '^[0-9a-f]{64}$'"));
+  assert.ok(migration.includes("credential_sha256 is null or credential_sha256 ~ ('^[0-9a-f]{64}' || chr(36))"));
   assert.ok(!/credential\s+text\s+(unique\s+)?not null/i.test(migration));
   assert.ok(migration.includes('credential_expires_at timestamptz not null'));
   assert.ok(migration.includes('credential_version integer not null'));
