@@ -211,10 +211,10 @@ Publish measured storage, throughput, latency, restore and concurrency results w
 | Capability | Current status |
 |---|---|
 | Existing relational AI identity schema | Present in existing Supabase project |
-| RLS/private backend boundary | 54/54 AI tables RLS-enabled; backend-only schema access observed |
+| RLS/private backend boundary | 62/62 AI tables RLS-enabled; backend-only schema access observed (latest live recheck 2026-11-17) |
 | Current runtime pause | Verified paused; zero workers |
 | Normalized repositories for all application routes | Not complete; JSONB compatibility adapter remains |
-| Global identity directory and shard router | Not implemented |
+| Global identity directory and shard router | Partial, source-only — deterministic virtual-partition planning, weighted rendezvous placement for new identities, and persisted-mapping validation are implemented in `backend/modules/ai-network/identity-shard-routing.js`; no durable directory or shard repository is wired |
 | Multi-shard identity storage | Not implemented |
 | Regional writes/replication/failover | Not implemented or benchmarked |
 | Distributed discovery projection | Not implemented or benchmarked |
@@ -222,7 +222,7 @@ Publish measured storage, throughput, latency, restore and concurrency results w
 | 10-billion registered identity benchmark | Not run |
 | Simultaneous execution capacity benchmark | Not run |
 
-**Conclusion:** This document establishes a safe target architecture and measurable release gates. It does not change production infrastructure, migrations, runtime settings or data. Task 17 remains **IN PROGRESS**, not complete, until the directory/router, shard infrastructure, migration, operational controls and measured capacity acceptance are implemented.
+**Conclusion:** This document establishes a safe target architecture and measurable release gates. It does not change production infrastructure, migrations, runtime settings or data. Task 17 remains **IN PROGRESS**, not complete, until the durable directory integration, shard infrastructure, migrations, operational controls and measured capacity acceptance are implemented.
 
 ## 14. Measured current control-plane baseline — 2026-11-15
 
@@ -237,3 +237,18 @@ Read-only measurements from the existing production Minglora Supabase project:
 - The public Render `/api/ready` URL was not accessible to the available external verifier. Render startup logs do confirm the process listening on port 10000, Supabase Auth configured, durable Supabase persistence ready, and LiveKit connected. These are separate signals; public HTTP readiness is not claimed.
 
 **Interpretation:** the current project has a secure, empty relational AI schema and a functioning control-plane runtime, but no measured identity data volume, registration rate, query throughput under load, concurrent execution capacity, physical shard, or regional failover evidence. The 10-billion target remains a design objective pending implementation and representative benchmarks.
+
+## 15. Source-only identity routing primitive — 2026-11-17
+
+The existing AI Network feature branch `feat/minglora-ai-network-bulk-retry-20261117` (open PR #489) now contains a narrowly scoped routing primitive:
+
+- `backend/modules/ai-network/identity-shard-routing.js` computes a tenant-and-identity-derived logical partition and selects an active candidate shard using deterministic weighted rendezvous hashing.
+- New-identity placement is a **plan only**. The caller must persist the mapping in a strongly consistent identity directory in the same idempotent registration workflow before accepting the identity.
+- Existing identities resolve only from their persisted directory record. The resolver does not recalculate their placement when the shard catalog changes.
+- Directory validation checks the requested tenant and identity, physical shard, home region, logical partition, lifecycle status and directory version. Missing, stale, cross-tenant, unknown-shard, offline and disabled mappings fail closed.
+- Draining shards may serve reads; writes to a draining shard are rejected.
+- Unit coverage has been added in `tests/unit/ai-network-shard-routing.test.js`. CI verification for these new tests is pending at the time of this source checkpoint.
+
+**Explicit non-deliverables:** this code does not create or persist a directory, register physical shards, provision infrastructure, connect to a shard database, move existing data, add regional replication/failover, change production traffic routing, change Supabase, or benchmark capacity. It is not activated by the live application. It does not establish 10-billion identity or simultaneous execution capacity.
+
+The latest read-only live baseline remains the existing Minglora Supabase control plane: PostgreSQL 17.11, 62 `ai_network` tables with RLS enabled, 15 original AI categories, zero production AI identities and provider/workforce records, and runtime execution paused with zero workers. The 10-billion registered-identity target remains an unmeasured architecture objective; simultaneous worker capacity is separate.
