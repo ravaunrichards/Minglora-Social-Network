@@ -89,6 +89,7 @@ async function applyLayout(page,product,layout){
       const r=node.getBoundingClientRect(),s=getComputedStyle(node);
       return {
         index:Number(node.dataset.seatIndex),
+        style:{position:s.position,width:s.width,height:s.height,minWidth:s.minWidth,maxWidth:s.maxWidth,flex:s.flex,left:s.left,right:s.right,top:s.top,bottom:s.bottom,transform:s.transform,zoom:s.zoom,gridColumn:s.gridColumn,gridRow:s.gridRow},
         x:r.x-bounds.x,y:r.y-bounds.y,w:r.width,h:r.height,
         visible:s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)>0&&r.width>1&&r.height>1,
         display:s.display,visibility:s.visibility,opacity:s.opacity
