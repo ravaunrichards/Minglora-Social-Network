@@ -2205,6 +2205,7 @@
     } else return;
     const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
+    const submittedBatchItems = Array.isArray(payload.items) ? payload.items.slice() : [];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
     if (kind === 'bot-chat') {
@@ -2303,15 +2304,35 @@
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
                                       : 'Saved successfully.';
-    const batchFailures = ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
+    const batchFailures = ['identity-bulk','identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
+    const batchRetryItems = kind === 'identity-bulk'
+      ? batchFailures.map(item => {
+        const index = Number(item.index);
+        return Number.isInteger(index) && index >= 1 ? submittedBatchItems[index - 1] : null;
+      }).filter(Boolean)
+      : kind === 'identity-profile-bulk'
+        ? batchFailures.map(item => submittedBatchItems.find(row => row.identity_id === item.identity_id)).filter(Boolean)
+        : [];
     if (batchFailures.length) {
-      const summaries = batchFailures.slice(0, 5).map(item =>
-        String(item.identity_id || 'Record') + ': ' + String(item.error || 'Update failed.')
-      );
+      const summaries = batchFailures.slice(0, 5).map(item => {
+        const identityId = String(item.identity_id || '');
+        const rowIndex = Number(item.index);
+        const rowLabel = identityId
+          ? 'Identity ' + identityId
+          : Number.isInteger(rowIndex) && rowIndex >= 1
+            ? 'Row ' + rowIndex + (item.idempotency_key ? ' [' + String(item.idempotency_key).slice(0, 80) + ']' : '')
+            : 'Record';
+        return rowLabel + ': ' + String(item.error || 'Update failed.');
+      });
       const remaining = batchFailures.length > summaries.length ? ' · ' + (batchFailures.length - summaries.length) + ' more failure(s).' : '';
       message += ' ' + summaries.join(' · ') + remaining;
+      if (batchRetryItems.length) message += ' Failed rows are retained in the batch editor for retry.';
     }
     await refresh(message);
+    if (batchRetryItems.length) {
+      const retryField = host.querySelector('form[data-ai-form="' + kind + '"] textarea[name="items"]');
+      if (retryField) retryField.value = JSON.stringify(batchRetryItems);
+    }
     if (batchFailures.length) {
       setNotice(message, 'warning');
       paintSnapshot();
