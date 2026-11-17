@@ -118,14 +118,15 @@ export async function generateOpenAIBotReply({
   env = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs,
-  maxOutputTokens = MAX_OUTPUT_TOKENS
+  maxOutputTokens = MAX_OUTPUT_TOKENS,
+  modelIdentifier = null
 } = {}) {
   const provider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (provider && provider !== 'openai') {
     throw providerError('provider_not_selected', 'OpenAI is not the selected Minglora provider.', 409);
   }
   const apiKey = String(env.OPENAI_API_KEY || (provider === 'openai' ? env.MINGLORA_AI_API_KEY : '') || '').trim();
-  const model = String(env.OPENAI_DEFAULT_MODEL || (provider === 'openai' ? env.MINGLORA_AI_MODEL : '') || '').trim();
+  const model = String(modelIdentifier != null ? modelIdentifier : (env.OPENAI_DEFAULT_MODEL || (provider === 'openai' ? env.MINGLORA_AI_MODEL : '') || '')).trim();
   if (!apiKey) throw providerError('missing_credentials', 'OpenAI is not configured in the private Minglora server environment.', 503);
   if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,179}$/.test(model)) {
     throw providerError('missing_model', 'Set OPENAI_DEFAULT_MODEL in the private Minglora server environment.', 503);

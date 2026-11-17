@@ -100,3 +100,14 @@ SMTP, Resend, SendGrid, Postmark, Mailgun and Amazon SES are represented in the 
 ### Existing credentials are preserved
 
 This change adds blank template fields only. It does not edit any local .env, Render service environment, Supabase Edge Function secret, provider account, user credential, live API key, mailbox or running service. Do not paste existing credentials into the repository to populate the template.
+
+
+## Per-identity provider/model execution — source implementation
+
+The provider registry and pending assignment records are connected to a dedicated server-side execution router. A human-initiated bot chat must resolve an enabled, owner-owned identity to an active text assignment whose account and model health were checked within the last 15 minutes. The browser cannot choose a provider or model.
+
+The first executable adapter in this release is OpenAI. It uses the model identifier persisted on the selected assignment for both the model-access probe and Responses API call; it does not fall back to the global default model. Input and output moderation, bounded history, consent-gated memory, request storage disabled, no tools, idempotent conversation persistence and the existing daily token budget remain in force. Providers in the catalogue without an implemented execution adapter remain pending and cannot execute.
+
+Authorized platform administrators can verify an assignment through the provider assignment center. The server probes the exact assigned model using the private OPENAI_API_KEY environment secret, then a service-role-only RPC records the health result and may activate the assignment. Failed probes are audited and prevent routing. Secret values are never sent through the browser or stored in profile/assignment rows; only the name of the server environment variable used is recorded. Assignment activation still passes through the existing database trigger, which requires a configured, healthy account and active model.
+
+The new migration is source-only until reviewed and applied. Existing production rows are not modified by this source change. No provider credential was available for live validation during implementation, so no live model generation, healthy provider account, or active identity assignment is claimed. This adapter set currently contains OpenAI only; Anthropic, Gemini and other catalogue providers need their own tested adapters before those providers can activate.

@@ -31,16 +31,20 @@ export async function probeOpenAIProvider({
   env = process.env,
   fetchImpl = globalThis.fetch,
   now = () => new Date(),
-  timeoutMs
+  timeoutMs,
+  modelIdentifier = null
 } = {}) {
   const checkedAt = checkedAtIso(now);
   const selectedProvider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
+  if (selectedProvider && selectedProvider !== 'openai') {
+    return result('provider_not_selected', 'OpenAI is not the selected provider in this server environment. No provider request was sent.', { checkedAt });
+  }
   const apiKey = String(
     env.OPENAI_API_KEY ||
     (selectedProvider === 'openai' ? env.MINGLORA_AI_API_KEY : '') ||
     ''
   ).trim();
-  const model = String(env.OPENAI_DEFAULT_MODEL || env.MINGLORA_AI_MODEL || '').trim();
+  const model = String(modelIdentifier != null ? modelIdentifier : (env.OPENAI_DEFAULT_MODEL || env.MINGLORA_AI_MODEL || '')).trim();
 
   if (!apiKey) {
     return result('missing_credentials', 'Add OPENAI_API_KEY to the private Minglora server environment. No provider request was sent.', { checkedAt, model });
