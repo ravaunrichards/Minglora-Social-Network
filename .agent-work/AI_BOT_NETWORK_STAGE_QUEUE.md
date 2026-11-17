@@ -642,3 +642,14 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Deployed the existing `minglora-runtime-state` Edge Function as ACTIVE version 132 from merged `main`. The existing custom `x-minglora-api-key` guard and `verify_jwt=false` configuration were preserved; bot-chat command allowlist and handler are present in the deployed source.
 - Runtime safety remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No worker, schedule or autonomous execution was enabled.
 - **Still blocked/pending:** existing Render workspace/service confirmation and Node API release; designated owner MFA/reviewer desktop/mobile acceptance; actual deployed-RPC concurrency/idempotency/lease/budget/owner-isolation tests; real provider credential/health/inference; shared Creator Studio budget migration; full capacity/load/recovery benchmarks. No 10-billion or multi-region capacity is claimed.
+
+ 
+## Deployed AI bot chat RPC rollback acceptance — 2026-11-17
+
+- Status: **VERIFIED — sequential rollback-only RPC contract**.
+- PR #482 checkpoint merged as `a204bb1631e2980bec599c44c630a523dc4531d6`; post-merge full CI, Auth provider acceptance and For You navigation passed.
+- Deployed Edge Function readback: `minglora-runtime-state` ACTIVE v132; original `x-minglora-api-key` hash guard and `verify_jwt=false` preserved; `ai_bot_chat_command` allowlist/handler present.
+- Production catalog readback: six normalized chat tables, RLS enabled, browser-role direct SELECT revoked, service_role access only; chat RPC SECURITY INVOKER, empty search_path, service-role-only EXECUTE; 19/19 FK covering indexes present.
+- Rollback-only deployed-RPC test passed: reserve, complete, idempotent duplicate, lease expiration/retry, failure release, daily-budget rejection, and second-owner denial. The temporary AI identity and dependent records were rolled back; post-test live counts for identity/chat/budget/usage records remained zero.
+- Remaining: concurrent independent-session test, billable failure usage test, Render Node API release (workspace/service confirmation required), signed-in owner/MFA desktop/mobile acceptance, live provider credential/inference, shared Creator Studio budget, and capacity/recovery benchmarking.
+- Safety: keep `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`; no live identity or usage fixtures; no 10-billion capacity claim.
