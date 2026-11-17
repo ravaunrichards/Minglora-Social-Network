@@ -38,7 +38,7 @@ assert.equal(fs.existsSync(path.join(croppedDirectory,'Full Screen.png')),false,
 
 function seatMarkup(product){
   const heading='<div class="live-guest-layout-heading"><strong>MINGLORA GUEST LAYOUT</strong><small>Host + 8 guests</small></div>';
-  const host='<div class="live-video-tile mw-video-tile live-guest-seat is-host is-spotlight" id="fixture-host" data-seat-index="0" data-identity="host"><div class="live-guest-seat-meta"><strong>Host</strong><small>Host</small></div><span class="live-guest-seat-tag">HOST</span></div>';
+  const host='<div class="live-video-tile mw-video-tile live-guest-seat is-host" id="fixture-host" data-seat-index="0" data-identity="host"><div class="live-guest-seat-meta"><strong>Host</strong><small>Host</small></div><span class="live-guest-seat-tag">HOST</span></div>';
   const guests=Array.from({length:8},(_,index)=>{
     const seat=index+1;
     const body='<span class="live-guest-seat-tag">GUEST '+seat+'</span><span class="live-guest-seat-meta"><strong>Guest '+seat+'</strong><small>Guest seat '+seat+'</small></span>';
@@ -65,7 +65,7 @@ async function collectGeometry(page,product,layout){
     const stage=document.querySelector(product==='live'?'#live-video-stage':'#mw-screen-stage');
     if(product==='live'){grid.dataset.liveLayout=layout;delete grid.dataset.liveGuestLayout;}
     else{stage.dataset.screenLayout=layout;grid.dataset.layout=layout;delete grid.dataset.guestLayout;}
-    grid.querySelector('.live-guest-seat.is-host')?.classList.add('is-spotlight');
+    grid.querySelector('.live-guest-seat.is-host')?.classList.toggle('is-spotlight',layout==='spotlight');
     const gridRect=grid.getBoundingClientRect();
     const seats=[...grid.querySelectorAll('.live-guest-seat')].sort((a,b)=>Number(a.dataset.seatIndex)-Number(b.dataset.seatIndex));
     const values=seats.map(tile=>{
@@ -74,6 +74,8 @@ async function collectGeometry(page,product,layout){
       return {
         seat:Number(tile.dataset.seatIndex),visible,
         box:[round((rect.left-gridRect.left)/gridRect.width*100),round((rect.top-gridRect.top)/gridRect.height*100),round(rect.width/gridRect.width*100),round(rect.height/gridRect.height*100)],
+        gridColumn:style.gridColumnStart+'/'+style.gridColumnEnd,
+        gridRow:style.gridRowStart+'/'+style.gridRowEnd,
         empty:tile.classList.contains('mw-empty-seat')
       };
     });
@@ -84,7 +86,7 @@ async function collectGeometry(page,product,layout){
       emptyCount:values.filter(x=>x.empty).length,
       visibleEmptyCount:values.filter(x=>x.empty&&x.visible).length,
       decorativePanelVisible:(()=>{const style=getComputedStyle(grid,'::after');return style.display!=='none'&&style.content!=='none'&&style.content!=='normal';})(),
-      geometry:values.map(x=>[x.seat,x.visible?x.box:null])
+      geometry:values.map(x=>[x.seat,x.visible?x.box:null,x.visible?[x.gridColumn,x.gridRow]:null])
     };
   },{product,layout:layout.id});
 }
@@ -109,7 +111,7 @@ async function writeReferenceComparison(browser,layout,product,viewport,rendered
 }
 
 const browser=await chromium.launch({headless:true});
-const results={layouts:layouts.length,viewports:viewports.length,products:2,combinations:0,seatRecordsChecked:0,comparisonScreenshots:0};
+const results={layouts:layouts.length,viewports:viewports.length,products:2,combinations:0,seatRecordsChecked:0,comparisonScreenshots:0,layoutMeasurements:[]};
 try{
   for(const viewport of viewports){
     for(const product of ['live','meetwave']){
@@ -125,7 +127,7 @@ try{
           const stage=document.querySelector(product==='live'?'#live-video-stage':'#mw-screen-stage');
           if(product==='live'){grid.dataset.liveLayout=layout;delete grid.dataset.liveGuestLayout;}
           else{stage.dataset.screenLayout=layout;grid.dataset.layout=layout;delete grid.dataset.guestLayout;}
-          grid.querySelector('.live-guest-seat.is-host')?.classList.add('is-spotlight');
+          grid.querySelector('.live-guest-seat.is-host')?.classList.toggle('is-spotlight',layout==='spotlight');
         },{product,layout:layout.id});
         const measure=await collectGeometry(page,product,layout);
         assert.equal(measure.seatCount,9,product+' '+layout.id+' '+viewport.name+' must retain one host and eight guest seat records');
@@ -135,6 +137,7 @@ try{
           assert.equal(measure.emptyCount,8,'MeetWave retains all eight invitation-seat records in '+layout.id);
           assert.equal(measure.visibleEmptyCount,{"full-screen":1,"fluid-panel":3,"fluid-grid":3,"fixed-grid":9,"fixed-panel":4,"side-by-side":9,"spotlight":9,"roundtable-1":9,"roundtable-2":9}[layout.id]-1,'MeetWave visible invite panels must match the reference panel count in '+layout.id);
         }
+        results.layoutMeasurements.push({product,layout:layout.id,viewport:viewport.name,seatCount:measure.seatCount,visibleCount:measure.visibleCount,decorativePanelVisible:measure.decorativePanelVisible,geometry:measure.geometry});
         const signature=JSON.stringify(measure.geometry);
         signatures.add(signature);
         results.combinations++;
