@@ -67,7 +67,7 @@ alter table ai_network.ai_worker_events enable row level security;
 revoke all on ai_network.ai_worker_principals, ai_network.ai_worker_identity_grants, ai_network.ai_worker_events
   from public, anon, authenticated;
 grant select, insert, update on ai_network.ai_worker_principals to service_role;
-grant select, insert, delete on ai_network.ai_worker_identity_grants to service_role;
+grant select, insert on ai_network.ai_worker_identity_grants to service_role;
 grant select, insert on ai_network.ai_worker_events to service_role;
 
 create or replace function public.minglora_ai_worker_admin_command(
@@ -422,7 +422,8 @@ begin
         select 1 from ai_network.ai_provider_assignments a
         join ai_network.ai_provider_accounts pa on pa.provider_account_id=a.provider_account_id
         where a.identity_id=q.identity_id and a.assignment_status='active'
-          and a.provider_health_status='healthy' and pa.status='configured' and pa.health_status='healthy'
+          and a.provider_health_status='healthy' and pa.owner_user_id=v_worker.owner_user_id
+          and pa.status='configured' and pa.health_status='healthy'
       )
     order by q.priority asc,q.scheduled_for asc,q.created_at asc
     for update skip locked limit 1;
@@ -990,6 +991,11 @@ begin
       select 1 from ai_network.ai_worker_identity_grants g
       where g.worker_id=v_worker.worker_id and g.owner_user_id=v_worker.owner_user_id
         and g.identity_id=q.identity_id
+    )
+    and exists (
+      select 1 from ai_network.ai_identities i
+      where i.identity_id=q.identity_id and i.owner_user_id=v_worker.owner_user_id
+        and i.status='active' and i.enabled=true
     )
   for update;
   if v_task.task_id is null then
