@@ -18,13 +18,38 @@ const panelStart = app.indexOf("id='live-fullscreen-chat-slot'");
 const panelEnd = app.indexOf('</aside></div>', panelStart);
 const panelMarkup = app.slice(panelStart, panelEnd);
 
-test('Host name and heart/count form the first line; LIVE NOW stays under the name', () => {
+test('Host identity card matches the two-line LIVE reference: avatar/name above LIVE NOW and heart total', () => {
   assert.ok(hudStart >= 0 && hudEnd > hudStart, 'LIVE HUD markup remains present');
-  assert.match(hud, /class='live-host-identity-copy'><strong>/);
-  assert.match(hud, /class='live-host-live-status'><i class='live-host-live-dot'><\/i> LIVE NOW/);
-  assert.match(hud, /live-host-profile-wrap[\s\S]*?live-like-control live-like-count/);
+  assert.match(hud, /class='live-host-profile-wrap'[\s\S]*?class='live-host-identity-block'/);
+  assert.match(hud, /class='live-host-profile'[\s\S]*?class='live-host-identity-copy'><strong>/);
+  assert.match(hud, /class='live-host-meta-row'[\s\S]*?class='live-host-live-status'><i class='live-host-live-dot'><\/i> LIVE NOW/);
+  assert.match(hud, /live-host-meta-row[\s\S]*?live-like-control live-like-count/);
   assert.match(hud, /id='live-heart-like'[\s\S]*?id='live-reaction-count'/);
   assert.doesNotMatch(hud, /<small>likes<\/small>/i);
+  const identityCopy = hud.match(/<span class='live-host-identity-copy'>[\s\S]*?<\/span>/)?.[0] || '';
+  assert.ok(identityCopy, 'host name remains inside the profile action');
+  assert.doesNotMatch(identityCopy, /live-host-live-status/, 'LIVE NOW and likes stay in the separate second row');
+});
+
+test('Follow stays separate from likes and is viewer-only; following changes it to Heart Me', () => {
+  assert.match(hud, /\(role==='viewer'\?[\s\S]*?id='live-follow-host'/);
+  assert.match(hud, /session\.host\?\.following\?' is-heart-me':''/);
+  assert.match(hud, /session\.host\?\.following\?'♥':'Follow'/);
+  assert.match(app, /follow\.classList\.toggle\('is-heart-me',following\)/);
+  assert.match(app, /if\(following\)\{await joinLiveHostFanClub\(session,button\);return;\}/);
+  assert.doesNotMatch(hud, /id='live-follow-host'[^]*?live-like-control/);
+});
+
+test('Reference-matched header keeps avatar, status, likes and action readable across widths', () => {
+  const headerCss = css.slice(css.lastIndexOf('/* Host identity + LIVE status + likes:'));
+  assert.ok(headerCss.includes('.live-host-identity-block{'));
+  assert.ok(headerCss.includes('.live-host-meta-row{'));
+  assert.ok(headerCss.includes('padding:0 0 0 36px'));
+  assert.ok(headerCss.includes('@media(max-width:900px)'));
+  assert.ok(headerCss.includes('@media(max-width:380px)'));
+  assert.ok(headerCss.includes('.live-follow-button.is-heart-me'));
+  assert.match(headerCss, /text-overflow:ellipsis/);
+  assert.match(headerCss, /overflow:visible/);
 });
 
 test('End LIVE exists once inside the LIVE panel header and retains its original handler', () => {
@@ -66,11 +91,11 @@ test('LIVE panel, End LIVE header and chat are contained in the panel without co
 });
 
 test('Final stylesheet and offline service-worker shell use matching cache-busted URLs', () => {
-  const styleUrl = '/live-interface-guardrails.css?v=20261117-live-heartme-fluid-panel-1';
+  const styleUrl = '/live-interface-guardrails.css?v=20261117-live-host-header-reference-1';
   assert.ok(html.includes(styleUrl));
   assert.ok(html.lastIndexOf(styleUrl) > html.lastIndexOf('/minglora-branding.css'));
   assert.ok(sw.includes(styleUrl));
-  assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
+  assert.match(sw, /const CACHE_NAME='minglora-shell-v353-self-updating-1';/);
   const appAsset = html.match(/src=["'](\/app\.js\?v=[^"']+)["']/)?.[1] || '';
   assert.ok(appAsset && sw.includes("'" + appAsset + "'"), 'current app bundle must be cached');
 });
