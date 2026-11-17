@@ -60,6 +60,7 @@ function meetwavePage(layout){
 function round(value){return Math.round(value*10)/10;}
 async function collectGeometry(page,product,layout){
   return page.evaluate(({product,layout})=>{
+    const round=value=>Math.round(value*10)/10;
     const grid=document.querySelector(product==='live'?'#live-guest-layout':'#mw-grid');
     const stage=document.querySelector(product==='live'?'#live-video-stage':'#mw-screen-stage');
     if(product==='live'){grid.dataset.liveLayout=layout;delete grid.dataset.liveGuestLayout;}
