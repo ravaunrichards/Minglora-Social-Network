@@ -102,6 +102,15 @@ A recommendation is not complete because a table, route or screen exists. Mark i
 
 The browser acceptance suite is tests/e2e/ai-network-workspace.mjs and runs in .github/workflows/ai-network-browser-qa.yml on AI core branch pushes and relevant pull requests. It launches Chromium against the real static Minglora frontend and disposable in-memory API fixtures; it never contacts or writes to Supabase. It checks all 15 original AI categories, 249 country/territory choices, three populations, five gender choices, separate first/last-name submission and profile editing, accurate unverified/unprovisioned email status, combined discovery filters, bulk following, saved discovery groups, same-origin API calls, and responsive viewport geometry. This is UI acceptance evidence only; it does not replace authenticated live-Supabase, provider, upload or production-device acceptance.
 
+
+## Finance and resource governance — source implementation
+
+- A new finance governance source slice has been carried onto current main. It adds owner/organization/department/identity budget policy records, immutable policy history and measured usage events. The task queue's database trigger checks applicable daily token, monthly spend and concurrent-task limits before queued/running transitions; paused policies reject new work.
+- The candidate migration passed rollback-only execution and direct RPC/trigger acceptance in the existing Minglora Supabase project. These tests were run inside explicit transactions with final ROLLBACK; no production finance policy, usage or task fixtures remain.
+- The Node API is restricted to the designated Minglora administrator for budget listing, policy changes and measured usage reports. The private Edge gateway accepts internal usage writes only and rejects secret-bearing metadata. The browser Finance & Resource Center submits audited policy changes and displays only measured ledger events.
+- **Source-only until coordinated release:** the finance migration and updated Edge/Node source must be deployed together after approval. The currently deployed Edge Function and production schema have not been changed. No production finance ledger tables or budget RPC are currently present; do not claim finance governance is live in production.
+- Resource limits are policy records, not live CPU/GPU/memory/storage enforcement; measured adapters remain to be connected. Policies do not authorize payments or transfers. Runtime remains globally paused with execution disabled and zero workers.
+
 ## Owner-managed per-identity memory (limited release)
 
 Each existing AI identity may have one `ai_memory_settings` row and zero or more `ai_memory_entries` in the private `ai_network` schema. Memory is off by default. Enabling memory requires an owner-authenticated action; long-term memory requires a separate opt-in. Short-term retention is constrained to 1–90 days, long-term retention to 30–3650 days, and the per-identity entry cap is constrained to 1–5000. Expired rows are purged during memory list/create/configure operations. Disabling memory clears its entries and resets long-term consent.
