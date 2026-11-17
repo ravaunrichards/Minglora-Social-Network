@@ -1596,6 +1596,7 @@ async function route(req, res) {
       const settingsExisted = (db.aiBotSettings || []).some(item => item.ownerId === user.id);
       const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
+      const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
       if (method === 'GET' && sub === 'email/status') {
         const status = await inspectResendDomain();
@@ -1904,7 +1905,6 @@ async function route(req, res) {
           messages: Array.isArray(stored?.messages) ? stored.messages : []};
       };
 
-      const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const aiMediaBucketForSlot = slot => slot === 'avatar' || slot === 'cover' ? 'minglora-ai-profile-media' : '';
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
       const aiMediaMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
