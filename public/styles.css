@@ -7579,3 +7579,11 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
   .live-daily-podium-card small{font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.live-daily-podium-card{transition:none}}
+
+
+/* LIVE permissions drawer: bind the checked state to the actual toggle track.
+   This selector must match .live-room-permission-toggle, not only preflight. */
+.live-room-permission-toggle input:checked+.live-preflight-switch{background:var(--blue)}
+.live-room-permission-toggle input:checked+.live-preflight-switch::after{transform:translateX(12px)}
+.live-room-permission-toggle input:focus-visible+.live-preflight-switch{outline:2px solid var(--blue);outline-offset:3px}
+.live-room-permission-toggle input:disabled+.live-preflight-switch{opacity:.55;cursor:wait}
