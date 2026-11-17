@@ -4197,6 +4197,37 @@ async function route(req, res) {
         return json(res,200,result);
       }
 
+      if((method==='GET'||method==='POST')&&p==='/api/admin/rbac'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified designated Creator Hub owner can manage administrator permissions.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Administrator permissions require Minglora Supabase Auth.'});
+        if(method==='GET'){
+          const result=await requestSupabaseState('admin_rbac_command',{
+            actorUserId:user.id,mfaVerified:true,rbacAction:'list',payload:{}
+          });
+          return json(res,200,result);
+        }
+        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This administrator permission request must come from Minglora.'});
+        const rbacAction=String(input?.rbacAction||'').trim().toLowerCase();
+        if(!['grant','revoke'].includes(rbacAction)){
+          return json(res,400,{error:'Choose grant or revoke for an administrator assignment.'});
+        }
+        const payload=input?.payload&&typeof input.payload==='object'&&!Array.isArray(input.payload)?input.payload:{};
+        const email=normalizeEmail(payload.email);
+        const reason=String(payload.reason||'').trim();
+        if(!validateEmail(email).valid||reason.length<5||reason.length>1000){
+          return json(res,400,{error:'Enter a valid Minglora account email and an administrative reason of at least 5 characters.'});
+        }
+        if(rbacAction==='grant'&&!/^[a-z][a-z0-9_]{2,63}$/.test(String(payload.role||''))){
+          return json(res,400,{error:'Choose a supported administrator role.'});
+        }
+        const result=await requestSupabaseState('admin_rbac_command',{
+          actorUserId:user.id,mfaVerified:true,rbacAction,payload:{email,reason,...(rbacAction==='grant'?{role:String(payload.role)}:{})}
+        });
+        return json(res,200,result);
+      }
+
       if(method==='GET'&&p==='/api/admin/access'){
         const designatedCreatorHubAdmin = isDesignatedCreatorHubAdmin(user);
         const canAccess = designatedCreatorHubAdmin && isModerator(user,req) && hasActiveReviewerSession(user);
