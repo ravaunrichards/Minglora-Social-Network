@@ -2494,9 +2494,7 @@
     }
     if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-course','training-enrollment','attendance','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
-    let message = kind === 'email-send'
-      ? 'Email accepted by Resend and recorded in the AI mailbox.'
-      : kind === 'memory-edit'
+    let message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
       : kind === 'memory-settings'
       ? 'AI memory consent and retention settings saved for this identity. Existing entries were cleared when memory was disabled.'
@@ -2566,6 +2564,7 @@
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
                                       : 'Saved successfully.';
+    if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
     const batchFailures = ['identity-bulk','identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
     const batchRetryItems = kind === 'identity-bulk'
       ? batchFailures.map(item => {
