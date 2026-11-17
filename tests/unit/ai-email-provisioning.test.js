@@ -37,6 +37,7 @@ test('AI email address and domain validation normalizes safe values', () => {
 test('email provider configuration exposes readiness booleans but never secret values', () => {
   const configured = getAIEmailConfig(env);
   assert.equal(configured.provider, 'resend');
+  assert.equal(configured.configured, true);
   assert.equal(configured.sendingConfigured, true);
   assert.equal(configured.receivingConfigured, true);
   assert.equal(configured.domain, 'ai.example.com');
@@ -77,6 +78,7 @@ test('Resend domain inspection requires verified sending and receiving capabilit
   assert.equal(status.receivingEnabled, true);
   assert.equal(status.webhookActive, true);
   assert.equal(status.webhookId, 'webhook_1');
+  assert.equal(status.configured, true);
   const unavailable = await inspectResendDomain({
     env,
     fetchImpl: async () => new Response(JSON.stringify({ data: [{
