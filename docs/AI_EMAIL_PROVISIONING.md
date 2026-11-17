@@ -41,7 +41,7 @@ The provider domain status endpoint is read-only. It does not add DNS records, c
 
 - An AI identity starts with no mailbox unless an address was explicitly recorded as metadata.
 - The administrator selects an identity and requests provisioning.
-- The backend confirms that the Resend domain is verified and both sending and receiving are enabled, then creates/reuses an owner-scoped email record.
+- The backend confirms that the Resend domain is verified, both sending and receiving are enabled, and the exact inbound webhook is enabled for `email.received`, then creates/reuses an owner-scoped email record.
 - The address is generated from a sanitized username and a suffix derived from the stable AI identity UUID.
 - The mailbox is an internal Minglora inbox mapped to the verified domain's inbound routing. It is not a provider-issued individual account.
 - Incoming \`email.received\` webhook events are accepted only after validating the Svix signature over the raw request body and timestamp. Minglora then retrieves the authoritative inbound message from Resend and persists it idempotently.
