@@ -370,7 +370,9 @@ begin
       into v_global_paused,v_execution_enabled,v_global_max,v_lease_seconds
     from ai_network.ai_task_runtime_controls c
     where c.control_key='primary'
-    for share;
+    -- Serialize global admission checks so two different worker principals cannot
+    -- both observe the same available global slot before either lease commits.
+    for update;
     if not found or coalesce(v_global_paused,true) or not coalesce(v_execution_enabled,false) or coalesce(v_global_max,0)=0 then
       return jsonb_build_object('claimed',false,'reason','runtime_paused_or_disabled');
     end if;
