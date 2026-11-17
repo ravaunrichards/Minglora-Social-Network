@@ -4161,6 +4161,13 @@ Deno.serve(async (req: Request) => {
       ? input.payload
       : {};
     const supportedAICommands = ["list_categories", "list", "get", "create", "bulk_create"];
+    const serializedPayload = JSON.stringify(payload);
+    if (new TextEncoder().encode(serializedPayload).byteLength > 200000) {
+      return json(413, { error: "AI identity data exceeds the supported request size." });
+    }
+    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential|private[_-]?key)"\s*:/i.test(serializedPayload)) {
+      return json(400, { error: "AI identity profile data cannot contain credentials or secrets." });
+    }
 
     if (!validUuid(actorUserId)) {
       return json(400, { error: "A valid signed-in Minglora user is required for AI identity access." });
