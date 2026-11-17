@@ -53,5 +53,5 @@ test('provider status marks fit the existing compact pill and are included in of
   for(const item of manifest.icons)assert.ok(worker.includes("'"+item.file+"'"),item.id+' SVG is pre-cached');
   assert.ok(worker.includes("minglora-shell-v352-self-updating-1"));
   assert.ok(html.includes('/styles.css?v=20261116-ranking-podium-top100-1'));
-  assert.ok(html.includes('/app.js?v=20261117-gifter-safe-level-normalization-1'));
+  assert.ok(html.includes('/app.js?v=20261117-live-heartme-fluid-panel-2'));
 });
