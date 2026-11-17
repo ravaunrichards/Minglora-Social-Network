@@ -217,16 +217,20 @@ begin
       );
     end if;
 
-    v_address := lower(regexp_replace(coalesce(v_username,'ai'), '[^a-zA-Z0-9._-]', '', 'g'));
-    v_address := left(v_address, 43) || '-' || left(replace(v_identity_id::text,'-',''), 12) || '@' || v_domain;
+    v_username := lower(regexp_replace(coalesce(v_username,'ai'), '[^a-zA-Z0-9._-]', '', 'g'));
+    v_username := regexp_replace(v_username, '\.{2,}', '.', 'g');
+    v_username := trim(both '.' from v_username);
+    if v_username = '' then v_username := 'ai'; end if;
+    -- Full UUID suffix provides 128-bit uniqueness at the 10-billion identity design target.
+    v_address := left(v_username, 31) || '-' || replace(v_identity_id::text,'-','') || '@' || v_domain;
     insert into ai_network.ai_emails (
       identity_id,email_address,email_type,is_primary,verification_status,email_provider,
-      provisioning_status,management_reference,email_status,mailbox_enabled,mailbox_domain,provisioned_at,last_verified_at
+      provisioning_status,management_reference,email_status,mailbox_enabled,mailbox_domain,provisioned_at
     )
     values (
       v_identity_id,v_address,'work',
       not exists(select 1 from ai_network.ai_emails where identity_id=v_identity_id and is_primary),
-      'verified','resend','provisioned','resend-domain:'||v_domain,'active',true,v_domain,now(),now()
+      'unverified','resend','provisioned','resend-domain:'||v_domain,'active',true,v_domain,now()
     )
     returning * into v_email;
 
