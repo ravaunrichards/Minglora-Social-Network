@@ -832,5 +832,11 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
     width:58px!important;height:44px!important
   }
+  /* The phone rail tiles must not shrink to their text's min-content width. */
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
+    width:58px!important;min-width:58px!important;max-width:58px!important;
+    height:44px!important;min-height:44px!important;max-height:44px!important;
+    flex:0 0 58px!important
+  }
 }
 /* END NINE COMPLETE GUEST LAYOUTS. */
