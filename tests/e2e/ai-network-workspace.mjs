@@ -42,6 +42,8 @@ let identities = [structuredClone(initialIdentity)];
 let savedGroups = [];
 let identityCreateRequests = [];
 let identityPatchRequests = [];
+let bulkIdentityRequests = [];
+let bulkIdentityFirstFailureUsed = false;
 let discoveryQueries = [];
 let bulkFollowRequests = [];
 let memorySettings = {
@@ -247,6 +249,50 @@ function aiApiResponse(req, url, body) {
     };
     identities.push(record);
     return { created: true, identity_id };
+  }
+
+  if (method === 'POST' && pathname === '/identities/bulk') {
+    bulkIdentityRequests.push(structuredClone(body));
+    const created = [];
+    const failed = [];
+    for (const [index, item] of (body.items || []).entries()) {
+      if (item.idempotency_key === 'ai-bulk-retry-row-002' && !bulkIdentityFirstFailureUsed) {
+        bulkIdentityFirstFailureUsed = true;
+        failed.push({
+          index: index + 1,
+          idempotency_key: item.idempotency_key,
+          sqlstate: '23505',
+          error: 'AI username already exists.'
+        });
+        continue;
+      }
+      const identity_id = randomUUID();
+      const record = {
+        identity: {
+          identity_id, status: 'created', enabled: false,
+          population: item.population || 'independent',
+          category_key: item.category_key
+        },
+        name: {
+          ...(item.name || {}),
+          full_name: [item.name?.first_name, item.name?.middle_name, item.name?.last_name].filter(Boolean).join(' ')
+        },
+        profile: item.profile || {},
+        languages: item.languages || [],
+        locations: item.locations || [],
+        primary_email: null
+      };
+      identities.push(record);
+      created.push(record);
+    }
+    return {
+      created_count: created.length,
+      reused_count: 0,
+      succeeded_count: created.length,
+      failed_count: failed.length,
+      created,
+      failed
+    };
   }
 
   if (method === 'PATCH' && /^\/identities\/[0-9a-f-]+$/i.test(pathname)) {
@@ -536,6 +582,44 @@ try {
   assert.ok(!Object.hasOwn(patch, 'provider_assignments'), 'Profile editing must not mutate provider assignments.');
   assert.equal(identities[0].name.first_name, 'Arianna', 'Updated name must be rendered from refreshed registry data.');
 
+  const bulkIdentityForm = page.locator('form[data-ai-form="identity-bulk"]');
+  const successfulBulkRow = {
+    population: 'independent',
+    category_key: 'ai_friends',
+    idempotency_key: 'ai-bulk-success-row-001',
+    name: { first_name: 'Maya', last_name: 'Brown', username: 'maya_brown_01' },
+    profile: { gender: 'female', bio: 'AI-labelled test identity.' },
+    languages: [{ language_tag: 'en', language_name: 'English', proficiency: 'fluent', is_primary: true }],
+    locations: []
+  };
+  const retryBulkRow = {
+    population: 'independent',
+    category_key: 'ai_friends',
+    idempotency_key: 'ai-bulk-retry-row-002',
+    name: { first_name: 'Leah', last_name: 'Reid', username: 'leah_reid_02' },
+    profile: { gender: 'female', bio: 'AI-labelled test identity.' },
+    languages: [{ language_tag: 'en', language_name: 'English', proficiency: 'fluent', is_primary: true }],
+    locations: []
+  };
+  const bulkItemsField = bulkIdentityForm.locator('[name="items"]');
+  await bulkItemsField.fill(JSON.stringify([successfulBulkRow, retryBulkRow]));
+  await bulkIdentityForm.locator('button[type="submit"]').click();
+  await page.getByText(/Bulk identity batch: 1 created; 0 reused; 1 failed\./).waitFor({ state: 'visible' });
+  await page.getByText(/Row 2 \[ai-bulk-retry-row-002\]: AI username already exists\./).waitFor({ state: 'visible' });
+  await page.getByText(/Failed rows are retained in the batch editor for retry\./).waitFor({ state: 'visible' });
+  assert.equal(bulkIdentityRequests.length, 1, 'The first identity batch must make one bounded bulk-create request.');
+  assert.deepEqual(bulkIdentityRequests[0].items, [successfulBulkRow, retryBulkRow]);
+  const retainedRetryRows = JSON.parse(await bulkIdentityForm.locator('[name="items"]').inputValue());
+  assert.deepEqual(retainedRetryRows, [retryBulkRow], 'Only the failed source row must be retained for retry.');
+  assert.equal(retainedRetryRows[0].idempotency_key, 'ai-bulk-retry-row-002', 'Retry must preserve the original idempotency key.');
+
+  await bulkIdentityForm.locator('button[type="submit"]').click();
+  await page.getByText(/Bulk identity batch: 1 created; 0 reused; 0 failed\./).waitFor({ state: 'visible' });
+  assert.equal(bulkIdentityRequests.length, 2, 'Retry must submit only the failed row.');
+  assert.deepEqual(bulkIdentityRequests[1].items, [retryBulkRow], 'Retry must preserve the failed row unchanged.');
+  assert.equal(await bulkIdentityForm.locator('[name="items"]').inputValue(), '', 'A successful retry should clear the batch editor.');
+  assert.equal(identities.length, 4, 'The two pre-existing/single-created identities and two successful batch identities must remain visible.');
+
   await page.getByText('Individual AI Memory').waitFor({ state:'visible' });
   const memorySettingsForm = page.locator('form[data-ai-form="memory-settings"]').first();
   assert.equal(await memorySettingsForm.locator('[name="memoryEnabled"]').isChecked(), false,
@@ -660,6 +744,8 @@ try {
     genderOptions: initialCounts.genders,
     identityCreates: identityCreateRequests.length,
     identityProfileUpdates: identityPatchRequests.length,
+    bulkIdentityBatchAttempts: bulkIdentityRequests.length,
+    bulkIdentityRowsRetainedForRetry: 1,
     combinedDiscoveryQueries: discoveryQueries.length,
     bulkFollowRequests: bulkFollowRequests.length,
     memorySettingsUpdates: memoryRequests.settings.length,
