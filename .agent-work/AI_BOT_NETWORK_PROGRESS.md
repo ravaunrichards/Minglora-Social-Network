@@ -1,3 +1,17 @@
+## AI email provisioning implementation — 2026-11-17
+
+- Email work is being implemented on \`feat/minglora-ai-email-provisioning-20261117\`, stacked on \`feat/minglora-ai-individual-identity-create-complete-20261117\` and therefore on the existing Minglora AI Network feature branch. No new repository or Supabase project was created.
+- Reuses the live \`ai_network.ai_emails\` registry; the additive migration adds virtual-mailbox lifecycle fields and a private \`ai_network.ai_email_messages\` inbox/sent table. A service-role-only RPC provides provision/list/inbox/send-complete/send-fail/read/verified-ingest operations. SQL was checked against the current live column names and audit actor-type constraint.
+- Adds a Resend server adapter for verified-domain checks, outbound delivery with provider idempotency keys, inbound message retrieval and Svix raw-body webhook verification. Adds an authenticated API and admin UI for provider status, mailbox provisioning, inbox reading, sent mail and read state.
+- Mailboxes are **Minglora app-managed virtual inboxes** on a Minglora-owned subdomain, not separate Google Workspace/Microsoft 365 mail seats, IMAP accounts or Supabase Auth users. A unique alias routes via the verified domain to the AI identity's internal inbox. No human Auth accounts are created.
+- Provider status is not assumed. Provisioning is blocked until the existing service has a Resend API key, a verified Minglora-owned domain with both sending and receiving enabled, and the inbound webhook signing secret. Secrets are read only from the server environment and never exposed through the status API.
+- Focused tests have been added for address/domain validation, safe configuration reporting, domain readiness, send idempotency, inbound retrieval, webhook signature/replay rejection, HTML escaping, private SQL grants and runtime/UI integration. CI has not yet been run for this feature branch.
+- **Not yet performed:** no live migration was applied; no Edge Function or web-service deployment was made; no Render environment variables were inspected or changed; no Resend key/domain/webhook was configured; no test address was provisioned; no live email was sent or received; no AI identity or human Auth account was created by this work.
+- Task 4 remains **PARTIAL — IMPLEMENTATION IN BRANCH, PRODUCTION ACTIVATION/ACCEPTANCE BLOCKED** until CI passes, the migration is reviewed/approved and deployed, the Resend domain and secrets are configured in the existing service, and signed end-to-end send/receive/retry/security tests pass. Do not count email as production-complete before that evidence exists.
+- Detailed setup, routes, database and acceptance steps: [AI Email Provisioning](../docs/AI_EMAIL_PROVISIONING.md).
+
+---
+
 ## Individual AI identity creation expansion — 2026-11-17
 
 - Branch: `feat/minglora-ai-individual-identity-create-complete-20261117`, stacked on the existing `feat/minglora-ai-network-bulk-retry-20261117` AI Network feature branch.
