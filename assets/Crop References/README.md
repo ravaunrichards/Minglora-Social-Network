@@ -46,20 +46,29 @@ These are full range/reference-sheet artwork. Keep them separate from the six mi
 
 ## 3. Daily Ranking Badges
 
-**Source folder:** `Daily Ranking Badge/`
+**Canonical source folder:** `Daily Ranking Badge/`
 
-The six supplied source files are:
+The folder contains **eight unique PNG reference crops**. The six numbered frames are assigned to existing runtime slots:
 
-- `Screenshot_20261112_021224_TikTok(1).png`
-- `Screenshot_20261112_021224_TikTok(2).png`
-- `Screenshot_20261112_021309_TikTok(1).png`
-- `Screenshot_20261112_021309_TikTok(2).png`
-- `Screenshot_20261112_021333_TikTok(1).png`
-- `Screenshot_20261112_021343_TikTok(1).png`
+**Daily podium placement frames**
+- `Screenshot_20261112_021224_TikTok(1).png` — first place
+- `Screenshot_20261112_021224_TikTok(2).png` — second place
+- `Screenshot_20261112_021309_TikTok(1).png` — third place
+
+**Daily Top Gifters avatar frames**
+- `Screenshot_20261112_021309_TikTok(2).png` — first place
+- `Screenshot_20261112_021333_TikTok(1).png` — second place
+- `Screenshot_20261112_021343_TikTok(1).png` — third place
+
+**Additional unnumbered source references — retained, not assigned to a rank**
+- `Screenshot_20261112_021355_TikTok(1).png` — blue/white flame frame
+- `Screenshot_20261112_021407_TikTok(1).png` — blue/white flame frame
+
+The two unnumbered frames are preserved in the canonical source folder and included in the duplicate-content audit. They are deliberately **not** mapped to a podium position, ranking tier, Top Gifters slot or runtime cache entry until their intended use is established. Do not infer a rank or create duplicate copies.
 
 **Application routes:** `/assets/daily-ranking-badges/place-1.png` through `place-3.png`, plus `/assets/daily-ranking-badges/top-gifters-place-1.png` through `top-gifters-place-3.png`.
 
-The first three routes supply the daily podium placement frames; the latter three supply the daily Top Gifters avatar frames. Period selection and ranking data remain driven by confirmed LIVE gifts.
+The first three routes serve the daily podium frames; the latter three serve the daily Top Gifters avatar frames. The ranking data and period filters remain driven by confirmed LIVE gifts.
 
 ## 4. LIVE Guest Layout References
 
@@ -91,6 +100,6 @@ ENIGMA is the Minglora default/fallback profile picture. The application fallbac
 
 ## Validation
 
-The test `tests/unit/crop-reference-assets.test.js` verifies the route mappings, frontend usage, progression states, guest-layout previews, default avatar wiring, source-file presence, and unique image contents across the 28 files in these groups.
+The test `tests/unit/crop-reference-assets.test.js` verifies the route mappings, frontend usage, progression states, guest-layout previews, default avatar wiring, source-file presence, and unique image contents across all 30 canonical PNG references: six milestone overlays, six Gifter range sheets, eight Daily Ranking crops, nine guest-layout previews, and the ENIGMA default profile picture. The two unnumbered Daily Ranking flame frames are audited but intentionally remain unassigned to runtime ranking positions.
 
 **Do not add duplicate image copies.** Add a new source file only when it is a genuinely new reference, place it in the matching category, document its intended use here, and wire one canonical application route to it.
