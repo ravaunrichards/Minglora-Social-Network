@@ -2,7 +2,7 @@ name: Minglora AI Network browser acceptance
 
 on:
   push:
-    branches: [feat/minglora-ai-bot-network-core]
+    branches: [feat/minglora-ai-bot-network-core, feat/minglora-ai-individual-identity-create-complete-20261117]
     paths:
       - 'public/ai-network.js'
       - 'public/ai-network.css'
