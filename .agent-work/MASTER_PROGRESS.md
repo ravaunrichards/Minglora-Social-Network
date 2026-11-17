@@ -224,3 +224,13 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Preserved all 50 unique numbered individual Gifter PNGs, original badge artwork, detailed panels, range source sheets, level thresholds, progression calculations, gift ledger, refunds, Coin balances/transactions, admin awards and database records.
 - Render service `minglora-social-network-temp` is connected to this exact repository and tracks `main` with automatic deploys enabled. Render deployment `dep-dbtpqpgae00c739rpq10` was automatically initiated for merge commit `7137b5b`; its latest observed state was `update_in_progress`. No duplicate manual deploy was triggered. Runtime-live status remains pending until Render confirms completion.
 - Final code/test/merge status: VERIFIED. Deployment: IN PROGRESS at checkpoint time.
+
+### Gifter range sheets — remove misaligned duplicate badge layers — 2026-11-16
+- Active task branch: `fix/gifter-range-sheet-single-layer-20261116`, based on current `main` after PR #458.
+- Root cause confirmed: the range gallery rendered each original range-sheet PNG plus a second milestone-crop PNG with fixed top/left offsets. Those separate images could drift or double the badge artwork.
+- Removed the six extra range-sheet overlay images and all corresponding absolute-positioning/blend-mode CSS. Each of the six range cards now renders only its matching canonical range-sheet PNG inside the existing 1.72:1 crop viewport; the no-outer-card-frame styling is retained.
+- Kept all six milestone crop PNGs, their canonical routes and their service-worker precache entries because they remain in use by the separate six-stage Gifter progression strip. No source image, individual badge, level panel, threshold, progression calculation, gift ledger, Coin/wallet data or database record was changed.
+- Updated Gifter HTML/service-worker asset keys, the two focused regression tests and `docs/MINGLORA_GIFTER_PROGRESSION.md`.
+- Checkpoint commits: `d03cfe5` (single-image renderer), `471bb13` (range-sheet CSS), `afb1ac6` (HTML asset version), `b03f52d` (service-worker asset version), `71c1721` (Gifter reference assertions), `5a851be` (range-sheet assertions; intermediate delimiter corrected by `c8a07cd`), `bce8c9a` (documentation).
+- Source inspection confirms the range renderer has no badge-overlay image or overlay mapping, the overlay selector is absent from range-sheet CSS, and the milestone crop images remain referenced by the progression tracker.
+- Automated CI, merge and deployment verification: pending. Do not claim runtime deployment until Render confirms the new mainline commit is live.
