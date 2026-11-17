@@ -99,6 +99,28 @@ async function worker(action, credentialHash, payload = {}) {
   });
 }
 
+
+async function workerOnClient(client, action, credentialHash, payload = {}) {
+  const { rows } = await client.query(
+    'SELECT public.minglora_ai_worker_runtime_command($1,$2,$3::jsonb) AS result',
+    [action,credentialHash,JSON.stringify(payload)]
+  );
+  return rows[0].result;
+}
+
+async function waitForDatabaseLock(pid, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { rows } = await pool.query(
+      'SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1',
+      [pid]
+    );
+    if (rows[0]?.wait_event_type === 'Lock') return;
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
+  throw new Error('The competing worker did not wait on the global admission lock.');
+}
+
 async function addIdentity(ownerId, providerOwnerId = ownerId) {
   const identityId = crypto.randomUUID();
   const accountId = crypto.randomUUID();
@@ -278,6 +300,74 @@ test('worker credentials are one-way digests, scoped to granted identities and b
   assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_created'));
   assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_credential_rotated'));
   assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_revoked'));
+});
+
+
+test('two worker principals cannot exceed the global concurrency cap under concurrent claims', async () => {
+  const ownerId = crypto.randomUUID();
+  await pool.query('INSERT INTO public.profiles(id) VALUES ($1)',[ownerId]);
+  const firstIdentity = await addIdentity(ownerId);
+  const secondIdentity = await addIdentity(ownerId);
+  const firstTaskId = await addTask(ownerId,firstIdentity,'Global slot one',1);
+  await addTask(ownerId,secondIdentity,'Global slot two',2);
+
+  const firstCredential = credential();
+  const secondCredential = credential();
+  await admin('create_worker',ownerId,{
+    worker_name:'Global concurrency worker one',
+    credential_sha256:firstCredential.sha256,
+    credential_expires_at:expiry(),
+    identity_ids:[firstIdentity],
+    allowed_action_classes:['content'],
+    max_concurrent_tasks:1
+  });
+  await admin('create_worker',ownerId,{
+    worker_name:'Global concurrency worker two',
+    credential_sha256:secondCredential.sha256,
+    credential_expires_at:expiry(),
+    identity_ids:[secondIdentity],
+    allowed_action_classes:['content'],
+    max_concurrent_tasks:1
+  });
+  await asService(client => client.query(
+    `UPDATE ai_network.ai_task_runtime_controls
+        SET global_paused=false,execution_enabled=true,max_concurrent_workers=1,lease_seconds=120
+      WHERE control_key='primary'`
+  ));
+
+  const firstClient = await pool.connect();
+  const secondClient = await pool.connect();
+  try {
+    await firstClient.query('BEGIN');
+    await firstClient.query('SET LOCAL ROLE service_role');
+    const firstClaim = await workerOnClient(firstClient,'claim_next_task',firstCredential.sha256);
+    assert.equal(firstClaim.claimed,true);
+    assert.equal(firstClaim.task_id,firstTaskId);
+
+    await secondClient.query('BEGIN');
+    await secondClient.query('SET LOCAL ROLE service_role');
+    const { rows: pidRows } = await secondClient.query('SELECT pg_backend_pid() AS pid');
+    const secondPid = pidRows[0].pid;
+    const secondClaimPromise = workerOnClient(secondClient,'claim_next_task',secondCredential.sha256);
+
+    await waitForDatabaseLock(secondPid);
+    await firstClient.query('COMMIT');
+
+    const secondClaim = await secondClaimPromise;
+    assert.equal(secondClaim.claimed,false);
+    assert.equal(secondClaim.reason,'global_worker_limit_reached');
+    await secondClient.query('COMMIT');
+
+    const running = await pool.query(
+      "SELECT count(*)::integer AS count FROM ai_network.ai_task_queue WHERE status='running' AND lease_expires_at>now()"
+    );
+    assert.equal(running.rows[0].count,1);
+  } finally {
+    await firstClient.query('ROLLBACK').catch(()=>{});
+    await secondClient.query('ROLLBACK').catch(()=>{});
+    firstClient.release();
+    secondClient.release();
+  }
 });
 
 test('expired worker credentials are invalidated and audited without rolling back the unauthorized response', async () => {
