@@ -1026,6 +1026,12 @@ body:has(#live-player-shell) .live-layout-option>span{
 
 
 /* LIVE stage-safe multi-guest geometry: keep the title clear of the host seat. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="full-screen"]{
+  grid-template-rows:22px minmax(0,1fr)!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:2!important;
+}
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-layout-heading{
   position:relative!important;inset:auto!important;grid-column:1/-1!important;grid-row:1!important;
   z-index:3!important;align-self:stretch!important;justify-self:stretch!important;
