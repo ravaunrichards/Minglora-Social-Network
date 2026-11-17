@@ -99,7 +99,7 @@ async function worker(action, credentialHash, payload = {}) {
   });
 }
 
-async function addIdentity(ownerId) {
+async function addIdentity(ownerId, providerOwnerId = ownerId) {
   const identityId = crypto.randomUUID();
   const accountId = crypto.randomUUID();
   await asService(async client => {
@@ -109,7 +109,7 @@ async function addIdentity(ownerId) {
     );
     await client.query(
       'INSERT INTO ai_network.ai_provider_accounts(provider_account_id,owner_user_id,status,health_status) VALUES ($1,$2,$3,$4)',
-      [accountId,ownerId,'configured','healthy']
+      [accountId,providerOwnerId,'configured','healthy']
     );
     await client.query(
       'INSERT INTO ai_network.ai_provider_assignments(identity_id,provider_account_id,assignment_status,provider_health_status) VALUES ($1,$2,$3,$4)',
@@ -154,10 +154,14 @@ after(async () => {
 
 test('worker credentials are one-way digests, scoped to granted identities and blocked by the global pause', async () => {
   const ownerId = crypto.randomUUID();
-  await pool.query('INSERT INTO public.profiles(id) VALUES ($1)',[ownerId]);
+  const otherOwnerId = crypto.randomUUID();
+  await pool.query('INSERT INTO public.profiles(id) VALUES ($1),($2)',[ownerId,otherOwnerId]);
   const grantedIdentity = await addIdentity(ownerId);
   const ungrantedIdentity = await addIdentity(ownerId);
-  const ungrantedTaskId = await addTask(ownerId,ungrantedIdentity,'Unassigned task',1);
+  const otherOwnerIdentity = await addIdentity(otherOwnerId);
+  const crossOwnerProviderIdentity = await addIdentity(ownerId,otherOwnerId);
+  const ungrantedTaskId = await addTask(ownerId,ungrantedIdentity,'Unassigned task',2);
+  const crossOwnerProviderTaskId = await addTask(ownerId,crossOwnerProviderIdentity,'Cross-owner provider task',1);
   const firstTaskId = await addTask(ownerId,grantedIdentity,'Granted task one',10);
   const secondTaskId = await addTask(ownerId,grantedIdentity,'Granted task two',20);
   const firstCredential = credential();
@@ -166,10 +170,21 @@ test('worker credentials are one-way digests, scoped to granted identities and b
     worker_name:'CI isolated worker',
     credential_sha256:firstCredential.sha256,
     credential_expires_at:expiry(),
-    identity_ids:[grantedIdentity],
+    identity_ids:[grantedIdentity,crossOwnerProviderIdentity],
     allowed_action_classes:['read_only','content'],
     max_concurrent_tasks:1
   });
+  await assert.rejects(
+    admin('create_worker',ownerId,{
+      worker_name:'Cross-tenant grant must fail',
+      credential_sha256:credential().sha256,
+      credential_expires_at:expiry(),
+      identity_ids:[otherOwnerIdentity],
+      allowed_action_classes:['content'],
+      max_concurrent_tasks:1
+    }),
+    error => error.code === '42501'
+  );
   const workerId = created.worker.worker_id;
   assert.ok(workerId);
   assert.equal(created.worker.status,'active');
@@ -196,6 +211,7 @@ test('worker credentials are one-way digests, scoped to granted identities and b
   assert.equal(claimed.task_id,firstTaskId);
   assert.equal(claimed.identity_id,grantedIdentity);
   assert.notEqual(claimed.task_id,ungrantedTaskId);
+  assert.notEqual(claimed.task_id,crossOwnerProviderTaskId);
 
   const concurrent = await worker('claim_next_task',firstCredential.sha256);
   assert.equal(concurrent.claimed,false);
