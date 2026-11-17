@@ -212,3 +212,15 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - All five PR workflows passed on the final PR head. Post-merge push CI run `43979864906` also passed: 1,268 tests, 1,268 passed, 0 failed; Supabase Auth provider acceptance and For You navigation jobs succeeded.
 - No manual Render deployment was triggered or independently verified. The source merge and repository CI are confirmed; runtime deployment status remains unverified.
 - Final task status: implementation, regression checks, documentation, merge and post-merge CI are VERIFIED.
+
+
+### Gifter Level Range sheet display crop — PR #456
+- Scope: the six existing canonical PNG references at `assets/Crop References/Gifter level range sheets/` only. The six files are rendered in a compact 1.72:1 viewport with `object-fit:cover` and `object-position:50% 54.5%`; this removes excess black source canvas from the presentation while retaining the complete range card, crest and bottom instruction line.
+- Original source assets were visually inspected, and all six Git blob SHAs were checked before and after merge. Every canonical PNG is byte-for-byte unchanged. No JPG/SVG substitute, recolour, redraw or source-image edit was introduced.
+- Updated the Gifter progression stylesheet cache key in the app shell and service-worker shell. Corrected five stale test assertions in `tests/unit/crop-reference-assets.test.js` and `tests/unit/gifter-badge-level-panels.test.js` to expect the new stylesheet key; production crop code did not need alteration to fix those assertions.
+- PR #456 head: `54dd5fa1305397d3cfa66620cf7d293b0dd91096`. Two focused test commits: `cfc591b103a36167a085b228ad69b39cc9026934` and `54dd5fa1305397d3cfa66620cf7d293b0dd91096`.
+- PR CI run #14219 passed all 1,269 tests (1,269 passed, 0 failed). Auth/OAuth provider acceptance, For You functional navigation, LIVE/MeetWave layout independence, AI identity/discovery browser acceptance, Chromium profile layout matrix, and seven-plus-two layout visual QA all passed.
+- PR #456 squash-merged into `main` on 2026-11-17 at 00:18:44Z. Merge commit: `7137b5beaae6bada2caa30f2f04306a4829f9b14`. Verified `main` points at this commit; post-merge CI run #43986594994 passed all three jobs: automated tests, Auth/OAuth acceptance and For You navigation.
+- Preserved all 50 unique numbered individual Gifter PNGs, original badge artwork, detailed panels, range source sheets, level thresholds, progression calculations, gift ledger, refunds, Coin balances/transactions, admin awards and database records.
+- Render service `minglora-social-network-temp` is connected to this exact repository and tracks `main` with automatic deploys enabled. Render deployment `dep-dbtpqpgae00c739rpq10` was automatically initiated for merge commit `7137b5b`; its latest observed state was `update_in_progress`. No duplicate manual deploy was triggered. Runtime-live status remains pending until Render confirms completion.
+- Final code/test/merge status: VERIFIED. Deployment: IN PROGRESS at checkpoint time.
