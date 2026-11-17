@@ -651,3 +651,22 @@
   }
   .gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:min(100%,170px)}
 }
+
+
+/* Gifter range sheets: crop the tall black source canvas in the viewport only.
+   The canonical PNG files remain byte-for-byte unchanged; the 1.72:1 window
+   keeps the full badge crest and bottom instruction line visible. */
+.gp-range-reference-figure{overflow:hidden}
+.gp-range-reference-figure img{
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:1.72 / 1;
+  object-fit:cover;
+  object-position:50% 50%;
+  border-radius:7px;
+}
+@media(max-width:760px){
+  .gp-range-reference-figure{padding:4px;gap:3px}
+  .gp-range-reference-figure img{aspect-ratio:1.72 / 1;object-fit:cover}
+}
