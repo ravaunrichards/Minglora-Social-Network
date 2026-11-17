@@ -52,24 +52,23 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 - This was a sequential database RPC contract test, not a concurrent-session/load test. Billable provider-failure accounting, signed-in HTTP/device acceptance, live provider inference and the Render Node API release remain unverified. The runtime remains globally paused, execution-disabled and at zero workers.
 
 
-## Shared Creator Studio budget — source implementation only
+## Shared Creator Studio budget — production migration and runtime rollout
 
 - Added an additive, not-yet-applied migration 20261117104500_minglora_creator_studio_shared_budget to the source branch. It creates separate Creator Studio reservation and usage-event tables; these records reference the owner/day budget row and do not create or depend on synthetic bot or AI identity records.
 - The same service-role-only minglora_ai_bot_chat_command RPC now has creator_begin_request, creator_complete_request and creator_fail_request actions. Both Creator Studio and chat reserve against, and settle through, the same locked owner/UTC-day budget row. Each reserve/settle/release path uses bounded leases and idempotent request IDs; provider-measured successful and billable failed usage is recorded, while non-billable failures release the reservation.
 - The chat get_usage and begin_request actions include Creator Studio usage and active reservations. This keeps chat from spending tokens already reserved by Creator Studio, and vice versa.
 - Creator Studio generation now calls the relational gateway only when Supabase persistence is active; local JSON-mode behavior is retained. Usage already settled in the relational ledger is marked in the legacy job snapshot so the same measured generation is not added twice to the legacy baseline.
 - The source branch extends the existing Edge gateway action allowlist, updates src/server.js and the AI Network service, and adds focused unit/contract tests.
-- **Not applied or deployed:** production still uses the existing baseline-only Creator Studio path until this migration and corresponding Node/Edge source are reviewed, merged and deployed. No production schema, Edge Function, Render service, provider credential or runtime control was changed. The source migration will be validated with a rollback-only SQL transaction before review.
+- **Production rollout:** PR #485 is merged; migration version 20261117111426 is applied to the existing Minglora Supabase project; both reservation/usage tables are RLS-enabled and service-role-only; the existing minglora-runtime-state Edge Function is ACTIVE v133 with the new actions and its custom API-key guard preserved. The existing Render service auto-deployed merged main, but the linked service is named minglora-social-network-temp in a Creator Hub workspace and is not confirmed as the intended production target.
 
 ## Acceptance still required
 
-1. Verify the existing Render workspace/service and deploy the current `src/server.js` backend from merged `main` without creating another service; this deployment is not yet confirmed.
-2. Use the designated Minglora owner session with verified reviewer/MFA state to test the real create/get conversation and POST chat API routes on desktop and mobile.
-3. Run deployed RPC integration tests using disposable, transaction-rolled-back fixtures for request idempotency, concurrency, lease expiry/recovery, owner isolation, daily budget limits, billable failures and rollback.
-4. Configure an actual private OpenAI credential/model, verify provider health, perform moderated inference and confirm measured usage. No credential is currently claimed as present.
-5. Migrate Creator Studio usage into the shared relational budget ledger before claiming cross-feature atomic budgets or enabling multi-instance/public traffic.
-6. Verify consent-gated memory recall with memory disabled, short-term enabled, long-term enabled only by its separate opt-in, expiry cleanup, owner isolation and credential-like summary exclusion.
-7. Benchmark identity and chat storage, query/write throughput, concurrency, backups, recovery and regional failover before making any 10-billion or multi-region capacity claim.
+1. Confirm the intended production Render workspace/service; the currently linked minglora-social-network-temp service is live but is not a confirmed production target.
+2. Use the designated Minglora owner session with verified MFA/reviewer state to exercise the real AI identity/chat and Creator Studio flows on desktop and mobile.
+3. Configure a real private OpenAI credential/model, verify provider health, perform moderated inference and confirm measured usage. No credential or live inference is claimed as present.
+4. Run independent concurrent sessions against the deployed Supabase RPC, followed by owner-isolation, budget/lease, billable failure and recovery checks under production-like traffic.
+5. Verify consent-gated memory recall with memory disabled, short-term enabled, long-term enabled only by its separate opt-in, expiry cleanup, owner isolation and credential-like summary exclusion.
+6. Benchmark identity and chat storage, query/write throughput, capacity, backup restoration, disaster recovery and regional failover before making any 10-billion or multi-region capacity claim.
 
 ## Two-session shared AI budget concurrency — verified CI checkpoint (2026-11-17)
 
@@ -83,3 +82,13 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 - Runtime safety remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No identities, Auth users, messages, budget rows, reservations or usage events were added to production.
 - Remaining release gates: signed-in owner/MFA desktop and mobile acceptance; actual provider credential, provider health and inference; confirm the correct existing Minglora Render workspace/service (the currently connected Render workspace is named Creator Hub and is not assumed to be Minglora); approved, coordinated production migration and Edge/Node deployment; production verification; capacity, recovery and regional scaling benchmarks. No 10-billion identity or simultaneous execution capacity has been claimed.
 - **Next execution step:** complete owner/MFA and provider readiness, establish the approved Minglora deployment target, then prepare a coordinated release plan for the merged migration and source changes. Do not enable workers or apply production migrations without the appropriate release authorization.
+
+
+## Production Creator Studio shared-budget acceptance — 2026-11-17
+
+- Applied Supabase migration 20261117111426 / minglora_creator_studio_shared_budget to the existing project.
+- Verified RLS, browser-role privilege denial, service_role CRUD, SECURITY INVOKER RPC, empty search_path and service_role-only EXECUTE.
+- Deployed minglora-runtime-state as ACTIVE v133; retained verify_jwt=false because the existing custom API-key guard authenticates runtime requests.
+- Rollback-only live RPC acceptance passed reserve/reuse, measured settle/idempotency, non-billable release, billable failure usage, shared daily usage, over-budget rejection and cross-owner denial. Post-rollback identity, budget and Creator Studio rows remain zero.
+- The Render auto-deploy to minglora-social-network-temp is live and durable Supabase persistence is ready; this temporary service is not verified as the correct production target.
+- Workers remain globally paused, execution disabled and max workers zero.
