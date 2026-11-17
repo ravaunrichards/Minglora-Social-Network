@@ -2207,16 +2207,8 @@ function stopLiveFanClubHeartbeat(){
 }
 function renderLiveFanClubStatus(status){
   liveFanClubState=status||null;
-  const button=$('#live-fan-club-join');
   const member=Boolean(status?.isMember||status?.membership?.status==='active');
   const paused=status?.membership?.status==='paused';
-  if(button){
-    button.classList.toggle('is-member',member);
-    button.disabled=false;
-    button.setAttribute('aria-pressed',member?'true':'false');
-    button.textContent=member?'♥ Joined':paused?'♥ Rejoin · 1 Coin':'♥ Join · 1 Coin';
-    button.title=member?'Open your Fan Club status and Team Gifts':paused?'Rejoin this Fan Club for 1 Coin':'Follow the host, then join for 1 Coin';
-  }
   const panelJoinButton=$('#live-fan-club-join-panel');
   if(panelJoinButton){panelJoinButton.textContent=member?'♥ Joined Fan Club':paused?'♥ Rejoin for 1 Coin':'♥ Join for 1 Coin';panelJoinButton.disabled=member;}
   const panel=$('#live-fan-club-status');
@@ -2233,9 +2225,17 @@ function renderLiveFanClubStatus(status){
   const follow=$('#live-follow-host');
   if(follow){
     const following=Boolean(status?.following);
-    follow.textContent=following?'Following':'Follow';
+    follow.textContent=following?'♥':'Follow';
     follow.classList.toggle('is-following',following);
+    follow.classList.toggle('is-heart-me',following);
+    follow.disabled=false;
     follow.setAttribute('aria-pressed',following?'true':'false');
+    follow.setAttribute('aria-label',following
+      ?(member?'Open Fan Club status and Team Gifts':paused?'Send Heart Me to rejoin the host Fan Club for 1 Coin':'Send Heart Me gift and join the host Fan Club for 1 Coin')
+      :'Follow LIVE host');
+    follow.title=following
+      ?(member?'Open your Fan Club status and Team Gifts':paused?'Rejoin the host Fan Club for 1 Coin':'Send Heart Me gift and join the host Fan Club for 1 Coin')
+      :'Follow this host';
   }
   refreshLiveGiftGrid?.();
   const teamButton=$('#live-team-gifts-open');if(teamButton)teamButton.disabled=!member;
@@ -2268,8 +2268,8 @@ function startLiveFanClubHeartbeat(session){
     }catch{}
   },60000);
 }
-async function joinLiveHostFanClub(session){
-  const button=$('#live-fan-club-join');
+async function joinLiveHostFanClub(session,triggerButton){
+  const button=triggerButton||$('#live-follow-host')||$('#live-fan-club-join-panel');
   if(!session?.id||!button)return;
   if(!session.host?.following&&!liveFanClubState?.following){
     toast('Follow the LIVE host first, then join the Fan Club.');
@@ -2825,9 +2825,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
             "<span class='live-host-identity-copy'><strong>"+esc(liveHostName)+"</strong><small class='live-host-live-status'><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
           "</button>"+
           "<div class='live-like-control live-like-count' aria-label='LIVE heart reactions'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong></div>"+
-          (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'Following':'Follow')+"</button>":"")+
+          (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button"+(session.host?.following?' is-heart-me':'')+"' aria-label='"+(session.host?.following?'Send Heart Me gift and join the host Fan Club for 1 Coin':'Follow LIVE host')+"' title='"+(session.host?.following?'Send Heart Me gift and join the host Fan Club for 1 Coin':'Follow this host')+"' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'♥':'Follow')+"</button>":"")+
         "</div>"+
-        (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join · 1 Coin</button>":"")+
       "</div>"+
     "</div>";
   const liveChatOverlay=liveSettings.groupChatEnabled!==false
@@ -3266,18 +3265,17 @@ activeLivePinnedComment=null;
     $('[data-live-profile-preview]')?.addEventListener('click',event=>openLiveProfilePreview(event.currentTarget.dataset.liveProfilePreview,session));
     $('#live-follow-host')?.addEventListener('click',async event=>{
       const button=event.currentTarget,following=button.getAttribute('aria-pressed')==='true';
+      if(following){await joinLiveHostFanClub(session,button);return;}
       button.disabled=true;
       try{
-        const result=await api('/users/'+encodeURIComponent(session.hostId)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
-        session.host=session.host||{};session.host.following=!following;
-        const status=liveFanClubState||{};status.following=!following;renderLiveFanClubStatus(status);
-        button.setAttribute('aria-pressed',String(!following));button.textContent=!following?(result.friends?'Friends':'Following'):'Follow';
-        toast(!following?'Now following '+(session.host.name||'the host')+'.':'Unfollowed the LIVE host.');
+        await api('/users/'+encodeURIComponent(session.hostId)+'/follow',{method:'POST',body:'{}'});
+        session.host=session.host||{};session.host.following=true;
+        const status=liveFanClubState||{};status.following=true;renderLiveFanClubStatus(status);
+        toast('Now following '+(session.host.name||'the host')+'.');
       }catch(error){toast(error.message||'The follow could not be updated.');}
       finally{button.disabled=false;}
     });
-    $('#live-fan-club-join')?.addEventListener('click',()=>void joinLiveHostFanClub(session));
-    $('#live-fan-club-join-panel')?.addEventListener('click',()=>void joinLiveHostFanClub(session));
+    $('#live-fan-club-join-panel')?.addEventListener('click',event=>void joinLiveHostFanClub(session,event.currentTarget));
     $('#live-team-gifts-open')?.addEventListener('click',()=>{
       if(!liveFanClubState?.isMember){toast('Join the host Fan Club to unlock Team Gifts.');return;}
       openLiveToolsPanel('#live-gift-panel');$('#live-gift-scope-team')?.click();

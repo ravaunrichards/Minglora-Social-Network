@@ -172,8 +172,12 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v351-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v352-self-updating-1/);
   assert.match(html, /app\.js\?v=20261117-gifter-safe-level-normalization-1/);
+  assert.match(html, /live-tiktok-compact\.css\?v=20261117-live-heartme-fluid-panel-1/);
+  assert.match(html, /live-interface-guardrails\.css\?v=20261117-live-heartme-fluid-panel-1/);
+  assert.ok(serviceWorker.includes("/live-tiktok-compact.css?v=20261117-live-heartme-fluid-panel-1"));
+  assert.ok(serviceWorker.includes("/live-interface-guardrails.css?v=20261117-live-heartme-fluid-panel-1"));
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-sheet-single-layer-1/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheet-single-layer-1/);
