@@ -1658,6 +1658,7 @@
     await loadAIMemory();
     await loadAIDiscovery();
     await loadAIProviderRegistry();
+    await loadAIFinanceRegistry();
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
     await loadAIDelegations();
