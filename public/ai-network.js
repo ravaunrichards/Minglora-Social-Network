@@ -1948,6 +1948,11 @@
       path = '/tasks/' + encodeURIComponent(taskId) + '/approval';
       payload.status = value('status');
       payload.reason = value('reason');
+    } else if (kind === 'task-cancel') {
+      const taskId = form.dataset.taskId;
+      if (!taskId) throw new Error('Task details are missing.');
+      path = '/tasks/' + encodeURIComponent(taskId) + '/cancel';
+      payload.reason = value('reason');
     } else if (kind === 'worker-create') {
       path = '/workers';
       const identityIds = data.getAll('identityIds').map(item => String(item).trim()).filter(Boolean);
