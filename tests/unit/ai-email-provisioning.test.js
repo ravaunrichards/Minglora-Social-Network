@@ -22,7 +22,8 @@ const env = {
   MINGLORA_AI_EMAIL_PROVIDER: 'resend',
   MINGLORA_AI_EMAIL_DOMAIN: 'ai.example.com',
   RESEND_API_KEY: 're_test_key_not_real',
-  RESEND_WEBHOOK_SECRET: 'whsec_' + Buffer.from('fixture-signing-key').toString('base64')
+  RESEND_WEBHOOK_SECRET: 'whsec_' + Buffer.from('fixture-signing-key').toString('base64'),
+  MINGLORA_AI_EMAIL_WEBHOOK_URL: 'https://minglora.example.com/api/ai-network/email/webhook'
 };
 
 test('AI email address and domain validation normalizes safe values', () => {
@@ -50,19 +51,32 @@ test('Resend domain inspection requires verified sending and receiving capabilit
   const status = await inspectResendDomain({
     env,
     fetchImpl: async (url, options) => {
-      assert.equal(url, 'https://api.resend.com/domains?limit=100');
       assert.equal(options.headers.Authorization, 'Bearer re_test_key_not_real');
+      if (url === 'https://api.resend.com/domains?limit=100') {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'domain_1', name: 'ai.example.com', status: 'verified',
+            capabilities: { sending: 'enabled', receiving: 'enabled' }
+          }]
+        }), { status: 200 });
+      }
+      assert.equal(url, 'https://api.resend.com/webhooks?limit=100');
       return new Response(JSON.stringify({
         data: [{
-          id: 'domain_1', name: 'ai.example.com', status: 'verified',
-          capabilities: { sending: 'enabled', receiving: 'enabled' }
-        }]
+          id: 'webhook_1',
+          endpoint: env.MINGLORA_AI_EMAIL_WEBHOOK_URL,
+          events: ['email.received'],
+          status: 'enabled'
+        }],
+        has_more: false
       }), { status: 200 });
     }
   });
   assert.equal(status.ready, true);
   assert.equal(status.sendingEnabled, true);
   assert.equal(status.receivingEnabled, true);
+  assert.equal(status.webhookActive, true);
+  assert.equal(status.webhookId, 'webhook_1');
   const unavailable = await inspectResendDomain({
     env,
     fetchImpl: async () => new Response(JSON.stringify({ data: [{
@@ -72,6 +86,7 @@ test('Resend domain inspection requires verified sending and receiving capabilit
   });
   assert.equal(unavailable.ready, false);
   assert.equal(unavailable.verified, false);
+  assert.equal(unavailable.webhookActive, false);
 });
 
 test('Resend outbound delivery validates sender domain and uses provider idempotency', async () => {
