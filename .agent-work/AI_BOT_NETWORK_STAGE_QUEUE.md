@@ -573,3 +573,12 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Remaining blockers: no live provider credential or generation acceptance; signed-in owner/MFA end-to-end acceptance; separate AI memory retrieval/injection remains deliberately unimplemented (memory remains off by default and owner-managed); conversation/message/request/usage records remain on the single-process JSONB runtime-state compatibility adapter and are not approved for multi-instance/public scale. No migration, production data, Auth user, provider secret, worker or deployment was changed.
 - Verification: original PR focused AI checks/browser acceptance/layout visual QA passed; old-branch full-suite result is 1,268/1,272. This current-main continuation requires fresh full CI and browser acceptance before merge. Keep runtime paused (global_paused=true, execution_enabled=false, max_concurrent_workers=0).
 - Next action: verify fresh CI/browser acceptance, then address normalized transactional conversation storage and consent-gated memory retrieval as separate reviewed slices. Do not deploy or activate workers.
+
+
+## Relational AI bot conversation persistence checkpoint — 2026-11-17
+
+- PR #466 is merged to main as d06bb06611d28e052104288968ba49bd766a803c. Verified full repository CI 1,288/1,288, AI Network tests 150/150, AI Network browser acceptance and nine-layout visual QA; post-merge CI also succeeded.
+- Live ai_network schema has 54 tables and all 54 have RLS. It has no conversation/message/request/usage/chat-budget tables. No production schema or data was changed for this continuation.
+- A source-only continuation adds normalized conversation/message/request/usage/daily chat-budget tables and a service-role-only command gateway. The migration is not applied and the Edge Function is not deployed.
+- Keep global_paused=true, execution_enabled=false, max_concurrent_workers=0. Chat budget reservations serialize concurrent bot-chat attempts; Creator Studio token use remains a runtime-state baseline, so cross-feature atomic budget enforcement is still a separate task.
+- Do not claim distributed/10-billion capacity. No production migration, Edge deployment, owner account creation, provider credential, worker or application deployment occurred.
