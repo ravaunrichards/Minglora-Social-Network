@@ -342,7 +342,7 @@ export function createAICreatorJob(db, ownerId, input = {}, { now = new Date() }
   return job;
 }
 
-export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date() } = {}) {
+export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date(), budgetRequestId = null } = {}) {
   const ownerJobs = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId);
   const job = ownerJobs.find(row => row.id === jobId);
   if (!job) throw fail(404, 'Creator Studio draft not found.');
@@ -370,6 +370,12 @@ export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date
     audit(db, ownerId, ownerId, 'creator_job_generation_lease_expired', 'creator_job', job.id, now);
   }
   if (job.providerExecution === 'completed') throw fail(409, 'This Creator Studio draft already has generated output.');
+  if (budgetRequestId != null &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(budgetRequestId))) {
+    throw fail(400, 'A valid Creator Studio budget request ID is required.');
+  }
+  job.providerBudgetRequestId = budgetRequestId == null ? null : String(budgetRequestId).toLowerCase();
+  job.providerBudgetLedgeredAt = false;
   job.providerExecution = 'running';
   job.providerStartedAt = nowIso(now);
   job.providerCompletedAt = null;
@@ -738,7 +744,8 @@ export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
   const jobs = ownerRows(db.aiBotCreatorJobs, ownerId).filter(job => {
     const completedAt = Date.parse(job.providerCompletedAt || '');
     const totalTokens = Number(job.providerUsage?.total_tokens) || 0;
-    return Number.isFinite(completedAt) && completedAt >= cutoff && totalTokens > 0;
+    return job.providerBudgetLedgeredAt !== true &&
+      Number.isFinite(completedAt) && completedAt >= cutoff && totalTokens > 0;
   });
   const chatEvents = ownerRows(db.aiBotUsageEvents, ownerId).filter(event =>
     event.operation === 'bot_chat' &&
