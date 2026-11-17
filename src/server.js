@@ -52,6 +52,8 @@ import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISett
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { verifyOpenAIModelExecution } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { resolveAssignedProviderRoute, canUseProviderFallback } from '../backend/modules/ai-network/provider-execution.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2122,6 +2124,32 @@ async function route(req, res) {
         }
       };
 
+      const runAIProviderExecutionCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator with the required active session can verify AI provider execution.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI provider execution verification requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_provider_execution_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI provider execution records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI provider execution command|function .*minglora_ai_provider_execution_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The additive AI provider execution migration and existing runtime gateway must be deployed before model verification is available. No provider assignment was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const runAIHRCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2437,6 +2465,95 @@ async function route(req, res) {
         }
         const health = await probeOpenAIProvider();
         return json(res, 200, health);
+      }
+
+      if (method === 'POST' && parts.length === 3 && parts[0] === 'provider-assignments' && parts[2] === 'verify') {
+        const assignmentId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assignmentId)) {
+          throw Object.assign(new Error('A valid provider assignment ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 1000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length) {
+          throw Object.assign(new Error('Provider model verification accepts no browser-supplied provider, model or credential fields.'), { status: 400 });
+        }
+        const assignmentRows = await runAIProviderCommand('list_provider_assignments');
+        const row = (Array.isArray(assignmentRows) ? assignmentRows : []).find(item =>
+          String(item?.assignment?.assignment_id || '') === assignmentId
+        );
+        if (!row) throw Object.assign(new Error('Provider assignment not found for this owner.'), { status: 404 });
+        const assignment = row.assignment || {};
+        const modelRows = await runAIProviderCommand('list_provider_models');
+        const model = (Array.isArray(modelRows) ? modelRows : []).find(item =>
+          String(item?.model_id || '') === String(assignment.model_id || '')
+        );
+        const account = row.provider_account || {};
+        if (!model || !model.is_active || model.text_capability !== true ||
+            !Array.isArray(assignment.assigned_capabilities) || !assignment.assigned_capabilities.includes('text')) {
+          throw Object.assign(new Error('This assignment does not reference an active text-capable model with text permission.'), { status: 409 });
+        }
+        if (String(model.provider_name || '').toLowerCase() !== 'openai' ||
+            String(account.provider_name || '').toLowerCase() !== 'openai' ||
+            String(account.provider_name || '').toLowerCase() !== String(model.provider_name || '').toLowerCase()) {
+          throw Object.assign(new Error('The first verified inference adapter supports OpenAI text assignments only. This assignment was not changed.'), { status: 501 });
+        }
+
+        let verified;
+        let probe;
+        let failure = null;
+        try {
+          probe = await probeOpenAIProvider({ model: model.model_identifier });
+          if (!probe.connected) {
+            failure = Object.assign(new Error(probe.note || 'OpenAI model access could not be verified.'), {
+              code: probe.status || 'provider_error', status: 503, safeForClient: true
+            });
+            throw failure;
+          }
+          verified = await verifyOpenAIModelExecution({ model: model.model_identifier, env: process.env });
+        } catch (error) {
+          failure = error;
+        }
+
+        if (failure) {
+          const probeStatus = String(failure.code || probe?.status || 'provider_error').toLowerCase().replace(/[^a-z0-9_.-]/g, '_').slice(0, 80);
+          const result = await runAIProviderExecutionCommand('verify_assignment', {
+            assignment_id: assignmentId,
+            provider_name: String(model.provider_name),
+            model_identifier: String(model.model_identifier),
+            health_status: 'unavailable',
+            probe_status: probeStatus,
+            connected: false,
+            http_status: Number(probe?.httpStatus) || null,
+            usage: failure.usage || {},
+            note: 'Provider execution verification failed. Check the private provider configuration and retry.'
+          });
+          return json(res, Number(failure.status) || 503, {
+            error: failure.safeForClient ? String(failure.message || 'Provider execution verification failed.') : 'Provider execution verification failed. No assignment was activated.',
+            status: result?.assignment_status || 'pending',
+            provider: 'openai',
+            model: String(model.model_identifier),
+            probeStatus
+          });
+        }
+
+        const result = await runAIProviderExecutionCommand('verify_assignment', {
+          assignment_id: assignmentId,
+          provider_name: String(model.provider_name),
+          model_identifier: String(model.model_identifier),
+          health_status: 'healthy',
+          probe_status: verified.probeStatus,
+          connected: true,
+          http_status: Number(probe?.httpStatus) || 200,
+          usage: verified.usage,
+          note: 'Moderated model inference smoke test succeeded; tools and response storage were disabled.'
+        });
+        return json(res, 200, {
+          verified: true,
+          provider: 'openai',
+          model: String(model.model_identifier),
+          assignment: result,
+          usage: verified.usage,
+          note: 'This AI identity now has a verified OpenAI text-model assignment. Autonomous workers remain disabled.'
+        });
       }
 
       if (method === 'GET' && sub === 'provider-accounts') {
@@ -2798,6 +2915,26 @@ async function route(req, res) {
           if (String(verifiedIdentity?.identity?.identity_id || '') !== chatBase.bot.identityId) {
             throw Object.assign(new Error('The bot’s relational Minglora AI identity could not be verified.'), { status: 409 });
           }
+          const providerExecutionRoute = relationalPersistence
+            ? resolveAssignedProviderRoute(
+                chatBase.bot.identityId,
+                await runAIProviderCommand('list_provider_assignments'),
+                await runAIProviderCommand('list_provider_models')
+              )
+            : null;
+          if (relationalPersistence && !providerExecutionRoute?.ok) {
+            const reason = providerExecutionRoute?.reason || 'active_assignment_missing';
+            const messages = {
+              active_assignment_missing: 'Assign and verify a provider/model for this AI identity before starting model execution.',
+              model_not_active: 'The AI identity assignment references a model that is not active in the provider catalogue.',
+              provider_account_mismatch: 'The provider account does not match the assigned model.',
+              provider_not_healthy: 'The assigned provider account has not passed a recent execution verification.',
+              text_capability_not_assigned: 'Text generation is not enabled for this AI identity assignment.',
+              provider_adapter_not_available: 'The selected provider adapter is not implemented for live model execution.',
+              model_identifier_invalid: 'The selected model identifier is invalid.'
+            };
+            throw Object.assign(new Error(messages[reason] || 'A verified provider/model assignment is required.'), { status: 503 });
+          }
           const chatState = relationalPersistence
             ? await loadRelationalAIBotChatState(chatBase, input.conversationId || null)
             : chatBase;
@@ -2853,17 +2990,41 @@ async function route(req, res) {
 
           try {
             const currentProviderStatus = getAIProviderStatus();
-            if (!currentProviderStatus.botChatAvailable) {
+            if (!relationalPersistence && !currentProviderStatus.botChatAvailable) {
               throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'), { status: 503 });
             }
-            const providerHealth = await probeOpenAIProvider();
-            if (!providerHealth.connected) {
-              throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+            const modelTargets = relationalPersistence
+              ? [providerExecutionRoute.primary, providerExecutionRoute.fallback].filter(Boolean)
+              : [{ provider: 'openai', model: null }];
+            let generated = null;
+            let lastProviderError = null;
+            for (let targetIndex = 0; targetIndex < modelTargets.length; targetIndex += 1) {
+              const target = modelTargets[targetIndex];
+              const providerHealth = await probeOpenAIProvider({ model: target.model || undefined });
+              if (!providerHealth.connected) {
+                lastProviderError = Object.assign(
+                  new Error('OpenAI model access check failed (' + providerHealth.status + '): ' + providerHealth.note),
+                  { code: providerHealth.status || 'provider_error', status: 503, safeForClient: true }
+                );
+                if (targetIndex + 1 < modelTargets.length && canUseProviderFallback(lastProviderError)) continue;
+                throw lastProviderError;
+              }
+              try {
+                generated = await generateOpenAIBotReply({
+                  bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
+                  history, memoryContext, env: process.env, maxOutputTokens: allowedOutputTokens,
+                  model: target.model || null
+                });
+                break;
+              } catch (error) {
+                lastProviderError = error;
+                if (targetIndex + 1 < modelTargets.length && canUseProviderFallback(error)) continue;
+                throw error;
+              }
             }
-            const generated = await generateOpenAIBotReply({
-              bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
-              history, memoryContext, env: process.env, maxOutputTokens: allowedOutputTokens
-            });
+            if (!generated) {
+              throw lastProviderError || Object.assign(new Error('The assigned provider/model did not generate a reply.'), { status: 503 });
+            }
             let saved;
             if (relationalPersistence) {
               const completed = await runAIBotChatCommand('complete_request', {
