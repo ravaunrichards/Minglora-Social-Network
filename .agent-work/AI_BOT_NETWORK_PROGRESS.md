@@ -457,3 +457,14 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - The same test verified completed-request retry reuse, 280 synthetic measured tokens with zero reservations remaining, over-budget request rejection, expired-lease recovery to attempt 2, owner isolation and non-billable failure cleanup. All synthetic identity/profile/message/request/budget/usage/audit rows were rolled back.
 - Production chat tables remain empty; no AI identity, human Auth user, provider credential or external inference was created. The existing Edge Function remains ACTIVE v132; workers remain paused, execution disabled and max worker count zero.
 - Render Node API deployment, designated owner MFA/reviewer desktop/mobile acceptance, real provider health/inference, shared Creator Studio budget integration and scale/load benchmarks remain outstanding. No 10-billion or multi-region capacity is claimed.
+
+ 
+## Deployed AI bot chat RPC rollback acceptance — 2026-11-17
+
+- PR #482 was merged to `main` as `a204bb1631e2980bec599c44c630a523dc4531d6`; post-merge full CI, Supabase Auth provider acceptance and For You navigation all passed. This checkpoint branch is based on the then-current `main` head `d86357cbea8bfc81aeb7e9b5f6de6a305a48dcdd`.
+- Read back deployed `minglora-runtime-state`: ACTIVE v132, `verify_jwt=false`, original hashed `x-minglora-api-key` guard preserved, and the `ai_bot_chat_command` gateway action/handler present.
+- Live SQL catalogs confirm all 60 `ai_network` tables have RLS; the private schema is not usable by `anon` or `authenticated`; chat-table SELECT and RPC EXECUTE are service-role-only; all 19 chat-table foreign keys have valid covering indexes.
+- Executed the deployed chat RPC under `SET LOCAL ROLE service_role` in an explicit rollback-only transaction. Sequential assertions passed for reservation, moderated completion, 60-token settlement, idempotent duplicate reuse, expired-lease retry (attempt 2), failure release, over-budget rejection (SQLSTATE `54000`), and cross-owner denial.
+- Verified post-rollback residue is zero: AI identities, chat requests, conversations, messages, daily budget rows, token reservations and usage events all remain at 0. No human Auth account or persistent AI identity was created.
+- Not yet covered: truly concurrent independent sessions, billable provider-failure recording, signed-in owner/MFA desktop/mobile HTTP acceptance, real provider inference, and Render Node API release. Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- Next engineering gate: migrate Creator Studio to the same atomic owner/day token-budget ledger. Deployment remains blocked pending confirmation of the correct existing Minglora Render workspace/service; do not create a new service or deploy to an unconfirmed workspace.
