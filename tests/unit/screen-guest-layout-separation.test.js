@@ -13,8 +13,6 @@ const meetwave=read('public/meetwave.js');
 const meetwaveCss=read('public/meetwave.css');
 
 const nine=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-const seven=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
-const two=['roundtable-1','roundtable-2'];
 
 test('LIVE uses one exact nine-layout guest registry and one host layout endpoint',()=>{
   const registry=app.match(/const LIVE_GUEST_LAYOUT_OPTIONS=Object\.freeze\(\[([\s\S]*?)\]\);/);
@@ -28,12 +26,11 @@ test('LIVE uses one exact nine-layout guest registry and one host layout endpoin
   assert.match(app,/function applyLiveGuestLayout\(value\)\{applyLiveScreenLayout\(value\);\}/);
 });
 
-test('All nine reference layouts define their own grid proportions, positions and seat sizing',()=>{
+test('All nine LIVE guest layouts define their own grid proportions and panel placements',()=>{
   const start=guestCss.indexOf('/* FINAL NINE GUEST LAYOUTS');
   const contract=guestCss.slice(start);
   assert.ok(start>=0);
   for(const layout of nine)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' layout is missing');
-  assert.match(contract,/full-screen[\s\S]*?\.live-host-only-layout/);
   assert.match(contract,/full-screen[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(contract,/@media\(max-width:760px\)[\s\S]*?full-screen[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(contract,/fluid-panel[\s\S]*?bottom:calc/);
@@ -46,30 +43,56 @@ test('All nine reference layouts define their own grid proportions, positions an
   assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
   assert.doesNotMatch(contract,/data-live-guest-layout/);
 });
-test('MeetWave screen and guest registries are disjoint and exact',()=>{
-  const screen=meetwave.match(/const MEETING_SCREEN_LAYOUTS = \{([^}]+)\}/);
-  const guest=meetwave.match(/const MEETING_GUEST_LAYOUTS = \{([^}]+)\}/);
-  assert.ok(screen&&guest);
-  assert.deepEqual([...screen[1].matchAll(/(?:'([^']+)'|(spotlight))\s*:/g)].map(match=>match[1]||match[2]),seven);
-  assert.deepEqual([...guest[1].matchAll(/'([^']+)'\s*:/g)].map(match=>match[1]),two);
+
+test('MeetWave exposes exactly one nine-layout selector; both Roundtables are complete guest layouts',()=>{
+  const registry=meetwave.match(/const MEETING_SCREEN_LAYOUTS = Object\.freeze\(\{([^}]+)\}\);/);
+  assert.ok(registry);
+  const ids=[...registry[1].matchAll(/(?:'([^']+)'|(spotlight))\s*:/g)].map(match=>match[1]||match[2]);
+  assert.deepEqual(ids,nine);
+  for(const layout of nine){
+    assert.ok(meetwave.includes('data-mw-layout="'+layout+'"'),layout+' is selectable');
+    assert.ok(meetwaveCss.includes('#mw-grid[data-layout="'+layout+'"]'),layout+' has its own complete grid selector');
+  }
+  assert.doesNotMatch(meetwave,/activeGuestLayout|MEETING_GUEST_LAYOUTS|applyMeetingGuestLayout|data-mw-guest-layout/);
+  assert.match(meetwave,/nine individual layouts/);
+  assert.equal((meetwave.match(/data-mw-layout="roundtable-[12]"/g)||[]).length,2);
+});
+
+test('MeetWave nine-layout CSS uses one full-stage grid and nine independent panel arrangements',()=>{
+  const start=meetwaveCss.lastIndexOf('/* NINE COMPLETE GUEST LAYOUTS');
+  const contract=meetwaveCss.slice(start);
+  assert.ok(start>=0,'complete nine-layout CSS contract is present');
+  for(const layout of nine)assert.ok(contract.includes('data-layout="'+layout+'"'),layout+' arrangement missing');
+  assert.ok(contract.includes('#mw-screen-stage[data-screen-layout] #mw-grid.live-guest-layout'));
+  assert.ok(contract.includes('position:absolute!important;inset:0!important'));
+  assert.ok(contract.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(contract.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,1.72fr) minmax(0,.86fr)!important'));
+  assert.ok(contract.includes('grid-column:1/-1!important'));
+  assert.ok(contract.includes('grid-column:2/4!important'));
+  assert.ok(contract.includes('data-seat-index="8"'));
+  assert.doesNotMatch(contract,/data-guest-layout=/);
   assert.match(meetwave,/MEETWAVE_GUEST_LIMIT = 8/);
   assert.match(meetwave,/MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT \+ 1/);
 });
 
-test('MeetWave screen CSS owns grid templates while Roundtable only positions the host',()=>{
-  const contract=meetwaveCss.slice(meetwaveCss.indexOf('/* FINAL SEVEN-PLUS-TWO CONTRACT'));
-  for(const layout of seven)assert.ok(contract.includes('data-screen-layout="'+layout+'"'),layout+' screen template missing');
-  const guest=contract.slice(contract.indexOf('/* Roundtable modes change host-seat placement only'));
-  const end=guest.indexOf('/* END FINAL MEETWAVE LAYOUT INDEPENDENCE CONTRACT. */');
-  assert.ok(end>0);
-  const guestRules=guest.slice(0,end);
-  for(const layout of two)assert.ok(guestRules.includes('data-guest-layout="'+layout+'"'));
-  assert.ok(guestRules.includes('#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]'));
-  assert.ok(guestRules.includes('#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]'));
-  assert.doesNotMatch(guestRules,/grid-template-(columns|rows)/);
+test('Both reference sets are served: nine original JPGs and eight retained crops, with no Full Screen crop',()=>{
+  const originals=['Full Screen','Fluid Panel','Fluid Grid','Fixed Grid','Fixed Panel','Side by Side','Spotlight','Roundtable 1','Roundtable 2'];
+  const crops=['Fluid Panel','Fluid Grid','Fixed Grid','Fixed Panel','Side by Side','Spotlight','Roundtable 1','Roundtable 2'];
+  for(const name of originals){
+    const slug=name.toLowerCase().replaceAll(' ','-');
+    assert.ok(server.includes("'/assets/live-guest-layouts/"+slug+".jpg'"),name+' original JPG route missing');
+    assert.ok(server.includes("'/assets/live-guest-layouts/"+slug+".png'"),name+' preview route missing');
+  }
+  for(const name of crops)assert.ok(server.includes("crop: '"+name+".png', original: '"+name+".jpg'"),name+' crop/original pair missing');
+  assert.ok(server.includes("full-screen.png': { crop: null, original: 'Full Screen.jpg' }"));
+  assert.ok(server.includes("sendGuestReference(originalFile,'image/jpeg')"));
+  assert.ok(server.includes("'assets','Guests Layout',original"));
+  assert.ok(server.includes("'assets','Crop References','Guests Layout',crop"));
 });
 
-test('No Roundtable identifier is present in the Profile Style Library screen-layout registry',()=>{
+test('Roundtable layouts remain outside the Profile Style Library',()=>{
   const start=app.indexOf('const PROFILE_SCREEN_LAYOUT_OPTIONS = Object.freeze([');
   const end=app.indexOf('const PROFILE_SCREEN_LAYOUT_IDS',start);
   assert.ok(start>=0&&end>start);
