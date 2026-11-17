@@ -41,7 +41,8 @@ test('chat RPC enforces service role, owner scope, idempotency and daily token r
 
 test('private Edge gateway has a narrow bot-chat command allowlist and rejects secrets', () => {
   assert.match(runtime, /"ai_bot_chat_command"/);
-  assert.match(runtime, /const supported = \["get_conversation", "get_usage", "begin_request", "complete_request", "fail_request"\]/);
+  assert.match(runtime, /const creatorBudgetActions = \["creator_begin_request", "creator_complete_request", "creator_fail_request"\]/);
+  assert.match(runtime, /const supported = \["get_conversation", "get_usage", "begin_request", "complete_request", "fail_request", \.\.\.creatorBudgetActions\]/);
   assert.match(runtime, /admin\.rpc\("minglora_ai_bot_chat_command"/);
   assert.match(runtime, /Credentials and secrets cannot be stored in AI bot conversations/);
 });
