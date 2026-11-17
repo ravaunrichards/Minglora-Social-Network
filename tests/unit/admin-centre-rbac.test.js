@@ -41,7 +41,7 @@ testRunner('RBAC audit is protected and records previous and new states', () => 
   assert.match(migration, /ALTER TABLE public\.minglora_admin_rbac_audit ENABLE ROW LEVEL SECURITY/);
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.minglora_admin_rbac_command/);
   assert.match(migration, /previous_state,new_state,reason/);
-  assert.match(migration, /BEFORE UPDATE OR DELETE ON public\\.minglora_admin_rbac_audit/);
+  assert.match(migration, /BEFORE UPDATE OR DELETE ON public\.minglora_admin_rbac_audit/);
   assert.match(migration, /Administrator permission audit records are append-only/);
 });
 
