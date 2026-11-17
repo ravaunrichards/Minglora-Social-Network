@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -123,7 +123,7 @@
 
   function renderAIIdentityRows(registry) {
     const identities = list(registry?.identities);
-    if (!identities.length) return empty('No AI identities are registered in the relational database yet.');
+    if (!identities.length) return empty(state.identityRegistrySearch ? 'No AI identity records match this search.' : 'No AI identities are registered in the relational database yet.');
     const bulkToolbar = '<div class="ai-network-inline-form ai-network-identity-bulk" role="group" aria-label="Bulk AI identity lifecycle management">' +
       '<label><span>Bulk lifecycle status</span><select data-ai-bulk-status>' +
       options([
@@ -324,6 +324,19 @@
     const warning = state.identityError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.identityError) + '</div>'
       : '<p class="ai-network-note">Each record is a distinct AI identity. No human login account or email inbox is created.</p>';
+    const pageSize = Math.max(1, Number(registry?.limit || 100));
+    const pageOffset = Math.max(0, Number(registry?.offset ?? state.identityRegistryOffset ?? 0));
+    const totalIdentities = Math.max(0, Number(registry?.total || 0));
+    const firstIdentity = totalIdentities ? pageOffset + 1 : 0;
+    const lastIdentity = Math.min(pageOffset + pageSize, totalIdentities);
+    const searchForm = '<form class="ai-network-inline-form ai-network-identity-search" data-ai-form="identity-search">' +
+      '<label><span>Search your AI identities</span><input type="search" name="search" maxlength="120" value="' + esc(state.identityRegistrySearch) + '" placeholder="Name, display name or username"></label>' +
+      '<button type="submit" class="secondary">Search</button>' +
+      '<button type="button" class="secondary" data-ai-action="identity-search-clear"' + (!state.identityRegistrySearch ? ' disabled' : '') + '>Clear</button></form>';
+    const pagination = '<div class="ai-network-inline-form ai-network-identity-pagination" role="group" aria-label="AI identity registry pages">' +
+      '<span>Showing ' + number(firstIdentity) + '–' + number(lastIdentity) + ' of ' + number(totalIdentities) + ' AI identities</span>' +
+      '<button type="button" class="secondary" data-ai-action="identity-page" data-offset="' + Math.max(0, pageOffset - pageSize) + '"' + (pageOffset <= 0 ? ' disabled' : '') + '>Previous</button>' +
+      '<button type="button" class="secondary" data-ai-action="identity-page" data-offset="' + (pageOffset + pageSize) + '"' + (pageOffset + pageSize >= totalIdentities ? ' disabled' : '') + '>Next</button></div>';
     const form = '<form class="ai-network-form" data-ai-form="identity">' +
       '<div class="ai-network-form-title">Register an AI identity</div>' +
       '<div class="ai-network-form-grid"><label>First name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
@@ -383,17 +396,23 @@
       '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
       warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
       (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
-      '</strong></div></div>' + renderAIIdentityRows(registry) + form + bulkForm + bulkProfileForm, 'ai-network-span-2');
+      '</strong></div></div>' + searchForm + pagination + renderAIIdentityRows(registry) + pagination + form + bulkForm + bulkProfileForm, 'ai-network-span-2');
   }
 
   async function loadAIIdentityRegistry() {
     state.identityError = '';
     try {
+      const identityQuery = new URLSearchParams({
+        limit: '100',
+        offset: String(Math.max(0, Number(state.identityRegistryOffset) || 0))
+      });
+      if (state.identityRegistrySearch) identityQuery.set('search', state.identityRegistrySearch.slice(0, 120));
       const [registry, categoryResult] = await Promise.all([
-        request('/identities?limit=100'),
+        request('/identities?' + identityQuery.toString()),
         request('/categories')
       ]);
       state.identityRegistry = registry;
+      state.identityRegistryOffset = Math.max(0, Number(registry?.offset || 0));
       state.identityCategories = list(categoryResult.categories);
       try {
         const adminCategoryResult = await request('/categories/admin');
@@ -1603,7 +1622,14 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'bot-chat') {
+    if (kind === 'identity-search') {
+      state.identityRegistrySearch = value('search').slice(0, 120);
+      state.identityRegistryOffset = 0;
+      await loadAIIdentityRegistry();
+      setNotice(state.identityRegistrySearch ? 'AI identity registry search applied.' : 'AI identity registry search cleared.');
+      paintSnapshot();
+      return;
+    } else if (kind === 'bot-chat') {
       const botId = form.dataset.botId || '';
       if (!botId) throw new Error('Choose a valid linked AI bot before sending a message.');
       const message = value('message');
@@ -2340,8 +2366,17 @@
     const action = button.dataset.aiAction, id = button.dataset.id;
     state.busy = true;
     try {
-      if (action === 'reload') return await load();
-      if (action === 'delete-memory') {
+      if (action === 'identity-page') {
+        const offset = Number(button.dataset.offset);
+        if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Choose a valid AI identity registry page.');
+        state.identityRegistryOffset = offset;
+      }
+      else if (action === 'identity-search-clear') {
+        state.identityRegistrySearch = '';
+        state.identityRegistryOffset = 0;
+      }
+      else if (action === 'reload') return await load();
+      else if (action === 'delete-memory') {
         const identityId = button.dataset.identityId || state.memoryIdentityId;
         if (!identityId || !id) throw new Error('Choose a valid AI memory entry to delete.');
         await request('/identities/' + encodeURIComponent(identityId) + '/memory/' + encodeURIComponent(id), { method:'DELETE' });
@@ -2427,7 +2462,9 @@
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
       await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' :
-        action === 'identity-status' ? 'AI identity lifecycle status updated and audited.' : 'AI Network updated.');
+        action === 'identity-status' ? 'AI identity lifecycle status updated and audited.' :
+        action === 'identity-page' ? 'AI identity registry page changed.' :
+        action === 'identity-search-clear' ? 'AI identity registry search cleared.' : 'AI Network updated.');
     } catch (error) {
       if (action === 'creator-generate') {
         try {
