@@ -125,13 +125,13 @@ test('Guest camera can be disabled by the host and voice rings can be switched o
 
 test('LIVE Follow becomes the orange Heart Me action after following the host',()=>{
   assert.match(app,/id='live-follow-host' class='live-follow-button/);
-  assert.match(app,/follow\\.classList\\.toggle\\('is-heart-me',following\\)/);
-  assert.match(app,/follow\\.textContent=following\\?'♥':'Follow'/);
+  assert.match(app,/follow\.classList\.toggle\('is-heart-me',following\)/);
+  assert.match(app,/follow\.textContent=following\?'♥':'Follow'/);
   assert.match(app,/Send Heart Me gift and join the host Fan Club for 1 Coin/);
-  assert.match(app,/async function joinLiveHostFanClub\\(session,triggerButton\\)/);
-  assert.match(app,/if\\(following\\)\\{await joinLiveHostFanClub\\(session,button\\);return;\\}/);
-  assert.match(app,/fan-club\\/join/);
+  assert.match(app,/async function joinLiveHostFanClub\(session,triggerButton\)/);
+  assert.match(app,/if\(following\)\{await joinLiveHostFanClub\(session,button\);return;\}/);
+  assert.match(app,/fan-club\/join/);
   assert.match(app,/id='live-fan-club-join-panel'/);
-  assert.match(liveGuardrails,/live-follow-button\\.is-heart-me[\\s\\S]*?color:#ff8c00/);
+  assert.match(liveGuardrails,/live-follow-button\.is-heart-me[\s\S]*?color:#ff8c00/);
   assert.doesNotMatch(app,/id='live-fan-club-join' class='live-fan-club-join'/);
 });
