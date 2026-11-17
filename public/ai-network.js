@@ -372,10 +372,15 @@
       '<label>Town<input name="town" maxlength="120"></label>' +
       '<label>Time zone<input name="timeZone" maxlength="80" value="UTC" placeholder="America/Jamaica"></label>' +
       '<label>Profession / occupation<input name="profession" maxlength="180"></label>' +
+      '<label>Profile visibility<select name="profileVisibility">' + options([{value:'private',label:'Private until approved'},{value:'followers',label:'Followers only'},{value:'public',label:'Public'},{value:'hidden',label:'Hidden from discovery'}], 'private') + '</select></label>' +
+      '<label>Qualifications (comma-separated)<input name="qualifications" maxlength="2000" placeholder="Certificates, degrees, licences"></label>' +
       '<label>Interests (comma-separated)<input name="interests" maxlength="1000"></label>' +
       '<label>Hobbies (comma-separated)<input name="hobbies" maxlength="1000"></label>' +
       '<label>Skills (comma-separated)<input name="skills" maxlength="1000"></label>' +
       '<label>Languages (comma-separated tags)<input name="languages" maxlength="240" value="en" placeholder="en, ht, es"></label></div>' +
+      '<label>Education history (JSON array)<textarea name="education" maxlength="12000" rows="3" spellcheck="false" placeholder=\'[{"institution":"Example University","qualification":"BSc Computer Science","year":2024}]\'>[]</textarea></label>' +
+      '<div class="ai-network-form-grid"><label>Personality configuration (JSON object)<textarea name="personality" maxlength="8000" rows="3" spellcheck="false" placeholder=\'{"traits":["curious","warm"],"communication_style":"supportive"}\'>{}</textarea></label>' +
+      '<label>Voice preferences (JSON object)<textarea name="voicePreferences" maxlength="4000" rows="3" spellcheck="false" placeholder=\'{"voice_style":"natural","pace":"measured"}\'>{}</textarea></label></div>' +
       countryDatalist +
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
@@ -1839,6 +1844,18 @@
       if (rawCurrentCountry && !currentCountry) {
         throw new Error('Select a valid current country from the country suggestions or enter its ISO two-letter code.');
       }
+      const parseProfileJson = (field, fallback, expectedType) => {
+        let parsed;
+        try { parsed = JSON.parse(value(field) || fallback); }
+        catch { throw new Error(field + ' must contain valid JSON.'); }
+        const actualType = Array.isArray(parsed) ? 'array' : parsed && typeof parsed === 'object' ? 'object' : typeof parsed;
+        if (actualType !== expectedType) throw new Error(field + ' must be a JSON ' + expectedType + '.');
+        return parsed;
+      };
+      const education = parseProfileJson('education', '[]', 'array');
+      const personality = parseProfileJson('personality', '{}', 'object');
+      const voicePreferences = parseProfileJson('voicePreferences', '{}', 'object');
+      if (education.length > 50) throw new Error('An AI profile may contain at most 50 education entries.');
       payload.profile = {
         gender: value('gender'),
         gender_presentation: value('genderPresentation'),
@@ -1853,7 +1870,12 @@
         city: value('city'),
         town: value('town'),
         time_zone: value('timeZone') || 'UTC',
+        profile_visibility: value('profileVisibility') || 'private',
         profession: value('profession'),
+        qualifications: value('qualifications').split(',').map(item => item.trim()).filter(Boolean),
+        education,
+        personality,
+        voice_preferences: voicePreferences,
         interests: value('interests').split(',').map(item => item.trim()).filter(Boolean),
         hobbies: value('hobbies').split(',').map(item => item.trim()).filter(Boolean),
         skills: value('skills').split(',').map(item => item.trim()).filter(Boolean)
