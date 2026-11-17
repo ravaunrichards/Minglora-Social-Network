@@ -337,7 +337,7 @@ export function getLiveGifterLeaderboard(db, options = {}) {
     b.points - a.points || b.giftsSent - a.giftsSent ||
     a.username.localeCompare(b.username)
   );
-  const limit = Math.max(1, Math.min(50, Math.floor(Number(options.limit) || 10)));
+  const limit = Math.max(1, Math.min(100, Math.floor(Number(options.limit) || 10)));
   return rows.slice(0, limit).map((item, index) => {
     const position = index + 1;
     const title = position === 1 ? "TOP GIFTER" :

@@ -33,7 +33,7 @@ test('the More page provides direct access to secondary features and account too
   assert.notEqual(moreStart,-1,'More page renderer exists');
   assert.ok(moreEnd>moreStart,'More page renderer is defined before the view router');
   const hub=app.slice(moreStart,moreEnd);
-  for(const destination of ['meetwave','friends','groups','pages','saved','creator','leagues','gifts','coins']){
+  for(const destination of ['meetwave','friends','groups','pages','saved','creator','rankings','leagues','gifts','coins']){
     assert.ok(hub.includes("view:'"+destination+"'"),destination+' is directly accessible from More');
   }
   for(const action of ['profile','notifications','settings','themes']){
@@ -97,7 +97,7 @@ test('desktop left sidebar contains secondary features while primary destination
   }
   assert.ok(!sidebar.includes('>Feeds</span>'),'The duplicate For You/Feeds sidebar shortcut is removed');
   const expected=[
-    ['friends','Friends'],['creator','Creator Studio'],['messages','Messenger'],
+    ['friends','Friends'],['rankings','Rankings'],['creator','Creator Studio'],['messages','Messenger'],
     ['gifts','Gifts'],['coins','Recharge'],['groups','Groups'],
     ['pages','Pages'],['saved','Saved'],['calendar','Events'],['clock-centre','Clock Centre'],['videos','Video']
   ];
