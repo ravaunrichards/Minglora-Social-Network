@@ -76,7 +76,7 @@ The runtime controls remain global_paused=true, execution_enabled=false, and max
 
 The existing bot, schedule, run, approval, creator-job, companion-consent and community-event collections retain their current durable state adapter. Legacy aiBotTeams rows remain readable for compatibility, while new teams and membership changes use the relational ai_network.ai_teams, ai_team_memberships and ai_team_events records through the private runtime gateway. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
 
-The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 36 RLS-enabled relational tables (verified 2026-11-14) and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
+The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 62 RLS-enabled relational tables (verified 2026-11-17) and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
 
 ## Relational identity layer — deployed in the existing Minglora project
 
