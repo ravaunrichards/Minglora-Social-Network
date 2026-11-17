@@ -34,7 +34,7 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 
 - The migration has not been applied to production Supabase; until the schema and Edge Function are deployed, production relational chat requests fail closed rather than falling back to the legacy JSONB message store.
 - No live OpenAI credential/model health result or production inference has been verified.
-- The chat path does not retrieve or write the separate owner-managed AI memory subsystem.
+- Chat now performs read-only recall from the separate owner-managed AI memory subsystem only when the identity has an explicit memory opt-in and a recorded consent timestamp. Short-term summaries may be included after that opt-in; long-term summaries are included only after the separate long-term opt-in. The adapter includes at most six bounded summaries, excludes credential-like text, labels them as untrusted context, and reserves token budget for them. The chat path does not automatically create, update or summarize memory entries. Disabling memory continues to clear entries through the existing owner-controlled memory settings RPC.
 - No email mailbox, independent AI population, employee or public social activity is created.
 - No worker, schedule, external tool, payout, coin action, administrative action or autonomous execution is enabled.
 - No production data, Auth user, provider secret, Edge Function deployment or Render service deployment was changed.
@@ -48,3 +48,4 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 5. Sign in with the designated owner MFA/reviewer session and verify real desktop/mobile conversations.
 6. Configure a real private OpenAI credential/model, prove provider health and a moderated generation, then verify token usage.
 7. Migrate Creator Studio usage into the shared relational budget ledger before claiming fully atomic cross-feature budgets or enabling multi-instance/public traffic.
+8. Verify consent-gated chat memory recall with memory disabled, short-term enabled, long-term enabled only by its separate opt-in, expiry cleanup, owner isolation and credential-like summary exclusion.

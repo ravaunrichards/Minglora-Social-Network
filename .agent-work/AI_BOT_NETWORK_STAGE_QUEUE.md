@@ -582,3 +582,22 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - A source-only continuation adds normalized conversation/message/request/usage/daily chat-budget tables and a service-role-only command gateway. The migration is not applied and the Edge Function is not deployed.
 - Keep global_paused=true, execution_enabled=false, max_concurrent_workers=0. Chat budget reservations serialize concurrent bot-chat attempts; Creator Studio token use remains a runtime-state baseline, so cross-feature atomic budget enforcement is still a separate task.
 - Do not claim distributed/10-billion capacity. No production migration, Edge deployment, owner account creation, provider credential, worker or application deployment occurred.
+
+
+## Consent-gated AI memory recall — 2026-11-17 (source implementation checkpoint)
+
+- Current-main continuation branch: `feat/minglora-ai-consented-memory-recall-20261117`, based on `6bc424c5951d0a38ad95d830e09a230eefc4496b`.
+- The owner-initiated bot chat now reads the existing owner-managed memory registry for the bot's canonical AI identity. Recall is enabled only when `memory_enabled=true` and a `consented_at` timestamp is present; long-term entries are additionally excluded unless `long_term_enabled=true`.
+- The provider adapter accepts only six bounded summaries (up to 3,600 aggregate characters), excludes credential-like summaries, and labels the content as untrusted context rather than instructions. Memory entries are not written or summarized automatically by chat.
+- The reserved input-token estimate now includes the bounded memory summaries so recall does not bypass the existing daily chat token budget.
+- Added adapter tests for explicit consent, separate long-term opt-in, disabled/unconsented behavior, limits and credential-like content; added server wiring assertions and documentation.
+- This is **source-only** and awaiting CI/owner review. The relational chat migration and its runtime gateway remain unapplied/undeployed; no provider credential or live inference was used. No memory setting, memory entry, identity, Auth user or worker was created/changed. Runtime remains globally paused, execution disabled and worker count zero.
+- This does not close the signed-in owner/device acceptance gate, does not change the historic 2/19 task count, and makes no 10-billion capacity claim.
+
+
+### Verification update — consent-gated AI memory recall PR #470
+
+- Repair commit `9540a412662e564c030ce2460029c01cc863fe67` corrected the static assertion to match the documented consent language; this was the only failure in the first CI run.
+- Latest verified checks for the repaired commit: full repository CI **1,301/1,301 passed**; AI Network checks **156/156 passed**; Supabase Auth provider acceptance passed; For You navigation passed; nine-layout LIVE/MeetWave visual matrix passed (**9 layouts, 3 viewports, 54 crop comparisons, 54 occupied-seat checks, 27 empty-seat checks**).
+- GitHub workflow runs: CI #14436 success, AI Network #439 success, visual QA #804 success. Duplicate CI run #14435 also succeeded.
+- PR #470 remains **open, draft, mergeable, and unmerged** pending owner review. No production migration, Edge Function, or application deployment occurred.
