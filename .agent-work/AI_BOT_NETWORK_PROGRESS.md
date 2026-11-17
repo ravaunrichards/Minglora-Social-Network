@@ -395,3 +395,15 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Focused tests and documentation were added. CI is pending; live owner/MFA acceptance, deployed relational chat migration/gateway, live provider credential and inference remain unverified.
 - No production schema, data, memory settings, identity, human Auth account, provider credential, worker control, Edge Function or Render deployment changed. Runtime flags remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 - Historic accepted task count remains `2/19`; this code slice does not claim a weighted completion percentage or 10-billion-scale capacity.
+
+
+### Verification update — consent-gated AI memory recall PR #470
+
+- Repair commit: `9540a412662e564c030ce2460029c01cc863fe67`.
+- Full repository automated suite: **1,301 passed / 0 failed**.
+- AI Network syntax and regression suite: **156 passed / 0 failed**.
+- Supabase Auth provider acceptance: passed.
+- For You functional navigation: passed.
+- LIVE/MeetWave visual matrix: **9 layouts**, **3 viewports**, **54 crop comparisons**, **54 occupied-seat checks**, **27 MeetWave empty-seat checks**, **27 matching geometries**; passed.
+- PR #470 is draft/open/mergeable and not merged. The first CI attempt exposed one stale expected-text assertion; it was corrected and all rerun checks passed.
+- No production schema/data/memory settings, provider credentials, AI identities, Auth users, workers or deployment targets were modified. Runtime controls remain paused.

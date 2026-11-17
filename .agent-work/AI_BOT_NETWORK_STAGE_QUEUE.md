@@ -593,3 +593,11 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Added adapter tests for explicit consent, separate long-term opt-in, disabled/unconsented behavior, limits and credential-like content; added server wiring assertions and documentation.
 - This is **source-only** and awaiting CI/owner review. The relational chat migration and its runtime gateway remain unapplied/undeployed; no provider credential or live inference was used. No memory setting, memory entry, identity, Auth user or worker was created/changed. Runtime remains globally paused, execution disabled and worker count zero.
 - This does not close the signed-in owner/device acceptance gate, does not change the historic 2/19 task count, and makes no 10-billion capacity claim.
+
+
+### Verification update — consent-gated AI memory recall PR #470
+
+- Repair commit `9540a412662e564c030ce2460029c01cc863fe67` corrected the static assertion to match the documented consent language; this was the only failure in the first CI run.
+- Latest verified checks for the repaired commit: full repository CI **1,301/1,301 passed**; AI Network checks **156/156 passed**; Supabase Auth provider acceptance passed; For You navigation passed; nine-layout LIVE/MeetWave visual matrix passed (**9 layouts, 3 viewports, 54 crop comparisons, 54 occupied-seat checks, 27 empty-seat checks**).
+- GitHub workflow runs: CI #14436 success, AI Network #439 success, visual QA #804 success. Duplicate CI run #14435 also succeeded.
+- PR #470 remains **open, draft, mergeable, and unmerged** pending owner review. No production migration, Edge Function, or application deployment occurred.
