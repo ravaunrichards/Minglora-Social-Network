@@ -2576,18 +2576,18 @@
   right:clamp(42px,7vw,54px)!important;
 }
 .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){
-  bottom:clamp(22px,3vw,28px)!important;
+  bottom:clamp(30px,3vw,36px)!important;
 }
 .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
-  bottom:calc(clamp(22px,3vw,28px) + clamp(44px,15vw,120px) + 9px)!important;
+  bottom:calc(clamp(30px,3vw,36px) + clamp(44px,15vw,120px) + 9px)!important;
 }
 @media(max-width:780px){
   .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
-    bottom:calc(clamp(22px,3vw,28px) + clamp(44px,15vw,116px) + 9px)!important;
+    bottom:calc(clamp(30px,3vw,36px) + clamp(44px,15vw,116px) + 9px)!important;
   }
 }
 @media(max-width:420px){
   .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
-    bottom:calc(clamp(22px,3vw,28px) + clamp(44px,15vw,58px) + 9px)!important;
+    bottom:calc(clamp(30px,3vw,36px) + clamp(44px,15vw,58px) + 9px)!important;
   }
 }
