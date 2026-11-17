@@ -79,6 +79,7 @@ test('bulk identity creation is bounded and isolates individual failures', () =>
 });
 
 test('bulk identity failures are labelled and retained for idempotent retry', () => {
+  assert.match(ui, /let message = kind === 'memory-edit'/);
   assert.match(ui, /const submittedBatchItems = Array\.isArray\(payload\.items\) \? payload\.items\.slice\(\) : \[\]/);
   assert.match(ui, /\['identity-bulk','identity-profile-bulk','provider-assignment-bulk'\]/);
   assert.match(ui, /submittedBatchItems\[index - 1\]/);
