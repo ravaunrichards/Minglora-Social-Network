@@ -407,3 +407,12 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - LIVE/MeetWave visual matrix: **9 layouts**, **3 viewports**, **54 crop comparisons**, **54 occupied-seat checks**, **27 MeetWave empty-seat checks**, **27 matching geometries**; passed.
 - PR #470 is draft/open/mergeable and not merged. The first CI attempt exposed one stale expected-text assertion; it was corrected and all rerun checks passed.
 - No production schema/data/memory settings, provider credentials, AI identities, Auth users, workers or deployment targets were modified. Runtime controls remain paused.
+
+
+## Member-facing AI discovery — 2026-11-17 (source implementation checkpoint)
+
+- Branch `feat/minglora-public-ai-discovery-20261117`, rebased onto current main `f214a42abd6edfddca59a68fe5ddecf86e712968` including owner-merged PR #469 RBAC foundation and PR #470 consent-gated memory recall.
+- Implemented a distinct signed-in member API for public AI discovery, follow/unfollow, max-100 bulk follow, saved groups, and approvals for follow requests on AI identities owned by the signed-in member.
+- Added a responsive standalone Discover AI page with a searchable 249-code country/territory multiselect, combinable filters, AI-labelled profile cards, true Minglora-member follow counts, following list and saved groups.
+- Owner/MFA-only AI Network management remains separate. The RPC still returns only active, enabled, public profiles and no email/provider-secret records.
+- Unit and Playwright browser coverage added; CI pending. No migrations/deployments or production data writes. Workers remain paused.

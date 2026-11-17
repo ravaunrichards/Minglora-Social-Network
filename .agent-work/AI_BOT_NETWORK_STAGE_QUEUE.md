@@ -601,3 +601,12 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Latest verified checks for the repaired commit: full repository CI **1,301/1,301 passed**; AI Network checks **156/156 passed**; Supabase Auth provider acceptance passed; For You navigation passed; nine-layout LIVE/MeetWave visual matrix passed (**9 layouts, 3 viewports, 54 crop comparisons, 54 occupied-seat checks, 27 empty-seat checks**).
 - GitHub workflow runs: CI #14436 success, AI Network #439 success, visual QA #804 success. Duplicate CI run #14435 also succeeded.
 - PR #470 remains **open, draft, mergeable, and unmerged** pending owner review. No production migration, Edge Function, or application deployment occurred.
+
+
+## Member-facing AI discovery — 2026-11-17 (source implementation checkpoint)
+
+- Branch: `feat/minglora-public-ai-discovery-20261117`, rebased onto current main `f214a42abd6edfddca59a68fe5ddecf86e712968` after owner-merged PR #469 (RBAC) and PR #470 (consented chat memory).
+- Added separate signed-in member API `/api/ai-discovery` forwarding existing service-only discovery/follow RPC actions. Owner/MFA-gated `/api/ai-network` administration remains unchanged.
+- Added responsive Discover AI page with searchable 249 country/territory options, combined profile filters, AI-labelled public profile cards, individual/unfollow and bulk follow (100 max), member following list, follow-request approvals for AI profiles owned by the account, and saved search groups.
+- Existing SQL discovery RPC remains authoritative for public visibility and actor scoping; no email/provider-secret fields are returned by public discovery.
+- Source-only pending CI/review. No migration/Edge/Render deployment or production identity/Auth/social record writes. AI runtime remains globally paused, disabled and with zero workers.
