@@ -29,15 +29,24 @@ export function getAIEmailConfig(env = process.env) {
   const provider = bounded(env.MINGLORA_AI_EMAIL_PROVIDER || env.EMAIL_PROVIDER || 'none', 30).toLowerCase();
   const apiKey = clean(env.RESEND_API_KEY);
   const webhookSecret = clean(env.RESEND_WEBHOOK_SECRET);
+  const webhookUrl = bounded(env.MINGLORA_AI_EMAIL_WEBHOOK_URL, 500);
   const domain = clean(env.MINGLORA_AI_EMAIL_DOMAIN).toLowerCase();
   const validDomain = DOMAIN_PATTERN.test(domain);
+  let validWebhookUrl = false;
+  try {
+    const parsed = new URL(webhookUrl);
+    validWebhookUrl = parsed.protocol === 'https:' &&
+      parsed.pathname === '/api/ai-network/email/webhook' &&
+      !parsed.search && !parsed.hash && !parsed.username && !parsed.password;
+  } catch { /* An unset or invalid endpoint remains unconfigured. */ }
   const fromName = bounded(env.MINGLORA_AI_EMAIL_FROM_NAME || 'Minglora AI', 80);
   return {
     provider,
-    configured: provider === 'resend' && Boolean(apiKey) && validDomain && Boolean(webhookSecret),
+    configured: provider === 'resend' && Boolean(apiKey) && validDomain && Boolean(webhookSecret) && validWebhookUrl,
     sendingConfigured: provider === 'resend' && Boolean(apiKey) && validDomain,
-    receivingConfigured: provider === 'resend' && Boolean(apiKey) && validDomain && Boolean(webhookSecret),
-    webhookConfigured: Boolean(webhookSecret),
+    receivingConfigured: provider === 'resend' && Boolean(apiKey) && validDomain && Boolean(webhookSecret) && validWebhookUrl,
+    webhookConfigured: Boolean(webhookSecret) && validWebhookUrl,
+    webhookUrl: validWebhookUrl ? webhookUrl : null,
     domain: validDomain ? domain : null,
     fromName,
     // Secret values are deliberately never returned by status/reporting APIs.
@@ -91,16 +100,37 @@ export async function inspectResendDomain({ env = process.env, fetchImpl = fetch
     const verified = Boolean(match && String(match.status || '').toLowerCase() === 'verified');
     const sendingEnabled = Boolean(verified && String(match?.capabilities?.sending || '').toLowerCase() === 'enabled');
     const receivingEnabled = Boolean(verified && String(match?.capabilities?.receiving || '').toLowerCase() === 'enabled');
-    const ready = sendingEnabled && receivingEnabled && config.webhookConfigured;
+    let webhookMatch = null;
+    if (sendingEnabled && receivingEnabled && config.webhookConfigured) {
+      let after = '';
+      for (let page = 0; page < 5; page += 1) {
+        const query = new URLSearchParams({ limit: '100' });
+        if (after) query.set('after', after);
+        const webhookPage = await resendRequest('/webhooks?' + query.toString(), { apiKey: env.RESEND_API_KEY, fetchImpl });
+        const webhooks = Array.isArray(webhookPage?.data) ? webhookPage.data : [];
+        webhookMatch = webhookMatch || webhooks.find(item =>
+          clean(item?.endpoint) === config.webhookUrl &&
+          String(item?.status || '').toLowerCase() === 'enabled' &&
+          Array.isArray(item?.events) && item.events.includes('email.received')
+        ) || null;
+        if (webhookMatch || webhookPage?.has_more !== true || !webhooks.length) break;
+        after = String(webhooks[webhooks.length - 1]?.id || '');
+        if (!after) break;
+      }
+    }
+    const webhookActive = Boolean(webhookMatch);
+    const ready = sendingEnabled && receivingEnabled && config.webhookConfigured && webhookActive;
     return {
       provider: 'resend', configured: true, domain: config.domain,
       domainId: match?.id || null, verified, sendingEnabled, receivingEnabled,
-      webhookConfigured: config.webhookConfigured, ready,
+      webhookConfigured: config.webhookConfigured,
+      webhookActive, webhookId: webhookMatch?.id || null, ready,
       note: !match ? 'The configured domain is not present in the Resend account.'
         : !verified ? 'The configured domain has not been verified by Resend.'
           : !sendingEnabled || !receivingEnabled ? 'Enable both sending and receiving for this verified Resend domain.'
-            : !config.webhookConfigured ? 'Add the Resend inbound webhook signing secret before activating AI inboxes.'
-              : 'The Resend domain and inbound webhook configuration are ready.'
+            : !config.webhookConfigured ? 'Set the webhook signing secret and exact HTTPS Minglora webhook URL in the private service environment.'
+              : !webhookActive ? 'Create or enable a Resend webhook for email.received at the configured Minglora webhook URL.'
+                : 'The Resend domain and inbound webhook are verified and enabled.'
     };
   } catch (error) {
     return {
