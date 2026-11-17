@@ -47,6 +47,19 @@ test('smoke test refuses to call OpenAI without a private server credential',asy
   assert.equal(calls,0);
 });
 
+test('assigned OpenAI model never reuses the legacy key for a different selected provider',async()=>{
+  let calls=0;
+  await assert.rejects(
+    verifyOpenAIModelExecution({
+      model:'gpt-assigned-model',
+      env:{MINGLORA_AI_PROVIDER:'anthropic',MINGLORA_AI_API_KEY:'anthropic-test-key'},
+      fetchImpl:async()=>{calls+=1;}
+    }),
+    error=>error.code==='missing_credentials'
+  );
+  assert.equal(calls,0);
+});
+
 test('input moderation failure prevents the smoke-test inference call',async()=>{
   const calls=[];
   const fetchImpl=async(url,options)=>{
