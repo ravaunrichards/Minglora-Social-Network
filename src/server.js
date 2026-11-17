@@ -1538,7 +1538,7 @@ async function route(req, res) {
       const providerEmailId = String(event?.data?.email_id || '').trim();
       if (!providerEmailId) return json(res, 400, { error: 'The inbound event has no provider email ID.' });
       const domainStatus = await inspectResendDomain();
-      if (!domainStatus.receivingEnabled) {
+      if (!domainStatus.receivingEnabled || !domainStatus.webhookActive) {
         return json(res, 503, { error: 'The Minglora inbound email domain is not verified and receiving-enabled.' });
       }
       const inbound = await retrieveResendInboundEmail(providerEmailId);
