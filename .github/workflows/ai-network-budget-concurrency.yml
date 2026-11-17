@@ -15,7 +15,6 @@ on:
       - 'backend/modules/ai-network/**'
       - 'tests/unit/ai-network-finance.test.js'
       - '.github/workflows/ai-network-budget-concurrency.yml'
-      - '.github/workflows/ai-network-budget-concurrency.yml'
   push:
     branches:
       - main
