@@ -112,10 +112,19 @@ This checkpoint supersedes earlier HR talent notes in this document.
 
 ## AI finance and resource governance
 
-The finance governance migration adds private owner, organization, department and identity budget policies with append-only change history, plus an immutable usage ledger. Budget policy updates require an audit reason. The task queue checks active applicable owner/org/department/identity limits before insertion or promotion into queued/running status: daily token reservations, monthly spend reservations and concurrent-task limits. A paused matching policy blocks new work. Existing task budget fields are reservations supplied by the task request; actual usage is recorded separately and is never inferred from those reservations.
+The finance governance migration adds private owner, organization, department and identity budget policies with append-only change history, plus an immutable Usage events ledger. Budget policy updates require an audit reason. The task queue checks active applicable owner/org/department/identity limits before insertion or promotion into queued/running status: daily token reservations, monthly spend reservations and concurrent-task limits. A paused matching policy blocks new work. Existing task budget fields are reservations supplied by the task request; actual usage is recorded separately and is never inferred from those reservations.
 
 Only authenticated designated Minglora administrators can list or update budget policies and view usage reports through the Node API. The private runtime gateway accepts usage events from internal server processes; public browser routes do not expose usage insertion. Usage events require an owner-owned AI identity, verify provider assignment/task linkage, reject secret-bearing metadata, use a stable source event ID for idempotency, and cannot be updated or deleted. Cost and token totals are derived from those recorded events only.
 
 The Finance & Resource Center displays actual ledger summaries and saved policies. No usage events currently exist, so the panel must show empty measured usage rather than estimate spend, tokens or compute. CPU/GPU/memory/storage limits are governance values until live resource-metering adapters exist. Budget policies do not authorize payments, payouts, refunds or Coin actions. AI workers remain globally paused and disabled; no provider execution is claimed.
 
 The source migration, Node API and Edge gateway are merged into Minglora source only after review; until the migration and matching Edge/Node versions are deployed together, the API returns a not-ready response and must not imply production finance is operational.
+
+
+### Finance API
+
+- `GET /api/ai-network/finance/budgets` — returns budget policies and immutable audit history for the signed-in designated Minglora administrator.
+- `POST /api/ai-network/finance/budgets` — creates or updates an owner, organization, department or identity policy; an audit reason is required.
+- `GET /api/ai-network/finance/usage` — returns up to 200 measured usage events across a maximum 90-day reporting window.
+- `record_usage` is not exposed as a public Node API route. It is accepted only by the private runtime Edge gateway for internal usage producers.
+- Usage events are immutable and measured; an empty ledger is rendered as an explicit empty state, not estimated spend or token totals.
