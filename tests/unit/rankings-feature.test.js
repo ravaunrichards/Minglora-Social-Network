@@ -36,7 +36,8 @@ test("Rankings uses the confirmed LIVE gift API for four periods and up to 100 p
 test("Rankings uses supplied top-three frames and separate Top 10 and Top 20 rank treatments",()=>{
  assert.match(page,/const podium = \[2,1,3\]/);
  assert.ok(page.includes("daily-ranking-badges/place-") && page.includes(".png' alt='' loading"));
- assert.ok(page.includes("ranking-position--top-ten")&&page.includes("ranking-position--top-twenty"));
+ assert.ok(page.includes("\"top-ten\"")&&page.includes("\"top-twenty\""));
+ assert.ok(css.includes(".ranking-position--top-ten")&&css.includes(".ranking-position--top-twenty"));
  assert.ok(page.includes("TOP 10")&&page.includes("TOP 20"));
  assert.ok(page.includes("data-ranking-profile")&&page.includes("window.openProfile"));
  assert.ok(css.includes(".ranking-podium-card--1"));
