@@ -2818,16 +2818,22 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
-  // Keep host name and heart/count on the first line; LIVE NOW sits directly below the name.
+  // Match the supplied TikTok LIVE header: host avatar/name first, then LIVE NOW + the live heart total directly beneath it.
+  // Follow remains a separate viewer action; after following it becomes the existing orange Heart Me action.
   const liveStageHud=
     "<div class='live-stage-topbar "+(role==="host"?"is-host":"")+"'>"+
       "<div class='live-stage-top-left'>"+
         "<div class='live-host-profile-wrap'>"+
-          "<button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
-            "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
-            "<span class='live-host-identity-copy'><strong>"+esc(liveHostName)+"</strong><small class='live-host-live-status'><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
-          "</button>"+
-          "<div class='live-like-control live-like-count' aria-label='LIVE heart reactions'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong></div>"+
+          "<div class='live-host-identity-block'>"+
+            "<button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
+              "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
+              "<span class='live-host-identity-copy'><strong>"+esc(liveHostName)+"</strong></span>"+
+            "</button>"+
+            "<div class='live-host-meta-row'>"+
+              "<small class='live-host-live-status'><i class='live-host-live-dot'></i> LIVE NOW</small>"+
+              "<div class='live-like-control live-like-count' aria-label='LIVE heart reactions'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong></div>"+
+            "</div>"+
+          "</div>"+
           (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button"+(session.host?.following?' is-heart-me':'')+"' aria-label='"+(session.host?.following?'Send Heart Me gift and join the host Fan Club for 1 Coin':'Follow LIVE host')+"' title='"+(session.host?.following?'Send Heart Me gift and join the host Fan Club for 1 Coin':'Follow this host')+"' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'♥':'Follow')+"</button>":"")+
         "</div>"+
       "</div>"+
@@ -10649,6 +10655,7 @@ function renderMoreHub(){
       {label:'Minglora Video',detail:'Discover community videos and publish your own',view:'videos',icon:'<span class="mobile-hub-emoji" aria-hidden="true">▶</span>'}
     ]},
     {title:'Connect & community',items:[
+      {label:'Discover AI',detail:'Find public AI personalities across Minglora',action:'ai-discovery',icon:messenger3dIcon('ai','mobile-hub-icon')},
       {label:'MeetWave',detail:'Voice and video conversations',view:'meetwave',icon:messenger3dIcon('meetwave','mobile-hub-icon')},
       {label:'Friends',detail:'People you connect with',view:'friends',icon:messenger3dIcon('friends','mobile-hub-icon')},
       {label:'Groups',detail:'Communities and discussions',view:'groups',icon:messenger3dIcon('groups','mobile-hub-icon')},
@@ -10688,6 +10695,7 @@ function renderMoreHub(){
     else if(action==='themes')openPaletteSwitcher();
     else if(action==='app-lock')window.MingloraAppLock?.open?.();
     else if(action==='app-metrics')window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:'analytics'}}));
+    else if(action==='ai-discovery')window.location.assign('/ai-discovery.html');
   }));
 }
 async function renderView(){try{if(state.view==='menstrual-health'&&!isFemaleAccountForMenstrualHealth()){state.view='feed';syncMenstrualHealthNavigation();syncNavigationActive();toast('Menstrual Health is available only to female accounts.');await loadPeople();await loadFeed();await loadStories();await renderFeed();return;}if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='rankings')await window.MingloraRankings?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();else if(state.view==='ai-network')await window.MingloraAINetwork?.render();else if(state.view==='settings')await window.MingloraSettings?.render?.();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
