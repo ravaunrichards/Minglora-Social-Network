@@ -1470,9 +1470,43 @@ async function route(req, res) {
       });
     }
   }
-  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !p.startsWith('/api/internal/video-transcode/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && p !== '/api/internal/ai-worker/runtime' && !p.startsWith('/api/internal/video-transcode/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
+  // Dedicated bearer-authenticated worker endpoint. The raw credential is never sent to
+  // Supabase; only its one-way SHA-256 digest crosses the private runtime gateway.
+  if (p === '/api/internal/ai-worker/runtime') {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    if (method !== 'POST') return json(res, 405, { error: 'Method not allowed.' });
+    const authorization = String(req.headers.authorization || '');
+    const match = authorization.match(/^Bearer (mngw_[A-Za-z0-9_-]{43})$/);
+    if (!match) return json(res, 401, { error: 'Worker authentication failed.' });
+    if (!isSupabasePersistence()) return json(res, 503, { error: 'AI worker runtime requires Minglora Supabase persistence.' });
+    try {
+      const input = await body(req, 72000);
+      if (!input || typeof input !== 'object' || Array.isArray(input)) {
+        return json(res, 400, { error: 'Worker runtime request must be a JSON object.' });
+      }
+      const aiAction = String(input.action || '');
+      if (!['claim_next_task','heartbeat_task','complete_task','fail_task'].includes(aiAction)) {
+        return json(res, 400, { error: 'Unsupported AI worker runtime command.' });
+      }
+      const payload = input.payload && typeof input.payload === 'object' && !Array.isArray(input.payload)
+        ? input.payload : {};
+      const credentialSha256 = crypto.createHash('sha256').update(match[1], 'utf8').digest('hex');
+      const response = await requestSupabaseState('ai_worker_runtime_command', {
+        credentialSha256, aiAction, payload
+      });
+      if (response?.skipped) return json(res, 503, { error: 'AI worker runtime is unavailable in local-only persistence mode.' });
+      return json(res, 200, { result: response?.result ?? null });
+    } catch (error) {
+      const status = Number(error?.status) || (/worker authentication failed|credential is expired or revoked/i.test(String(error?.message || '')) ? 401 : 503);
+      return json(res, status, { error: String(error?.message || 'Minglora AI worker request failed.').slice(0, 240) });
+    }
+  }
+
     if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
     const user = sessionUser(req);
     try {
@@ -2090,6 +2124,36 @@ async function route(req, res) {
         }
       };
 
+      const runAIWorkerAdminCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req) || !isDesignatedCreatorHubAdmin(user) || !hasActiveReviewerSession(user)) {
+          throw Object.assign(new Error('Only the designated Minglora owner with an active MFA session can manage worker credentials.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI worker principals require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_worker_admin_command', {
+            actorUserId: user.id, aiAction, payload
+          });
+          if (response?.skipped) throw Object.assign(new Error('AI worker principals are unavailable in local-only persistence mode.'), { status: 503 });
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI worker administration command|function .*minglora_ai_worker_admin_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The AI worker-principal migration and runtime gateway must be deployed before this operation is available. No worker data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
+      const createAIWorkerCredential = () => {
+        const credential = 'mngw_' + crypto.randomBytes(32).toString('base64url');
+        const credentialSha256 = crypto.createHash('sha256').update(credential, 'utf8').digest('hex');
+        return { credential, credentialSha256 };
+      };
+
+      const workerCredentialExpiry = hours => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+
       const runAIProviderCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2384,6 +2448,70 @@ async function route(req, res) {
         const input = await body(req, 72000);
         const result = await runAITeamCommand('delegate_task', { ...(input || {}), delegation_grant_id: parts[1] });
         return json(res, result?.reused ? 200 : 201, result || {});
+      }
+
+      if (method === 'GET' && sub === 'workers') {
+        const result = await runAIWorkerAdminCommand('list_workers');
+        return json(res, 200, result || { workers: [] });
+      }
+      if (method === 'POST' && sub === 'workers') {
+        const input = await body(req, 12000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI worker input must be a JSON object.'), { status: 400 });
+        }
+        const workerName = String(input.workerName || '').trim();
+        const identityIds = Array.isArray(input.identityIds) ? [...new Set(input.identityIds.map(value => String(value).trim()))] : [];
+        const allowedActionClasses = Array.isArray(input.allowedActionClasses) ? [...new Set(input.allowedActionClasses.map(value => String(value)))] : ['read_only','content'];
+        const expiresInHours = Number(input.expiresInHours ?? 8);
+        const maxConcurrentTasks = Number(input.maxConcurrentTasks ?? 1);
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (workerName.length < 2 || workerName.length > 120 || identityIds.length < 1 || identityIds.length > 100 ||
+            identityIds.some(id => !uuid.test(id)) || !Number.isInteger(expiresInHours) || expiresInHours < 1 || expiresInHours > 24 ||
+            !Number.isInteger(maxConcurrentTasks) || maxConcurrentTasks < 1 || maxConcurrentTasks > 32 ||
+            !allowedActionClasses.length || allowedActionClasses.length > 2 ||
+            allowedActionClasses.some(item => !['read_only','content'].includes(item))) {
+          throw Object.assign(new Error('Enter a worker name, 1–100 valid active AI identities, read-only/content permissions, a 1–24 hour credential lifetime and a 1–32 task concurrency limit.'), { status: 400 });
+        }
+        const generated = createAIWorkerCredential();
+        const result = await runAIWorkerAdminCommand('create_worker', {
+          worker_name: workerName, identity_ids: identityIds,
+          allowed_action_classes: allowedActionClasses,
+          max_concurrent_tasks: maxConcurrentTasks,
+          credential_sha256: generated.credentialSha256,
+          credential_expires_at: workerCredentialExpiry(expiresInHours)
+        });
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('Pragma', 'no-cache');
+        return json(res, 201, { ...(result || {}), credential: generated.credential, credential_delivery: 'shown_once' });
+      }
+      if (parts[0] === 'workers' && parts.length === 3 && parts[2] === 'rotate' && method === 'POST') {
+        const workerId = parts[1];
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuid.test(workerId)) throw Object.assign(new Error('A valid worker ID is required.'), { status: 400 });
+        const input = await body(req, 4000);
+        const expiresInHours = Number(input?.expiresInHours ?? 8);
+        if (!Number.isInteger(expiresInHours) || expiresInHours < 1 || expiresInHours > 24) {
+          throw Object.assign(new Error('Worker credentials must expire within 1–24 hours.'), { status: 400 });
+        }
+        const generated = createAIWorkerCredential();
+        const result = await runAIWorkerAdminCommand('rotate_worker', {
+          worker_id: workerId,
+          credential_sha256: generated.credentialSha256,
+          credential_expires_at: workerCredentialExpiry(expiresInHours)
+        });
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('Pragma', 'no-cache');
+        return json(res, 200, { ...(result || {}), credential: generated.credential, credential_delivery: 'shown_once' });
+      }
+      if (parts[0] === 'workers' && parts.length === 3 && parts[2] === 'revoke' && method === 'POST') {
+        const workerId = parts[1];
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuid.test(workerId)) throw Object.assign(new Error('A valid worker ID is required.'), { status: 400 });
+        const input = await body(req, 4000);
+        const result = await runAIWorkerAdminCommand('revoke_worker', {
+          worker_id: workerId, reason: String(input?.reason || 'Revoked by designated administrator.')
+        });
+        return json(res, 200, result || {});
       }
 
       if (method === 'GET' && sub === 'tasks') {
