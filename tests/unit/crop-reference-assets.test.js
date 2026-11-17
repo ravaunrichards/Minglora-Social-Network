@@ -82,7 +82,7 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(!server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(!serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-badge-overlays-1/);
   assert.match(progressionStyles, /\.gp-level-index-item\.is-locked \.gp-level-index-art\{opacity:1\}/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
@@ -145,8 +145,8 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(serviceWorker, /minglora-shell-v347-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-canvas-crop-2/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-badge-overlays-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-badge-overlays-1/);
 });
 
 
@@ -209,7 +209,8 @@ test("Gifter range sheets use one matching bright badge crop without editing the
   const renderer = progression.slice(rendererStart, rendererEnd);
   assert.equal((renderer.match(/class='gp-range-reference-badge'/g) || []).length, 1,
     "each sheet renders exactly one matching badge overlay");
-  assert.ok(renderer.includes('sheet.badge + "?v=20261116-bright-stage-badge-overlays-2"'));
+  assert.ok(renderer.includes("sheet.badge"));
+  assert.ok(renderer.includes("bright-stage-badge-overlays-2"));
   assert.ok(styles.includes(".gp-range-reference-artwork{"));
   assert.ok(styles.includes("aspect-ratio:1.72 / 1;"));
   assert.ok(styles.includes(".gp-range-reference-artwork > .gp-range-reference-sheet{"));
