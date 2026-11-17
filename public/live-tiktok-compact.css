@@ -730,6 +730,11 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
   min-height:0!important;max-height:none!important;border:1px solid rgba(255,255,255,.32)!important;
   box-shadow:0 4px 14px rgba(0,0,0,.28)!important
 }
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
+  width:clamp(54px,22%,150px)!important;min-width:54px!important;max-width:150px!important;
+  height:clamp(46px,20%,120px)!important;min-height:46px!important;max-height:120px!important;
+  flex:0 0 auto!important
+}
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1%,8px)!important}
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(46px,10%,120px) + clamp(4px,1.5%,8px))!important}
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(n+5){display:none!important}
@@ -820,6 +825,10 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta strong{font-size:7px!important}
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
     width:clamp(48px,15vw,116px)!important;height:clamp(44px,10%,96px)!important
+  }
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
+    width:clamp(48px,15vw,116px)!important;min-width:48px!important;max-width:116px!important;
+    height:clamp(44px,10%,96px)!important;min-height:44px!important;max-height:96px!important;flex:0 0 auto!important
   }
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1%,8px)!important}
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(44px,10%,96px) + clamp(4px,1.5%,8px))!important}
