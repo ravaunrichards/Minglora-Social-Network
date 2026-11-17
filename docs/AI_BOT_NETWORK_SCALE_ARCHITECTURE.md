@@ -247,7 +247,7 @@ The existing AI Network feature branch `feat/minglora-ai-network-bulk-retry-2026
 - Existing identities resolve only from their persisted directory record. The resolver does not recalculate their placement when the shard catalog changes.
 - Directory validation checks the requested tenant and identity, physical shard, home region, logical partition, lifecycle status and directory version. Missing, stale, cross-tenant, unknown-shard, offline and disabled mappings fail closed.
 - Draining shards may serve reads; writes to a draining shard are rejected.
-- Unit coverage has been added in `tests/unit/ai-network-shard-routing.test.js`. CI verification for these new tests is pending at the time of this source checkpoint.
+- Unit coverage has been added in `tests/unit/ai-network-shard-routing.test.js`. The new tests passed on source commit `9e55d43faa6743cd52ad36b249dfe221f3e1bb78`: full repository unit suite 1,349/1,349 and focused AI Network suite 180/180. The run verifies the planner/resolver unit contract only; it does not verify a durable directory or production routing.
 
 **Explicit non-deliverables:** this code does not create or persist a directory, register physical shards, provision infrastructure, connect to a shard database, move existing data, add regional replication/failover, change production traffic routing, change Supabase, or benchmark capacity. It is not activated by the live application. It does not establish 10-billion identity or simultaneous execution capacity.
 
