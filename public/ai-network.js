@@ -348,6 +348,7 @@
       '<label>Purpose / purpose statement<textarea name="purpose" maxlength="1200" rows="2" placeholder="Describe this AI identity and its purpose."></textarea></label>' +
       '<label>Biography<textarea name="bio" maxlength="4000" rows="2" placeholder="Public AI biography"></textarea></label>' +
       '<label>Introduction<textarea name="introduction" maxlength="2000" rows="2" placeholder="Profile introduction"></textarea></label>' +
+      '<label>Personality description<textarea name="personalityDescription" maxlength="2000" rows="3" placeholder="Describe the AI personality and how it approaches conversations."></textarea></label>' +
       '<div class="ai-network-form-grid"><label>Gender presentation<input name="genderPresentation" maxlength="80"></label>' +
       '<label>Nationality<input name="nationality" maxlength="120" placeholder="Nationality description"></label>' +
       '<label>Country of origin<input name="countryOfOrigin" list="ai-network-countries" autocomplete="off" placeholder="Search countries"></label>' +
@@ -362,9 +363,20 @@
       '<label>Interests (comma-separated)<input name="interests" maxlength="1000"></label>' +
       '<label>Hobbies (comma-separated)<input name="hobbies" maxlength="1000"></label>' +
       '<label>Skills (comma-separated)<input name="skills" maxlength="1000"></label>' +
+      '<label>Personality traits (comma-separated)<input name="personalityTraits" maxlength="1000" placeholder="curious, empathetic, analytical"></label>' +
+      '<label>Communication style<input name="communicationStyle" maxlength="120" placeholder="warm, concise, professional"></label>' +
+      '<label>Education / learning history (one entry per line)<textarea name="education" rows="3" maxlength="4000" placeholder="Institution, qualification or learning record"></textarea></label>' +
+      '<label>Qualifications (comma-separated)<input name="qualifications" maxlength="2000" placeholder="BA, TESOL, industry certification"></label>' +
+      '<label>Profile visibility<select name="profileVisibility">' + options(['public','followers','private','hidden'].map(value => ({value,label:({public:"Public",followers:"Followers only",private:"Private",hidden:"Hidden"})[value]})), 'public') + '</select></label>' +
+      '<label>Voice preferences (JSON object)<textarea name="voicePreferences" rows="3" maxlength="4000" spellcheck="false">{}</textarea></label>' +
       '<label>Languages (comma-separated tags)<input name="languages" maxlength="240" value="en" placeholder="en, ht, es"></label></div>' +
       countryDatalist +
+      '<div class="ai-network-profile-media"><div class="ai-network-form-grid">' +
+      '<label>AI profile picture · max 10 MB<input type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif"></label>' +
+      '<label>AI cover photo · max 20 MB<input type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"></label></div>' +
+      '<p class="ai-network-note" data-ai-media-status>Images are stored separately for this AI identity and never replace your human profile images.</p></div>' +
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
+      '<p class="ai-network-note">Identity creation does not connect a model or provider. Provider assignments are managed separately and remain pending until the provider is independently verified. The AI identity starts disabled and fully supervised.</p>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
       '</form>';
     const bulkProfileForm = '<form class="ai-network-form" data-ai-form="identity-profile-bulk">' +
@@ -1892,8 +1904,46 @@
         profession: value('profession'),
         interests: value('interests').split(',').map(item => item.trim()).filter(Boolean),
         hobbies: value('hobbies').split(',').map(item => item.trim()).filter(Boolean),
-        skills: value('skills').split(',').map(item => item.trim()).filter(Boolean)
+        skills: value('skills').split(',').map(item => item.trim()).filter(Boolean),
+        personality: {
+          description: value('personalityDescription'),
+          traits: value('personalityTraits').split(',').map(item => item.trim()).filter(Boolean),
+          communication_style: value('communicationStyle')
+        },
+        education: value('education').split(/\r?\n/).map(item => item.trim()).filter(Boolean),
+        qualifications: value('qualifications').split(',').map(item => item.trim()).filter(Boolean),
+        voice_preferences: (() => {
+          let preferences;
+          try { preferences = JSON.parse(value('voicePreferences') || '{}'); }
+          catch { throw new Error('Voice preferences must contain valid JSON.'); }
+          if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) {
+            throw new Error('Voice preferences must be a JSON object.');
+          }
+          return preferences;
+        })(),
+        profile_visibility: value('profileVisibility') || 'public'
       };
+      if (!['public','followers','private','hidden'].includes(payload.profile.profile_visibility)) {
+        throw new Error('Choose a valid AI profile visibility option.');
+      }
+      const selectedMedia = [
+        ['avatar', form.querySelector('[name="avatarFile"]')?.files?.[0] || null],
+        ['cover', form.querySelector('[name="coverFile"]')?.files?.[0] || null]
+      ];
+      const allowedImageTypes = ['image/jpeg','image/png','image/webp','image/avif'];
+      for (const [slot, file] of selectedMedia) {
+        if (!file) continue;
+        const limit = slot === 'avatar' ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
+        if (file.size < 1 || file.size > limit) {
+          throw new Error(slot === 'avatar' ? 'The AI profile picture must be between 1 byte and 10 MB.' : 'The AI cover photo must be between 1 byte and 20 MB.');
+        }
+        if (!allowedImageTypes.includes(String(file.type || '').toLowerCase())) {
+          throw new Error('AI profile images must be JPEG, PNG, WebP or AVIF files.');
+        }
+      }
+      if (selectedMedia.some(([,file]) => file) && typeof window.uploadMediaFile !== 'function') {
+        throw new Error('Minglora secure AI profile uploads are unavailable in this session. No identity was created.');
+      }
       payload.languages = value('languages').split(',').map(tag => tag.trim()).filter(Boolean)
         .map((tag, index) => ({
           language_tag: tag,
@@ -2288,20 +2338,31 @@
       state.botChatError = '';
     }
     let uploadedMediaCount = 0;
-    if (kind === 'identity-edit' && identityIdForMedia) {
+    const mediaUploadFailures = [];
+    if (kind === 'identity') {
+      const createdIdentity = result?.identity?.identity || result?.identity || null;
+      identityIdForMedia = String(createdIdentity?.identity_id || '');
+    }
+    if (['identity-edit','identity'].includes(kind)) {
       const selectedMedia = [
         ['avatar', form.querySelector('[name="avatarFile"]')?.files?.[0] || null],
         ['cover', form.querySelector('[name="coverFile"]')?.files?.[0] || null]
       ];
       for (const [slot, file] of selectedMedia) {
         if (!file) continue;
+        if (!identityIdForMedia) {
+          mediaUploadFailures.push(slot);
+          continue;
+        }
         const status = form.querySelector('[data-ai-media-status]');
-        await window.uploadMediaFile(slot, file, 1, 0, progress => {
-          if (status) status.textContent = 'Uploading AI ' + slot + ': ' + Number(progress?.percentage || 0) + '%';
-        }, { aiIdentityId: identityIdForMedia });
-        const input = form.querySelector('[name="' + slot + 'File"]');
-        if (input) input.value = '';
-        uploadedMediaCount += 1;
+        try {
+          await window.uploadMediaFile(slot, file, 1, 0, progress => {
+            if (status) status.textContent = 'Uploading AI ' + slot + ': ' + Number(progress?.percentage || 0) + '%';
+          }, { aiIdentityId: identityIdForMedia });
+          uploadedMediaCount += 1;
+        } catch {
+          mediaUploadFailures.push(slot);
+        }
       }
     }
     form.reset();
@@ -2348,7 +2409,9 @@
       : kind === 'provider-assignment-status'
             ? 'Provider assignment status updated.'
             : kind === 'identity'
-      ? 'AI identity record saved in Minglora Supabase.'
+      ? 'AI identity record saved in Minglora Supabase.' +
+        (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded and attached.' : '') +
+        (mediaUploadFailures.length ? ' Image upload incomplete for ' + mediaUploadFailures.join(', ') + '; the identity is saved and these images can be retried from Edit AI profile.' : '')
       : kind === 'identity-bulk'
         ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'
         : kind === 'identity-profile-bulk'
