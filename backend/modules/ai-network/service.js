@@ -382,7 +382,8 @@ export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date
       responseId: job.providerResponseId || null,
       requestId: job.providerRequestId || null,
       usage: { ...job.providerUsage },
-      completedAt: job.providerCompletedAt || null
+      completedAt: job.providerCompletedAt || null,
+      budgetLedgeredAt: job.providerBudgetLedgeredAt === true
     });
     job.providerUsageHistory = history.slice(-50);
     job.providerUsage = null;
@@ -753,16 +754,37 @@ export function failAIBotChatRequest(db, ownerId, requestId, reason, {
   return request;
 }
 
+function getCreatorJobUsageEntries(job) {
+  const entries = (Array.isArray(job.providerUsageHistory) ? job.providerUsageHistory : [])
+    .filter(attempt => attempt && typeof attempt === 'object')
+    .map(attempt => ({
+      usage: attempt.usage,
+      completedAt: attempt.completedAt || null,
+      budgetLedgeredAt: attempt.budgetLedgeredAt === true
+    }));
+  if (job.providerUsage && typeof job.providerUsage === 'object') {
+    entries.push({
+      usage: job.providerUsage,
+      completedAt: job.providerCompletedAt || null,
+      budgetLedgeredAt: job.providerBudgetLedgeredAt === true
+    });
+  }
+  return entries;
+}
+
 export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
   ensureAICollections(db);
   const dayStart = new Date(now);
   dayStart.setUTCHours(0, 0, 0, 0);
   const cutoff = dayStart.getTime();
-  const jobs = ownerRows(db.aiBotCreatorJobs, ownerId).filter(job => {
-    const completedAt = Date.parse(job.providerCompletedAt || '');
-    const totalTokens = Number(job.providerUsage?.total_tokens) || 0;
-    return job.providerBudgetLedgeredAt !== true &&
-      Number.isFinite(completedAt) && completedAt >= cutoff && totalTokens > 0;
+  const jobUsageEntries = ownerRows(db.aiBotCreatorJobs, ownerId).flatMap(job =>
+    getCreatorJobUsageEntries(job)
+      .filter(entry => entry.budgetLedgeredAt !== true)
+      .map(entry => ({ ...entry, jobId: job.id }))
+  ).filter(entry => {
+    const completedAt = Date.parse(entry.completedAt || '');
+    const totalTokens = Number(entry.usage?.total_tokens) || 0;
+    return Number.isFinite(completedAt) && completedAt >= cutoff && totalTokens > 0;
   });
   const chatEvents = ownerRows(db.aiBotUsageEvents, ownerId).filter(event =>
     event.operation === 'bot_chat' &&
@@ -770,11 +792,11 @@ export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
     Date.parse(event.createdAt) >= cutoff &&
     (Number(event.usage?.total_tokens) || 0) > 0
   );
-  const jobTokens = jobs.reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0);
+  const jobTokens = jobUsageEntries.reduce((sum, entry) => sum + Math.max(0, Number(entry.usage?.total_tokens) || 0), 0);
   const chatTokens = chatEvents.reduce((sum, event) => sum + Math.max(0, Number(event.usage?.total_tokens) || 0), 0);
   return {
     tokensUsed: jobTokens + chatTokens,
-    draftsWithTokenUsage: jobs.length,
+    draftsWithTokenUsage: new Set(jobUsageEntries.map(entry => entry.jobId)).size,
     chatRequestsWithTokenUsage: chatEvents.length,
     date: dayStart.toISOString().slice(0, 10)
   };
