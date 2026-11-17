@@ -274,10 +274,20 @@ try{
                 bottom:mwRow.stage.height-mwPanel.y-mwPanel.height,
                 width:mwPanel.width,height:mwPanel.height
               };
-              for(const metric of ['right','bottom','width','height']){
+              // LIVE Fluid Panel intentionally has a larger right/bottom safe inset than
+              // MeetWave so guest thumbnails clear the host-stage border lines.
+              const rightInsetDelta=liveAnchors.right-mwAnchors.right;
+              const bottomInsetDelta=liveAnchors.bottom-mwAnchors.bottom;
+              assert.ok(rightInsetDelta>=10&&rightInsetDelta<=56,
+                'LIVE Fluid Panel guest seat must sit 10–56px farther inside the host right frame for seat '+livePanel.index+' on '+viewport.name+
+                '; LIVE='+JSON.stringify(liveAnchors)+' MeetWave='+JSON.stringify(mwAnchors));
+              assert.ok(bottomInsetDelta>=10&&bottomInsetDelta<=32,
+                'LIVE Fluid Panel guest seat must sit 10–32px farther inside the host bottom frame for seat '+livePanel.index+' on '+viewport.name+
+                '; LIVE='+JSON.stringify(liveAnchors)+' MeetWave='+JSON.stringify(mwAnchors));
+              for(const metric of ['width','height']){
                 const delta=Math.abs(liveAnchors[metric]-mwAnchors[metric]);
                 assert.ok(delta<=2.5,
-                  'LIVE and MeetWave Fluid Panel '+metric+' anchor differs by '+delta.toFixed(2)+'px for seat '+livePanel.index+' on '+viewport.name+
+                  'LIVE and MeetWave Fluid Panel '+metric+' differs by '+delta.toFixed(2)+'px for seat '+livePanel.index+' on '+viewport.name+
                   '; LIVE='+JSON.stringify(liveAnchors)+' MeetWave='+JSON.stringify(mwAnchors));
               }
               continue;
