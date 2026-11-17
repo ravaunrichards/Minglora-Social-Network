@@ -211,4 +211,4 @@ test("Gifter range sheets render only their supplied PNG artwork without editing
   assert.ok(html.includes("/gifter-progression.js?v=20261116-gifter-range-sheet-single-layer-1"));
   assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-sheet-single-layer-1"));
   assert.ok(sw.includes("/gifter-progression.js?v=20261116-gifter-range-sheet-single-layer-1"));
-;
+});
