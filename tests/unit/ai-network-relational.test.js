@@ -78,6 +78,15 @@ test('bulk identity creation is bounded and isolates individual failures', () =>
   assert.match(ui, /result\.reused_count/);
 });
 
+test('bulk identity failures are labelled and retained for idempotent retry', () => {
+  assert.match(ui, /const submittedBatchItems = Array\.isArray\(payload\.items\) \? payload\.items\.slice\(\) : \[\]/);
+  assert.match(ui, /\['identity-bulk','identity-profile-bulk','provider-assignment-bulk'\]/);
+  assert.match(ui, /submittedBatchItems\[index - 1\]/);
+  assert.match(ui, /item\.idempotency_key/);
+  assert.match(ui, /Failed rows are retained in the batch editor for retry/);
+  assert.match(ui, /JSON\.stringify\(batchRetryItems\)/);
+});
+
 test('runtime gateway validates actor IDs and allowlists AI identity commands', () => {
   assert.match(runtime, /"ai_identity_command"/);
   assert.match(runtime, /supportedAICommands = \["list_categories", "list", "get", "create", "bulk_create"\]/);
