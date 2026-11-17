@@ -72,12 +72,15 @@ test('server resolves assignments before token reservation and routes only throu
   assert.match(route, /runAIProviderExecutionCommand\('resolve_execution'/);
   assert.match(route, /probeAssignedProvider\(/);
   assert.match(route, /generateAIProviderReply\(\{\s*assignment: providerAssignment/);
-  assert.match(route, /provider-assignments.*verify/);
+  assert.ok(route.includes("parts[2] === 'verify'"));
+  assert.ok(route.includes("requestSupabaseState('ai_provider_execution_command'"));
   assert.ok(route.indexOf("runAIProviderExecutionCommand('resolve_execution'") < route.indexOf("runAIBotChatCommand('begin_request'"));
 });
 
 test('provider assignment UI exposes verify-and-activate without a browser credential field', () => {
   assert.ok(ui.includes('provider-assignment-verify'));
+  assert.ok(ui.includes('Verify & activate'));
+  assert.ok(ui.includes('Re-check model health'));
   assert.ok(ui.includes("'/provider-assignments/' + encodeURIComponent(id) + '/verify'"));
   assert.ok(!ui.includes('name="openaiApiKey"'));
   assert.ok(!ui.includes('name="OPENAI_API_KEY"'));

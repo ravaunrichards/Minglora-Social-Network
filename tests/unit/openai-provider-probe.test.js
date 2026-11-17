@@ -70,7 +70,7 @@ test('OpenAI probe supports the legacy generic key only when OpenAI is selected'
     fetchImpl: async () => { calls += 1; },
     now: fixedNow
   });
-  assert.equal(missing.status, 'missing_credentials');
+  assert.equal(missing.status, 'provider_not_selected');
   assert.equal(calls, 0);
 
   const legacy = await probeOpenAIProvider({

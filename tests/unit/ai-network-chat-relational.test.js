@@ -53,6 +53,8 @@ test('Supabase-backed server persists relational chat while local JSON mode reta
   assert.match(server, /runAIBotChatCommand\('complete_request'/);
   assert.match(server, /runAIBotChatCommand\('fail_request'/);
   assert.match(server, /runAIBotChatCommand\('get_usage'/);
+  assert.match(server, /runAIProviderExecutionCommand\('resolve_execution'/);
+  assert.ok(server.indexOf("runAIProviderExecutionCommand('resolve_execution'") < server.indexOf("runAIBotChatCommand('begin_request'"));
   assert.match(server, /loadRelationalAIBotChatState/);
   assert.match(server, /await saveStore\(\)/);
 });
@@ -62,7 +64,9 @@ test('bot chat recalls only owner-consented memory and accounts for bounded memo
   assert.match(server, /runAIMemoryCommand\('list', \{ identity_id: identityId \}\)/);
   assert.match(server, /settings\.memory_enabled === true && Boolean\(settings\.consented_at\)/);
   assert.match(server, /settings\.long_term_enabled === true/);
-  assert.match(server, /history, memoryContext, env: process\.env/);
+  assert.match(server, /history,/);
+  assert.match(server, /memoryContext,/);
+  assert.match(server, /generateAIProviderReply\(\{\s*assignment: providerAssignment/);
   assert.match(server, /memoryContextLength/);
   assert.match(doc, /explicit memory opt-in and a recorded consent timestamp/i);
   assert.match(doc, /does not automatically create, update or summarize memory entries/i);
