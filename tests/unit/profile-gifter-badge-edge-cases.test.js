@@ -34,7 +34,7 @@ const sandbox = {
   verifiedProfileBadge: () => "",
   platformAdminProfileBadge: () => "",
   liveProProfileBadge: () => "",
-  profileBadgeCardMarkup: item => "<article>" + item.category + "|" + item.title + "|" + item.artwork + "</article>"
+  profileBadgeCardMarkup: item => "<article>" + item.category + "|" + item.title + "|" + item.description + "|" + item.artwork + "</article>"
 };
 const renderers = vm.runInNewContext(
   rendererSource + "\n" + gallerySource +
