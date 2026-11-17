@@ -156,7 +156,7 @@ function creatorPayload(requestId, jobId, usageDate, reserveTokens) {
   };
 }
 
-function chatPayload(requestId, identityId, botId, reserveTokens) {
+function chatPayload(requestId, identityId, botId, reserveTokens, usageDate) {
   return {
     request_id: requestId,
     identity_id: identityId,
@@ -165,7 +165,7 @@ function chatPayload(requestId, identityId, botId, reserveTokens) {
     message_hash: crypto.createHash('sha256')
       .update(requestId)
       .digest('hex'),
-    usage_date: new Date().toISOString().slice(0, 10),
+    usage_date: usageDate,
     daily_token_budget: 1000,
     baseline_used_tokens: 0,
     reserve_tokens: reserveTokens
@@ -218,7 +218,7 @@ test('Creator Studio reservation blocks an over-budget concurrent bot chat reque
     firstAction: 'creator_begin_request',
     firstPayload: creatorPayload(firstRequestId, 'creator-holds-budget-for-chat', usageDate, 700),
     secondAction: 'begin_request',
-    secondPayload: chatPayload(secondRequestId, identityId, botId, 400),
+    secondPayload: chatPayload(secondRequestId, identityId, botId, 400, usageDate),
     ownerId
   });
 
@@ -243,7 +243,7 @@ test('bot chat reservation blocks an over-budget concurrent Creator Studio reque
 
   await concurrentBudgetAttempt({
     firstAction: 'begin_request',
-    firstPayload: chatPayload(firstRequestId, identityId, botId, 700),
+    firstPayload: chatPayload(firstRequestId, identityId, botId, 700, usageDate),
     secondAction: 'creator_begin_request',
     secondPayload: creatorPayload(secondRequestId, 'creator-waits-for-chat-budget', usageDate, 400),
     ownerId
