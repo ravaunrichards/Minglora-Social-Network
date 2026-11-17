@@ -21,12 +21,12 @@
   ]);
 
   const BADGE_RANGE_SHEETS = Object.freeze([
-    { file: "lv-1-9.png", label: "LV.1 – LV.9", alt: "Cropped Gifter badge range reference, Levels 1 through 9", badge: "range-1.png" },
-    { file: "lv-10-19.png", label: "LV.10 – LV.19", alt: "Cropped Gifter badge range reference, Levels 10 through 19", badge: "range-2.png" },
-    { file: "lv-20-29.png", label: "LV.20 – LV.29", alt: "Cropped Gifter badge range reference, Levels 20 through 29", badge: "range-3.png" },
-    { file: "lv-30-39.png", label: "LV.30 – LV.39", alt: "Cropped Gifter badge range reference, Levels 30 through 39", badge: "range-4.png" },
-    { file: "lv-40-49.png", label: "LV.40 – LV.49", alt: "Cropped Gifter badge range reference, Levels 40 through 49", badge: "range-5.png" },
-    { file: "lv-50-plus.png", label: "LV.50+", alt: "Cropped Gifter badge range reference, Level 50 and above", badge: "range-6.png" }
+    { file: "lv-1-9.png", label: "LV.1 – LV.9", alt: "Cropped Gifter badge range reference, Levels 1 through 9" },
+    { file: "lv-10-19.png", label: "LV.10 – LV.19", alt: "Cropped Gifter badge range reference, Levels 10 through 19" },
+    { file: "lv-20-29.png", label: "LV.20 – LV.29", alt: "Cropped Gifter badge range reference, Levels 20 through 29" },
+    { file: "lv-30-39.png", label: "LV.30 – LV.39", alt: "Cropped Gifter badge range reference, Levels 30 through 39" },
+    { file: "lv-40-49.png", label: "LV.40 – LV.49", alt: "Cropped Gifter badge range reference, Levels 40 through 49" },
+    { file: "lv-50-plus.png", label: "LV.50+", alt: "Cropped Gifter badge range reference, Level 50 and above" }
   ]);
 
   function isGifterViewActive() {
@@ -133,7 +133,6 @@
         "<figure class='gp-reference-figure gp-range-reference-figure'><figcaption><strong>" + esc(sheet.label) + "</strong><span>Cropped range reference</span></figcaption>" +
         "<div class='gp-range-reference-artwork'>" +
         "<img class='gp-range-reference-sheet' src='/assets/gifter-badge-range-sheets/" + sheet.file + "' alt='" + esc(sheet.alt) + "' loading='lazy' decoding='async'>" +
-        "<img class='gp-range-reference-badge' src='/assets/gifter-crop-badges/" + sheet.badge + "?v=20261116-bright-stage-badge-overlays-2' alt='' aria-hidden='true' loading='lazy' decoding='async'>" +
         "</div></figure>"
       ).join("") + "</div></section>";
   }
