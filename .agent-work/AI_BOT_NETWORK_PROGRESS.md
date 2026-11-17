@@ -428,3 +428,11 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - LIVE and MeetWave nine-layout visual matrix: passed.
 - Previous source-head profile layout matrix completed successfully (run #451). Fresh current-main profile and browser matrices are pending.
 - No live database/schema/data, AI identities, user accounts, emails or followers were changed. No production migrations/deployments. Production worker controls remain paused, execution disabled and max workers zero.
+
+
+## Owner direction — remove duplicate standalone Discover AI (2026-11-17)
+
+- Removed the standalone member-facing `/ai-discovery.html` page and `/api/ai-discovery` route because they duplicated the existing Minglora AI Network experience.
+- Preserved the owner/MFA-gated `/api/ai-network` management route, Minglora AI Network navigation/workspace, private identity/discovery RPCs, database schema and records.
+- No Supabase migration, identity/profile/follow data deletion, provider configuration, or worker/runtime control change was made.
+- Removed standalone discovery page assets and member-facing browser tests; the AI Network browser acceptance workflow remains active.
