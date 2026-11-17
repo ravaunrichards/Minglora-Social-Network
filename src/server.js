@@ -1610,6 +1610,7 @@ async function route(req, res) {
           receivingEnabled: Boolean(status.receivingEnabled),
           webhookConfigured: Boolean(status.webhookConfigured),
           webhookSecretPresent: Boolean(emailConfig.hasWebhookSecret),
+          webhookActive: Boolean(status.webhookActive),
           ready: Boolean(status.ready),
           note: status.note
         });
