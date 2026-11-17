@@ -82,6 +82,8 @@ async function collectGeometry(page,product,layout){
       grid:[Math.round(gridRect.width),Math.round(gridRect.height)],
       seatCount:seats.length,visibleCount:values.filter(x=>x.visible).length,
       emptyCount:values.filter(x=>x.empty).length,
+      visibleEmptyCount:values.filter(x=>x.empty&&x.visible).length,
+      decorativePanelVisible:(()=>{const style=getComputedStyle(grid,'::after');return style.display!=='none'&&style.content!=='none'&&style.content!=='normal';})(),
       geometry:values.map(x=>[x.seat,x.visible?x.box:null])
     };
   },{product,layout:layout.id});
@@ -126,9 +128,13 @@ try{
           grid.querySelector('.live-guest-seat.is-host')?.classList.add('is-spotlight');
         },{product,layout:layout.id});
         const measure=await collectGeometry(page,product,layout);
-        assert.equal(measure.seatCount,9,product+' '+layout.id+' '+viewport.name+' must retain exactly one host and eight guest seats');
-        assert.equal(measure.visibleCount,9,product+' '+layout.id+' '+viewport.name+' must display all eight guest panels plus the host');
-        if(product==='meetwave')assert.equal(measure.emptyCount,8,'MeetWave guest placeholders remain invitation seats in '+layout.id);
+        assert.equal(measure.seatCount,9,product+' '+layout.id+' '+viewport.name+' must retain one host and eight guest seat records');
+        assert.equal(measure.visibleCount,{"full-screen":1,"fluid-panel":3,"fluid-grid":3,"fixed-grid":9,"fixed-panel":4,"side-by-side":9,"spotlight":9,"roundtable-1":9,"roundtable-2":9}[layout.id],product+' '+layout.id+' '+viewport.name+' must match the visible panel count in its source reference');
+        assert.equal(measure.decorativePanelVisible,layout.id==='side-by-side',product+' '+layout.id+' '+viewport.name+' must add only the Side by Side decorative tenth panel');
+        if(product==='meetwave'){
+          assert.equal(measure.emptyCount,8,'MeetWave retains all eight invitation-seat records in '+layout.id);
+          assert.equal(measure.visibleEmptyCount,{"full-screen":1,"fluid-panel":3,"fluid-grid":3,"fixed-grid":9,"fixed-panel":4,"side-by-side":9,"spotlight":9,"roundtable-1":9,"roundtable-2":9}[layout.id]-1,'MeetWave visible invite panels must match the reference panel count in '+layout.id);
+        }
         const signature=JSON.stringify(measure.geometry);
         signatures.add(signature);
         results.combinations++;
