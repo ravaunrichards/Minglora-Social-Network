@@ -529,7 +529,7 @@ try {
   assert.equal(latestIdentitySearch.search, 'ari', 'The owner registry must forward the search term to the database query.');
   assert.equal(latestIdentitySearch.limit, 100, 'The owner registry must request a bounded page size.');
   assert.equal(latestIdentitySearch.offset, 0, 'A new registry search must reset to the first page.');
-  await page.getByText('Showing 1–1 of 1 AI identities').waitFor({ state:'visible' });
+  await page.getByText('Showing 1–1 of 1 AI identities').first().waitFor({ state:'visible' });
   await page.locator('[data-ai-action="identity-search-clear"]').click();
   await page.getByText('AI identity registry search cleared.').waitFor({ state:'visible' });
   assert.equal(identitySearchRequests[identitySearchRequests.length - 1].search, '', 'Clearing search must restore the complete owner-scoped page.');
