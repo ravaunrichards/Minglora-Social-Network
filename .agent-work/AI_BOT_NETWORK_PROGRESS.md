@@ -508,3 +508,78 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Supabase advisor notes for the new private tables are informational: RLS is enabled with no browser policies by design because direct browser privileges are revoked; two secondary indexes are currently unused because the new tables are empty. No missing foreign-key index finding was returned for the new tables. Existing project-wide advisor findings were not changed as part of this task.
 - Remaining release/acceptance gates: confirm the intended production Render workspace/service; perform signed-in designated-owner/MFA desktop and mobile HTTP acceptance; configure and verify a real provider credential/model and moderated inference; run production multi-session/load, backup and recovery tests; verify memory recall behavior on devices; benchmark real storage/query/write and regional failover limits. No 10-billion identity capacity or simultaneous execution capacity is claimed.
 - Next action: resolve the production Render target and owner/MFA/provider acceptance; retain the global pause until those independent safety gates are complete.
+
+
+## Provider/model execution implementation — 2026-11-17
+
+**Feature branch:** `feat/minglora-ai-provider-model-execution-20261117`  
+**State:** IMPLEMENTED IN SOURCE — AWAITING CI, REVIEW, PRODUCTION MIGRATION/EDGE DEPLOYMENT, REAL PROVIDER CREDENTIAL AND OWNER ACCEPTANCE. Do not call production model execution enabled.
+
+### Implemented in source
+- Added an assignment resolver that uses owner-scoped persisted provider assignment rows, not browser model overrides. It requires active assignment, healthy account/assignment, an active text-capable catalogue model and explicit text capability on the assignment. First implemented inference adapter is OpenAI text only.
+- Added a server-side OpenAI model execution smoke test for an explicitly selected assignment: fixed technical marker only, input and output moderation, Responses API with `store:false`, no tools and a bounded 32-token output. It returns measured provider/model/token metadata only after the expected completion marker and output moderation succeed.
+- Added a designated-Minglora-admin/MFA-protected per-assignment verification API. It loads assignment/model metadata from the existing private Supabase RPCs; browser cannot pass credentials, provider or model identifiers. Only successful inference verification can mark the saved account configured/healthy and assignment active/healthy.
+- Added private `ai_provider_health_events` table and service-role-only `minglora_ai_provider_execution_command` RPC in additive migration `20261117130000_minglora_ai_provider_execution_verification.sql`. It audits status, probe, HTTP response and measured token usage and stores no credentials.
+- Added `ai_provider_execution_command` to the existing `minglora-runtime-state` Edge Function source allowlist/handler, preserving the existing custom API-key guard. This is branch source only; not deployed.
+- Updated AI bot chat to resolve its provider/model from the individual identity's persisted active assignment, perform a selected-model access check, execute that saved model and optionally try a same-provider fallback for retryable transport/provider/model errors only. Moderation/auth/config/safety errors do not trigger fallback. Local JSON-mode compatibility retains prior environment-based path.
+- Added Provider Center UI with explicit confirmation for the billable model verification test.
+- Added unit/contract tests for provider routing, fallback policy, billable smoke test and API/migration safety. Updated provider, chat and module docs.
+
+### Verified live baseline (read-only; existing Minglora Supabase project)
+- Project ref: `gzycobgbasnqqhnympkr`.
+- Provider accounts: 0; provider models: 0; assignments: 0.
+- Durable AI tasks: 0; schedules: 0; approvals: 0.
+- Runtime controls: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`, `lease_seconds=120`.
+- Existing `minglora-runtime-state` Edge Function was ACTIVE v133 at last read.
+- No production data was added or changed by this implementation.
+
+### Not done / release gates
+- No provider credential has been live-tested and no provider-side account row exists. The existing Render service environment has not been inspected because workspace selection is still pending. Do not paste secrets into chat; configure credentials only in the private Minglora server environment/secrets manager.
+- The new migration is source-only; it has not been applied to production.
+- The Edge Function action is source-only; it has not been deployed.
+- The existing Render service has not been inspected/deployed in this task because a workspace selection is required. The connected workspace is `Creator Hub Creator Network` (`tea-dbphlfk9v7es73bu7amg`); obtain explicit user confirmation before selecting it and inspecting `minglora-social-network-temp`.
+- No real provider inference, live assignment activation, production chat test, desktop/mobile acceptance or worker test is claimed.
+- Other provider adapters (Anthropic, Gemini, xAI, Mistral, etc.) remain catalogue/configuration entries, not implemented execution adapters.
+- Background worker claim/heartbeat/complete/fail remain blocked behind the existing worker-auth guard. Global pause and zero workers remain untouched.
+- No dollar-cost pricing reconciliation, cross-provider fallback, no 10-billion identity capacity or concurrent execution capacity has been measured.
+
+### Next action
+- Draft PR #497 is open; keep it in draft while reviewing the source-only migration and remaining release gates. Continue CI/browser acceptance and fix provider-related failures without suppressing tests.
+- After successful review and explicit production-release authorization, apply the additive migration to the existing project, deploy the updated existing Edge Function, configure real provider credentials privately, run an admin-confirmed inference test against an actual AI identity, verify token/health audit rows, then confirm existing Render workspace/service and complete signed-in owner/MFA device acceptance. Keep workers globally paused pending their separate authenticated-worker implementation and operational gates.
+
+
+### Validation update — PR #497, revision `1998ed211e13031ba90cd03a29e95cababe37ec4`
+- **AI Network checks:** PASS. GitHub Actions run 44198433314 completed successfully: Edge Function TypeScript parse/transpile, `node --check src/server.js`, `node --check public/ai-network.js`, and 184 AI Network tests passed / 0 failed.
+- **AI Network browser acceptance:** PASS. Run 44198433206 completed successfully; the real AI workspace UI exercised against disposable API fixtures.
+- **Nine-layout LIVE/MeetWave visual QA:** PASS. Run 44198433153 completed successfully.
+- **Full repository CI:** PARTIAL / FAIL. Run 44198433115 completed with 1,350 tests passing and 3 failures in unchanged LIVE/MeetWave layout tests:
+  1. `tests/unit/live-layout-panels.test.js:230` — expected fluid-panel right inset not found in the selected stylesheet input.
+  2. `tests/unit/live-tiktok-compact-layout.test.js:89` — expected `nth-child(3) bottom:2px`, while current CSS uses a clamped inset.
+  3. `tests/unit/meetwave-room-reference.test.js:259` — expected an earlier bottom clamp, while current CSS uses `clamp(64px,6vw,72px)`.
+  No provider/model source, provider tests or Edge Function syntax checks failed in this run. These unrelated layout expectations were not altered or suppressed by this provider/model change.
+- PR #497 remains open as a **draft**, unmerged, with 16 changed files. No production schema migration, Edge Function deployment, Render deployment, provider credential or provider/account/model/assignment records were changed by this work.
+- Production provider inference remains unverified because the live catalog has zero provider accounts, models and assignments. Global worker pause/execution-disabled/zero-worker controls are unchanged.
+- The CI failure above means the repository is not fully green; provider feature acceptance is green, but the overall PR must not be represented as a full green build.
+
+
+## Managed provider credential isolation — 2026-11-17
+
+- Hardened the existing PR #497 feature branch so only persisted `account_type='managed'` provider accounts can use Minglora's private server-side OpenAI credential.
+- Enforced the ownership boundary in the chat route resolver, the administrator verification API and the service-role activation RPC. User-managed account references remain recorded as user-managed and cannot be activated through the platform key until a dedicated secrets-manager lookup is implemented.
+- Assigned-model chat inference now uses only `OPENAI_API_KEY`; it will not fall back to the legacy generic `MINGLORA_AI_API_KEY`. A regression test verifies that no provider request is made when only that generic key exists.
+- Added route, resolver and SQL contract tests for the managed-account requirement.
+- The Provider Center now explains the credential distinction before users register/verify accounts.
+- No production migration or Edge deployment was performed. Live provider accounts/models/assignments remain 0; no provider secret or actual inference has been verified. Global workers remain paused and disabled.
+
+
+## Latest validation — revision `cdd51d4e8d3df71e0d779a57af6b377cc25a8848` (2026-11-17)
+
+- **Minglora AI Network syntax and regression checks: PASS — 185 passed / 0 failed.** The same run passed Edge Function TypeScript transpile and `node --check` for `src/server.js` and `public/ai-network.js`. Run: `44200011864`.
+- **Nine-layout LIVE/MeetWave visual QA: PASS.** Run: `44200011875`.
+- **Supabase Auth provider acceptance: PASS** and **For You navigation: PASS** on the current revision.
+- **AI identity/discovery browser acceptance:** still running at the latest tracker update (run `44200011886`).
+- **Full repository CI: FAIL — 1,350 passed / 3 failed.** Run `44200011928`; the three failures are the same unrelated existing assertions in `tests/unit/live-layout-panels.test.js:230`, `tests/unit/live-tiktok-compact-layout.test.js:89`, and `tests/unit/meetwave-room-reference.test.js:259`. They reproduce on the unchanged parent commit and were not modified or suppressed.
+- **Draft PR:** #497 remains open, mergeable, and unmerged. Its description now reflects the managed-account guard and validation status.
+- **Latest source hardening:** execution and verification require `account_type='managed'`; assigned-model chat requires `OPENAI_API_KEY` and cannot fall back to the legacy generic provider key. User-managed references remain non-executable until a secrets-manager integration exists.
+
+Production remains unchanged: migration `20261117130000_minglora_ai_provider_execution_verification.sql` is not applied; deployed `minglora-runtime-state` remains version 133; no Render deployment, live provider inference, model/assignment creation, or worker activation occurred. Live identity/provider/model/assignment counts remain zero. The 10-billion target and concurrent execution capacity are not measured or achieved.

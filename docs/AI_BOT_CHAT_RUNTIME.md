@@ -1,6 +1,16 @@
 # Minglora AI Bot Conversation Runtime
 
-**Status:** Owner-initiated chat code is merged to main. The additive relational chat migration is applied to the existing Minglora Supabase project as migration `20261117101442_minglora_ai_bot_conversations`; the deterministic message-order repair is applied as `20261117102355_minglora_ai_bot_message_order`; all six chat tables and the service-role-only RPC are live. The existing `minglora-runtime-state` Edge Function is ACTIVE at version 132 with its prior custom API-key authentication and `verify_jwt=false` preserved. The Render-backed Node API release, signed-in owner/MFA acceptance, a real provider credential and production inference remain unverified.
+**Status:** Owner-initiated chat code is merged to main. The additive relational chat migration is applied to the existing Minglora Supabase project as migration `20261117101442_minglora_ai_bot_conversations`; the deterministic message-order repair is applied as `20261117102355_minglora_ai_bot_message_order`; all six chat tables and the service-role-only RPC are live. The existing `minglora-runtime-state` Edge Function was read as ACTIVE at version 133 on 2026-11-17 with its prior custom API-key authentication and `verify_jwt=false` preserved. The Render-backed Node API release, signed-in owner/MFA acceptance, a real provider credential and production inference remain unverified.
+
+## Provider/model execution implementation — feature branch
+
+The feature branch `feat/minglora-ai-provider-model-execution-20261117` adds a first OpenAI text execution path on top of the existing owner/MFA chat. It resolves the provider model from the individual AI identity's owner-scoped, persisted assignment, not from a browser parameter. The assignment must be active, the account configured, both health states healthy, the model active/text-capable, and text explicitly included in the assignment capabilities. Other provider adapters remain unavailable.
+
+The Provider Center's per-assignment verification action is intentionally billable. Following explicit browser confirmation, the server retrieves saved assignment metadata, checks the selected model, and executes a fixed technical marker through the OpenAI Responses API. Both prompt and result are moderated; the request uses `store:false`, no tools and a 32-token output ceiling. No profile, conversation or memory is sent. A successful result can update the account and assignment to configured/healthy/active and writes a private `ai_provider_health_events` audit record. Failure never activates the assignment. Browser requests cannot submit provider credentials or model overrides.
+
+Bot chat then uses the assigned model and, when configured, the same-provider text-capable fallback. Fallback is restricted to retryable transport/provider/model errors; moderation, safety, authentication and invalid-configuration failures stop without retry. Usage is recorded by the existing bot-chat usage ledger. The provider execution audit migration `20261117130000_minglora_ai_provider_execution_verification.sql` and Edge Function gateway handler are source-only on this branch, not applied/deployed to production.
+
+Production verification is still blocked by the absence of provider accounts, models, assignments, real provider credentials and AI identities. The task-worker runtime remains globally paused, disabled and configured for zero workers. No provider inference or autonomous execution has been performed in production by this work.
 
 ## Scope and safety
 
