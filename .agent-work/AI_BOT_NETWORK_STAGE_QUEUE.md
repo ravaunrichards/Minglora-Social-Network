@@ -730,7 +730,7 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - No production data was added or changed by this implementation.
 
 ### Not done / release gates
-- No real provider credential or provider-side account has been supplied/configured. Do not paste secrets into chat; configure credentials only in the private Minglora server environment/secrets manager.
+- No provider credential has been live-tested and no provider-side account row exists. The existing Render service environment has not been inspected because workspace selection is still pending. Do not paste secrets into chat; configure credentials only in the private Minglora server environment/secrets manager.
 - The new migration is source-only; it has not been applied to production.
 - The Edge Function action is source-only; it has not been deployed.
 - The existing Render service has not been inspected/deployed in this task because a workspace selection is required. The connected workspace is `Creator Hub Creator Network` (`tea-dbphlfk9v7es73bu7amg`); obtain explicit user confirmation before selecting it and inspecting `minglora-social-network-temp`.
