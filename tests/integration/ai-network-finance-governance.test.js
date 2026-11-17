@@ -17,9 +17,24 @@ let pool;
 
 async function installFixture() {
   await pool.query(`
-    CREATE ROLE anon NOLOGIN;
-    CREATE ROLE authenticated NOLOGIN;
-    CREATE ROLE service_role NOLOGIN BYPASSRLS;
+    DO $roles$
+    BEGIN
+      CREATE ROLE anon NOLOGIN;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END
+    $roles$;
+    DO $roles$
+    BEGIN
+      CREATE ROLE authenticated NOLOGIN;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END
+    $roles$;
+    DO $roles$
+    BEGIN
+      CREATE ROLE service_role NOLOGIN BYPASSRLS;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END
+    $roles$;
     GRANT service_role TO postgres;
 
     CREATE TABLE public.profiles (id uuid PRIMARY KEY);
