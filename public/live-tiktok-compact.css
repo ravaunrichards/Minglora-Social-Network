@@ -864,3 +864,151 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 }
 
 /* END NINE COMPLETE GUEST LAYOUTS. */
+
+/* LIVE room manager accessibility: expose every panel control without a hidden
+   horizontal shortcut rail. The panel content remains independently scrollable. */
+body:has(#live-player-shell) .live-tools-shortcuts{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  flex:0 0 auto!important;
+  flex-wrap:initial!important;
+  width:100%!important;
+  max-height:none!important;
+  height:auto!important;
+  padding:8px!important;
+  gap:6px!important;
+  overflow:visible!important;
+}
+body:has(#live-player-shell) .live-tools-shortcuts button.live-tools-shortcut{
+  display:flex!important;
+  flex:initial!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  min-height:42px!important;
+  padding:4px 5px!important;
+  gap:2px!important;
+  white-space:normal!important;
+  text-align:center!important;
+  overflow-wrap:anywhere!important;
+}
+body:has(#live-player-shell) .live-tools-shortcut-label{
+  max-width:100%!important;
+  text-align:center!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+  line-height:1.1!important;
+}
+body:has(#live-player-shell) .live-tools-content{
+  flex:1 1 auto!important;
+  width:100%!important;
+  height:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  scrollbar-gutter:stable!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+body:has(#live-player-shell) .live-tools-content [data-live-tools-panel]{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+body:has(#live-player-shell) .live-layout-options{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  gap:8px!important;
+}
+body:has(#live-player-shell) .live-layout-option{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:92px!important;
+  padding:7px!important;
+  gap:8px!important;
+  align-items:center!important;
+  overflow:visible!important;
+}
+body:has(#live-player-shell) .live-layout-option .live-layout-preview{
+  display:block!important;
+  flex:0 0 56px!important;
+  width:56px!important;
+  height:76px!important;
+  max-width:56px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  background:#fff!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  border-radius:7px!important;
+}
+body:has(#live-player-shell) .live-layout-option>span{
+  min-width:0!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  line-height:1.2!important;
+}
+@media(max-width:900px){
+  body:has(#live-player-shell) #live-tools-backdrop{
+    position:fixed!important;
+    inset:0!important;
+    display:flex!important;
+    align-items:flex-end!important;
+    justify-content:center!important;
+    width:100vw!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:visible!important;
+  }
+  body:has(#live-player-shell) #live-tools-drawer{
+    display:flex!important;
+    flex-direction:column!important;
+    width:100%!important;
+    height:94dvh!important;
+    max-height:94dvh!important;
+    min-height:0!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    border-radius:18px 18px 0 0!important;
+    padding-bottom:env(safe-area-inset-bottom,0px)!important;
+  }
+  body:has(#live-player-shell) .live-tools-header{
+    flex:0 0 auto!important;
+    min-width:0!important;
+  }
+  body:has(#live-player-shell) .live-tools-shortcuts{
+    flex:0 0 auto!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  body:has(#live-player-shell) .live-tools-content{
+    flex:1 1 0!important;
+    height:0!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow-x:auto!important;
+    overflow-y:auto!important;
+    padding:8px 10px max(14px,env(safe-area-inset-bottom))!important;
+  }
+}
+@media(max-height:620px) and (max-width:900px){
+  body:has(#live-player-shell) #live-tools-drawer{
+    height:96dvh!important;
+    max-height:96dvh!important;
+  }
+  body:has(#live-player-shell) .live-tools-header{padding:6px 9px!important}
+  body:has(#live-player-shell) .live-tools-shortcuts{gap:4px!important;padding:5px!important}
+  body:has(#live-player-shell) .live-tools-shortcuts button.live-tools-shortcut{
+    min-height:34px!important;
+    padding:3px!important;
+  }
+}

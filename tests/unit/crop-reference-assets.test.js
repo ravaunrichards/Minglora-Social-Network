@@ -120,13 +120,33 @@ test("Daily top-three ranking uses the supplied cropped first, second and third 
 
 });
 
-test("the nine uploaded guest-layout references are used as LIVE layout thumbnails", () => {
-  const layouts = ["full-screen", "fluid-panel", "fluid-grid", "fixed-grid", "fixed-panel", "side-by-side", "spotlight", "roundtable-1", "roundtable-2"];
-  for (const layout of layouts) {
+test("all nine original LIVE guest crops are served from the canonical folder and shown as real previews", () => {
+  const layouts = [
+    ["full-screen", "Full Screen.png"],
+    ["fluid-panel", "Fluid Panel.png"],
+    ["fluid-grid", "Fluid Grid.png"],
+    ["fixed-grid", "Fixed Grid.png"],
+    ["fixed-panel", "Fixed Panel.png"],
+    ["side-by-side", "Side by Side.png"],
+    ["spotlight", "Spotlight.png"],
+    ["roundtable-1", "Roundtable 1.png"],
+    ["roundtable-2", "Roundtable 2.png"]
+  ];
+  const sourceDirectory = path.join(root, "assets", "Crop References", "Guests Layout");
+  assert.ok(server.includes("path.join(__dirname,'..','assets','Crop References','Guests Layout',liveGuestLayoutReferenceFiles)"),
+    "the image handler must read the canonical supplied crop folder");
+  assert.ok(!server.includes("path.join(__dirname,'..','assets','Crop References','Guests Layout','png',liveGuestLayoutReferenceFiles)"),
+    "the image handler must not add a nonexistent png subfolder");
+  for (const [layout, sourceFile] of layouts) {
+    assert.ok(fs.existsSync(path.join(sourceDirectory, sourceFile)), "missing original reference crop: " + sourceFile);
     assert.ok(server.includes("/assets/live-guest-layouts/" + layout + ".png"), "missing route for " + layout);
     assert.ok(serviceWorker.includes("/assets/live-guest-layouts/" + layout + ".png"), "missing cache entry for " + layout);
+    assert.ok(serviceWorker.includes("/assets/live-guest-layouts/" + layout + ".png?v=20261117-live-room-access-previews-1"),
+      "missing fresh cache-busted route for " + layout);
   }
   assert.match(app, /live-layout-preview/);
+  assert.match(app, /live-guest-layouts\//);
+  assert.match(app, /20261117-live-room-access-previews-1/);
 });
 
 test("ENIGMA is the default profile avatar and is served from the original crop-reference file", () => {

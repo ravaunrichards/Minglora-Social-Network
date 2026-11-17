@@ -9794,7 +9794,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     '/assets/live-guest-layouts/roundtable-2.png': 'Roundtable 2.png'
   })[p];
   if(liveGuestLayoutReferenceFiles){
-    const assetFile=path.join(__dirname,'..','assets','Crop References','Guests Layout','png',liveGuestLayoutReferenceFiles);
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Guests Layout',liveGuestLayoutReferenceFiles);
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'LIVE guest layout reference not found.'});
       res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});

@@ -39,15 +39,15 @@ SHELL.push(
   '/assets/daily-ranking-badges/top-gifters-place-1.png?v=20261116-daily-ranking-crop-badges-2',
   '/assets/daily-ranking-badges/top-gifters-place-2.png?v=20261116-daily-ranking-crop-badges-2',
   '/assets/daily-ranking-badges/top-gifters-place-3.png?v=20261116-daily-ranking-crop-badges-2',
-  '/assets/live-guest-layouts/full-screen.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/fluid-panel.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/fluid-grid.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/fixed-grid.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/fixed-panel.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/side-by-side.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/spotlight.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/roundtable-1.png?v=20261116-crop-guest-layout-thumbnails-1',
-  '/assets/live-guest-layouts/roundtable-2.png?v=20261116-crop-guest-layout-thumbnails-1'
+  '/assets/live-guest-layouts/full-screen.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/fluid-panel.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/fluid-grid.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/fixed-grid.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/fixed-panel.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/side-by-side.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/spotlight.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/roundtable-1.png?v=20261117-live-room-access-previews-1',
+  '/assets/live-guest-layouts/roundtable-2.png?v=20261117-live-room-access-previews-1'
 );
 SHELL.push('/assets/icons/live-controls/manifest.json');
 SHELL.push('/assets/icons/live-gift-categories/manifest.json');
