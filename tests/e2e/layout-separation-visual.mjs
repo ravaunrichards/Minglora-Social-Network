@@ -189,7 +189,7 @@ function verify(result,definition,viewport,state){
     product:result.product,layout:result.layout,viewport:viewport.name,state,
     visiblePanels:visible.length,seatRecords:result.seats.length,
     stage:result.stage,columns:result.columns,rows:result.rows,
-    panels:visible.map(seat=>({index:seat.index,x:Math.round(seat.x),y:Math.round(seat.y),width:Math.round(seat.w),height:Math.round(seat.h)}))
+    panels:visible.map(seat=>({index:seat.index,x:Math.round(seat.x),y:Math.round(seat.y),width:Math.round(seat.w),height:Math.round(seat.h),style:seat.style}))
   };
 }
 function signature(result){
