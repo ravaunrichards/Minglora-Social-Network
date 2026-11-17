@@ -22,7 +22,7 @@ const viewports=[
   {name:'tablet',width:820,height:1180},
   {name:'desktop',width:1366,height:900}
 ];
-const referenceDirectory=path.join(root,'assets/Crop References/Guests Layout/png');
+const referenceDirectory=path.join(root,'assets/Crop References/Guests Layout');
 const artifacts=path.join(root,'artifacts/layout-separation-visual');
 fs.mkdirSync(artifacts,{recursive:true});
 const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css')+'\n'+read('public/live-tiktok-compact.css');
@@ -30,7 +30,7 @@ const meetwaveCss=read('public/meetwave.css');
 const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;color:#fff;font-family:Arial,sans-serif}body{padding:0;box-sizing:border-box}';
 const report={
   result:'pending',
-  originalCropDirectory:'assets/Crop References/Guests Layout/png/',
+  originalCropDirectory:'assets/Crop References/Guests Layout/',
   products:['LIVE','MeetWave'],
   layouts:layouts.map(item=>item.id),
   viewports:[],
