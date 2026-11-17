@@ -5,9 +5,10 @@
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
   const number = value => Number(value || 0).toLocaleString();
   const labelForPeriod = value => periods.find(([key]) => key === value)?.[1] || "Today";
+  const DEFAULT_RANKING_AVATAR = "/assets/profile-defaults/enigma.png?v=20261116-enigma-brand-1";
   function safeAvatarUrl(user) {
-    const value = String(user?.avatarUrl || user?.avatar_url || user?.avatar || user?.profilePicture || "").trim();
-    return /^https:\/\//i.test(value) || /^\/(?!\/)/.test(value) ? value : "";
+    const value = String(user?.avatar || user?.avatarUrl || user?.avatar_url || user?.profilePicture || "").trim();
+    return /^https:\/\//i.test(value) || /^\/(?!\/)/.test(value) ? value : DEFAULT_RANKING_AVATAR;
   }
   function avatarMarkup(user, className) {
     const name = String(user?.name || user?.username || "Minglora member");
