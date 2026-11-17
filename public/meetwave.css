@@ -2366,8 +2366,8 @@
   min-height:0!important;max-height:none!important;border:1px solid rgba(255,255,255,.32)!important;
   box-shadow:0 4px 14px rgba(0,0,0,.28)!important
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:8px!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(16px + clamp(46px,20%,120px))!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1%,8px)!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(46px,10%,120px) + clamp(4px,1.5%,8px))!important}
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(n+5){display:none!important}
 
 /* 3. FLUID GRID — one full-height left panel and exactly two right-hand panels. */
@@ -2455,8 +2455,10 @@
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat .live-guest-seat-meta{padding:4px 5px!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat .live-guest-seat-meta strong{font-size:7px!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
-    width:clamp(48px,24%,116px)!important;height:clamp(42px,19%,96px)!important
+    width:clamp(48px,15vw,116px)!important;height:clamp(44px,10%,96px)!important
   }
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1%,8px)!important}
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(44px,10%,96px) + clamp(4px,1.5%,8px))!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]{grid-template-columns:minmax(0,1.55fr) minmax(0,.86fr)!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]{grid-template-columns:minmax(0,.68fr) minmax(0,1.35fr) minmax(0,.68fr)!important}
@@ -2466,7 +2468,9 @@
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat .live-guest-seat-meta strong{font-size:6px!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat .live-guest-seat-meta small{display:none!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
-    width:58px!important;height:44px!important
+    width:clamp(48px,15vw,58px)!important;height:clamp(44px,10%,96px)!important
   }
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1%,8px)!important}
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(44px,10%,96px) + clamp(4px,1.5%,8px))!important}
 }
 /* END NINE COMPLETE GUEST LAYOUTS. */
