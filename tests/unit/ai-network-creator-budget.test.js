@@ -92,6 +92,10 @@ test('legacy Creator Studio usage excludes generations already recorded in the r
   const started = startAICreatorJobGeneration(db, 'owner-1', legacy.id, { now, budgetRequestId: requestId });
   assert.equal(started.providerBudgetRequestId, requestId);
   assert.equal(started.providerBudgetLedgeredAt, false);
+  assert.equal(started.providerUsage, null);
+  assert.equal(started.providerUsageHistory[0].budgetLedgeredAt, false);
+  assert.equal(getAICreatorDailyUsage(db, 'owner-1', { now }).tokensUsed, 60,
+    'legacy measured usage must remain in the budget baseline while a draft is retried');
   // Keep this fixture independent of the active-generation lease guard so the
   // malformed budget request ID is the failure being asserted.
   started.providerExecution = 'failed';
