@@ -123,18 +123,22 @@ test('Audio LIVE follows the Video LIVE panel grid without collapsing or clippin
 
 const AUDIO_LIVE_LAYOUTS = [
   'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
-  'side-by-side','spotlight'
+  'side-by-side','spotlight','roundtable-1','roundtable-2'
 ];
 
 test('Audio LIVE defines a real rounded grid template for each of the seven screen presets', () => {
   for (const layout of AUDIO_LIVE_LAYOUTS) {
-    const selectorIndex = fit.indexOf(`data-live-layout="${layout}"`);
-    assert.ok(selectorIndex >= 0, layout + ' selector must exist');
-    const ruleEnd = fit.indexOf('}', selectorIndex);
-    const rule = fit.slice(selectorIndex, ruleEnd);
+    const audioSelector = `.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="${layout}"]`;
+    const selectorIndex = fit.indexOf(audioSelector);
+    assert.ok(selectorIndex >= 0, layout + ' must have an Audio LIVE grid selector using data-live-layout');
+    const ruleStart = fit.indexOf('{', selectorIndex);
+    const ruleEnd = fit.indexOf('}', ruleStart);
+    const rule = fit.slice(ruleStart + 1, ruleEnd);
     assert.match(rule, /grid-template-columns:[^;]+!important/, layout + ' columns must override compact grid');
     assert.match(rule, /grid-template-rows:[^;]+!important/, layout + ' rows must override compact grid');
   }
+  assert.doesNotMatch(fit, /\.live-audio-stage[^{}]*\[data-live-guest-layout="roundtable-[12]"/,
+    'Audio LIVE must not use the removed data-live-guest-layout attribute');
   assert.match(fit, /grid-auto-flow:row dense!important/);
   assert.match(fit, /border-radius:18px!important/);
   assert.match(fit, /border-radius:50%!important/);
@@ -148,7 +152,9 @@ test('All nine Audio LIVE guest presets share the unified layout state and synch
   assert.deepEqual([...registry[1].matchAll(/value:'([^']+)'/g)].map(match=>match[1]),layouts);
   for(const layout of layouts){
     assert.ok(server.includes("'" + layout + "'"),layout+' must be accepted by the server');
-    assert.ok(guestLayouts.includes('data-live-layout="'+layout+'"'),layout+' must have its own grid rules');
+    assert.ok(guestLayouts.includes('data-live-layout="'+layout+'"'),layout+' must have its video grid rules');
+    assert.ok(fit.includes('.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="'+layout+'"]'),
+      layout+' must have its own Audio LIVE grid rules');
   }
   assert.match(server,/LIVE_SCREEN_LAYOUTS\.includes\(layout\)/);
   assert.match(server,/session\.liveLayout = layout/);
