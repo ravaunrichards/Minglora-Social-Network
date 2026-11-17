@@ -14,7 +14,7 @@ const result = (status, note, fields = {}) => ({
   connected: false,
   healthStatus: 'unknown',
   healthProbeAvailable: true,
-  inferenceAdapterAvailable: true,
+  inferenceAdapterAvailable: false,
   executionEnabled: false,
   checkedAt: fields.checkedAt || null,
   model: fields.model || null,
