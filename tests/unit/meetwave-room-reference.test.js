@@ -247,3 +247,24 @@ test('Full Screen crop cannot be overridden by the retired guest-tray grid', () 
   assert.ok(contract.includes('#mw-grid[data-layout="full-screen"]{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}'));
   assert.ok(contract.includes('#mw-grid[data-layout="full-screen"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){display:none!important}'));
 });
+
+
+test('MeetWave stage heading owns a dedicated row and cannot cover the host or guest tiles', () => {
+  const correction=css.slice(css.lastIndexOf('/* MeetWave stage-safe layout corrections'));
+  assert.match(correction, /\.live-guest-layout-heading\{[\s\S]*?position:relative!important[\s\S]*?grid-row:1!important/);
+  assert.match(correction, /data-layout="full-screen"\}\{grid-template-rows:22px minmax\(0,1fr\)!important\}/);
+  assert.match(correction, /data-layout="fluid-panel"\}\{grid-template-rows:22px minmax\(0,1fr\)!important\}/);
+});
+
+test('MeetWave Side by Side matches two top seats and eight equally arranged lower invitation seats', () => {
+  const correction=css.slice(css.lastIndexOf('/* MeetWave stage-safe layout corrections'));
+  assert.match(correction, /data-layout="side-by-side"\}\{[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important;[\s\S]*?grid-template-rows:22px minmax\(0,1\.55fr\) repeat\(2,minmax\(0,\.72fr\)\)!important/);
+  assert.match(correction, /data-layout="side-by-side"\]>.live-guest-seat\.is-host\{grid-column:1\/3!important;grid-row:2!important\}/);
+  assert.match(correction, /data-layout="side-by-side"\].*nth-child\(3\)\{grid-column:3\/5!important;grid-row:2!important\}/);
+  assert.ok(js.includes("layout==='side-by-side'&&!sideBySideExtra"));
+  assert.ok(js.includes("sideBySideExtra?.remove()"));
+  assert.ok(js.includes("data-side-by-side-extra"));
+  assert.ok(js.includes("const seatNumber=MEETWAVE_GUEST_LIMIT+1"));
+  assert.ok(js.includes('1 / 9 seats in use'));
+  assert.ok(js.includes('MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1'));
+});
