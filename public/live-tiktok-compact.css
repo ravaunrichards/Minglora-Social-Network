@@ -682,177 +682,185 @@ body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]>
 }
 
 
-/* FINAL NINE GUEST LAYOUTS — direct parity with assets/Guests Layout/*.jpg.
-   This block loads last, so older experimental presets above cannot override it. */
-body:has(#live-player-shell) #live-video-stage #live-guest-layout.live-guest-layout{
-  position:relative!important;box-sizing:border-box!important;display:grid!important;
+/* FINAL NINE GUEST LAYOUTS — each selector follows its own supplied crop.
+   Original sources: assets/Crop References/Guests Layout/png/*.png
+   All participant nodes stay mounted; each crop determines which seat panels
+   are shown on the stage and their exact row/column arrangement. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout.live-guest-layout{
+  position:relative!important;display:grid!important;box-sizing:border-box!important;
   width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
-  max-width:100%!important;max-height:100%!important;align-content:stretch!important;
-  align-items:stretch!important;justify-items:stretch!important;grid-auto-flow:row!important;
-  gap:clamp(3px,.65vw,8px)!important;overflow:hidden!important;
+  max-width:100%!important;max-height:100%!important;
+  align-content:stretch!important;align-items:stretch!important;justify-items:stretch!important;
+  grid-auto-flow:row dense!important;gap:clamp(4px,.7vw,9px)!important;
+  padding:clamp(5px,.65vw,9px)!important;overflow:hidden!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat{
-  box-sizing:border-box!important;min-width:0!important;min-height:0!important;
-  width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;
-  overflow:hidden!important;border-radius:clamp(7px,1vw,14px)!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-layout-heading{
+  position:absolute!important;top:7px!important;left:8px!important;right:8px!important;
+  z-index:20!important;display:flex!important;align-items:center!important;gap:5px 9px!important;
+  min-width:0!important;max-height:20px!important;margin:0!important;padding:2px 6px!important;
+  border-radius:6px!important;background:rgba(8,13,22,.5)!important;color:#fff!important;
+  font-size:8px!important;line-height:1.2!important;overflow:hidden!important;pointer-events:none!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-meta{
-  max-width:calc(100% - 8px)!important;overflow:hidden!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat,
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.mw-empty-seat{
+  position:relative!important;display:flex!important;visibility:visible!important;opacity:1!important;
+  box-sizing:border-box!important;width:100%!important;height:100%!important;
+  min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;
+  margin:0!important;transform:none!important;overflow:hidden!important;
+  border-radius:clamp(7px,1vw,14px)!important;justify-self:stretch!important;align-self:stretch!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-meta strong{
-  font-size:clamp(7px,.8vw,11px)!important;line-height:1.15!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta strong{
+  display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  white-space:nowrap!important;font-size:clamp(7px,.8vw,11px)!important;line-height:1.15!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-meta small{
-  font-size:clamp(6px,.65vw,9px)!important;line-height:1.1!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta small{font-size:clamp(6px,.65vw,9px)!important;line-height:1.1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-tag{font-size:clamp(6px,.62vw,8px)!important;line-height:1!important}
+
+/* 1. FULL SCREEN — exactly one full-height participant panel. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="full-screen"]{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="full-screen"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){display:none!important}
+
+/* 2. FLUID PANEL — one dominant panel and exactly two lower-right guest panels. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
+  position:absolute!important;z-index:10!important;right:8px!important;left:auto!important;top:auto!important;
+  width:clamp(48px,15vw,120px)!important;height:clamp(44px,15vw,120px)!important;
+  min-height:44px!important;max-height:120px!important;border:1px solid rgba(255,255,255,.32)!important;
+  box-shadow:0 4px 14px rgba(0,0,0,.28)!important
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-tag{
-  font-size:clamp(6px,.62vw,8px)!important;line-height:1!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty){
+  width:clamp(48px,15vw,120px)!important;min-width:48px!important;max-width:120px!important;
+  height:clamp(44px,15vw,120px)!important;min-height:44px!important;max-height:120px!important;
+  flex:0 0 auto!important
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-layout-heading{
-  z-index:6!important;min-width:0!important;max-height:22px!important;
-  font-size:9px!important;overflow:hidden!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1vw,8px)!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1vw,8px) + clamp(44px,15vw,120px) + clamp(4px,1vw,8px))!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(n+5){display:none!important}
+
+/* 3. FLUID GRID — one full-height left panel and exactly two right-hand panels. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{
+  grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important;
+  grid-template-rows:repeat(2,minmax(0,1fr))!important
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"]:not(.live-host-only-layout){
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.62fr))!important;
-  grid-auto-rows:minmax(0,.62fr)!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"]:not(.live-host-only-layout)>.live-guest-layout-heading{
-  grid-column:1/-1!important;grid-row:1!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"]:not(.live-host-only-layout)>.live-guest-seat.is-host{
-  grid-column:1/-1!important;grid-row:2!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout{
-  display:block!important;position:relative!important;grid-template-columns:1fr!important;grid-template-rows:1fr!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-host{
-  position:absolute!important;inset:0!important;z-index:1!important;width:100%!important;height:100%!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest{
-  position:absolute!important;z-index:4!important;bottom:8px!important;top:auto!important;
-  width:clamp(38px,10%,108px)!important;height:clamp(50px,12vh,112px)!important;
-  min-height:0!important;border:1px solid rgba(255,255,255,.28)!important;
-  box-shadow:0 5px 18px rgba(0,0,0,.3)!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(2){left:calc(8px + 0%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(3){left:calc(8px + 10.7%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(4){left:calc(8px + 21.4%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(5){left:calc(8px + 32.099999999999994%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(6){left:calc(8px + 42.8%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(7){left:calc(8px + 53.5%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(8){left:calc(8px + 64.19999999999999%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"].live-host-only-layout>.live-guest-seat.is-guest:nth-child(9){left:calc(8px + 74.89999999999999%)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]{
-  grid-template-columns:minmax(0,1fr)!important;grid-template-rows:22px minmax(0,1fr)!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-layout-heading{
-  grid-column:1/-1!important;grid-row:1!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{
-  grid-column:1!important;grid-row:2!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
-  position:absolute!important;z-index:4!important;bottom:9px!important;top:auto!important;
-  width:clamp(64px,9vw,104px)!important;height:clamp(78px,15vh,124px)!important;
-  min-height:0!important;border:1px solid rgba(255,255,255,.26)!important;
-  box-shadow:0 4px 14px rgba(0,0,0,.28)!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1/3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:2!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:2!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(n+5){display:none!important}
+
+/* 4. FIXED GRID — exact three-column by three-row panel matrix. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:repeat(3,minmax(0,1fr))!important;
+  grid-auto-flow:row!important;grid-auto-rows:minmax(0,1fr)!important;
 }
 
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{width:clamp(50px,16%,118px)!important;height:clamp(58px,13vh,104px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(3){left:8px!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(4){left:calc(8px + 17%)!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(5){left:calc(8px + 34%)!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(6){left:calc(8px + 51%)!important;bottom:8px!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(7){left:8px!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(8){left:calc(8px + 17%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(9){left:calc(8px + 34%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(10){left:calc(8px + 51%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-grid"]{
-  grid-template-columns:minmax(0,2.05fr) minmax(94px,.95fr)!important;
-  grid-template-rows:22px repeat(8,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
+/* 5. FIXED PANEL — one large left panel and exactly three stacked right panels. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]{
+  grid-template-columns:minmax(0,1.72fr) minmax(0,.86fr)!important;
+  grid-template-rows:repeat(3,minmax(0,1fr))!important
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:2/10!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat.is-guest{grid-column:2!important;grid-row:auto!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fixed-grid"]{
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  grid-template-rows:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fixed-grid"]>.live-guest-layout-heading{
-  position:absolute!important;top:3px!important;left:5px!important;z-index:5!important;
-  width:auto!important;max-width:calc(100% - 10px)!important;height:18px!important;
-  padding:0 5px!important;border-radius:5px!important;background:rgba(8,13,22,.56)!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fixed-panel"]{
-  grid-template-columns:minmax(0,2fr) minmax(92px,.82fr)!important;
-  grid-template-rows:22px repeat(8,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
-}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:2/10!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat.is-guest{grid-column:2!important;grid-row:auto!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="side-by-side"]{
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1/4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:2!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:2!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(5){grid-column:2!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(n+6){display:none!important}
+
+/* 6. SIDE BY SIDE — two large top panels above two rows of four small panels. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]{
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.62fr))!important;
-  grid-auto-rows:minmax(0,.62fr)!important;
+  grid-template-rows:minmax(0,1.65fr) repeat(2,minmax(0,.72fr))!important;
+  grid-auto-flow:row dense!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat.is-host{grid-column:1/3!important;grid-row:2!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat.is-guest:nth-child(3){grid-column:3/5!important;grid-row:2!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat.is-guest:nth-child(n+4){grid-column:span 1!important;grid-row:auto!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="spotlight"]{
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat.is-host{grid-column:1/3!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:3/5!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(n+4){grid-column:span 1!important;grid-row:auto!important}
+
+/* 7. SPOTLIGHT — one wide top panel above two rows of four guest panels. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]{
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.62fr))!important;
-  grid-auto-rows:minmax(0,.62fr)!important;
+  grid-template-rows:minmax(0,1.65fr) repeat(2,minmax(0,.72fr))!important;
+  grid-auto-flow:row dense!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="spotlight"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-guest{grid-column:auto!important;grid-row:auto!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]{
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
-  grid-auto-rows:minmax(0,1fr)!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-spotlight{grid-column:1/-1!important;grid-row:1!important;z-index:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat:not(.is-spotlight){grid-column:span 1!important;grid-row:auto!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]>.mw-empty-seat{grid-column:span 1!important;grid-row:auto!important}
+
+/* 8. ROUNDTABLE 1 — central full-height panel, four guest panels on each side. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]{
+  grid-template-columns:minmax(0,.82fr) minmax(0,1.45fr) minmax(0,.82fr)!important;
+  grid-template-rows:repeat(4,minmax(0,1fr))!important;grid-auto-flow:row dense!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:2/6!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(3){grid-column:1!important;grid-row:2!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(4){grid-column:3!important;grid-row:2!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(5){grid-column:1!important;grid-row:3!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(6){grid-column:3!important;grid-row:3!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(7){grid-column:1!important;grid-row:4!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(8){grid-column:3!important;grid-row:4!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(9){grid-column:1!important;grid-row:5!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-guest:nth-child(10){grid-column:3!important;grid-row:5!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]{
-  grid-template-columns:minmax(70px,.78fr) minmax(0,1.45fr) minmax(0,1.45fr) minmax(70px,.78fr)!important;
-  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
-  grid-auto-rows:minmax(0,1fr)!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:1/5!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:3!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(6){grid-column:3!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(8){grid-column:3!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(10){grid-column:3!important;grid-row:4!important}
+
+/* 9. ROUNDTABLE 2 — a different four-column structure with two central panels
+   worth of width for the main participant and four guest panels on each outer side. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]{
+  grid-template-columns:minmax(0,.72fr) minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,.72fr)!important;
+  grid-template-rows:repeat(4,minmax(0,1fr))!important;grid-auto-flow:row dense!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4!important;grid-row:2/6!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(3){grid-column:1!important;grid-row:2!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(4){grid-column:4!important;grid-row:2!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(5){grid-column:1!important;grid-row:3!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(6){grid-column:4!important;grid-row:3!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(7){grid-column:1!important;grid-row:4!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(8){grid-column:4!important;grid-row:4!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(9){grid-column:1!important;grid-row:5!important}
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-guest:nth-child(10){grid-column:4!important;grid-row:5!important}
-@media(max-width:760px){
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"]:not(.live-host-only-layout){
-    grid-template-columns:repeat(3,minmax(0,1fr))!important;
-    grid-template-rows:22px minmax(0,1.5fr) repeat(3,minmax(0,.52fr))!important;
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4!important;grid-row:1/5!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:4!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(6){grid-column:4!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(8){grid-column:4!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(10){grid-column:4!important;grid-row:4!important}
+
+/* Responsive fit scales tile proportions without changing a crop's row/column count. */
+@media(max-width:780px){
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout.live-guest-layout{gap:5px!important;padding:5px!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta{padding:4px 5px!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta strong{font-size:7px!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
+    width:clamp(48px,15vw,116px)!important;height:clamp(44px,15vw,116px)!important
   }
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty){
+    width:clamp(48px,15vw,116px)!important;min-width:48px!important;max-width:116px!important;
+    height:clamp(44px,15vw,116px)!important;min-height:44px!important;max-height:116px!important;flex:0 0 auto!important
+  }
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1vw,8px)!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1vw,8px) + clamp(44px,15vw,116px) + clamp(4px,1vw,8px))!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1%,8px)!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1%,8px) + clamp(44px,10%,96px) + clamp(4px,1.5%,8px))!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]{grid-template-columns:minmax(0,1.55fr) minmax(0,.86fr)!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]{grid-template-columns:minmax(0,.68fr) minmax(0,1.35fr) minmax(0,.68fr)!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]{grid-template-columns:minmax(0,.62fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,.62fr)!important}
+}
+@media(max-width:420px){
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta strong{font-size:6px!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta small{display:none!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
+    width:58px!important;height:44px!important
+  }
+  /* The phone rail tiles must not shrink to their text's min-content width. */
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty){
+    width:clamp(48px,15vw,58px)!important;min-width:48px!important;max-width:58px!important;
+    height:clamp(44px,15vw,58px)!important;min-height:44px!important;max-height:58px!important;
+    flex:0 0 auto!important
+  }
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){bottom:clamp(4px,1vw,8px)!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){bottom:calc(clamp(4px,1vw,8px) + clamp(44px,15vw,58px) + clamp(4px,1vw,8px))!important}
+}
 
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-grid"]{grid-template-columns:minmax(0,1.7fr) minmax(78px,.9fr)!important}
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fixed-panel"]{grid-template-columns:minmax(0,1.6fr) minmax(76px,.85fr)!important}
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="side-by-side"]{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat{gap:2px!important;padding:3px!important}
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-avatar{width:clamp(20px,5vw,34px)!important;height:clamp(20px,5vw,34px)!important}
+/* Wide LIVE player shells add a 6px inner inset; compensate so guest thumbnails
+   retain the same 8px stage-edge anchor as MeetWave. */
+@media(min-width:901px){
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){right:2px!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){bottom:2px!important}
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){bottom:calc(2px + clamp(44px,15vw,120px) + clamp(4px,1vw,8px))!important}
 }
-@media(max-width:380px){
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout{gap:2px!important}
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-meta strong{font-size:6px!important}
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-meta small{display:none!important}
-}
-/* END FINAL NINE GUEST LAYOUTS. */
+
+/* END NINE COMPLETE GUEST LAYOUTS. */
