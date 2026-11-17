@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const migration = read('supabase/migrations/20261117070000_minglora_ai_bot_conversations.sql');
+const messageOrderMigration = read('supabase/migrations/20261117102500_minglora_ai_bot_message_order.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const doc = read('docs/AI_BOT_CHAT_RUNTIME.md');
@@ -85,6 +86,17 @@ test('AI bot chat migration indexes every child-side foreign key lookup', () => 
     assert.ok(migration.includes('create index if not exists ' + name), 'missing covering index ' + name);
   }
   assert.ok(migration.includes('create index if not exists ai_bot_conversations_owner_user_idx\n on ai_network.ai_bot_conversations(owner_user_id);'));
+});
+
+test('chat messages use stable per-conversation sequence numbers instead of timestamp or UUID ordering', () => {
+  assert.match(messageOrderMigration, /add column if not exists sequence_no bigint/i);
+  assert.match(messageOrderMigration, /row_number\\(\\) over/i);
+  assert.match(messageOrderMigration, /unique \\(conversation_id,sequence_no\\)/i);
+  assert.match(messageOrderMigration, /v_conversation\\.message_count::bigint\\+1,'user'/i);
+  assert.match(messageOrderMigration, /v_conversation\\.message_count::bigint\\+2,'assistant'/i);
+  assert.match(messageOrderMigration, /order by m\\.sequence_no desc limit 20/i);
+  assert.match(messageOrderMigration, /jsonb_agg\\(q\\.item order by q\\.sequence_no\\)/i);
+  assert.match(messageOrderMigration, /'sequenceNo',m\\.sequence_no/i);
 });
 
 test('documentation records the applied production foundation and outstanding acceptance gates', () => {
