@@ -1,3 +1,16 @@
+## Individual AI identity creation expansion — 2026-11-17
+
+- Branch: `feat/minglora-ai-individual-identity-create-complete-20261117`, stacked on the existing `feat/minglora-ai-network-bulk-retry-20261117` AI Network feature branch.
+- Expanded the authenticated single-identity form to collect personality description/traits and communication style, education records, qualifications, voice preferences, and profile visibility in addition to separate first/middle/last names, username, population/category, gender, biography, nationality, origin/current country, administrative location, time zone, profession, interests, hobbies, skills, languages and optional email metadata.
+- Added optional AI-only avatar and cover upload directly during creation through the existing owner-authorized private media upload flow. Upload failure is reported as a partial media failure; the already-created identity is not misreported as failed, and images can be retried through profile editing.
+- Creation remains a single owner-authenticated request to the existing relational identity API. It does not create a human Supabase Auth user, provision an inbox, activate a model, or enable AI execution. Email metadata stays `unverified` / `not_requested`. Identities begin `created`, disabled, and fully supervised.
+- Username, public profile identifier, email address and owner-scoped idempotency uniqueness are already enforced by live schema indexes; no new uniqueness migration was needed.
+- Production currently has zero provider accounts, provider models and provider assignments, so no provider can be assigned as operational during creation. Provider assignment remains a distinct workflow and is not represented as connected or healthy.
+- Added focused unit and Chromium browser assertions for the complete profile payload and existing email disclosure.
+- Verification: commit `0f28c478a9463bf5e4a890d8a19fb1faf19ca62b` passed full repository CI (run [44184338927](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/44184338927)), AI Network syntax/regression checks (run [44184338799](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/44184338799)), and AI identity/discovery browser acceptance (run [44184338782](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/44184338782)); all jobs completed successfully. Automated checks do not replace real authenticated production owner acceptance: create/list/get/edit and owner-authorized private avatar/cover upload remain open gates. Live production counts are zero identities, profiles, names, email rows, provider accounts, provider models and assignments. No production migration, deployment, retained identity, email inbox, human Auth user, provider credential or runtime-control change was made.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
 
 - Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.

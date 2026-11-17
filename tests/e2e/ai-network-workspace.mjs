@@ -519,6 +519,13 @@ try {
   await createForm.locator('[name="currentCountry"]').fill('JM');
   await createForm.locator('[name="timeZone"]').fill('America/Jamaica');
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
+  await createForm.locator('[name="personalityDescription"]').fill('Warm, curious and supportive AI personality.');
+  await createForm.locator('[name="personalityTraits"]').fill('empathetic, curious, patient');
+  await createForm.locator('[name="communicationStyle"]').fill('warm and clear');
+  await createForm.locator('[name="education"]').fill('Bachelor of Education\nLanguage-learning specialization');
+  await createForm.locator('[name="qualifications"]').fill('BA Education, TESOL');
+  await createForm.locator('[name="voicePreferences"]').fill('{"voice":"neutral","pace":"measured"}');
+  await createForm.locator('[name="profileVisibility"]').selectOption('public');
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
   assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
   assert.equal(await createForm.locator('[name="lastName"]').inputValue(), 'Campbell', 'Identity surname input must remain filled after category refresh.');
@@ -546,6 +553,17 @@ try {
   assert.equal(identityCreateRequests[0].profile.country_of_origin, 'JM');
   assert.equal(identityCreateRequests[0].profile.current_country, 'JM');
   assert.equal(identityCreateRequests[0].profile.time_zone, 'America/Jamaica');
+  assert.deepEqual(identityCreateRequests[0].profile.personality, {
+    description: 'Warm, curious and supportive AI personality.',
+    traits: ['empathetic', 'curious', 'patient'],
+    communication_style: 'warm and clear'
+  });
+  assert.deepEqual(identityCreateRequests[0].profile.education, [
+    'Bachelor of Education','Language-learning specialization'
+  ]);
+  assert.deepEqual(identityCreateRequests[0].profile.qualifications, ['BA Education','TESOL']);
+  assert.deepEqual(identityCreateRequests[0].profile.voice_preferences, { voice:'neutral', pace:'measured' });
+  assert.equal(identityCreateRequests[0].profile.profile_visibility, 'public');
   assert.equal(identityCreateRequests[0].languages.length, 2);
   assert.equal(identityCreateRequests[0].email.email_address, 'nia@example.test');
   assert.equal(identities.length, 2, 'The in-memory registry should refresh after creation.');

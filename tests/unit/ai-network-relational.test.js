@@ -68,6 +68,35 @@ test('email rows do not claim verification or inbox provisioning', () => {
   assert.match(ui, /No inbox is created or claimed/i);
 });
 
+test('individual identity creation captures the complete configurable profile and AI-only media', () => {
+  assert.match(ui, /data-ai-form="identity"/);
+  for (const field of [
+    'personalityDescription','personalityTraits','communicationStyle',
+    'education','qualifications','voicePreferences','profileVisibility',
+    'avatarFile','coverFile'
+  ]) {
+    assert.ok(ui.includes('name="' + field + '"'), 'Create form exposes ' + field);
+  }
+  assert.match(ui, /personality:\s*\{/);
+  assert.match(ui, /description:\s*value\('personalityDescription'\)/);
+  assert.match(ui, /traits:\s*value\('personalityTraits'\)/);
+  assert.match(ui, /communication_style:\s*value\('communicationStyle'\)/);
+  assert.match(ui, /education:\s*value\('education'\)\.split/);
+  assert.match(ui, /qualifications:\s*value\('qualifications'\)\.split/);
+  assert.match(ui, /voice_preferences:\s*\(\(\)\s*=>/);
+  assert.match(ui, /profile_visibility:\s*value\('profileVisibility'\)/);
+  assert.match(ui, /AI profile picture · max 10 MB/);
+  assert.match(ui, /AI cover photo · max 20 MB/);
+  assert.match(ui, /window\.uploadMediaFile\(slot, file/);
+  assert.match(ui, /createdIdentity\?\.identity_id/);
+  assert.match(ui, /Image upload incomplete for/);
+  assert.match(migration, /personality,/);
+  assert.match(migration, /education,/);
+  assert.match(migration, /qualifications,/);
+  assert.match(migration, /voice_preferences/);
+  assert.match(migration, /profile_visibility/);
+});
+
 test('bulk identity creation is bounded and isolates individual failures', () => {
   assert.match(migration, /jsonb_array_length\(v_payload->'items'\) > 100/i);
   assert.match(migration, /exception when others then/i);
