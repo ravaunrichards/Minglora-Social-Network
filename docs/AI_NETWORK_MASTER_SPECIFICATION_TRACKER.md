@@ -1,6 +1,7 @@
 # Minglora AI Network — Master Specification Implementation Tracker
 
 **Audit date:** 2026-11-17  
+**Latest live recheck:** 2026-11-17 21:14 UTC  
 **Scope:** Existing repository `ravaunrichards/Minglora-Social-Network` and existing Supabase project `gzycobgbasnqqhnympkr` (Minglora).  
 **Purpose:** Evidence-based status for the Master AI Bot Network specification. This is a live-state checkpoint, not a completion declaration.
 
@@ -21,7 +22,7 @@ A table, endpoint, fixture, mock, or passing isolated test does not by itself pr
 | Supabase project | Minglora — existing project only |
 | PostgreSQL | 17.11 |
 | Project status | ACTIVE_HEALTHY |
-| Database size at audit | 40 MB |
+| Database size at latest recheck | 42 MB (2026-11-17 21:13 UTC) |
 | `ai_network` base tables | 62 |
 | `ai_network` tables with RLS enabled | 62 / 62 |
 | `anon` schema USAGE | denied |
@@ -45,6 +46,16 @@ A table, endpoint, fixture, mock, or passing isolated test does not by itself pr
 The three worker tables introduced in source migration `20261117130000_minglora_ai_worker_principals.sql` are not present in production. The live Edge Function remains on v133 and does not include that worker-principal release. No worker credentials or worker records have been created.
 
 The live identity/provider/workforce counts above are zero. Do not interpret zero rows as proof of successful throughput, and do not create sample identities or artificial Auth users to make dashboards appear populated.
+
+### Live access-boundary and security-advisor recheck — 2026-11-17 21:14 UTC
+
+- Exact live measurements: 62 `ai_network` base tables, 62/62 with RLS enabled; 15 active AI categories; 20 active department templates; 20 active position templates; 0 AI identities, names, profiles, email records, provider accounts, provider models, provider assignments, organizations, employment records or queued tasks.
+- `ai_network` schema access remains server-only: `anon` USAGE denied, `authenticated` USAGE denied, and `service_role` USAGE granted.
+- The live `ai_task_runtime_controls.primary` row remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`, with a 120-second lease. Its last update remains 2026-11-14 02:20:51 UTC.
+- The three worker-principal tables remain absent from production. The source migration stays un-applied; no worker principal, credential or production task was created.
+- Security Advisor returned 119 INFO findings for RLS-enabled tables without policies. In the `ai_network` schema this aligns with the deliberate browser-role schema-denial and service-role-only access model; do not add broad client policies just to silence this lint.
+- Separate project-wide WARN findings remain open: 1 authenticated-executable `SECURITY DEFINER` MFA helper (`public.minglora_list_my_mfa_factors()`), 65 anonymous-access-policy findings across existing schemas, and leaked-password protection disabled. The MFA helper currently uses an empty `search_path` and filters by `auth.uid()`. These findings require an owner-reviewed, policy-by-policy assessment; no existing social policies or Auth settings were changed in this recheck.
+- The connected Render account exposes one workspace, “Creator Hub Creator Network's workspace.” It has not been confirmed as Minglora's production target, so no Render service inventory, environment inspection or deployment was performed.
 
 ## 2. Master specification status
 
