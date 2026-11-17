@@ -75,3 +75,26 @@ test('Audio-only LIVE keeps its original speaker grid instead of becoming a flat
 test('Mobile audio-only LIVE reserves space above the bottom control dock', () => {
   assert.match(compact, /\.live-video-column #live-video-stage\.live-audio-stage\{[\s\S]*?inset:0 0 60px/);
 });
+
+
+test('LIVE multi-guest stage reserves its heading row instead of covering the host panel', () => {
+  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  assert.match(correction, /#live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?position:relative!important[\s\S]*?grid-row:1!important/);
+  assert.match(correction, /data-live-layout="full-screen"\]\{\s*grid-template-rows:22px minmax\(0,1fr\)!important/);
+  assert.match(correction, /data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{\s*grid-column:1!important;grid-row:2!important/);
+  assert.match(correction, /data-live-layout="fluid-panel"\]\{\s*grid-template-rows:22px minmax\(0,1fr\)!important/);
+  assert.match(correction, /data-live-layout="fluid-grid"\]\{[\s\S]*?grid-template-rows:22px repeat\(2,minmax\(0,1fr\)\)!important/);
+});
+
+test('LIVE Fluid Panel guest seats are inset and size-clamped inside the video-stage border', () => {
+  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  assert.match(correction, /data-live-layout="fluid-panel"\][\s\S]*?right:clamp\(8px,1vw,12px\)!important/);
+  assert.match(correction, /width:clamp\(48px,15vw,120px\)!important;height:clamp\(44px,15vw,120px\)!important/);
+  assert.match(correction, /max-width:none!important;max-height:none!important/);
+  assert.match(correction, /nth-child\(3\)\{\s*bottom:clamp\(4px,1vw,8px\)!important/);
+  assert.match(correction, /nth-child\(4\)\{\s*bottom:calc\(clamp\(4px,1vw,8px\)/);
+  assert.match(correction, /@media\(min-width:901px\)\{[\s\S]*?\}\s*$/);
+  assert.match(correction, /\{right:2px!important\}/);
+  assert.match(correction, /nth-child\(3\)\{bottom:2px!important\}/);
+  assert.match(correction, /nth-child\(4\)\{bottom:calc\(2px \+ clamp\(44px,15vw,120px\)/);
+});

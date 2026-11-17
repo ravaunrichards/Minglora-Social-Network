@@ -96,6 +96,11 @@ async function applyLayout(page,product,layout){
       };
     });
     const computed=getComputedStyle(grid);
+    const rowTracks=computed.gridTemplateRows.trim().split(/\s+/);
+    const heading=grid.querySelector(':scope > .live-guest-layout-heading');
+    const headingStyle=heading?getComputedStyle(heading):null;
+    const headingBounds=heading?heading.getBoundingClientRect():null;
+    const hasDedicatedHeadingTrack=!!heading&&headingStyle.display!=='none'&&headingStyle.gridRowStart==='1'&&headingBounds.height>0;
     const gridBounds=grid.getBoundingClientRect();
     const liveSelector='body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="'+args.layout+'"]';
     return {
@@ -105,7 +110,9 @@ async function applyLayout(page,product,layout){
       layoutAttribute:grid.getAttribute(args.product==='LIVE'?'data-live-layout':'data-layout'),
       productionSelectorMatches:args.product==='LIVE'?document.querySelectorAll(liveSelector).length:document.querySelectorAll('.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="'+args.layout+'"]').length,
       columns:computed.gridTemplateColumns.trim().split(/\s+/).length,
-      rows:computed.gridTemplateRows.trim().split(/\s+/).length,
+      rows:rowTracks.length-(hasDedicatedHeadingTrack?1:0),
+      totalGridRows:rowTracks.length,
+      headingRowHeight:hasDedicatedHeadingTrack?headingBounds.height:null,
       columnTemplate:computed.gridTemplateColumns,rowTemplate:computed.gridTemplateRows,
       display:computed.display,
       seats
@@ -120,6 +127,11 @@ function assertInside(result,seat,label){
 }
 function verify(result,definition,viewport,state){
   const label=result.product+' '+definition.id+' '+viewport.name+' '+state;
+  if(result.headingRowHeight!==null){
+    assert.ok(Math.abs(result.headingRowHeight-22)<=1,label+' reserves a separate 22px heading row');
+    const host=result.seats.find(seat=>seat.index===0&&seat.visible);
+    if(host)assert.ok(host.y>=result.headingRowHeight-1,label+' keeps the host panel below the heading row');
+  }
   assert.equal(result.seats.length,9,label+' retains all nine seat records');
   const visible=result.seats.filter(seat=>seat.visible);
   assert.equal(visible.length,definition.visible,label+' stage panel count matches its source-crop arrangement');
@@ -190,7 +202,7 @@ function verify(result,definition,viewport,state){
   return {
     product:result.product,layout:result.layout,viewport:viewport.name,state,
     visiblePanels:visible.length,seatRecords:result.seats.length,
-    stage:result.stage,columns:result.columns,rows:result.rows,
+    stage:result.stage,columns:result.columns,rows:result.rows,totalGridRows:result.totalGridRows,headingRowHeight:result.headingRowHeight,
     panels:visible.map(seat=>({index:seat.index,x:Math.round(seat.x),y:Math.round(seat.y),width:Math.round(seat.w),height:Math.round(seat.h),style:seat.style}))
   };
 }
@@ -270,20 +282,29 @@ try{
               }
               continue;
             }
+            const liveHeadingOffset=liveRow.headingRowHeight||0;
+            const mwHeadingOffset=mwRow.headingRowHeight||0;
+            const liveContentHeight=Math.max(1,liveRow.stage.height-liveHeadingOffset);
+            const mwContentHeight=Math.max(1,mwRow.stage.height-mwHeadingOffset);
             for(const metric of ['x','y','width','height']){
               const dimension=(metric==='x'||metric==='width')?'width':'height';
-              const liveRatio=livePanel[metric]/liveRow.stage[dimension];
-              const mwRatio=mwPanel[metric]/mwRow.stage[dimension];
+              const liveValue=metric==='y'?Math.max(0,livePanel.y-liveHeadingOffset):livePanel[metric];
+              const mwValue=metric==='y'?Math.max(0,mwPanel.y-mwHeadingOffset):mwPanel[metric];
+              const liveExtent=dimension==='height'?liveContentHeight:liveRow.stage[dimension];
+              const mwExtent=dimension==='height'?mwContentHeight:mwRow.stage[dimension];
+              const liveRatio=liveValue/liveExtent;
+              const mwRatio=mwValue/mwExtent;
               const delta=Math.abs(liveRatio-mwRatio);
               maxRelativeDelta=Math.max(maxRelativeDelta,delta);
               assert.ok(delta<=0.025,
                 'LIVE and MeetWave relative '+metric+' differs by '+delta.toFixed(4)+' for seat '+livePanel.index+' in '+definition.id+' on '+viewport.name+
-                '; LIVE stage='+JSON.stringify(liveRow.stage)+' MeetWave stage='+JSON.stringify(mwRow.stage));
+                '; heading-excluded LIVE stage='+liveContentHeight+'px MeetWave stage='+mwContentHeight+'px');
             }
           }
           report.geometryComparisons.push({
             layout:definition.id,viewport:viewport.name,
-            result:'matched within 2.5% of each stage dimension',
+            result:'matched within 2.5% of each usable video-area dimension',
+            geometryBasis:'video area excludes its dedicated heading row',
             maxRelativeDelta:Number(maxRelativeDelta.toFixed(4)),
             liveStage:liveRow.stage,meetWaveStage:mwRow.stage
           });
