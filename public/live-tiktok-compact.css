@@ -1012,3 +1012,14 @@ body:has(#live-player-shell) .live-layout-option>span{
     padding:3px!important;
   }
 }
+@media(max-width:900px){
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{
+    grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important;
+    grid-template-rows:repeat(2,minmax(0,1fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:repeat(3,minmax(0,1fr))!important;
+    grid-auto-flow:row!important;
+  }
+}
