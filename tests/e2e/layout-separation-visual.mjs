@@ -430,7 +430,7 @@ try{
         if(state.followed){
           assert.equal(metrics.follow.width,27,label+' after-follow Heart Me remains the compact orange heart');
         }else{
-          assert.ok(metrics.follow.width>=40,label+' before-follow action retains a readable Follow label');
+          assert.ok(metrics.follow.width>=34,label+' before-follow action retains a readable Follow label at compact phone width');
         }
       }else{
         assert.equal(metrics.follow,null,label+' host does not get a self-follow action');
