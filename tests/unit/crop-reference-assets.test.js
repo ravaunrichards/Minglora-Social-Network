@@ -182,3 +182,15 @@ test("Creator League displays the first 20 ranks with original first/second/thir
   assert.match(leagueStyles, /league-ranking-medal--top-twenty/);
 });
 
+
+
+test("Gifter range sheets crop the tall black source canvas in the display frame without editing canonical PNGs", () => {
+  const styles = read("public/gifter-progression.css");
+  const html = read("public/index.html");
+  const sw = read("public/sw.js");
+  assert.match(styles, /\.gp-range-reference-figure\{overflow:hidden\}/);
+  assert.match(styles, /\.gp-range-reference-figure img\{[\s\S]*?aspect-ratio:1\.72 \/ 1[\s\S]*?object-fit:cover[\s\S]*?object-position:50% 50%/);
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-canvas-crop-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-canvas-crop-1"));
+  assert.match(styles, /\.gp-range-reference-figure img\{[\s\S]*?border-radius:7px/);
+});
