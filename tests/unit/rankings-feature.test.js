@@ -35,7 +35,7 @@ test("Rankings uses the confirmed LIVE gift API for four periods and up to 100 p
 });
 test("Rankings uses supplied top-three frames and separate Top 10 and Top 20 rank treatments",()=>{
  assert.match(page,/const podium = \[2,1,3\]/);
- assert.match(page,/daily-ranking-badges\/place-" \+ place \+ "\.png/);
+ assert.ok(page.includes("daily-ranking-badges/place-") && page.includes(".png' alt='' loading"));
  assert.ok(page.includes("ranking-position--top-ten")&&page.includes("ranking-position--top-twenty"));
  assert.ok(page.includes("TOP 10")&&page.includes("TOP 20"));
  assert.ok(page.includes("data-ranking-profile")&&page.includes("window.openProfile"));
@@ -49,7 +49,7 @@ test("Rankings handles empty, failure, period-switch and route-cancellation stat
  assert.ok(page.includes("data-ranking-retry")&&page.includes("AbortController"));
  assert.ok(page.includes("data-ranking-period")&&page.includes('cache:"no-store"'));
  assert.ok(page.includes("function onNavigateAway()"));
- assert.ok(worker.includes("v348-standalone-rankings-1"));
+ assert.ok(worker.includes("minglora-shell-v348-self-updating-1"));
  assert.ok(worker.includes("/rankings.css?v=20261116-standalone-rankings-1"));
  assert.ok(worker.includes("/rankings.js?v=20261116-standalone-rankings-1"));
 });
