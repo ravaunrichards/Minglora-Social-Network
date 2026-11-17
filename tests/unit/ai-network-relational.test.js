@@ -183,3 +183,19 @@ test('AI identity owner registry supports paginated and searchable retrieval', (
   assert.match(ui, /identityRegistrySearch/);
   assert.match(ui, /No AI identity records match this search/);
 });
+
+test('AI identity creation collects and validates complete individual profile fields', () => {
+  assert.match(ui, /name="profileVisibility"/);
+  assert.match(ui, /name="qualifications"/);
+  assert.match(ui, /name="education"/);
+  assert.match(ui, /name="personality"/);
+  assert.match(ui, /name="voicePreferences"/);
+  assert.match(ui, /profile_visibility: value\('profileVisibility'\) \|\| 'private'/);
+  assert.match(ui, /qualifications: value\('qualifications'\)\.split\(','\)/);
+  assert.match(ui, /education,/);
+  assert.match(ui, /personality,/);
+  assert.match(ui, /voice_preferences: voicePreferences/);
+  assert.match(ui, /parseProfileJson\('education', '\[\]', 'array'\)/);
+  assert.match(ui, /parseProfileJson\('personality', '\{\}', 'object'\)/);
+  assert.match(ui, /parseProfileJson\('voicePreferences', '\{\}', 'object'\)/);
+});
