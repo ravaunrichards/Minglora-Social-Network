@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { verifyOpenAIModelExecution } from '../../backend/modules/ai-network/openai-bot-chat.js';
+import { probeOpenAIProvider } from '../../backend/modules/ai-network/openai-provider-probe.js';
 
 function response(payload, status=200) {
   return { ok:status>=200 && status<300, status, json:async()=>payload };
@@ -36,6 +37,32 @@ test('OpenAI assignment smoke test performs moderated, non-stored, tool-free inf
   assert.deepEqual(calls[1].payload.tools,[]);
   assert.ok(calls.every(call=>call.options.headers.Authorization==='Bearer test-secret'));
   assert.ok(!JSON.stringify(result).includes('test-secret'));
+});
+
+test('assigned OpenAI model probe uses OpenAI-specific credentials, not another provider generic key',async()=>{
+  let requestSeen=null;
+  const result=await probeOpenAIProvider({
+    model:'gpt-assigned-model',
+    env:{MINGLORA_AI_PROVIDER:'anthropic',MINGLORA_AI_API_KEY:'anthropic-test-key',OPENAI_API_KEY:'openai-test-key'},
+    fetchImpl:async(url,options)=>{
+      requestSeen={url,options};
+      return response({id:'gpt-assigned-model'});
+    }
+  });
+  assert.equal(result.connected,true);
+  assert.equal(requestSeen.options.headers.Authorization,'Bearer openai-test-key');
+  assert.ok(requestSeen.url.endsWith('/models/gpt-assigned-model'));
+});
+
+test('assigned OpenAI model probe will not send a different provider generic key',async()=>{
+  let calls=0;
+  const result=await probeOpenAIProvider({
+    model:'gpt-assigned-model',
+    env:{MINGLORA_AI_PROVIDER:'anthropic',MINGLORA_AI_API_KEY:'anthropic-test-key'},
+    fetchImpl:async()=>{calls+=1;return response({id:'should-not-be-called'});}
+  });
+  assert.equal(result.status,'missing_credentials');
+  assert.equal(calls,0);
 });
 
 test('smoke test refuses to call OpenAI without a private server credential',async()=>{
