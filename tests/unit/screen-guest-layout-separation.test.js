@@ -58,6 +58,19 @@ test('MeetWave exposes exactly one nine-layout selector; both Roundtables are co
   assert.equal((meetwave.match(/data-mw-layout="roundtable-[12]"/g)||[]).length,2);
 });
 
+test('LIVE guest panels match source-specific counts without removing guest seat records',()=>{
+  const start=guestCss.lastIndexOf('/* FINAL NINE GUEST LAYOUTS');
+  const contract=guestCss.slice(start);
+  assert.ok(start>=0);
+  assert.match(contract,/data-live-layout="full-screen"[\s\S]*?>\.live-guest-seat:not\(\.is-host\)\{\s*display:none!important/);
+  assert.match(contract,/data-live-layout="fluid-panel"[\s\S]*?nth-child\(n\+5\)\{\s*display:none!important/);
+  assert.match(contract,/data-live-layout="fluid-grid"[\s\S]*?nth-child\(n\+5\)\{\s*display:none!important/);
+  assert.match(contract,/data-live-layout="fixed-panel"[\s\S]*?nth-child\(n\+6\)\{display:none!important\}/);
+  assert.match(contract,/data-live-layout="side-by-side"[\s\S]*?::after\{\s*content:""!important/);
+  assert.match(app,/guests\.slice\(0,8\)/);
+  assert.match(meetwave,/MEETWAVE_GUEST_LIMIT = 8/);
+});
+
 test('MeetWave nine-layout CSS uses one full-stage grid and nine independent panel arrangements',()=>{
   const start=meetwaveCss.lastIndexOf('/* NINE COMPLETE GUEST LAYOUTS');
   const contract=meetwaveCss.slice(start);
@@ -67,14 +80,16 @@ test('MeetWave nine-layout CSS uses one full-stage grid and nine independent pan
   assert.ok(contract.includes('position:absolute!important;inset:0!important'));
   assert.ok(contract.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
   assert.ok(contract.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'));
-  assert.ok(contract.includes('grid-template-columns:minmax(0,2.05fr) minmax(94px,.95fr)!important'));
-  assert.ok(contract.includes('grid-template-columns:minmax(0,2fr) minmax(92px,.82fr)!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,1.65fr) minmax(0,.9fr)!important'));
+  assert.ok(contract.includes('grid-template-columns:minmax(0,1.75fr) minmax(0,.9fr)!important'));
   assert.ok(contract.includes('grid-column:1/-1!important'));
   assert.ok(contract.includes('grid-column:2/4!important'));
   assert.ok(contract.includes('grid-template-columns:minmax(70px,.78fr) minmax(0,1.45fr) minmax(0,1.45fr) minmax(70px,.78fr)!important'));
-  assert.ok(contract.includes('grid-template-columns:minmax(0,1.7fr) minmax(78px,.9fr)!important'));
-  assert.doesNotMatch(contract,/\.live-guest-seat(?:\.is-host|\.is-guest)?\s*\{[^{}]*display:\s*none/i);
-  assert.doesNotMatch(contract,/\.mw-empty-seat\s*\{[^{}]*display:\s*none/i);
+  assert.ok(contract.includes('grid-template-rows:repeat(2,minmax(0,1fr))!important'));
+  assert.match(contract,/data-layout="full-screen"[\s\S]*?>:is\(\.live-guest-seat\.is-guest,\.mw-empty-seat\)\{\s*display:none!important/);
+  assert.match(contract,/data-layout="fluid-panel"[\s\S]*?nth-child\(n\+5\)\{display:none!important\}/);
+  assert.match(contract,/data-layout="fixed-panel"[\s\S]*?nth-child\(n\+6\)\{display:none!important\}/);
+  assert.match(contract,/data-layout="side-by-side"[\s\S]*?::after\{\s*content:""!important/);
   assert.ok(contract.includes('>.live-guest-seat.is-host'));
   assert.ok(contract.includes('.mw-empty-seat'));
   assert.doesNotMatch(contract,/data-guest-layout=/);
