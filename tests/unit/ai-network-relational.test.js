@@ -168,3 +168,35 @@ test('AI memory API and UI remain owner-authenticated and explain that model rec
   assert.match(ui, /long_term_enabled/);
   assert.match(ui, /does not yet connect to live model recall or automatic conversation capture/i);
 });
+
+
+test('individual AI registration captures full profile metadata and structured language details', () => {
+  for (const token of [
+    'name="qualifications"',
+    'name="education"',
+    'name="personality"',
+    'name="voicePreferences"',
+    'name="languageDetails"',
+    'name="profileVisibility"',
+    "qualifications: value('qualifications')",
+    'education,',
+    'personality,',
+    'voice_preferences: voicePreferences',
+    "profile_visibility: value('profileVisibility') || 'private'",
+    'payload.languages = structuredLanguages',
+    'Only one primary AI language'
+  ]) assert.ok(ui.includes(token), 'Missing registration profile field/behavior: ' + token);
+  assert.match(ui, /An AI profile may have at most 30 education records/);
+  assert.match(ui, /An AI profile may have at most 50 language records/);
+});
+
+test('AI identity gateway bounds payload size and rejects secret-shaped fields', () => {
+  const identityCommandStart = runtime.indexOf('if (action === "ai_identity_command")');
+  const statusCommandStart = runtime.indexOf('if (action === "ai_identity_status_command")', identityCommandStart);
+  assert.ok(identityCommandStart >= 0 && statusCommandStart > identityCommandStart);
+  const handler = runtime.slice(identityCommandStart, statusCommandStart);
+  assert.match(handler, /serializedPayload/);
+  assert.match(handler, /byteLength\(serializedPayload\)\s*>\s*200000/);
+  assert.match(handler, /access\[_-\]\?token\|password\|secret\|authorization\|cookie\|credential/);
+  assert.match(handler, /cannot contain credentials or secrets/);
+});
