@@ -95,6 +95,9 @@ begin
    into v_actual_tokens;
   select
    coalesce((select sum(r.reserved_tokens) from ai_network.ai_bot_daily_token_reservations r
+    join ai_network.ai_bot_chat_requests q on q.request_id=r.request_id
+      and q.attempt_count=r.attempt_count and q.owner_user_id=r.owner_user_id
+      and q.status='running' and q.lease_expires_at>v_now
     where r.owner_user_id=p_actor_user_id and r.usage_date=v_usage_date and r.status='reserved'),0) +
    coalesce((select sum(r.reserved_tokens) from ai_network.ai_creator_studio_daily_token_reservations r
     where r.owner_user_id=p_actor_user_id and r.usage_date=v_usage_date and r.status='reserved'
@@ -163,6 +166,9 @@ begin
    into v_actual_tokens;
   select
    coalesce((select sum(r.reserved_tokens) from ai_network.ai_bot_daily_token_reservations r
+    join ai_network.ai_bot_chat_requests q on q.request_id=r.request_id
+      and q.attempt_count=r.attempt_count and q.owner_user_id=r.owner_user_id
+      and q.status='running' and q.lease_expires_at>v_now
     where r.owner_user_id=p_actor_user_id and r.usage_date=v_usage_date and r.status='reserved'),0) +
    coalesce((select sum(r.reserved_tokens) from ai_network.ai_creator_studio_daily_token_reservations r
     where r.owner_user_id=p_actor_user_id and r.usage_date=v_usage_date and r.status='reserved'
@@ -394,6 +400,9 @@ begin
    into v_actual_tokens;
   select
    coalesce((select sum(r.reserved_tokens) from ai_network.ai_bot_daily_token_reservations r
+    join ai_network.ai_bot_chat_requests q on q.request_id=r.request_id
+      and q.attempt_count=r.attempt_count and q.owner_user_id=r.owner_user_id
+      and q.status='running' and q.lease_expires_at>v_now
     where r.owner_user_id=p_actor_user_id and r.usage_date=v_usage_date and r.status='reserved'),0) +
    coalesce((select sum(r.reserved_tokens) from ai_network.ai_creator_studio_daily_token_reservations r
     where r.owner_user_id=p_actor_user_id and r.usage_date=v_usage_date and r.status='reserved'
