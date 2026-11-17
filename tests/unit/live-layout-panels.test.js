@@ -233,6 +233,6 @@ test('Fluid Panel guest overlays stay clear of the host stage right and bottom b
   assert.match(safeZone,/bottom:clamp\(18px,2\.5vw,22px\)!important/);
   assert.match(safeZone,/right:clamp\(32px,3\.5vw,48px\)!important/);
   assert.match(safeZone,/bottom:clamp\(24px,2\.5vw,34px\)!important/);
-  assert.match(safeZone,/clamp\(12px,1\.2vw,16px\)/);
+  assert.ok(safeZone.includes('clamp(4px,1vw,8px)'), 'guest thumbnails retain their compact vertical gap');
   assert.doesNotMatch(safeZone,/right:2px!important|bottom:2px!important/);
 });
