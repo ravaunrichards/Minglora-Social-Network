@@ -66,7 +66,7 @@ test('LIVE panel, End LIVE header and chat are contained in the panel without co
 });
 
 test('Final stylesheet and offline service-worker shell use matching cache-busted URLs', () => {
-  const styleUrl = '/live-interface-guardrails.css?v=20261112-live-hostline-final-3';
+  const styleUrl = '/live-interface-guardrails.css?v=20261117-live-heartme-fluid-panel-1';
   assert.ok(html.includes(styleUrl));
   assert.ok(html.lastIndexOf(styleUrl) > html.lastIndexOf('/minglora-branding.css'));
   assert.ok(sw.includes(styleUrl));
