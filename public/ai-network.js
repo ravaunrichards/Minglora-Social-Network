@@ -2411,7 +2411,7 @@
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
       else if (action === 'provider-assignment-verify') {
         if (!id) throw new Error('A valid provider assignment is required.');
-        if (!window.confirm('Verify the assigned provider/model using Minglora’s private server credential and activate it only when the exact model is reachable?')) return;
+        if (!window.confirm('Verify access to the exact assigned model and send one short, moderation-checked test reply with no tools? The provider may charge for this small inference request. The assignment activates only if the verification succeeds.')) return;
         await request('/provider-assignments/' + encodeURIComponent(id) + '/verify', { method:'POST', body:{} });
       }
       else if (action === 'bot-chat-open') {

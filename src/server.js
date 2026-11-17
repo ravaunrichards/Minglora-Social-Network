@@ -2569,6 +2569,7 @@ async function route(req, res) {
         const health = await probeAssignedProvider({
           providerName: candidate?.provider_name,
           modelIdentifier: candidate?.model_identifier,
+          accountType: candidate?.account_type,
           env: process.env
         });
         if (!health.connected) {
