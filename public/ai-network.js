@@ -348,6 +348,7 @@
       '<label>Purpose / purpose statement<textarea name="purpose" maxlength="1200" rows="2" placeholder="Describe this AI identity and its purpose."></textarea></label>' +
       '<label>Biography<textarea name="bio" maxlength="4000" rows="2" placeholder="Public AI biography"></textarea></label>' +
       '<label>Introduction<textarea name="introduction" maxlength="2000" rows="2" placeholder="Profile introduction"></textarea></label>' +
+      '<label>Personality description<textarea name="personalityDescription" maxlength="2000" rows="3" placeholder="Describe the AI personality and how it approaches conversations."></textarea></label>' +
       '<div class="ai-network-form-grid"><label>Gender presentation<input name="genderPresentation" maxlength="80"></label>' +
       '<label>Nationality<input name="nationality" maxlength="120" placeholder="Nationality description"></label>' +
       '<label>Country of origin<input name="countryOfOrigin" list="ai-network-countries" autocomplete="off" placeholder="Search countries"></label>' +
