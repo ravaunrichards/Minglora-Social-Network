@@ -39,6 +39,15 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 - No worker, schedule, external tool, payout, coin action, administrative action or autonomous execution is enabled.
 - No AI identity, human Auth user, mailbox, provider credential, conversation, message or usage record was created. No Render service deployment or worker-control change was performed.
 
+
+## Deployed RPC rollback-only acceptance — 2026-11-17
+
+- Executed the deployed `public.minglora_ai_bot_chat_command` as `service_role` inside one transaction that was explicitly rolled back.
+- Verified a reserved request, moderated completion, token settlement, completed-request idempotent reuse, a timed-out lease advancing to attempt 2, release on failure, and rejection of an over-budget reservation with SQLSTATE `54000`.
+- Verified a second existing Minglora profile cannot read the first owner's conversation.
+- The test identity, requests, conversation, messages, audit records, budget row, reservations and usage events were transaction-scoped fixtures. Post-rollback counts for all of those AI/chat tables were zero.
+- This was a sequential database RPC contract test, not a concurrent-session/load test. Billable provider-failure accounting, signed-in HTTP/device acceptance, live provider inference and the Render Node API release remain unverified. The runtime remains globally paused, execution-disabled and at zero workers.
+
 ## Acceptance still required
 
 1. Verify the existing Render workspace/service and deploy the current `src/server.js` backend from merged `main` without creating another service; this deployment is not yet confirmed.
