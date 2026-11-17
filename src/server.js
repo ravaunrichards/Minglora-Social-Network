@@ -1599,14 +1599,17 @@ async function route(req, res) {
 
       if (method === 'GET' && sub === 'email/status') {
         const status = await inspectResendDomain();
+        const emailConfig = getAIEmailConfig();
         return json(res, 200, {
           provider: status.provider,
           configured: Boolean(status.configured),
+          credentialsPresent: Boolean(emailConfig.hasApiKey),
           domain: status.domain,
           verified: Boolean(status.verified),
           sendingEnabled: Boolean(status.sendingEnabled),
           receivingEnabled: Boolean(status.receivingEnabled),
           webhookConfigured: Boolean(status.webhookConfigured),
+          webhookSecretPresent: Boolean(emailConfig.hasWebhookSecret),
           ready: Boolean(status.ready),
           note: status.note
         });
