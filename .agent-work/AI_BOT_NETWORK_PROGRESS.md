@@ -407,3 +407,24 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - LIVE/MeetWave visual matrix: **9 layouts**, **3 viewports**, **54 crop comparisons**, **54 occupied-seat checks**, **27 MeetWave empty-seat checks**, **27 matching geometries**; passed.
 - PR #470 is draft/open/mergeable and not merged. The first CI attempt exposed one stale expected-text assertion; it was corrected and all rerun checks passed.
 - No production schema/data/memory settings, provider credentials, AI identities, Auth users, workers or deployment targets were modified. Runtime controls remain paused.
+
+
+## Member-facing AI discovery — 2026-11-17 (source implementation checkpoint)
+
+- Branch `feat/minglora-public-ai-discovery-20261117`, ported onto current main `ad0873b0bc317ab881b0175100b1c7de66cf5fff` including owner-merged PR #469 RBAC foundation and PR #470 consent-gated memory recall.
+- Implemented a distinct signed-in member API for public AI discovery, follow/unfollow, max-100 bulk follow, saved groups, and approvals for follow requests on AI identities owned by the signed-in member.
+- Added a responsive standalone Discover AI page with a searchable 249-code country/territory multiselect, combinable filters, AI-labelled profile cards, true Minglora-member follow counts, following list and saved groups.
+- Owner/MFA-only AI Network management remains separate. The RPC still returns only active, enabled, public profiles and no email/provider-secret records.
+- Unit and Playwright browser coverage added; CI pending. No migrations/deployments or production data writes. Workers remain paused.
+
+
+### Verification checkpoint — current-main member-facing AI discovery continuation
+
+- Original PR #472 verification commit: `4a46221a567a849bcae386a62726a7b546e5c4d0`; source branch is superseded by this current-main continuation.
+- Previous source-head full repository suite: **1,314 passed, 0 failed**; fresh current-main run pending.
+- Previous source-head AI Network regression suite: **156 passed, 0 failed**; fresh current-main run pending.
+- Previous source-head public discovery Playwright browser acceptance: passed — 249 country/territory options, 2 disposable profile fixtures, 4 combined-filter submissions, follow/unfollow, bulk follow, saved search creation/application, follow-request approval, desktop/mobile screenshots, and no page errors.
+- Supabase Auth provider acceptance: passed. For You functional navigation: passed.
+- LIVE and MeetWave nine-layout visual matrix: passed.
+- Previous source-head profile layout matrix completed successfully (run #451). Fresh current-main profile and browser matrices are pending.
+- No live database/schema/data, AI identities, user accounts, emails or followers were changed. No production migrations/deployments. Production worker controls remain paused, execution disabled and max workers zero.

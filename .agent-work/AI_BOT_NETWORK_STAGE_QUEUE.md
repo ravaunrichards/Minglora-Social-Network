@@ -601,3 +601,25 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Latest verified checks for the repaired commit: full repository CI **1,301/1,301 passed**; AI Network checks **156/156 passed**; Supabase Auth provider acceptance passed; For You navigation passed; nine-layout LIVE/MeetWave visual matrix passed (**9 layouts, 3 viewports, 54 crop comparisons, 54 occupied-seat checks, 27 empty-seat checks**).
 - GitHub workflow runs: CI #14436 success, AI Network #439 success, visual QA #804 success. Duplicate CI run #14435 also succeeded.
 - PR #470 remains **open, draft, mergeable, and unmerged** pending owner review. No production migration, Edge Function, or application deployment occurred.
+
+
+## Member-facing AI discovery — 2026-11-17 (source implementation checkpoint)
+
+- Branch: `feat/minglora-public-ai-discovery-20261117`, ported onto current main `ad0873b0bc317ab881b0175100b1c7de66cf5fff` after owner-merged PR #469 (RBAC) and PR #470 (consented chat memory).
+- Added separate signed-in member API `/api/ai-discovery` forwarding existing service-only discovery/follow RPC actions. Owner/MFA-gated `/api/ai-network` administration remains unchanged.
+- Added responsive Discover AI page with searchable 249 country/territory options, combined profile filters, AI-labelled public profile cards, individual/unfollow and bulk follow (100 max), member following list, follow-request approvals for AI profiles owned by the account, and saved search groups.
+- Existing SQL discovery RPC remains authoritative for public visibility and actor scoping; no email/provider-secret fields are returned by public discovery.
+- Source-only pending CI/review. No migration/Edge/Render deployment or production identity/Auth/social record writes. AI runtime remains globally paused, disabled and with zero workers.
+
+
+### Verification checkpoint — current-main member-facing AI discovery continuation
+
+- Original PR #472 verification commit: `4a46221a567a849bcae386a62726a7b546e5c4d0`; its branch is superseded by this current-main continuation.
+- Previous source-head full repository tests: **1,314 passed / 0 failed**; fresh current-main run pending.
+- AI Network syntax and regression tests: **156 passed / 0 failed**.
+- Dedicated public AI discovery Playwright browser workflow: **passed**. It rendered all 249 country/territory options, tested 2 disposable public-profile fixtures, 4 combined-filter calls, individual follow/unfollow, max-100 bulk-follow request, saved search creation/application, and owner-scoped follow-request approval; captured desktop/mobile screenshots. No production records were used.
+- Supabase Auth provider acceptance: passed.
+- For You navigation: passed.
+- LIVE and MeetWave original-crop matrix: passed across nine layouts.
+- The previous source-head profile layout matrix completed successfully (run #451). Fresh current-main profile and browser matrices are pending.
+- The original PR #472 branch is superseded; the current-main continuation is pending verification. No migrations, Edge Function or Render deployment, production identities/follows/Auth users, or worker setting changes were performed.
