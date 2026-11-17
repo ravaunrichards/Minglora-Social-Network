@@ -44,6 +44,7 @@ let identityCreateRequests = [];
 let identityPatchRequests = [];
 let bulkIdentityRequests = [];
 let bulkIdentityFirstFailureUsed = false;
+let bulkIdentityRetainedRetryRows = 0;
 let discoveryQueries = [];
 let bulkFollowRequests = [];
 let memorySettings = {
@@ -610,6 +611,7 @@ try {
   assert.equal(bulkIdentityRequests.length, 1, 'The first identity batch must make one bounded bulk-create request.');
   assert.deepEqual(bulkIdentityRequests[0].items, [successfulBulkRow, retryBulkRow]);
   const retainedRetryRows = JSON.parse(await bulkIdentityForm.locator('[name="items"]').inputValue());
+  bulkIdentityRetainedRetryRows = retainedRetryRows.length;
   assert.deepEqual(retainedRetryRows, [retryBulkRow], 'Only the failed source row must be retained for retry.');
   assert.equal(retainedRetryRows[0].idempotency_key, 'ai-bulk-retry-row-002', 'Retry must preserve the original idempotency key.');
 
@@ -745,7 +747,7 @@ try {
     identityCreates: identityCreateRequests.length,
     identityProfileUpdates: identityPatchRequests.length,
     bulkIdentityBatchAttempts: bulkIdentityRequests.length,
-    bulkIdentityRowsRetainedForRetry: 1,
+    bulkIdentityRowsRetainedForRetry: bulkIdentityRetainedRetryRows,
     combinedDiscoveryQueries: discoveryQueries.length,
     bulkFollowRequests: bulkFollowRequests.length,
     memorySettingsUpdates: memoryRequests.settings.length,
