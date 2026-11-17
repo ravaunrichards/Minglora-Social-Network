@@ -605,7 +605,21 @@ try {
   const bulkItemsField = bulkIdentityForm.locator('[name="items"]');
   await bulkItemsField.fill(JSON.stringify([successfulBulkRow, retryBulkRow]));
   await bulkIdentityForm.locator('button[type="submit"]').click();
-  await page.getByText(/Bulk identity batch: 1 created; 0 reused; 1 failed\./).waitFor({ state: 'visible' });
+  try {
+    await page.getByText(/Bulk identity batch: 1 created; 0 reused; 1 failed\./).waitFor({ state: 'visible', timeout: 8000 });
+  } catch (error) {
+    const diagnostics = {
+      bulkIdentityRequestCount: bulkIdentityRequests.length,
+      bulkIdentityRequests,
+      visibleAlerts: await page.locator('.ai-network-alert').allTextContents(),
+      retryEditorValue: await bulkIdentityForm.locator('[name="items"]').inputValue().catch(() => null),
+      identityCount: identities.length,
+      pageTitle: await page.title()
+    };
+    console.error('[AI Network bulk identity retry diagnostic]', JSON.stringify(diagnostics));
+    await page.screenshot({ path: path.join(artifactsDir, 'ai-network-bulk-retry-debug.png'), fullPage: true }).catch(() => {});
+    throw error;
+  }
   await page.getByText(/Row 2 \[ai-bulk-retry-row-002\]: AI username already exists\./).waitFor({ state: 'visible' });
   await page.getByText(/Failed rows are retained in the batch editor for retry\./).waitFor({ state: 'visible' });
   assert.equal(bulkIdentityRequests.length, 1, 'The first identity batch must make one bounded bulk-create request.');
