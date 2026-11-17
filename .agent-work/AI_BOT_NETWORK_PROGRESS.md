@@ -541,3 +541,10 @@ Implemented in source:
 - Global AI workers remain paused and disabled; the interactive owner-initiated chat route is separate and does not enable autonomous workers.
 
 **Live Supabase baseline at inspection:** 0 AI identities, 0 provider accounts and 0 provider assignments. All 62 existing ai_network tables had RLS enabled. No production data was inserted, updated or deleted by this source work.
+
+
+## Provider verification hardening update (2026-11-17)
+
+The admin verify action now performs a real short text-inference check after the exact model lookup. The probe uses the selected assigned model, private OPENAI_API_KEY only, no tools, no request storage, and input/output moderation. Inference failure records an unavailable health event and cannot activate the assignment. The probe is only available for platform-managed provider account references; user-managed provider references remain blocked pending secrets-manager integration. The UI confirmation discloses that one small inference request may incur provider charges.
+
+The latest full repository CI run before this update passed the provider-specific routing and migration tests; the overall workflow remained red only on three unrelated MeetWave/Fluid Panel CSS tests, which also fail on the parent commit. The current hardening changes are queued for the next CI run.

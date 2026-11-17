@@ -111,3 +111,10 @@ The first executable adapter in this release is OpenAI. It uses the model identi
 Authorized platform administrators can verify an assignment through the provider assignment center. The server probes the exact assigned model using the private OPENAI_API_KEY environment secret, then a service-role-only RPC records the health result and may activate the assignment. Failed probes are audited and prevent routing. Secret values are never sent through the browser or stored in profile/assignment rows; only the name of the server environment variable used is recorded. Assignment activation still passes through the existing database trigger, which requires a configured, healthy account and active model.
 
 The new migration is source-only until reviewed and applied. Existing production rows are not modified by this source change. No provider credential was available for live validation during implementation, so no live model generation, healthy provider account, or active identity assignment is claimed. This adapter set currently contains OpenAI only; Anthropic, Gemini and other catalogue providers need their own tested adapters before those providers can activate.
+
+
+## Exact-model inference verification
+
+The Provider & Model Assignment Center's administrator verification action does more than read the model catalogue. It first retrieves the exact database-assigned model, then sends a single short test prompt through the Responses API with tools disabled, request storage disabled, and input/output moderation enabled. The configured server OpenAI key is used; legacy global provider keys and global model defaults are deliberately ignored. A provider is marked healthy for activation only when both model retrieval and this text-inference check succeed.
+
+The test generation may incur a small provider charge. Only platform-managed account references are eligible to use the Minglora server environment credential. User-managed provider accounts remain inactive until a supported secrets-manager integration is implemented.

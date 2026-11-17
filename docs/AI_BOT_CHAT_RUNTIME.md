@@ -101,3 +101,6 @@ Bot chat resolves the selected AI identity's database-owned provider assignment 
 An authorized platform administrator can verify a pending assignment from the Provider & Model Assignment Center. The Node server probes the exact assigned model through the private server environment, then calls a service-role-only database function to record health and activate it. Failed health probes are audited and cannot activate an assignment. No credentials are accepted from the browser or persisted in profile/provider assignment fields. The existing database assignment-activation trigger remains enabled.
 
 The new database migration and Edge Function changes are source-only on the feature branch. The production schema and Edge Function have not been updated; no production AI provider assignment has been activated. No live provider inference is claimed until production deployment and an owner-initiated end-to-end test succeed.
+
+
+The administrator verification path also performs a short, moderated generation request with no tools against the exact assigned model. The assignment remains inactive if model retrieval or inference fails. Only platform-managed accounts can use the server's OPENAI_API_KEY; user-managed provider references require a separate approved secrets-manager integration.
