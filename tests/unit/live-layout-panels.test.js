@@ -183,7 +183,7 @@ test('Full Screen has its own expand icon with no guest panels; Fluid Panel keep
   const iconMap=app.slice(app.indexOf('function liveLayoutIcon'),app.indexOf('function applyLiveScreenLayout'));
   assert.ok(iconMap.includes("fullscreen:'full-screen'"), "Full Screen maps to its own supplied preview");
   assert.ok(iconMap.includes("fluidPanel:'fluid-panel'"), "Fluid Panel maps to its own supplied preview");
-  assert.match(iconMap, /src='\/assets\/live-guest-layouts\/"\+reference\+"\.png'/);
+  assert.match(iconMap, /src='\/assets\/live-guest-layouts\/"\+reference\+"\.png\?v=20261117-live-room-access-previews-1/);
   assert.ok(iconMap.includes("class='live-layout-preview'"), "layout previews use the shared preview image renderer");
 });
 
