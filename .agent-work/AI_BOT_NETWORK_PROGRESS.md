@@ -508,3 +508,41 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Supabase advisor notes for the new private tables are informational: RLS is enabled with no browser policies by design because direct browser privileges are revoked; two secondary indexes are currently unused because the new tables are empty. No missing foreign-key index finding was returned for the new tables. Existing project-wide advisor findings were not changed as part of this task.
 - Remaining release/acceptance gates: confirm the intended production Render workspace/service; perform signed-in designated-owner/MFA desktop and mobile HTTP acceptance; configure and verify a real provider credential/model and moderated inference; run production multi-session/load, backup and recovery tests; verify memory recall behavior on devices; benchmark real storage/query/write and regional failover limits. No 10-billion identity capacity or simultaneous execution capacity is claimed.
 - Next action: resolve the production Render target and owner/MFA/provider acceptance; retain the global pause until those independent safety gates are complete.
+
+
+## Provider/model execution implementation — 2026-11-17
+
+**Feature branch:** `feat/minglora-ai-provider-model-execution-20261117`  
+**State:** IMPLEMENTED IN SOURCE — AWAITING CI, REVIEW, PRODUCTION MIGRATION/EDGE DEPLOYMENT, REAL PROVIDER CREDENTIAL AND OWNER ACCEPTANCE. Do not call production model execution enabled.
+
+### Implemented in source
+- Added an assignment resolver that uses owner-scoped persisted provider assignment rows, not browser model overrides. It requires active assignment, healthy account/assignment, an active text-capable catalogue model and explicit text capability on the assignment. First implemented inference adapter is OpenAI text only.
+- Added a server-side OpenAI model execution smoke test for an explicitly selected assignment: fixed technical marker only, input and output moderation, Responses API with `store:false`, no tools and a bounded 32-token output. It returns measured provider/model/token metadata only after the expected completion marker and output moderation succeed.
+- Added a designated-Minglora-admin/MFA-protected per-assignment verification API. It loads assignment/model metadata from the existing private Supabase RPCs; browser cannot pass credentials, provider or model identifiers. Only successful inference verification can mark the saved account configured/healthy and assignment active/healthy.
+- Added private `ai_provider_health_events` table and service-role-only `minglora_ai_provider_execution_command` RPC in additive migration `20261117130000_minglora_ai_provider_execution_verification.sql`. It audits status, probe, HTTP response and measured token usage and stores no credentials.
+- Added `ai_provider_execution_command` to the existing `minglora-runtime-state` Edge Function source allowlist/handler, preserving the existing custom API-key guard. This is branch source only; not deployed.
+- Updated AI bot chat to resolve its provider/model from the individual identity's persisted active assignment, perform a selected-model access check, execute that saved model and optionally try a same-provider fallback for retryable transport/provider/model errors only. Moderation/auth/config/safety errors do not trigger fallback. Local JSON-mode compatibility retains prior environment-based path.
+- Added Provider Center UI with explicit confirmation for the billable model verification test.
+- Added unit/contract tests for provider routing, fallback policy, billable smoke test and API/migration safety. Updated provider, chat and module docs.
+
+### Verified live baseline (read-only; existing Minglora Supabase project)
+- Project ref: `gzycobgbasnqqhnympkr`.
+- Provider accounts: 0; provider models: 0; assignments: 0.
+- Durable AI tasks: 0; schedules: 0; approvals: 0.
+- Runtime controls: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`, `lease_seconds=120`.
+- Existing `minglora-runtime-state` Edge Function was ACTIVE v133 at last read.
+- No production data was added or changed by this implementation.
+
+### Not done / release gates
+- No real provider credential or provider-side account has been supplied/configured. Do not paste secrets into chat; configure credentials only in the private Minglora server environment/secrets manager.
+- The new migration is source-only; it has not been applied to production.
+- The Edge Function action is source-only; it has not been deployed.
+- The existing Render service has not been inspected/deployed in this task because a workspace selection is required. The connected workspace is `Creator Hub Creator Network` (`tea-dbphlfk9v7es73bu7amg`); obtain explicit user confirmation before selecting it and inspecting `minglora-social-network-temp`.
+- No real provider inference, live assignment activation, production chat test, desktop/mobile acceptance or worker test is claimed.
+- Other provider adapters (Anthropic, Gemini, xAI, Mistral, etc.) remain catalogue/configuration entries, not implemented execution adapters.
+- Background worker claim/heartbeat/complete/fail remain blocked behind the existing worker-auth guard. Global pause and zero workers remain untouched.
+- No dollar-cost pricing reconciliation, cross-provider fallback, no 10-billion identity capacity or concurrent execution capacity has been measured.
+
+### Next action
+- Open a draft PR and run repository CI. Fix failures rather than suppressing tests.
+- After successful review and explicit production-release authorization, apply the additive migration to the existing project, deploy the updated existing Edge Function, configure real provider credentials privately, run an admin-confirmed inference test against an actual AI identity, verify token/health audit rows, then confirm existing Render workspace/service and complete signed-in owner/MFA device acceptance. Keep workers globally paused pending their separate authenticated-worker implementation and operational gates.
