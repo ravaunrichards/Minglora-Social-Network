@@ -208,11 +208,11 @@
   function isLeagueViewActive() {
     return Boolean($("#main-content") && document.querySelector("[data-view='leagues'].active"));
   }
+  const DEFAULT_LEAGUE_AVATAR = "/assets/profile-defaults/enigma.png?v=20261116-enigma-brand-1";
   function image(member, ringClass = "") {
     const ring = ringClass ? " " + ringClass : "";
-    return member?.avatarUrl
-      ? "<img class='league-avatar" + ring + "' src='" + esc(member.avatarUrl) + "' alt=''>"
-      : "<span class='league-avatar league-avatar-fallback" + ring + "' aria-hidden='true'>" + esc((member?.name || "M").slice(0,1).toUpperCase()) + "</span>";
+    const picture = String(member?.avatar || member?.avatarUrl || member?.avatar_url || member?.profilePicture || "").trim();
+    return "<img class='league-avatar" + ring + "' src='" + esc(picture || DEFAULT_LEAGUE_AVATAR) + "' alt='' loading='lazy' decoding='async'>";
   }
   function podiumMarkup(leaderboard) {
     const positionalTopThree = [leaderboard[0], leaderboard[1], leaderboard[2]];
