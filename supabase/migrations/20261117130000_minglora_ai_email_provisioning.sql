@@ -232,7 +232,7 @@ begin
     insert into ai_network.ai_identity_audit_logs (
       identity_id,actor_type,actor_user_id,action,metadata
     ) values (
-      v_identity_id,'human',p_actor_user_id,'ai_email_mailbox_provisioned',
+      v_identity_id,'human_user',p_actor_user_id,'ai_email_mailbox_provisioned',
       jsonb_build_object('email_id',v_email.email_id,'email_address',v_email.email_address,'provider','resend','domain',v_domain)
     );
 
