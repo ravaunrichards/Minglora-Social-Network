@@ -6608,7 +6608,7 @@ async function route(req, res) {
         const period=['daily','weekly','monthly','all_time'].includes(requestedPeriod)?requestedPeriod:'daily';
         const timeZone=giftGalleryTimeZone(user);
         const leaderboard=getLiveGifterLeaderboard(db,{
-          period,now:new Date(),timeZone,limit:50
+          period,now:new Date(),timeZone,limit:100
         }).map(item=>{
           const member=db.users.find(candidate=>candidate.id===item.userId);
           return member&&!blockedBetween(user.id,member.id)?{
