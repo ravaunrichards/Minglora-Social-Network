@@ -1642,6 +1642,20 @@ async function route(req, res) {
         return response?.result;
       };
 
+      // Recall is read-only and follows consent stored with this identity. The database RPC
+      // verifies ownership and removes expired entries before returning eligible summaries.
+      const loadAIBotMemoryContext = async identityId => {
+        const result = await runAIMemoryCommand('list', { identity_id: identityId });
+        const settings = result?.settings || {};
+        const consented = settings.memory_enabled === true && Boolean(settings.consented_at);
+        const longTermEnabled = consented && settings.long_term_enabled === true;
+        const entries = consented && Array.isArray(result?.entries)
+          ? result.entries.filter(entry => entry?.memory_type === 'short_term' ||
+              (longTermEnabled && entry?.memory_type === 'long_term'))
+          : [];
+        return { memoryEnabled: consented, consented, longTermEnabled, entries };
+      };
+
       const runAIBotChatCommand = async (aiAction, payload = {}) => {
         if (!isSupabasePersistence()) throw Object.assign(new Error('Relational AI bot conversations require Minglora Supabase persistence.'), { status: 503 });
         const response = await requestSupabaseState('ai_bot_chat_command', {
@@ -2798,8 +2812,13 @@ async function route(req, res) {
           const availableDailyTokens = dailyTokenLimit - totalDailyTokensUsed;
           const history = (Array.isArray(chatState.messages) ? chatState.messages : [])
             .slice(-10).map(item => ({ role: item.role, content: item.content }));
+          const memoryContext = relationalPersistence
+            ? await loadAIBotMemoryContext(chatBase.bot.identityId)
+            : null;
           const contextLength = history.reduce((sum, item) => sum + String(item.content || '').length, 0);
-          const estimatedInputReserve = Math.ceil((String(input.message).length + contextLength) / 3) + 500;
+          const memoryContextLength = Math.min(3600, (Array.isArray(memoryContext?.entries) ? memoryContext.entries : [])
+            .reduce((sum, item) => sum + String(item?.summary || '').length, 0));
+          const estimatedInputReserve = Math.ceil((String(input.message).length + contextLength + memoryContextLength) / 3) + 500;
           const allowedOutputTokens = Math.min(700, availableDailyTokens - estimatedInputReserve);
           if (allowedOutputTokens < 128) {
             throw Object.assign(new Error('This conversation would exceed the remaining daily AI token budget. No provider generation request was sent.'), { status: 429 });
@@ -2842,7 +2861,7 @@ async function route(req, res) {
             }
             const generated = await generateOpenAIBotReply({
               bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
-              history, env: process.env, maxOutputTokens: allowedOutputTokens
+              history, memoryContext, env: process.env, maxOutputTokens: allowedOutputTokens
             });
             let saved;
             if (relationalPersistence) {

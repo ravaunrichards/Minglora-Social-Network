@@ -55,6 +55,17 @@ test('Supabase-backed server persists relational chat while local JSON mode reta
   assert.match(server, /await saveStore\(\)/);
 });
 
+test('bot chat recalls only owner-consented memory and accounts for bounded memory context in its reservation', () => {
+  assert.match(server, /const loadAIBotMemoryContext = async identityId/);
+  assert.match(server, /runAIMemoryCommand\('list', \{ identity_id: identityId \}\)/);
+  assert.match(server, /settings\.memory_enabled === true && Boolean\(settings\.consented_at\)/);
+  assert.match(server, /settings\.long_term_enabled === true/);
+  assert.match(server, /history, memoryContext, env: process\.env/);
+  assert.match(server, /memoryContextLength/);
+  assert.match(doc, /owner-consented memory summaries/i);
+  assert.match(doc, /does not automatically create, update or summarize memory entries/i);
+});
+
 test('documentation does not claim the new migration or Edge runtime is deployed', () => {
   assert.match(doc, /have \*\*not\*\* been applied or deployed/i);
   assert.match(doc, /Creator Studio usage is still reported as a baseline/i);

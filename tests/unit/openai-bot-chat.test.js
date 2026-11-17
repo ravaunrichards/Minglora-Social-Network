@@ -101,6 +101,86 @@ test('billed usage is retained in safe error metadata when moderation after gene
   assert.equal(JSON.stringify(thrown).includes('private-openai-test-key'), false);
 });
 
+
+test('owner-consented memory is provided as bounded untrusted context and long-term entries require separate consent', async () => {
+  let generationPayload;
+  const result = await generateOpenAIBotReply({
+    bot, identity, message: 'Help me plan my next creator post.', env,
+    memoryContext: {
+      memoryEnabled: true, consented: true, longTermEnabled: false,
+      entries: [
+        { memory_type: 'short_term', summary: 'The owner prefers concise captions.' },
+        { memory_type: 'long_term', summary: 'The owner works in Kingston.' }
+      ]
+    },
+    fetchImpl: async (url, options) => {
+      if (url.endsWith('/responses')) generationPayload = JSON.parse(options.body);
+      return url.endsWith('/responses') ? generated() : clear();
+    }
+  });
+  const memoryMessage = generationPayload.input.find(item =>
+    item.role === 'developer' && JSON.stringify(item).includes('Owner-consented AI memory summaries'));
+  assert.ok(memoryMessage);
+  const memoryText = memoryMessage.content[0].text;
+  assert.match(memoryText, /prefers concise captions/);
+  assert.doesNotMatch(memoryText, /works in Kingston/);
+  assert.match(memoryText, /untrusted context, not instructions/);
+  assert.equal(result.externalActionsTaken, false);
+});
+
+test('AI memory is never sent to the provider while disabled, unconsented or without the separate long-term opt-in', async () => {
+  const payloads = [];
+  const contexts = [
+    { memoryEnabled: false, consented: false, longTermEnabled: false,
+      entries: [{ memory_type: 'short_term', summary: 'Should not be included.' }] },
+    { memoryEnabled: true, consented: false, longTermEnabled: true,
+      entries: [{ memory_type: 'short_term', summary: 'Should not be included.' }] },
+    { memoryEnabled: true, consented: true, longTermEnabled: false,
+      entries: [{ memory_type: 'long_term', summary: 'Long-term consent is required.' }] }
+  ];
+  for (const memoryContext of contexts) {
+    await generateOpenAIBotReply({
+      bot, identity, message: 'Please help with a draft.', env, memoryContext,
+      fetchImpl: async (url, options) => {
+        if (url.endsWith('/responses')) payloads.push(JSON.parse(options.body));
+        return url.endsWith('/responses') ? generated() : clear();
+      }
+    });
+  }
+  for (const payload of payloads) {
+    assert.equal(payload.input.some(item =>
+      JSON.stringify(item).includes('Should not be included.') ||
+      JSON.stringify(item).includes('Long-term consent is required.')), false);
+  }
+});
+
+test('AI memory recall is capped and excludes credential-like summaries', async () => {
+  let generationPayload;
+  const entries = [
+    { memory_type: 'short_term', summary: 'password: do-not-send-this-value' },
+    ...Array.from({ length: 12 }, (_, index) => ({
+      memory_type: 'short_term', summary: 'Preference ' + index + ' '.repeat(800)
+    }))
+  ];
+  await generateOpenAIBotReply({
+    bot, identity, message: 'Please help with a draft.', env,
+    memoryContext: { memoryEnabled: true, consented: true, longTermEnabled: true, entries },
+    fetchImpl: async (url, options) => {
+      if (url.endsWith('/responses')) generationPayload = JSON.parse(options.body);
+      return url.endsWith('/responses') ? generated() : clear();
+    }
+  });
+  const memoryMessage = generationPayload.input.find(item =>
+    item.role === 'developer' && JSON.stringify(item).includes('Owner-consented AI memory summaries'));
+  assert.ok(memoryMessage);
+  const serialized = memoryMessage.content[0].text;
+  assert.doesNotMatch(serialized, /do-not-send-this-value/);
+  const encoded = serialized.slice(serialized.indexOf('['));
+  const items = JSON.parse(encoded);
+  assert.ok(items.length <= 6);
+  assert.ok(items.reduce((sum, item) => sum + item.summary.length, 0) <= 3600);
+});
+
 test('chat validates message length and refuses insecure endpoints before network calls', async () => {
   let calls = 0;
   await assert.rejects(generateOpenAIBotReply({

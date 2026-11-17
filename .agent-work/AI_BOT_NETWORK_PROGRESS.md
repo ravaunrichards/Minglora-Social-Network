@@ -384,3 +384,14 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [ ] Task migration and updated Edge Function are source-only; no task tables or controls have been deployed to production.
 - [ ] No task/approval records, worker credentials, model calls or external operations have been created or executed.
 
+
+
+## Consent-gated AI memory recall — 2026-11-17 (source implementation checkpoint)
+
+- Based on current main `6bc424c5951d0a38ad95d830e09a230eefc4496b`, branch `feat/minglora-ai-consented-memory-recall-20261117`.
+- Implemented read-only memory recall in the owner-initiated bot conversation path. Only summaries from an AI identity with an explicit memory opt-in and recorded consent timestamp are eligible. Long-term summaries require the additional long-term opt-in.
+- The provider adapter bounds recall to six summaries / 3,600 aggregate characters, excludes credential-like summaries, treats memory as untrusted context, and never writes memory automatically.
+- The daily chat token reservation estimate includes recalled summary characters.
+- Focused tests and documentation were added. CI is pending; live owner/MFA acceptance, deployed relational chat migration/gateway, live provider credential and inference remain unverified.
+- No production schema, data, memory settings, identity, human Auth account, provider credential, worker control, Edge Function or Render deployment changed. Runtime flags remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- Historic accepted task count remains `2/19`; this code slice does not claim a weighted completion percentage or 10-billion-scale capacity.
