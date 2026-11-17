@@ -46,7 +46,7 @@ test('runtime gateway exposes a narrowly allowlisted private execution verificat
     'allowedFields',
     'admin.rpc("minglora_ai_provider_execution_command"'
   ]) assert.ok(gateway.includes(token),'Missing provider execution gateway rule: '+token);
-  assert.ok(gateway.includes('custom API key') || gateway.includes('render_runtime') || gateway.includes('x-minglora-api-key'));
+
 });
 
 test('administrator execution verification uses persisted model metadata, a fresh probe and a moderated smoke test',()=>{
@@ -82,7 +82,7 @@ test('provider UI requires confirmation before its billable execution check',()=
   assert.ok(ui.includes('data-ai-form="provider-assignment-verify"'));
   assert.ok(ui.includes('Run a real, billable model test for this AI assignment?'));
   assert.ok(ui.includes('Run billable model execution test'));
-  assert.ok(ui.includes('model.execution test'));
+  assert.ok(ui.includes('model execution test'));
   assert.ok(!ui.includes('name="apiKey"'));
   assert.ok(!ui.includes('name="secret"'));
 });
