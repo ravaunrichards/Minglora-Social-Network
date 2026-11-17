@@ -7,6 +7,14 @@ on:
       - 'supabase/migrations/*minglora_ai_bot_message_order.sql'
       - 'supabase/migrations/*creator_studio_shared_budget.sql'
       - 'tests/integration/ai-network-shared-budget-concurrency.test.js'
+      - 'tests/integration/ai-network-finance-governance.test.js'
+      - 'supabase/migrations/*finance_governance.sql'
+      - 'src/server.js'
+      - 'public/ai-network.js'
+      - 'supabase/functions/minglora-runtime-state/index.ts'
+      - 'backend/modules/ai-network/**'
+      - 'tests/unit/ai-network-finance.test.js'
+      - '.github/workflows/ai-network-budget-concurrency.yml'
       - '.github/workflows/ai-network-budget-concurrency.yml'
   push:
     branches:
@@ -49,3 +57,11 @@ jobs:
         run: npm ci
       - name: Run two-session shared-budget integration tests
         run: node --test tests/integration/ai-network-shared-budget-concurrency.test.js
+      - name: Create isolated database for finance integration tests
+        env:
+          PGPASSWORD: postgres
+        run: createdb --host=localhost --username=postgres minglora_finance_test
+      - name: Run finance policy and task-guard integration tests
+        env:
+          AI_NETWORK_FINANCE_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/minglora_finance_test
+        run: node --test tests/integration/ai-network-finance-governance.test.js
