@@ -252,8 +252,8 @@ test('Full Screen crop cannot be overridden by the retired guest-tray grid', () 
 test('MeetWave stage heading owns a dedicated row and cannot cover the host or guest tiles', () => {
   const correction=css.slice(css.lastIndexOf('/* MeetWave stage-safe layout corrections'));
   assert.match(correction, /\.live-guest-layout-heading\{[\s\S]*?position:relative!important[\s\S]*?grid-row:1!important/);
-  assert.match(correction, /data-layout="full-screen"\}\{grid-template-rows:22px minmax\(0,1fr\)!important\}/);
-  assert.match(correction, /data-layout="fluid-panel"\}\{grid-template-rows:22px minmax\(0,1fr\)!important\}/);
+  assert.match(correction, /data-layout="full-screen"\]\{grid-template-rows:22px minmax\(0,1fr\)!important\}/);
+  assert.match(correction, /data-layout="fluid-panel"\]\{grid-template-rows:22px minmax\(0,1fr\)!important\}/);
 });
 
 test('MeetWave Side by Side matches two top seats and eight equally arranged lower invitation seats', () => {
