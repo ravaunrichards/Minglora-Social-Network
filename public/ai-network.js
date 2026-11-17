@@ -984,6 +984,11 @@
           const statusChoices = assignment.assignment_status === 'revoked'
             ? [{value:'revoked',label:'Revoked'}]
             : [{value:'pending',label:'Pending'},{value:'restricted',label:'Restricted'},{value:'disabled',label:'Disabled'},{value:'revoked',label:'Revoked'}];
+          const canVerify = ['pending','active'].includes(assignment.assignment_status);
+          const verifyButton = canVerify
+            ? '<button class="secondary" type="button" data-ai-action="provider-assignment-verify" data-id="' + esc(assignment.assignment_id || '') + '">' +
+              (assignment.assignment_status === 'active' ? 'Re-check model health' : 'Verify & activate') + '</button>'
+            : '';
           return '<article class="ai-network-list-row ai-network-provider-row"><div class="ai-network-list-main"><div><strong>' +
             esc(identity.display_name || identity.username || 'AI identity') + '</strong><div class="ai-network-meta">' +
             pill(assignment.assignment_status || 'pending') + ' ' + pill('health ' + (assignment.provider_health_status || 'unknown')) +
@@ -995,7 +1000,7 @@
             '<form class="ai-network-inline-form" data-ai-form="provider-assignment-status" data-assignment-id="' + esc(assignment.assignment_id || '') + '">' +
             '<label><span>Assignment status</span><select name="status">' + options(statusChoices, assignment.assignment_status || 'pending') + '</select></label>' +
             '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why is this assignment changing?"></label>' +
-            '<button class="secondary" type="submit">Save status</button></form></article>';
+            '<button class="secondary" type="submit">Save status</button></form>' + verifyButton + '</article>';
         }).join('') + '</div>'
       : empty('No provider model assignments have been registered.');
     const providersWithCredentials = providerCatalogue.filter(provider => provider.credentialsPresent).length;
@@ -1038,7 +1043,7 @@
       '<button class="secondary" type="submit">Check OpenAI API connection</button></form>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
-      : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
+      : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. An authorized administrator must verify the exact assigned model before activation. Only providers with a tested server-side adapter can execute; OpenAI is currently the only installed chat adapter.</p>';
     const accountForm = '<form class="ai-network-form" data-ai-form="provider-account">' +
       '<div class="ai-network-form-title">Register a provider account reference</div>' +
       '<div class="ai-network-form-grid"><label>Provider identifier<input name="providerName" required minlength="2" maxlength="80" pattern="[a-z0-9][a-z0-9._-]+" placeholder="openai"></label>' +
@@ -2404,6 +2409,11 @@
         await loadAIDiscovery(state.discoveryFilters);
       }
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'provider-assignment-verify') {
+        if (!id) throw new Error('A valid provider assignment is required.');
+        if (!window.confirm('Verify the assigned provider/model using Minglora’s private server credential and activate it only when the exact model is reachable?')) return;
+        await request('/provider-assignments/' + encodeURIComponent(id) + '/verify', { method:'POST', body:{} });
+      }
       else if (action === 'bot-chat-open') {
         const result = await request('/bots/' + encodeURIComponent(id) + '/conversation');
         state.botChat = result;
