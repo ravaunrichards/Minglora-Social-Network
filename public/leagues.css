@@ -274,8 +274,8 @@
 .league-podium-member.is-place-1{z-index:2;transform:translateY(-9px)}
 .league-podium-member.is-place-1:hover{transform:translateY(-13px)}
 .league-podium-art{position:relative;display:block;flex:0 0 auto;width:clamp(64px,15vw,100px);height:clamp(74px,18vw,116px);isolation:isolate;overflow:hidden}
-.league-podium-rank-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center}
-.league-podium-avatar{position:absolute;z-index:1;left:50%;top:42%;display:grid;place-items:center;width:43%;height:43%;transform:translate(-50%,-50%)}
+.league-podium-rank-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;object-fit:contain;object-position:center;pointer-events:none}
+.league-podium-avatar{position:absolute;z-index:1;left:50%;top:42%;display:grid;place-items:center;width:36%;height:36%;box-sizing:border-box;transform:translate(-50%,-50%)}
 .league-podium-avatar .league-avatar{display:block;width:100%;height:100%;border:2px solid rgba(255,255,255,.95);border-radius:50%;object-fit:cover;box-shadow:0 2px 7px rgba(0,0,0,.23)}
 .league-podium-place-label{font-size:9px;font-weight:950;letter-spacing:.09em;color:var(--muted)}
 .league-podium-member strong{max-width:100%;font-size:11px}
