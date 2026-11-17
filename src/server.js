@@ -10284,6 +10284,7 @@ server.listen(PORT,'0.0.0.0',async()=>{
   startLiveSessionCleanupSweep();
   console.log(`Minglora listening on port ${PORT}`);
   const persistence = await persistenceHealth();
+  const aiReadiness = getAIProviderStatus();
   console.info('[Minglora readiness]', JSON.stringify({
     authProvider: AUTH_PROVIDER,
     authConfigured: AUTH_PROVIDER === 'legacy' || supabaseAuthConfigured(),
@@ -10291,7 +10292,13 @@ server.listen(PORT,'0.0.0.0',async()=>{
     persistenceDurable: persistence.durable,
     persistenceReady: persistence.ready,
     liveProvider: 'livekit',
-    liveConfigured: isLiveKitConfigured()
+    liveConfigured: isLiveKitConfigured(),
+    aiProvider: aiReadiness.provider,
+    aiCredentialsPresent: Boolean(aiReadiness.credentialsPresent),
+    aiAdapterAvailable: Boolean(aiReadiness.adapterAvailable),
+    aiBotChatAvailable: Boolean(aiReadiness.botChatAvailable),
+    aiManualDraftsAvailable: Boolean(aiReadiness.manualDraftsAvailable),
+    aiExecutionEnabled: Boolean(aiReadiness.executionEnabled)
   }));
   const liveHealth = await verifyLiveKitConnection({ force: true });
   const liveVerification = {
