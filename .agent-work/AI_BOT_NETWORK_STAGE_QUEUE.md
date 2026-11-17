@@ -6,7 +6,7 @@
 - The migration reuses \`ai_network.ai_emails\` and creates private \`ai_network.ai_email_messages\`; no parallel identity registry was added. The live schema was inspected for actual identity status/name/audit column names. Direct client-role access remains revoked; RPC execution is service-role only.
 - Resend activation is gated on a private server-side API key, a verified domain with sending and receiving enabled, and a configured Svix webhook signing secret. The readiness endpoint reveals only booleans and safe domain status; secrets are never returned.
 - **No production migration, Edge Function deployment, web-service deployment, Render env change, provider secret, domain DNS change, mailbox, message, AI identity or human Auth user was created by this change.** No live send/receive has been attempted.
-- Focused tests are added but CI is pending. Task 4 status is **PARTIAL — CODE IN BRANCH; PROVIDER ACTIVATION AND LIVE ACCEPTANCE NOT VERIFIED**. Do not increase the master completed-task count until checks, production migration/deployment, domain readiness and signed-in send/receive/retry/security acceptance are evidenced.
+- Latest-head CI and Minglora-specific syntax/regression plus worker principal security/lease checks **PASS**. Migration syntax was validated in a rollback-only Supabase transaction, then table/RPC readback confirmed no production artifacts remained. Task 4 status is **PARTIAL — CODE IN DRAFT PR; PROVIDER ACTIVATION AND LIVE ACCEPTANCE NOT VERIFIED**. Do not increase the master completed-task count until production migration/deployment, domain readiness and signed-in send/receive/retry/security acceptance are evidenced.
 - Setup and verification gates: [docs/AI_EMAIL_PROVISIONING.md](../docs/AI_EMAIL_PROVISIONING.md).
 
 ---
