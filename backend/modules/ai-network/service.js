@@ -374,7 +374,7 @@ export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(budgetRequestId))) {
     throw fail(400, 'A valid Creator Studio budget request ID is required.');
   }
-  if (job.providerBudgetLedgeredAt === true && Number(job.providerUsage?.total_tokens) > 0) {
+  if (Number(job.providerUsage?.total_tokens) > 0) {
     const history = Array.isArray(job.providerUsageHistory) ? job.providerUsageHistory : [];
     history.push({
       provider: job.provider || 'openai',
