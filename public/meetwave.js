@@ -45,6 +45,21 @@
       grid.dataset.guestLimit=String(MEETWAVE_GUEST_LIMIT);
       grid.dataset.gridRole='host-eight-guest-seats';
       delete grid.dataset.guestLayout;
+      const sideBySideExtra=grid.querySelector('[data-side-by-side-extra]');
+      if(layout==='side-by-side'&&!sideBySideExtra){
+        const seatNumber=MEETWAVE_GUEST_LIMIT+1;
+        const extra=document.createElement('button');
+        extra.type='button';
+        extra.className='mw-video-tile live-guest-seat empty mw-empty-seat';
+        extra.dataset.seatIndex=String(seatNumber);
+        extra.dataset.sideBySideExtra='true';
+        extra.setAttribute('data-open-guest-invite','');
+        extra.setAttribute('aria-label','Invite a guest to seat '+seatNumber);
+        extra.innerHTML='<span class="live-guest-seat-plus" aria-hidden="true">+</span><strong>Guest seat '+seatNumber+'</strong><small>Tap to invite</small>';
+        grid.append(extra);
+      }else if(layout!=='side-by-side'){
+        sideBySideExtra?.remove();
+      }
     }
     if(!spotlightIdentity){const initialTile=$('#mw-grid .live-guest-seat.is-host')||$('#mw-local');spotlightIdentity=initialTile?.dataset.identity||state.user.id;}
     applySpotlightSelection(spotlightIdentity);
