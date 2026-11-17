@@ -70,3 +70,16 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 5. Migrate Creator Studio usage into the shared relational budget ledger before claiming cross-feature atomic budgets or enabling multi-instance/public traffic.
 6. Verify consent-gated memory recall with memory disabled, short-term enabled, long-term enabled only by its separate opt-in, expiry cleanup, owner isolation and credential-like summary exclusion.
 7. Benchmark identity and chat storage, query/write throughput, concurrency, backups, recovery and regional failover before making any 10-billion or multi-region capacity claim.
+
+## Two-session shared AI budget concurrency — verified CI checkpoint (2026-11-17)
+
+- Status: **VERIFIED — merged source plus real two-session PostgreSQL CI**.
+- PR #487 merged into `main` as `75eccd2cf1c3470c1e502e5cec0f180e616330a6`.
+- Added a reusable GitHub Actions workflow using a disposable PostgreSQL 17 service. It applies the actual Minglora relational chat, message-order and Creator Studio shared-budget migrations in the isolated CI database and uses two independent PostgreSQL sessions.
+- All 3 concurrency tests passed, 0 failed: competing Creator Studio reservations serialize on the same owner/UTC-day budget row; a Creator Studio hold blocks an over-budget bot-chat request; a bot-chat hold blocks an over-budget Creator Studio request. Each case verified the second backend was genuinely waiting on a database lock before the first transaction committed, then received SQLSTATE `54000`.
+- Post-merge main CI completed: full repository suite **1,331 passed / 0 failed**; two-session PostgreSQL tests **3 passed / 0 failed**; Supabase Auth provider acceptance passed; For You navigation passed. Pre-merge nine-layout LIVE/MeetWave visual matrix also passed.
+- This verifies database locking in disposable PostgreSQL using the actual merged migrations. It is not a production Supabase concurrency test, provider inference test, or capacity/load benchmark.
+- Production state remains unchanged: migration `20261117104500_minglora_creator_studio_shared_budget` is merged but **not applied**; Creator Studio reservation and usage tables remain absent; deployed Edge Function remains ACTIVE v132 and has not been updated with the Creator Studio RPC actions; Node API/Render deployment not performed.
+- Runtime safety remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No identities, Auth users, messages, budget rows, reservations or usage events were added to production.
+- Remaining release gates: signed-in owner/MFA desktop and mobile acceptance; actual provider credential, provider health and inference; confirm the correct existing Minglora Render workspace/service (the currently connected Render workspace is named Creator Hub and is not assumed to be Minglora); approved, coordinated production migration and Edge/Node deployment; production verification; capacity, recovery and regional scaling benchmarks. No 10-billion identity or simultaneous execution capacity has been claimed.
+- **Next execution step:** complete owner/MFA and provider readiness, establish the approved Minglora deployment target, then prepare a coordinated release plan for the merged migration and source changes. Do not enable workers or apply production migrations without the appropriate release authorization.
