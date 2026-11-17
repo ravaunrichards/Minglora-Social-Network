@@ -1848,7 +1848,7 @@
         let parsed;
         try { parsed = JSON.parse(value(field) || fallback); }
         catch { throw new Error(field + ' must contain valid JSON.'); }
-        const actualType = Array.isArray(parsed) ? 'array' : parsed && typeof parsed === 'object' ? 'object' : typeof parsed;
+        const actualType = parsed === null ? 'null' : Array.isArray(parsed) ? 'array' : typeof parsed === 'object' ? 'object' : typeof parsed;
         if (actualType !== expectedType) throw new Error(field + ' must be a JSON ' + expectedType + '.');
         return parsed;
       };
