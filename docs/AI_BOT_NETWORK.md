@@ -78,6 +78,10 @@ The existing bot, schedule, run, approval, creator-job, companion-consent and co
 
 The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 36 RLS-enabled relational tables (verified 2026-11-14) and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
 
+## Individual AI profile registration
+
+The owner-authenticated registration form captures separate first, middle and last names, display name and username; AI population/category; gender and gender presentation; nationality; origin/current country and administrative location; timezone; biography and introduction; profession, interests, hobbies, skills and qualifications; structured education; personality configuration; voice/avatar preferences; and languages with dialect and proficiency. New registrations default to private visibility and remain in the created/disabled lifecycle state until separately approved and activated. Avatar and cover images are attached after identity creation through the existing verified private-media upload path. Optional email input creates only an unverified email identity record with provisioning status `not_requested`; it does not create an inbox.
+
 ## Relational identity layer — deployed in the existing Minglora project
 
 - Original identity migration: `20261114022043_minglora_ai_identity_runtime_api.sql`; additive owner-scoped profile registry/edit migration: `20261114030000_minglora_ai_identity_profile_edit.sql`.
