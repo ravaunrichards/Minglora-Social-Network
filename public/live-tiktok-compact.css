@@ -1131,3 +1131,24 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
     bottom:calc(clamp(64px,6vw,74px) + clamp(44px,15vw,120px) + clamp(4px,1vw,8px))!important;
   }
 }
+
+/* FINAL Fluid Panel safe-zone: keep guest seats clear of the host ribbon and stage edges.
+   Higher-specificity selectors intentionally override legacy phone/tablet/desktop offsets.
+   The same rule covers video and audio LIVE stages. */
+body:has(#live-player-shell) #live-player-shell #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3),
+body:has(#live-player-shell) #live-player-shell #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+  right:clamp(18px,2.4vw,32px)!important;
+  left:auto!important;
+  top:auto!important;
+}
+body:has(#live-player-shell) #live-player-shell #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
+  bottom:clamp(88px,8vw,104px)!important;
+}
+body:has(#live-player-shell) #live-player-shell #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+  bottom:calc(clamp(88px,8vw,104px) + clamp(44px,15vw,120px) + 8px)!important;
+}
+@media(max-width:420px){
+  body:has(#live-player-shell) #live-player-shell #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+    bottom:calc(clamp(88px,8vw,104px) + clamp(44px,15vw,58px) + 8px)!important;
+  }
+}
