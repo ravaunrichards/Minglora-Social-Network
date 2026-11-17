@@ -212,3 +212,20 @@ test("Gifter range sheets render only their supplied PNG artwork without editing
   assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-sheet-single-layer-1"));
   assert.ok(sw.includes("/gifter-progression.js?v=20261116-gifter-range-sheet-single-layer-1"));
 });
+
+test("Daily ranking badge routes resolve from the canonical root-level PNG folder", () => {
+  const sourceDirectory = path.join(root, "assets", "Crop References", "Daily Ranking Badge");
+  const sourceNames = [
+    "Screenshot_20261112_021224_TikTok(1).png",
+    "Screenshot_20261112_021224_TikTok(2).png",
+    "Screenshot_20261112_021309_TikTok(1).png",
+    "Screenshot_20261112_021309_TikTok(2).png",
+    "Screenshot_20261112_021333_TikTok(1).png",
+    "Screenshot_20261112_021343_TikTok(1).png"
+  ];
+  for (const name of sourceNames) {
+    assert.ok(fs.existsSync(path.join(sourceDirectory, name)), "missing ranking crop: " + name);
+  }
+  assert.ok(server.includes("path.join(__dirname,'..','assets','Crop References','Daily Ranking Badge',dailyRankingBadgeAssets)"));
+  assert.ok(!server.includes("path.join(__dirname,'..','assets','Crop References','Daily Ranking Badge','png',dailyRankingBadgeAssets)"));
+});

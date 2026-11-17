@@ -46,7 +46,7 @@ These are full range/reference-sheet artwork. Keep them separate from the six mi
 
 ## 3. Daily Ranking Badges
 
-**Source folder:** `Daily Ranking Badge/png/`
+**Source folder:** `Daily Ranking Badge/`
 
 The six supplied source files are:
 
