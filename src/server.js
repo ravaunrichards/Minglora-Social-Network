@@ -9783,23 +9783,53 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     return;
   }
   const liveGuestLayoutReferenceFiles = ({
-    '/assets/live-guest-layouts/full-screen.png': 'Full Screen.png',
-    '/assets/live-guest-layouts/fluid-panel.png': 'Fluid Panel.png',
-    '/assets/live-guest-layouts/fluid-grid.png': 'Fluid Grid.png',
-    '/assets/live-guest-layouts/fixed-grid.png': 'Fixed Grid.png',
-    '/assets/live-guest-layouts/fixed-panel.png': 'Fixed Panel.png',
-    '/assets/live-guest-layouts/side-by-side.png': 'Side by Side.png',
-    '/assets/live-guest-layouts/spotlight.png': 'Spotlight.png',
-    '/assets/live-guest-layouts/roundtable-1.png': 'Roundtable 1.png',
-    '/assets/live-guest-layouts/roundtable-2.png': 'Roundtable 2.png'
+    '/assets/live-guest-layouts/full-screen.png': { crop: null, original: 'Full Screen.jpg' },
+    '/assets/live-guest-layouts/fluid-panel.png': { crop: 'Fluid Panel.png', original: 'Fluid Panel.jpg' },
+    '/assets/live-guest-layouts/fluid-grid.png': { crop: 'Fluid Grid.png', original: 'Fluid Grid.jpg' },
+    '/assets/live-guest-layouts/fixed-grid.png': { crop: 'Fixed Grid.png', original: 'Fixed Grid.jpg' },
+    '/assets/live-guest-layouts/fixed-panel.png': { crop: 'Fixed Panel.png', original: 'Fixed Panel.jpg' },
+    '/assets/live-guest-layouts/side-by-side.png': { crop: 'Side by Side.png', original: 'Side by Side.jpg' },
+    '/assets/live-guest-layouts/spotlight.png': { crop: 'Spotlight.png', original: 'Spotlight.jpg' },
+    '/assets/live-guest-layouts/roundtable-1.png': { crop: 'Roundtable 1.png', original: 'Roundtable 1.jpg' },
+    '/assets/live-guest-layouts/roundtable-2.png': { crop: 'Roundtable 2.png', original: 'Roundtable 2.jpg' },
+    '/assets/live-guest-layouts/full-screen.jpg': { original: 'Full Screen.jpg' },
+    '/assets/live-guest-layouts/fluid-panel.jpg': { original: 'Fluid Panel.jpg' },
+    '/assets/live-guest-layouts/fluid-grid.jpg': { original: 'Fluid Grid.jpg' },
+    '/assets/live-guest-layouts/fixed-grid.jpg': { original: 'Fixed Grid.jpg' },
+    '/assets/live-guest-layouts/fixed-panel.jpg': { original: 'Fixed Panel.jpg' },
+    '/assets/live-guest-layouts/side-by-side.jpg': { original: 'Side by Side.jpg' },
+    '/assets/live-guest-layouts/spotlight.jpg': { original: 'Spotlight.jpg' },
+    '/assets/live-guest-layouts/roundtable-1.jpg': { original: 'Roundtable 1.jpg' },
+    '/assets/live-guest-layouts/roundtable-2.jpg': { original: 'Roundtable 2.jpg' }
   })[p];
   if(liveGuestLayoutReferenceFiles){
-    const assetFile=path.join(__dirname,'..','assets','Crop References','Guests Layout','png',liveGuestLayoutReferenceFiles);
-    fs.readFile(assetFile,(error,data)=>{
-      if(error)return json(res,404,{error:'LIVE guest layout reference not found.'});
-      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
-      res.end(data);
-    });
+    const {crop,original}=liveGuestLayoutReferenceFiles;
+    const originalFile=path.join(__dirname,'..','assets','Guests Layout',original);
+    const cropFile=crop&&path.join(__dirname,'..','assets','Crop References','Guests Layout',crop);
+    const sendGuestReference=(file,mime)=>{
+      fs.readFile(file,(error,data)=>{
+        if(error)return json(res,404,{error:'LIVE guest layout reference not found.'});
+        res.writeHead(200,{'Content-Type':mime,'Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+        res.end(data);
+      });
+    };
+    if(p.endsWith('.jpg')){
+      sendGuestReference(originalFile,'image/jpeg');
+    }else if(cropFile){
+      fs.readFile(cropFile,(error,data)=>{
+        if(!error){
+          res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+          res.end(data);
+          return;
+        }
+        // Full Screen.png was intentionally removed. Serve the retained original
+        // JPG for this compatibility URL instead of recreating the deleted crop.
+        sendGuestReference(originalFile,'image/jpeg');
+      });
+    }else{
+      // Full Screen has no cropped PNG by design; use the uncropped JPG.
+      sendGuestReference(originalFile,'image/jpeg');
+    }
     return;
   }
   if(p==='/assets/profile-defaults/enigma.png'){
