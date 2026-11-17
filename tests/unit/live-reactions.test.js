@@ -135,3 +135,10 @@ test('LIVE Follow becomes the orange Heart Me action after following the host',(
   assert.match(liveGuardrails,/live-follow-button\.is-heart-me[\s\S]*?color:#ff8c00/);
   assert.doesNotMatch(app,/id='live-fan-club-join' class='live-fan-club-join'/);
 });
+
+
+test('LIVE permission drawer toggles visibly move their switch thumb', () => {
+  assert.match(styles, /\.live-room-permission-toggle input:checked\+\.live-preflight-switch\{background:var\(--blue\)\}/);
+  assert.match(styles, /\.live-room-permission-toggle input:checked\+\.live-preflight-switch::after\{transform:translateX\(12px\)\}/);
+  assert.match(styles, /\.live-room-permission-toggle input:focus-visible\+\.live-preflight-switch\{outline:2px solid var\(--blue\);outline-offset:3px\}/);
+});
