@@ -2329,13 +2329,13 @@
       if (batchRetryItems.length) message += ' Failed rows are retained in the batch editor for retry.';
     }
     await refresh(message);
-    if (batchRetryItems.length) {
-      const retryField = host.querySelector('form[data-ai-form="' + kind + '"] textarea[name="items"]');
-      if (retryField) retryField.value = JSON.stringify(batchRetryItems);
-    }
     if (batchFailures.length) {
       setNotice(message, 'warning');
       paintSnapshot();
+    }
+    if (batchRetryItems.length) {
+      const retryField = host.querySelector('form[data-ai-form="' + kind + '"] textarea[name="items"]');
+      if (retryField) retryField.value = JSON.stringify(batchRetryItems);
     }
   }
 
