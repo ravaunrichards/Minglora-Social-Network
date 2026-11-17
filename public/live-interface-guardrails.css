@@ -628,3 +628,33 @@ body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me:
   body:has(#live-player-shell) .live-stage-topbar .live-host-live-status{font-size:7px!important}
   body:has(#live-player-shell) .live-stage-topbar .live-follow-button{padding-inline:6px!important}
 }
+
+/* Final compact-height correction: keep the two-line identity card inside the
+   reserved 50/52px host row, including narrow 320px phones. */
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block{
+  padding:2px 7px 2px 3px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block button.live-host-profile{
+  flex:0 0 28px!important;height:28px!important;min-height:28px!important;max-height:28px!important;
+  align-self:flex-start!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block button.live-host-profile img{
+  flex:0 0 26px!important;width:26px!important;height:26px!important;
+  min-width:26px!important;min-height:26px!important;max-width:26px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-meta-row{
+  min-height:12px!important;height:12px!important;max-height:12px!important;
+  padding-left:33px!important;gap:5px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-meta-row .live-like-control{
+  min-height:12px!important;height:12px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-meta-row .live-heart-like{
+  flex-basis:13px!important;width:13px!important;height:13px!important;
+  min-width:13px!important;min-height:13px!important;font-size:12px!important;
+}
+@media(min-width:901px){
+  body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block{
+    padding:2px 8px 2px 3px!important;
+  }
+}
