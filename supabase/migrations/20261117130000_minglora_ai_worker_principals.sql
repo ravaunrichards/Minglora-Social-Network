@@ -353,7 +353,9 @@ begin
       insert into ai_network.ai_worker_events(worker_id,owner_user_id,actor_type,event_type,reason)
       values (v_worker.worker_id,v_worker.owner_user_id,'system','worker_credential_expired','Worker credential expired and was invalidated.');
     end if;
-    raise exception using errcode = '42501', message = 'Worker credential is expired or revoked.';
+    -- Return normally after persisting expiry so the invalidation and audit event commit.
+    -- The HTTP gateway translates this explicit result into 401 without rolling back the RPC.
+    return jsonb_build_object('authenticated',false,'error','Worker credential is expired or revoked.');
   end if;
   if not exists(select 1 from public.profiles p where p.id=v_worker.owner_user_id) then
     raise exception using errcode = '42501', message = 'Worker owner is no longer available.';
