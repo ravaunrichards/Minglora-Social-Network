@@ -43,13 +43,13 @@ test("platform Top Gifters offers period filters, earned rank titles and working
 });
 
 test("Top Gifters assets are versioned and included in the PWA shell", () => {
-  assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
+  assert.match(html, /top-gifters\.js\?v=20261117-avatar-rankings-sync-1/);
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||"";
   const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||"";
   assert.ok(appAsset&&sw.includes("/"+appAsset),"service worker caches the current HTML app script");
   assert.ok(styleAsset&&sw.includes("/"+styleAsset),"service worker caches the current HTML stylesheet");
   assert.match(sw, /minglora-shell-v\d+-[^']+/);
-  assert.match(sw, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
+  assert.match(sw, /top-gifters\.js\?v=20261117-avatar-rankings-sync-1/);
   assert.match(css, /\.live-top-gifters-list/);
   assert.match(css, /\.minglora-gifter-profile/);
   assert.match(css, /\.live-weekly-title-gifters/);
@@ -87,4 +87,23 @@ test("profile Gift Gallery presents the weekly Title Gifter and up to ten ranked
   const appAsset=html.split('src="').map(part=>part.split('"')[0]).find(asset=>asset.startsWith('/app.js?v='))||'';
   assert.ok(appAsset&&sw.includes("'"+appAsset+"'"),'service worker caches the active application bundle');
   assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v"));
+});
+
+
+test("Platform Top Gifters uses canonical member photos and a shared default avatar", () => {
+  assert.ok(addon.includes("function safeAvatarUrl(user)"));
+  assert.ok(addon.includes("user?.avatar || user?.avatarUrl || user?.avatar_url || user?.profilePicture"));
+  assert.ok(addon.includes("DEFAULT_GIFTER_AVATAR"));
+});
+
+test("Daily and embedded Top Gifters podium avatars stay compact and preserve badge framing", () => {
+  assert.ok(css.includes(".minglora-gifter-podium .minglora-gifter-rank-frame{position:absolute;inset:0;z-index:0"));
+  assert.ok(css.includes(".minglora-gifter-podium .minglora-gifter-rank-avatar"));
+  assert.ok(css.includes("width:21px;height:21px;box-sizing:border-box"));
+  assert.ok(css.includes(".live-daily-podium-card .live-daily-podium-frame"));
+  assert.ok(css.includes("object-fit:contain;object-position:center"));
+  assert.ok(css.includes("width:36%;height:36%;max-width:none;box-sizing:border-box"));
+  assert.ok(html.includes("leagues.js?v=20261117-avatar-rankings-sync-1"));
+  assert.ok(html.includes("rankings.js?v=20261117-avatar-rankings-sync-1"));
+  assert.ok(sw.includes("minglora-shell-v352-self-updating-1"));
 });
