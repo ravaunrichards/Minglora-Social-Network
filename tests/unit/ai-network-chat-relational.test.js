@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const migration = read('supabase/migrations/20261117070000_minglora_ai_bot_conversations.sql');
-const messageOrderMigration = read('supabase/migrations/20261117102500_minglora_ai_bot_message_order.sql');
+const messageOrderMigration = read('supabase/migrations/20261117102355_minglora_ai_bot_message_order.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const doc = read('docs/AI_BOT_CHAT_RUNTIME.md');
