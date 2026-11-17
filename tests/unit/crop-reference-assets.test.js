@@ -145,7 +145,7 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(serviceWorker, /minglora-shell-v347-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-display-parity-2/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-canvas-crop-2/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
 });
 
@@ -182,3 +182,15 @@ test("Creator League displays the first 20 ranks with original first/second/thir
   assert.match(leagueStyles, /league-ranking-medal--top-twenty/);
 });
 
+
+
+test("Gifter range sheets crop the tall black source canvas in the display frame without editing canonical PNGs", () => {
+  const styles = read("public/gifter-progression.css");
+  const html = read("public/index.html");
+  const sw = read("public/sw.js");
+  assert.match(styles, /\.gp-range-reference-figure\{overflow:hidden\}/);
+  assert.match(styles, /\.gp-range-reference-figure img\{[\s\S]*?aspect-ratio:1\.72 \/ 1[\s\S]*?object-fit:cover[\s\S]*?object-position:50% 54.5%/);
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-canvas-crop-2"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-canvas-crop-2"));
+  assert.match(styles, /\.gp-range-reference-figure img\{[\s\S]*?border-radius:7px/);
+});
