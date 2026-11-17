@@ -9774,7 +9774,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     '/assets/daily-ranking-badges/top-gifters-place-3.png': 'Screenshot_20261112_021343_TikTok(1).png'
   })[p];
   if(dailyRankingBadgeAssets){
-    const assetFile=path.join(__dirname,'..','assets','Crop References','Daily Ranking Badge','png',dailyRankingBadgeAssets);
+    const assetFile=path.join(__dirname,'..','assets','Crop References','Daily Ranking Badge',dailyRankingBadgeAssets);
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'Daily ranking badge reference not found.'});
       res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
