@@ -26,18 +26,21 @@ test('LIVE uses one exact nine-layout guest registry and one host layout endpoin
   assert.match(app,/function applyLiveGuestLayout\(value\)\{applyLiveScreenLayout\(value\);\}/);
 });
 
-test('All nine LIVE guest layouts define their own grid proportions and panel placements',()=>{
+test('All nine LIVE guest layouts define source-matched grid geometry and visible panel counts',()=>{
   const start=guestCss.indexOf('/* FINAL NINE GUEST LAYOUTS');
   const contract=guestCss.slice(start);
   assert.ok(start>=0);
   for(const layout of nine)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' layout is missing');
-  assert.match(contract,/full-screen[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.match(contract,/@media\(max-width:760px\)[\s\S]*?full-screen[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(contract,/full-screen[\s\S]*?display:none!important/);
   assert.match(contract,/fluid-panel[\s\S]*?bottom:calc/);
-  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
+  assert.match(contract,/fluid-panel[\s\S]*?nth-child\(n\+5\)[\s\S]*?display:none!important/);
+  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,1\.65fr\)/);
+  assert.match(contract,/fluid-grid[\s\S]*?nth-child\(n\+5\)[\s\S]*?display:none!important/);
   assert.match(contract,/fixed-grid[\s\S]*?grid-template-rows:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,1\.75fr\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?nth-child\(n\+6\)[\s\S]*?display:none!important/);
   assert.match(contract,/side-by-side[\s\S]*?grid-column:1\/3/);
+  assert.match(contract,/side-by-side[\s\S]*?::after[\s\S]*?content:""/);
   assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
   assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);
   assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
