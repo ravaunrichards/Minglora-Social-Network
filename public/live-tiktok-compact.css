@@ -858,9 +858,8 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 /* Wide LIVE player shells add a 6px inner inset; compensate so guest thumbnails
    retain the same 8px stage-edge anchor as MeetWave. */
 @media(min-width:901px){
+  /* Keep the original horizontal anchor; vertical placement is controlled below. */
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){right:2px!important}
-  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){bottom:2px!important}
-  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){bottom:calc(2px + clamp(44px,15vw,120px) + clamp(4px,1vw,8px))!important}
 }
 
 /* END NINE COMPLETE GUEST LAYOUTS. */
@@ -1122,9 +1121,6 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 
 /* LIVE Fluid Panel guest seats 1 and 2 — lift clear of the host microphone-status ribbon.
    Shared by video and audio stages; preserves seat size, right anchor and stack gap. */
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
-  right:clamp(20px,3vw,30px)!important;
-}
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
   bottom:clamp(58px,6vw,66px)!important;
 }
@@ -1132,9 +1128,6 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
   bottom:calc(clamp(58px,6vw,66px) + clamp(44px,15vw,120px) + clamp(4px,1vw,8px))!important;
 }
 @media(min-width:901px){
-  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
-    right:clamp(32px,3.5vw,48px)!important;
-  }
   body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
     bottom:clamp(64px,6vw,74px)!important;
   }
