@@ -188,7 +188,7 @@ test('worker credentials are one-way digests, scoped to granted identities and b
   const workerId = created.worker.worker_id;
   assert.ok(workerId);
   assert.equal(created.worker.status,'active');
-  assert.deepEqual(created.worker.identity_ids,[grantedIdentity]);
+  assert.deepEqual(created.worker.identity_ids,[grantedIdentity,crossOwnerProviderIdentity]);
   const stored = await pool.query(
     'SELECT credential_sha256,status FROM ai_network.ai_worker_principals WHERE worker_id=$1',
     [workerId]
