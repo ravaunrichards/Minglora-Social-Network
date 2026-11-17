@@ -256,6 +256,13 @@ test('MeetWave stage heading owns a dedicated row and cannot cover the host or g
   assert.match(correction, /data-layout="fluid-panel"\]\{\s*grid-template-rows:22px minmax\(0,1fr\)!important/);
 });
 
+test('MeetWave Fluid Panel guest seats clear the host right border and bottom ribbon', () => {
+  const clearance=css.slice(css.lastIndexOf('/* MeetWave Fluid Panel guest seat clearance'));
+  assert.match(clearance,/right:clamp\(20px,2\.8vw,32px\)!important/);
+  assert.match(clearance,/nth-child\(3\)\{[\s\S]*?bottom:clamp\(28px,3\.2vw,38px\)!important/);
+  assert.match(clearance,/nth-child\(4\)\{[\s\S]*?bottom:calc\(clamp\(28px,3\.2vw,38px\)/);
+});
+
 test('MeetWave Side by Side matches two top seats and eight equally arranged lower invitation seats', () => {
   const correction=css.slice(css.lastIndexOf('/* MeetWave stage-safe layout corrections'));
   assert.match(correction, /data-layout="side-by-side"\]\{[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important;[\s\S]*?grid-template-rows:22px minmax\(0,1\.55fr\) repeat\(2,minmax\(0,\.72fr\)\)!important/);
