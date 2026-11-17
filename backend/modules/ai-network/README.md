@@ -69,9 +69,13 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 
 ## Provider execution gate
 
-MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The provider catalogue/assignment workflow stores provider account references as `unconfigured`, model metadata as catalogue entries, and each new identity assignment as `pending` with health `unknown`. It never accepts or returns credentials and does not mark a provider connected. Assignments cannot be activated through these APIs. A separate approved secrets-manager integration, real provider probe, request validation, output moderation, timeout/retry policy, usage accounting and tests are required before execution. `executionEnabled` remains false; therefore bot execution and schedules cannot yet be activated.
+MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. Provider account and model records are metadata; a new identity assignment starts `pending` with health `unknown`. Credentials are never accepted or returned through browser APIs.
 
-Provider environment slots, the credential inventory, and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
+The feature branch `feat/minglora-ai-provider-model-execution-20261117` adds the first OpenAI text inference path. It resolves each AI identity's saved model assignment, requires an active identity, healthy configured account and active text-capable model, and refuses unimplemented providers. An authorized platform administrator can explicitly start a billable, fixed-prompt model verification test. Input/output moderation, `store:false`, no tools, a bounded output and a private health-event audit are required. Only verified moderated inference marks the provider/account healthy and assignment active. Owner/MFA chat then uses that assigned model and its optional same-provider fallback; moderation or security failures never trigger fallback.
+
+The new provider execution migration and Edge Function action are source-only on the feature branch. They have not been applied to the live database or deployed. Existing production provider accounts, models and assignments remain empty. No live provider credential, inference or worker is verified. `executionEnabled` remains false, global pause remains true and the worker limit remains zero. The durable queue's worker claim/callback route remains blocked until an independent authenticated worker identity and authorization scheme exist.
+
+Provider environment slots, the credential inventory and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
 
 ## Persistence note
 
