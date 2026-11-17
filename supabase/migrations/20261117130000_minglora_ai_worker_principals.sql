@@ -7,7 +7,7 @@ create table if not exists ai_network.ai_worker_principals (
   worker_id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null references public.profiles(id) on delete restrict,
   worker_name text not null check (length(trim(worker_name)) between 2 and 120),
-  credential_sha256 text unique check (credential_sha256 is null or credential_sha256 ~ '^[0-9a-f]{64}
+  credential_sha256 text unique check (credential_sha256 is null or credential_sha256 ~ ('^[0-9a-f]{64}' || chr(36))),
   credential_expires_at timestamptz not null,
   credential_version integer not null default 1 check (credential_version between 1 and 1000000),
   status text not null default 'active' check (status in ('active','revoked','expired')),
@@ -327,7 +327,7 @@ begin
   if current_user <> 'service_role' then
     raise exception using errcode = '42501', message = 'AI worker runtime is restricted to the Minglora server runtime.';
   end if;
-  if p_credential_sha256 !~ '^[0-9a-f]{64}$' then
+  if coalesce(p_credential_sha256,'') !~ ('^[0-9a-f]{64}' || chr(36)) then
     raise exception using errcode = '42501', message = 'Worker authentication failed.';
   end if;
   if jsonb_typeof(v_payload)<>'object'
