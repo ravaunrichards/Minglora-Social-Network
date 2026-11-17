@@ -121,7 +121,7 @@ export async function inspectResendDomain({ env = process.env, fetchImpl = fetch
     const webhookActive = Boolean(webhookMatch);
     const ready = sendingEnabled && receivingEnabled && config.webhookConfigured && webhookActive;
     return {
-      provider: 'resend', configured: true, domain: config.domain,
+      provider: 'resend', configured: config.configured, domain: config.domain,
       domainId: match?.id || null, verified, sendingEnabled, receivingEnabled,
       webhookConfigured: config.webhookConfigured,
       webhookActive, webhookId: webhookMatch?.id || null, ready,
