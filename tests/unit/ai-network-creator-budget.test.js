@@ -92,6 +92,9 @@ test('legacy Creator Studio usage excludes generations already recorded in the r
   const started = startAICreatorJobGeneration(db, 'owner-1', legacy.id, { now, budgetRequestId: requestId });
   assert.equal(started.providerBudgetRequestId, requestId);
   assert.equal(started.providerBudgetLedgeredAt, false);
+  // Keep this fixture independent of the active-generation lease guard so the
+  // malformed budget request ID is the failure being asserted.
+  started.providerExecution = 'failed';
   assert.throws(() => startAICreatorJobGeneration(db, 'owner-1', linked.id, {
     now, budgetRequestId: 'not-a-uuid'
   }), { status: 400 });
