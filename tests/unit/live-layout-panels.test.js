@@ -69,13 +69,13 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
 });
 
 
-test('Full Screen keeps the host and visible guest and empty-seat windows', () => {
+test('Full Screen displays the host as the only stage panel and preserves guest seat records', () => {
   assert.match(app, /root\.setAttribute\('aria-label','LIVE guest layout · '\+label\)/);
   assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
-  assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing Full Screen guest layout rules');
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat:not\(\.is-host\)\{display:flex!important/);
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?grid-row:2/);
-  assert.doesNotMatch(styles, /live-audio-stage\.live-host-only-layout/);
+  assert.match(tiktok, /data-live-layout="full-screen"[\s\S]*?>\.live-guest-seat\.is-host\{[\s\S]*?position:absolute!important;inset:0!important[\s\S]*?width:100%[\s\S]*?height:100%/);
+  assert.match(tiktok, /data-live-layout="full-screen"[\s\S]*?>\.live-guest-seat:not\(\.is-host\)\{\s*display:none!important/);
+  assert.match(app, /guests\.slice\(0,8\)/, 'guest capacity remains available while Full Screen shows one host panel');
+  assert.doesNotMatch(tiktok, /live-audio-stage\.live-host-only-layout/);
 });
 
 
@@ -166,11 +166,15 @@ test('The nine supplied guest arrangements have distinct reference-matched grid 
   const contract=tiktok.slice(tiktok.indexOf('/* FINAL NINE GUEST LAYOUTS'));
   const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
   for(const layout of layouts)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' geometry missing');
+  assert.match(contract,/full-screen[\s\S]*?display:none!important/);
   assert.match(contract,/fluid-panel[\s\S]*?position:absolute/);
-  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
+  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,1\.65fr\)/);
+  assert.match(contract,/fluid-grid[\s\S]*?nth-child\(n\+5\)[\s\S]*?display:none!important/);
   assert.match(contract,/fixed-grid[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,1\.75fr\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?nth-child\(n\+6\)[\s\S]*?display:none!important/);
   assert.match(contract,/side-by-side[\s\S]*?grid-column:1\/3/);
+  assert.match(contract,/side-by-side[\s\S]*?::after[\s\S]*?content:""/);
   assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
   assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);
   assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
@@ -187,7 +191,7 @@ test('Full Screen has its own expand icon with no guest panels; Fluid Panel keep
   assert.ok(iconMap.includes("class='live-layout-preview'"), "layout previews use the shared preview image renderer");
 });
 
-test('Full Screen keeps the compact centered host stage and visible guest seats', () => {
+test('Full Screen keeps the compact centered stage with one full-stage host tile', () => {
   assert.match(app, /value:'full-screen',label:'Full Screen',icon:'fullscreen'/);
   assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
   assert.doesNotMatch(app, /classList\.toggle\('live-full-screen-active',hostOnly\)/);
@@ -195,5 +199,6 @@ test('Full Screen keeps the compact centered host stage and visible guest seats'
   assert.match(styles, /width:min\(100%,62\.4dvh,608px\)/);
   assert.match(styles, /max-height:min\(78dvh,760px\)/);
   assert.match(styles, /aspect-ratio:4 \/ 5/);
-  assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
+  assert.match(tiktok, /data-live-layout="full-screen"[\s\S]*?>\.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
+  assert.match(tiktok, /data-live-layout="full-screen"[\s\S]*?>\.live-guest-seat:not\(\.is-host\)\{\s*display:none!important/);
 });
