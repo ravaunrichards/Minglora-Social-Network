@@ -2,8 +2,6 @@ name: Minglora nine-layout crop-reference visual QA
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [fix/minglora-live-meetwave-crop-layouts-20261116]
   workflow_dispatch:
 permissions:
   contents: read
