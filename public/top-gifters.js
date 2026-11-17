@@ -16,6 +16,11 @@
   const count = value => Number(value || 0).toLocaleString();
   const titleFor = position => position === 1 ? "TOP GIFTER" :
     position <= 3 ? "TOP 3 GIFTER" : position <= 10 ? "TOP 10 GIFTER" : "LIVE GIFTER";
+  const DEFAULT_GIFTER_AVATAR = "/assets/profile-defaults/enigma.png?v=20261116-enigma-brand-1";
+  function safeAvatarUrl(user) {
+    const value = String(user?.avatar || user?.avatarUrl || user?.avatar_url || user?.profilePicture || "").trim();
+    return /^https:\/\//i.test(value) || /^\/(?!\/)/.test(value) ? value : DEFAULT_GIFTER_AVATAR;
+  }
 
   function addTopGiftersTab() {
     const nav = document.querySelector(".live-discovery-board .live-discovery-tabs");
@@ -48,7 +53,7 @@
         String(badgeLevel).padStart(2, "0") + ".png' alt='Level " + badgeLevel + " gifter badge' loading='lazy' decoding='async' width='24' height='24'><span class='minglora-gifter-badge-name'>" +
         escapeHtml(earned) + "</span></span>"
       : "";
-    const avatar = user.avatarUrl || user.avatar_url || user.avatar || user.profilePicture || "";
+    const avatar = safeAvatarUrl(user);
     const initial = escapeHtml((user.name || item.name || user.username || item.username || "M").slice(0, 1).toUpperCase());
     const podium = activePeriod === "daily" && position <= 3;
     const image = podium
