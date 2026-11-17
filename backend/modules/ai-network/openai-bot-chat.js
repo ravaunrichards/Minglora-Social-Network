@@ -122,7 +122,9 @@ export async function verifyOpenAIModelExecution({
   fetchImpl = globalThis.fetch,
   timeoutMs
 } = {}) {
-  const provider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
+  const provider = assignedModel
+    ? 'openai'
+    : String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (provider && provider !== 'openai') {
     throw providerError('provider_not_selected', 'OpenAI is not the selected Minglora provider.', 409);
   }
