@@ -282,20 +282,29 @@ try{
               }
               continue;
             }
+            const liveHeadingOffset=liveRow.headingRowHeight||0;
+            const mwHeadingOffset=mwRow.headingRowHeight||0;
+            const liveContentHeight=Math.max(1,liveRow.stage.height-liveHeadingOffset);
+            const mwContentHeight=Math.max(1,mwRow.stage.height-mwHeadingOffset);
             for(const metric of ['x','y','width','height']){
               const dimension=(metric==='x'||metric==='width')?'width':'height';
-              const liveRatio=livePanel[metric]/liveRow.stage[dimension];
-              const mwRatio=mwPanel[metric]/mwRow.stage[dimension];
+              const liveValue=metric==='y'?Math.max(0,livePanel.y-liveHeadingOffset):livePanel[metric];
+              const mwValue=metric==='y'?Math.max(0,mwPanel.y-mwHeadingOffset):mwPanel[metric];
+              const liveExtent=dimension==='height'?liveContentHeight:liveRow.stage[dimension];
+              const mwExtent=dimension==='height'?mwContentHeight:mwRow.stage[dimension];
+              const liveRatio=liveValue/liveExtent;
+              const mwRatio=mwValue/mwExtent;
               const delta=Math.abs(liveRatio-mwRatio);
               maxRelativeDelta=Math.max(maxRelativeDelta,delta);
               assert.ok(delta<=0.025,
                 'LIVE and MeetWave relative '+metric+' differs by '+delta.toFixed(4)+' for seat '+livePanel.index+' in '+definition.id+' on '+viewport.name+
-                '; LIVE stage='+JSON.stringify(liveRow.stage)+' MeetWave stage='+JSON.stringify(mwRow.stage));
+                '; heading-excluded LIVE stage='+liveContentHeight+'px MeetWave stage='+mwContentHeight+'px');
             }
           }
           report.geometryComparisons.push({
             layout:definition.id,viewport:viewport.name,
-            result:'matched within 2.5% of each stage dimension',
+            result:'matched within 2.5% of each usable video-area dimension',
+            geometryBasis:'video area excludes its dedicated heading row',
             maxRelativeDelta:Number(maxRelativeDelta.toFixed(4)),
             liveStage:liveRow.stage,meetWaveStage:mwRow.stage
           });
