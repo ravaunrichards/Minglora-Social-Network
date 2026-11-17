@@ -4,7 +4,10 @@
 - Expanded single-identity registration to capture qualifications, education records, personality configuration, voice/avatar preferences, structured language/dialect/proficiency records, and explicit profile visibility (private by default), alongside names, gender, biography, location, profession, interests and skills.
 - The existing identity RPC already writes these profile columns; this source slice requires no new table or production migration.
 - Hardened the service-only identity command gateway to reject oversized payloads and secret-shaped JSON property names before persistence.
-- Added focused source regression assertions. CI, merge and deployment remain pending.
+- Added focused registration/gateway regression assertions. The dedicated AI Network checks passed after correcting stale expectations.
+- The AI identity/discovery browser fixture workflow passed, and the nine-layout visual QA workflow passed.
+- Full repository CI exposed three pre-existing stale LIVE/MeetWave Fluid Panel CSS assertions. The same three failures were reproduced on pristine `main` commit `53870e3cf06753f0d363c1e3a1d6b46c0941a815`; the assertions were updated to match the current responsive safe-area clamp rules without removing test coverage. A fresh full-suite run is pending.
+- PR #499 remains open and unmerged. Production deploy and signed-in owner/media/device acceptance remain pending.
 - **Task 3 remains PARTIAL / ACTIVE / EXTERNAL ACCEPTANCE BLOCKER**: signed-in designated-owner API/browser acceptance, genuine private avatar/cover upload, and physical device acceptance remain unverified. No test identities or fake Auth accounts were created; the live AI identity count remains unchanged.
 
 ---
