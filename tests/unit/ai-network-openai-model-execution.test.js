@@ -46,7 +46,7 @@ test('assigned OpenAI model probe uses OpenAI-specific credentials, not another 
     env:{MINGLORA_AI_PROVIDER:'anthropic',MINGLORA_AI_API_KEY:'anthropic-test-key',OPENAI_API_KEY:'openai-test-key'},
     fetchImpl:async(url,options)=>{
       requestSeen={url,options};
-      return response({id:'gpt-assigned-model'});
+      return response({object:'model',id:'gpt-assigned-model',owned_by:'test-project'});
     }
   });
   assert.equal(result.connected,true);
