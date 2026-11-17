@@ -653,9 +653,8 @@
 }
 
 
-/* Gifter reference sheets: keep the supplied PNGs unchanged, remove the
-   surrounding card frame, crop the source canvas in one viewport, and show
-   one matching high-quality badge crop over its softer embedded counterpart. */
+/* Gifter range sheets: show the supplied range PNG by itself.
+   Keep the established source crop, without stacking a second badge image. */
 .gp-range-reference-figure{
   overflow:visible;
   gap:4px;
@@ -666,7 +665,6 @@
   box-shadow:none;
 }
 .gp-range-reference-artwork{
-  position:relative;
   display:block;
   width:100%;
   min-width:0;
@@ -674,38 +672,17 @@
   overflow:hidden;
   border-radius:7px;
   background:transparent;
-  isolation:isolate;
 }
-.gp-range-reference-artwork > img{
-  position:absolute;
-  inset:0;
+.gp-range-reference-artwork > .gp-range-reference-sheet{
   display:block;
   width:100%;
   height:100%;
   max-width:none;
   min-width:0;
-  border:0;
-  border-radius:0;
-}
-.gp-range-reference-artwork > .gp-range-reference-sheet{
-  z-index:0;
   object-fit:cover;
   object-position:50% 54.5%;
-}
-.gp-range-reference-artwork > .gp-range-reference-badge{
-  z-index:1;
-  top:-25%;
-  left:26%;
-  width:100%;
-  height:100%;
-  aspect-ratio:auto;
-  object-fit:contain;
-  object-position:center;
-  mix-blend-mode:lighten;
-  pointer-events:none;
-  user-select:none;
-  filter:drop-shadow(0 0 3px rgba(255,255,255,.88))
-    drop-shadow(0 0 8px rgba(255,218,122,.72));
+  border:0;
+  border-radius:0;
 }
 @media(max-width:760px){
   .gp-range-reference-figure{padding:0;gap:3px}
