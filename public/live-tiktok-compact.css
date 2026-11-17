@@ -1049,16 +1049,16 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
   position:absolute!important;z-index:10!important;top:auto!important;left:auto!important;
   right:clamp(8px,1vw,12px)!important;
-  width:clamp(48px,15vw,108px)!important;height:clamp(44px,15vw,108px)!important;
+  width:clamp(48px,15vw,120px)!important;height:clamp(44px,15vw,120px)!important;
   min-width:0!important;min-height:0!important;
-  max-width:calc(100% - 16px)!important;max-height:calc(100% - 16px)!important;
+  max-width:none!important;max-height:none!important;
   box-sizing:border-box!important;flex:0 0 auto!important;
 }
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
-  bottom:clamp(8px,1vw,12px)!important;
+  bottom:clamp(4px,1vw,8px)!important;
 }
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
-  bottom:calc(clamp(8px,1vw,12px) + clamp(44px,15vw,108px) + clamp(8px,1vw,12px))!important;
+  bottom:calc(clamp(4px,1vw,8px) + clamp(44px,15vw,120px) + clamp(4px,1vw,8px))!important;
 }
 body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{
   grid-template-rows:22px repeat(2,minmax(0,1fr))!important;
