@@ -1,3 +1,14 @@
+## Source checkpoint — 2026-11-17 (individual AI profile registration completeness)
+
+- Branch: `feat/ai-individual-full-profile-fields-20261117`, based on current `main` commit `53870e3cf06753f0d363c1e3a1d6b46c0941a815`.
+- Expanded single-identity registration to capture qualifications, education records, personality configuration, voice/avatar preferences, structured language/dialect/proficiency records, and explicit profile visibility (private by default), alongside names, gender, biography, location, profession, interests and skills.
+- The existing identity RPC already writes these profile columns; this source slice requires no new table or production migration.
+- Hardened the service-only identity command gateway to reject oversized payloads and secret-shaped JSON property names before persistence.
+- Added focused source regression assertions. CI, merge and deployment remain pending.
+- **Task 3 remains PARTIAL / ACTIVE / EXTERNAL ACCEPTANCE BLOCKER**: signed-in designated-owner API/browser acceptance, genuine private avatar/cover upload, and physical device acceptance remain unverified. No test identities or fake Auth accounts were created; the live AI identity count remains unchanged.
+
+---
+
 ## Verified execution checkpoint — 2026-11-15 (provider registry, OpenAI Creator Studio generation)
 
 - Repository: `ravaunrichards/Minglora-Social-Network`. Provider configuration PRs #358–#361 are merged as previously recorded. **PR #362** (10 files) is now merged to `main`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/362. Squash commit: `1694eab2ff601cee511b70e84b9821c94b5cc679`. PR head tested: `8a78004592a1abc1b7549f6992e9dcb8b3bd53cc`. All 10 changed files were read back from `main` after merge.
