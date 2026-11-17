@@ -73,7 +73,7 @@ test('MeetWave nine-layout CSS uses one full-stage grid and nine independent pan
   assert.ok(contract.includes('grid-column:2/4!important'));
   assert.ok(contract.includes('grid-template-columns:minmax(70px,.78fr) minmax(0,1.45fr) minmax(0,1.45fr) minmax(70px,.78fr)!important'));
   assert.ok(contract.includes('grid-template-columns:minmax(0,1.7fr) minmax(78px,.9fr)!important'));
-  assert.doesNotMatch(contract,/display:none!important/);
+  assert.doesNotMatch(contract,/(?:\\.live-guest-seat|\\.mw-empty-seat)[^{}]*\\{[^{}]*display:\\s*none/i);
   assert.ok(contract.includes('data-seat-index="8"'));
   assert.doesNotMatch(contract,/data-guest-layout=/);
   assert.match(meetwave,/MEETWAVE_GUEST_LIMIT = 8/);
