@@ -33,6 +33,7 @@ test('assigned provider probe uses the database-selected model rather than a glo
   const result = await probeAssignedProvider({
     providerName: 'openai',
     modelIdentifier: 'assigned-model-v2',
+    accountType: 'managed',
     env: {
       OPENAI_API_KEY: 'server-only-test-key',
       OPENAI_DEFAULT_MODEL: 'wrong-global-model',
@@ -40,9 +41,14 @@ test('assigned provider probe uses the database-selected model rather than a glo
       MINGLORA_AI_API_KEY: 'must-not-be-used'
     },
     fetchImpl: async (url, options) => {
-      requestedUrl = url;
+      requestedUrl = requestedUrl || url;
       assert.equal(options.headers.Authorization, 'Bearer server-only-test-key');
-      return response(200, { id: 'assigned-model-v2', object: 'model', owned_by: 'openai' });
+      if (url.endsWith('/models/assigned-model-v2')) {
+        return response(200, { id: 'assigned-model-v2', object: 'model', owned_by: 'openai' });
+      }
+      if (url.endsWith('/moderations')) return clear();
+      if (url.endsWith('/responses')) return generated();
+      throw new Error('Unexpected provider endpoint: ' + url);
     },
     now: () => new Date('2026-11-17T22:00:00.000Z')
   });
@@ -50,8 +56,45 @@ test('assigned provider probe uses the database-selected model rather than a glo
   assert.equal(result.connected, true);
   assert.equal(result.model, 'assigned-model-v2');
   assert.equal(result.inferenceAdapterAvailable, true);
+  assert.equal(result.inferenceVerified, true);
   assert.equal(result.executionEnabled, false);
   assert.equal(JSON.stringify(result).includes('server-only-test-key'), false);
+});
+
+test('user-managed provider accounts cannot be verified using Minglora platform credentials', async () => {
+  let calls = 0;
+  const result = await probeAssignedProvider({
+    providerName: 'openai',
+    modelIdentifier: 'assigned-model-v2',
+    accountType: 'user',
+    env: { OPENAI_API_KEY: 'must-not-be-used' },
+    fetchImpl: async () => { calls += 1; }
+  });
+  assert.equal(calls, 0);
+  assert.equal(result.status, 'managed_account_required');
+  assert.equal(result.connected, false);
+  assert.equal(result.executionEnabled, false);
+});
+
+test('model access without a successful text inference check does not mark the provider healthy', async () => {
+  const result = await probeAssignedProvider({
+    providerName: 'openai',
+    modelIdentifier: 'assigned-model-v2',
+    accountType: 'managed',
+    env: { OPENAI_API_KEY: 'server-only-test-key' },
+    fetchImpl: async url => {
+      if (url.endsWith('/models/assigned-model-v2')) {
+        return response(200, { id: 'assigned-model-v2', object: 'model', owned_by: 'openai' });
+      }
+      if (url.endsWith('/moderations')) return clear();
+      if (url.endsWith('/responses')) return response(403, { error: { message: 'forbidden' } });
+      throw new Error('Unexpected provider endpoint: ' + url);
+    }
+  });
+  assert.equal(result.connected, false);
+  assert.equal(result.healthStatus, 'unavailable');
+  assert.equal(result.inferenceVerified, false);
+  assert.equal(result.executionEnabled, false);
 });
 
 test('provider without an installed adapter stays inactive and does not make a network request', async () => {

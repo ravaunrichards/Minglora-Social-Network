@@ -42,6 +42,7 @@ export function listAIProviderExecutionAdapters() {
 export async function probeAssignedProvider({
   providerName,
   modelIdentifier,
+  accountType,
   env = process.env,
   fetchImpl = globalThis.fetch,
   now = () => new Date(),
@@ -54,6 +55,10 @@ export async function probeAssignedProvider({
     return unavailable(provider, model, 'adapter_unavailable',
       'No executable provider adapter is installed for this provider. The assignment remains inactive.');
   }
+  if (accountType !== 'managed') {
+    return unavailable(provider, model, 'managed_account_required',
+      'The platform verifier uses Minglora-managed server credentials only. User-managed provider accounts need a supported secrets-manager integration.');
+  }
   if (!MODEL_IDENTIFIER_PATTERN.test(model)) {
     return unavailable(provider, model, 'invalid_model',
       'The assigned model identifier is missing or invalid. No provider request was sent.');
@@ -62,13 +67,71 @@ export async function probeAssignedProvider({
   const probe = await adapter.probe({
     env: assignedEnvironment, fetchImpl, now, timeoutMs, modelIdentifier: model
   });
-  return {
-    ...probe,
-    providerId: provider,
-    model,
-    inferenceAdapterAvailable: true,
-    executionEnabled: false
-  };
+  if (!probe.connected) {
+    return {
+      ...probe,
+      providerId: provider,
+      model,
+      inferenceAdapterAvailable: true,
+      inferenceVerified: false,
+      executionEnabled: false
+    };
+  }
+  try {
+    const probeIdentityId = 'minglora-provider-health-check';
+    const inference = await adapter.generate({
+      bot: {
+        id: probeIdentityId,
+        identityId: probeIdentityId,
+        name: 'Minglora provider health check',
+        purpose: 'Perform a short provider/model execution verification.'
+      },
+      identity: { identity_id: probeIdentityId },
+      message: 'Reply with the single word OK.',
+      history: [],
+      memoryContext: null,
+      env: assignedEnvironment,
+      fetchImpl,
+      timeoutMs,
+      maxOutputTokens: 128,
+      modelIdentifier: model
+    });
+    if (!inference || typeof inference.output !== 'string' || !inference.output.trim()) {
+      throw Object.assign(new Error('The assigned model returned no text.'), { code: 'empty_inference', status: 502 });
+    }
+    let checkedAt;
+    try { checkedAt = new Date(now()).toISOString(); } catch { checkedAt = new Date().toISOString(); }
+    return {
+      ...probe,
+      providerId: provider,
+      model,
+      status: 'healthy',
+      connected: true,
+      healthStatus: 'healthy',
+      inferenceAdapterAvailable: true,
+      inferenceVerified: true,
+      executionEnabled: false,
+      checkedAt,
+      note: 'The assigned model was retrieved and completed a moderated text-generation check. The assignment remains inactive until the database activation step succeeds.'
+    };
+  } catch (error) {
+    let checkedAt;
+    try { checkedAt = new Date(now()).toISOString(); } catch { checkedAt = new Date().toISOString(); }
+    return {
+      ...probe,
+      providerId: provider,
+      model,
+      status: String(error?.code || 'inference_failed').slice(0, 64),
+      connected: false,
+      healthStatus: 'unavailable',
+      inferenceAdapterAvailable: true,
+      inferenceVerified: false,
+      executionEnabled: false,
+      checkedAt,
+      httpStatus: Number.isInteger(error?.status) ? error.status : probe.httpStatus,
+      note: 'The API credential could retrieve the assigned model, but the controlled text-generation check failed. The assignment remains inactive.'
+    };
+  }
 }
 
 /**
