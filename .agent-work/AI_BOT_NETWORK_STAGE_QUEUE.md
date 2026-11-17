@@ -742,3 +742,17 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 ### Next action
 - Open a draft PR and run repository CI. Fix failures rather than suppressing tests.
 - After successful review and explicit production-release authorization, apply the additive migration to the existing project, deploy the updated existing Edge Function, configure real provider credentials privately, run an admin-confirmed inference test against an actual AI identity, verify token/health audit rows, then confirm existing Render workspace/service and complete signed-in owner/MFA device acceptance. Keep workers globally paused pending their separate authenticated-worker implementation and operational gates.
+
+
+### Validation update — PR #497, revision `1998ed211e13031ba90cd03a29e95cababe37ec4`
+- **AI Network checks:** PASS. GitHub Actions run 44198433314 completed successfully: Edge Function TypeScript parse/transpile, `node --check src/server.js`, `node --check public/ai-network.js`, and 184 AI Network tests passed / 0 failed.
+- **AI Network browser acceptance:** PASS. Run 44198433206 completed successfully; the real AI workspace UI exercised against disposable API fixtures.
+- **Nine-layout LIVE/MeetWave visual QA:** PASS. Run 44198433153 completed successfully.
+- **Full repository CI:** PARTIAL / FAIL. Run 44198433115 completed with 1,350 tests passing and 3 failures in unchanged LIVE/MeetWave layout tests:
+  1. `tests/unit/live-layout-panels.test.js:230` — expected fluid-panel right inset not found in the selected stylesheet input.
+  2. `tests/unit/live-tiktok-compact-layout.test.js:89` — expected `nth-child(3) bottom:2px`, while current CSS uses a clamped inset.
+  3. `tests/unit/meetwave-room-reference.test.js:259` — expected an earlier bottom clamp, while current CSS uses `clamp(64px,6vw,72px)`.
+  No provider/model source, provider tests or Edge Function syntax checks failed in this run. These unrelated layout expectations were not altered or suppressed by this provider/model change.
+- PR #497 remains open as a **draft**, unmerged, with 16 changed files. No production schema migration, Edge Function deployment, Render deployment, provider credential or provider/account/model/assignment records were changed by this work.
+- Production provider inference remains unverified because the live catalog has zero provider accounts, models and assignments. Global worker pause/execution-disabled/zero-worker controls are unchanged.
+- The CI failure above means the repository is not fully green; provider feature acceptance is green, but the overall PR must not be represented as a full green build.
