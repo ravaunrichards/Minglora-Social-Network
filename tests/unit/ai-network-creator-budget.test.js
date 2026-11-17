@@ -98,4 +98,13 @@ test('legacy Creator Studio usage excludes generations already recorded in the r
   assert.throws(() => startAICreatorJobGeneration(db, 'owner-1', linked.id, {
     now, budgetRequestId: 'not-a-uuid'
   }), { status: 400 });
+  const retried = startAICreatorJobGeneration(db, 'owner-1', linked.id, {
+    now, budgetRequestId: '7c36b6d0-0d2a-4ef2-9dce-9fd9e13ae1c7'
+  });
+  assert.equal(retried.providerBudgetLedgeredAt, false);
+  assert.equal(retried.providerUsage, null);
+  assert.equal(retried.providerUsageHistory[0].usage.total_tokens, 60);
+  assert.equal(getAICreatorDailyUsage(db, 'owner-1', { now }).tokensUsed, 60,
+    'a previously ledgered retry must not be counted again as legacy JSON usage');
+
 });
