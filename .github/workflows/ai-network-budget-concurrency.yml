@@ -58,8 +58,9 @@ jobs:
         run: node --test tests/integration/ai-network-shared-budget-concurrency.test.js
       - name: Create isolated database for finance integration tests
         env:
-          PGPASSWORD: postgres
-        run: createdb --host=localhost --username=postgres minglora_finance_test
+          AI_NETWORK_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/minglora_test
+        run: |
+          node --input-type=module -e "import pg from 'pg'; const client = new pg.Client({ connectionString: process.env.AI_NETWORK_TEST_DATABASE_URL }); await client.connect(); await client.query('CREATE DATABASE minglora_finance_test'); await client.end();"
       - name: Run finance policy and task-guard integration tests
         env:
           AI_NETWORK_FINANCE_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/minglora_finance_test
