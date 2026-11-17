@@ -1,38 +1,36 @@
-name: Minglora seven-plus-two layout visual QA
-
+name: Minglora nine-layout crop-reference visual QA
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [fix/minglora-guest-layout-nine-crop-sync-20261117]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   layout-matrix:
-    name: LIVE and MeetWave layout independence matrix
+    name: LIVE and MeetWave original-crop visual matrix
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out repository
+      - name: Check out Minglora Social Network
         uses: actions/checkout@v7
-      - name: Set up Node.js 24
+      - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          package-manager-cache: false
-      - name: Install isolated Playwright runner
+      - name: Install Playwright
         run: npm install --no-save --package-lock=false playwright@1.56.0
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Check visual test syntax
         run: node --check tests/e2e/layout-separation-visual.mjs
-      - name: Render every screen and guest-box combination
+      - name: Compare all nine crop layouts on mobile, tablet and desktop
         run: node tests/e2e/layout-separation-visual.mjs
-      - name: Upload layout screenshots
+      - name: Upload original-crop comparison screenshots and geometry report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: minglora-seven-plus-two-layout-visual-evidence
+          name: minglora-nine-layout-crop-visual-evidence
           path: artifacts/layout-separation-visual/
           if-no-files-found: warn
           retention-days: 7

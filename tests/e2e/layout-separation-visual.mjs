@@ -6,96 +6,307 @@ import { chromium } from 'playwright';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
-const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css');
-const meetwaveCss=read('public/meetwave.css');
-const screens=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
-const guests=['roundtable-1','roundtable-2'];
-const viewports=[{name:'desktop',width:1280,height:900},{name:'mobile',width:390,height:844}];
+const layouts=[
+  {id:'full-screen',label:'Full Screen',file:'Full Screen.png',visible:1},
+  {id:'fluid-panel',label:'Fluid Panel',file:'Fluid Panel.png',visible:3},
+  {id:'fluid-grid',label:'Fluid Grid',file:'Fluid Grid.png',visible:3},
+  {id:'fixed-grid',label:'Fixed Grid',file:'Fixed Grid.png',visible:9},
+  {id:'fixed-panel',label:'Fixed Panel',file:'Fixed Panel.png',visible:4},
+  {id:'side-by-side',label:'Side by Side',file:'Side by Side.png',visible:9},
+  {id:'spotlight',label:'Spotlight',file:'Spotlight.png',visible:9},
+  {id:'roundtable-1',label:'Roundtable 1',file:'Roundtable 1.png',visible:9},
+  {id:'roundtable-2',label:'Roundtable 2',file:'Roundtable 2.png',visible:9}
+];
+const viewports=[
+  {name:'mobile',width:390,height:844},
+  {name:'tablet',width:820,height:1180},
+  {name:'desktop',width:1366,height:900}
+];
+const referenceDirectory=path.join(root,'assets/Crop References/Guests Layout');
 const artifacts=path.join(root,'artifacts/layout-separation-visual');
 fs.mkdirSync(artifacts,{recursive:true});
-const seatMarkup=Array.from({length:9},(_,index)=>{
-  const role=index===0?'is-host':'is-guest';
-  return '<div class="live-guest-seat '+role+'" data-seat-index="'+index+'"><span>Seat '+index+'</span></div>';
-}).join('');
-const browser=await chromium.launch({headless:true});
-let combinations=0;
-function assertStableScreenGeometry(current,baseline,message){
-  const currentColumns=String(current[0]).trim().split(/\s+/).map(parseFloat);
-  const baselineColumns=String(baseline[0]).trim().split(/\s+/).map(parseFloat);
-  assert.equal(currentColumns.length,baselineColumns.length,message+' (column count)');
-  for(let index=0;index<currentColumns.length;index++){
-    assert.ok(Math.abs(currentColumns[index]-baselineColumns[index])<=1,message+' (column '+(index+1)+': '+currentColumns[index]+'px versus '+baselineColumns[index]+'px)');
+const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css')+'\n'+read('public/live-tiktok-compact.css');
+const meetwaveCss=read('public/meetwave.css');
+const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;color:#fff;font-family:Arial,sans-serif}body{padding:0;box-sizing:border-box}';
+const report={
+  result:'pending',
+  originalCropDirectory:'assets/Crop References/Guests Layout/',
+  products:['LIVE','MeetWave'],
+  layouts:layouts.map(item=>item.id),
+  viewports:[],
+  screenshots:[],
+  occupiedSeatChecks:[],
+  emptySeatChecks:[],
+  geometryComparisons:[],
+  notes:['Every seat remains in the DOM; each reference determines which stage panels are visible.','Side by Side preserves the reference 4-column, 3-row structure; the ninth participant fills nine of its ten depicted cells because current capacity is one host plus eight guests.']
+};
+function seatMarkup(product,state){
+  const nodes=[];
+  nodes.push('<div class="mw-video-tile live-guest-seat is-host" data-seat-index="0" data-identity="qa-host"><div class="mw-video-placeholder">Host</div><span class="live-guest-seat-tag">HOST</span><span class="live-guest-seat-meta"><strong>Host participant</strong><small>Visual QA</small></span></div>');
+  for(let i=1;i<=8;i++){
+    const id='qa-guest-'+i;
+    if(product==='MeetWave'&&state==='empty'){
+      nodes.push('<button type="button" class="mw-video-tile live-guest-seat empty mw-empty-seat" data-seat-index="'+i+'" data-identity="'+id+'" aria-label="Invite Guest '+i+'"><span class="mw-empty-seat-icon">+</span><span class="mw-empty-seat-label">Guest '+i+'</span></button>');
+    }else{
+      nodes.push('<div class="mw-video-tile live-guest-seat is-guest" data-seat-index="'+i+'" data-identity="'+id+'"><div class="mw-video-placeholder">Guest '+i+'</div><span class="live-guest-seat-tag">GUEST '+i+'</span><span class="live-guest-seat-meta"><strong>Guest participant '+i+'</strong><small>Visual QA</small></span></div>');
+    }
   }
-  assert.deepEqual(current.slice(1),baseline.slice(1),message);
+  return nodes.join('');
 }
+function markup(product,state){
+  const heading='<div class="live-guest-layout-heading"><strong>'+product.toUpperCase()+' STAGE</strong><small>Original-crop visual QA</small></div>';
+  const seats=heading+seatMarkup(product,state);
+  if(product==='LIVE'){
+    return '<section id="live-player-shell" class="live-player-shell live-mode-video_audio"><header class="live-player-header"><strong>MINGLORA LIVE</strong></header><div class="live-player-layout"><div class="live-video-column"><section id="live-video-stage" class="live-video-stage live-mode-video_audio"><div id="live-guest-layout" class="live-guest-layout">'+seats+'</div><div id="live-screen-share-stage" class="live-screen-share-stage" aria-label="Shared screen"></div></section><div class="live-player-controls live-icon-controls" role="group" aria-label="LIVE controls"></div></div><aside id="live-fullscreen-chat-slot" class="live-fullscreen-chat-slot"></aside></div></section>';
+  }
+  return '<section class="mw-meeting live-player-shell"><header class="mw-meeting-head live-player-header"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Visual QA room</h1></div><b id="mw-count" class="mw-meeting-count">9 seats</b></header><div class="mw-meeting-layout live-player-layout"><section class="mw-stage-column live-video-column"><div id="mw-screen-stage" class="mw-screen-stage" data-screen-layout="fluid-grid"><div id="mw-grid" class="mw-video-grid live-guest-layout live-video-stage" data-grid-role="host-eight-guest-seats" data-layout="fluid-grid">'+seats+'</div><div id="mw-screen-share-stage" class="mw-screen-share-stage" hidden></div></div><div id="mw-audio" class="mw-audio"></div><div class="mw-controls live-player-controls live-icon-controls" role="group" aria-label="MeetWave controls"></div></section><aside id="mw-chat-panel" class="mw-chat-panel"></aside></div></section>';
+}
+async function buildPage(browser,product,viewport,state){
+  const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height},deviceScaleFactor:1});
+  const css=product==='LIVE'?liveCss:meetwaveCss;
+  await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'\n'+sizing+'</style></head><body>'+markup(product,state)+'</body></html>');
+  return page;
+}
+async function applyLayout(page,product,layout){
+  return page.evaluate(args=>{
+    const stage=document.querySelector(args.product==='LIVE'?'#live-video-stage':'#mw-screen-stage');
+    const grid=document.querySelector(args.product==='LIVE'?'#live-guest-layout':'#mw-grid');
+    if(args.product==='LIVE'){
+      grid.dataset.liveLayout=args.layout;
+      delete grid.dataset.liveGuestLayout;
+    }else{
+      stage.dataset.screenLayout=args.layout;
+      grid.dataset.layout=args.layout;
+      delete stage.dataset.guestLayout;
+      delete grid.dataset.guestLayout;
+    }
+    if(args.layout==='spotlight'){
+      const selected=grid.querySelector('[data-seat-index="3"]');
+      if(selected)selected.classList.add('is-spotlight','is-focused');
+    }
+    const bounds=stage.getBoundingClientRect();
+    const seats=[...grid.querySelectorAll('.live-guest-seat')].map(node=>{
+      const r=node.getBoundingClientRect(),s=getComputedStyle(node);
+      return {
+        index:Number(node.dataset.seatIndex),
+        style:{position:s.position,width:s.width,height:s.height,minWidth:s.minWidth,maxWidth:s.maxWidth,flex:s.flex,left:s.left,right:s.right,top:s.top,bottom:s.bottom,transform:s.transform,zoom:s.zoom,gridColumn:s.gridColumn,gridRow:s.gridRow},
+        x:r.x-bounds.x,y:r.y-bounds.y,w:r.width,h:r.height,
+        visible:s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)>0&&r.width>1&&r.height>1,
+        display:s.display,visibility:s.visibility,opacity:s.opacity
+      };
+    });
+    const computed=getComputedStyle(grid);
+    const gridBounds=grid.getBoundingClientRect();
+    const liveSelector='body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="'+args.layout+'"]';
+    return {
+      product:args.product,layout:args.layout,
+      stage:{width:bounds.width,height:bounds.height},
+      grid:{x:gridBounds.x-bounds.x,y:gridBounds.y-bounds.y,width:gridBounds.width,height:gridBounds.height},
+      layoutAttribute:grid.getAttribute(args.product==='LIVE'?'data-live-layout':'data-layout'),
+      productionSelectorMatches:args.product==='LIVE'?document.querySelectorAll(liveSelector).length:document.querySelectorAll('.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="'+args.layout+'"]').length,
+      columns:computed.gridTemplateColumns.trim().split(/\s+/).length,
+      rows:computed.gridTemplateRows.trim().split(/\s+/).length,
+      columnTemplate:computed.gridTemplateColumns,rowTemplate:computed.gridTemplateRows,
+      display:computed.display,
+      seats
+    };
+  },{product,layout});
+}
+function assertInside(result,seat,label){
+  assert.ok(seat.w>1&&seat.h>1,label+' seat '+seat.index+' has a visible panel');
+  assert.ok(seat.x>=-2&&seat.y>=-2,label+' seat '+seat.index+' starts inside stage');
+  assert.ok(seat.x+seat.w<=result.stage.width+3,label+' seat '+seat.index+' ends inside horizontally');
+  assert.ok(seat.y+seat.h<=result.stage.height+3,label+' seat '+seat.index+' ends inside vertically');
+}
+function verify(result,definition,viewport,state){
+  const label=result.product+' '+definition.id+' '+viewport.name+' '+state;
+  assert.equal(result.seats.length,9,label+' retains all nine seat records');
+  const visible=result.seats.filter(seat=>seat.visible);
+  assert.equal(visible.length,definition.visible,label+' stage panel count matches its source-crop arrangement');
+  visible.forEach(seat=>assertInside(result,seat,label));
+  const get=index=>visible.find(seat=>seat.index===index);
+  if(definition.id==='full-screen'){
+    const host=get(0);
+    assert.ok(host.w>=result.stage.width*.88&&host.h>=result.stage.height*.88,label+' uses one full-stage panel; host='+JSON.stringify(host)+' stage='+JSON.stringify(result.stage));
+    assert.equal(result.columns,1,label+' uses one column');
+    assert.equal(result.rows,1,label+' uses one row');
+  }
+  if(definition.id==='fluid-panel'){
+    const host=get(0),first=get(1),second=get(2);
+    assert.ok(host.w>=result.stage.width*.88&&host.h>=result.stage.height*.88,label+' keeps one dominant panel; host='+JSON.stringify(host)+' stage='+JSON.stringify(result.stage));
+    assert.ok(first&&second&&first.x>result.stage.width*.68&&second.x>result.stage.width*.68,label+' places two compact panels at the lower right');
+    assert.ok(Math.abs(first.x-second.x)<3&&Math.abs(first.y-second.y)>first.h*.7,label+' stacks the compact panels vertically');
+    const stackGap=first.y-(second.y+second.h);
+    assert.ok(stackGap>=3&&stackGap<=10,label+' keeps the two lower-right thumbnails close together; gap='+stackGap);
+  }
+  if(definition.id==='fluid-grid'){
+    const host=get(0),first=get(1),second=get(2);
+    assert.ok(host.x<first.x&&host.h>=result.stage.height*.88,label+' keeps the large panel full height at left');
+    assert.ok(Math.abs(first.x-second.x)<3&&Math.abs(first.y-second.y)>first.h*.7,label+' has two stacked panels in the right column');
+    assert.equal(result.columns,2,label+' uses two columns');
+    assert.equal(result.rows,2,label+' uses two rows');
+  }
+  if(definition.id==='fixed-grid'){
+    assert.equal(result.columns,3,label+' uses three columns');
+    assert.equal(result.rows,3,label+' uses three rows');
+    assert.equal(new Set(visible.map(seat=>Math.round(seat.x/3))).size,3,label+' fills three columns');
+    assert.equal(new Set(visible.map(seat=>Math.round(seat.y/3))).size,3,label+' fills three rows');
+  }
+  if(definition.id==='fixed-panel'){
+    const host=get(0),guests=[get(1),get(2),get(3)];
+    assert.ok(host.x<guests[0].x&&host.h>=result.stage.height*.88,label+' uses a large left panel');
+    assert.ok(guests.every(Boolean)&&guests.every(item=>Math.abs(item.x-guests[0].x)<3),label+' aligns three guest panels on the right');
+    assert.equal(new Set(guests.map(item=>Math.round(item.y/3))).size,3,label+' uses three stacked rows');
+    assert.equal(result.columns,2,label+' uses two columns');
+    assert.equal(result.rows,3,label+' uses three rows');
+  }
+  if(definition.id==='side-by-side'){
+    const top=[get(0),get(1)],small=visible.filter(seat=>seat.index>=2);
+    assert.ok(top.every(Boolean)&&Math.abs(top[0].y-top[1].y)<3,label+' places two large panels on the top row');
+    assert.ok(top.every(item=>item.h>small[0].h*1.3),label+' keeps top panels larger than compact panels');
+    assert.ok(small.every(item=>item.y>top[0].y+top[0].h*.7),label+' places compact panels underneath');
+    assert.equal(result.columns,4,label+' uses four columns');
+    assert.equal(result.rows,3,label+' uses three rows');
+  }
+  if(definition.id==='spotlight'){
+    const main=visible.find(seat=>seat.w>result.stage.width*.9);
+    const small=visible.filter(seat=>seat.index!==main.index);
+    assert.ok(main,label+' has one full-width spotlight panel');
+    assert.equal(new Set(small.map(seat=>Math.round(seat.y/3))).size,2,label+' has two lower rows');
+    assert.equal(new Set(small.map(seat=>Math.round(seat.x/3))).size,4,label+' has four compact columns');
+  }
+  if(definition.id==='roundtable-1'||definition.id==='roundtable-2'){
+    const host=get(0),center=host.x+host.w/2;
+    const left=visible.filter(seat=>seat.index>0&&seat.x+seat.w/2<center);
+    const right=visible.filter(seat=>seat.index>0&&seat.x+seat.w/2>center);
+    assert.ok(Math.abs(center-result.stage.width/2)<result.stage.width*.1,label+' centers the main panel');
+    assert.equal(left.length,4,label+' has four guest panels on the left');
+    assert.equal(right.length,4,label+' has four guest panels on the right');
+    assert.equal(new Set(left.map(seat=>Math.round(seat.y/3))).size,4,label+' has four left-side rows');
+    assert.equal(new Set(right.map(seat=>Math.round(seat.y/3))).size,4,label+' has four right-side rows');
+    assert.equal(result.columns,definition.id==='roundtable-1'?3:4,label+' keeps its distinct column count');
+    assert.equal(result.rows,4,label+' keeps four rows');
+  }
+  return {
+    product:result.product,layout:result.layout,viewport:viewport.name,state,
+    visiblePanels:visible.length,seatRecords:result.seats.length,
+    stage:result.stage,columns:result.columns,rows:result.rows,
+    panels:visible.map(seat=>({index:seat.index,x:Math.round(seat.x),y:Math.round(seat.y),width:Math.round(seat.w),height:Math.round(seat.h),style:seat.style}))
+  };
+}
+function signature(result){
+  return result.seats.filter(seat=>seat.visible)
+    .map(seat=>[seat.index,seat.x,seat.y,seat.w,seat.h].map(value=>Math.round(value/3)).join(',')).join('|');
+}
+async function compareCrop(browser,product,definition,viewport,png){
+  const pathToCrop=path.join(referenceDirectory,definition.file);
+  assert.ok(fs.existsSync(pathToCrop),'Original crop missing: '+pathToCrop);
+  const original=fs.readFileSync(pathToCrop).toString('base64');
+  const rendered=png.toString('base64');
+  const page=await browser.newPage({viewport:{width:1440,height:620},deviceScaleFactor:1});
+  const html='<!doctype html><html><head><style>*{box-sizing:border-box}body{margin:0;padding:16px;background:#edf0f5;color:#101828;font-family:Arial,sans-serif}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.head strong{font-size:17px}.head small{font-size:12px;color:#475467}.compare{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}.panel{background:#fff;border:1px solid #cbd3dd;border-radius:10px;padding:10px;min-width:0}.panel h2{margin:0 0 8px;font-size:12px;letter-spacing:.04em}.panel img{display:block;width:100%;height:480px;object-fit:contain;background:#f7f8fa}.foot{margin-top:8px;font-size:10px;color:#667085}</style></head><body><div class="head"><strong>'+product+' · '+definition.label+'</strong><small>'+viewport.name+' · '+viewport.width+' × '+viewport.height+'</small></div><div class="compare"><section class="panel"><h2>ORIGINAL CROPPED REFERENCE</h2><img src="data:image/png;base64,'+original+'" alt="Original '+definition.label+' crop"></section><section class="panel"><h2>RENDERED IMPLEMENTATION</h2><img src="data:image/png;base64,'+rendered+'" alt="'+product+' '+definition.label+' render"></section></div><div class="foot">Source file: '+definition.file+' · viewport: '+viewport.width+' × '+viewport.height+'</div></body></html>';
+  await page.setContent(html);
+  const name='compare-'+product.toLowerCase()+'-'+definition.id+'-'+viewport.name+'.png';
+  await page.screenshot({path:path.join(artifacts,name),fullPage:true});
+  await page.close();
+  report.screenshots.push(name);
+}
+const browser=await chromium.launch({headless:true});
 try{
   for(const viewport of viewports){
-    const livePage=await browser.newPage({viewport:{width:viewport.width,height:viewport.height}});
-    for(const mode of ['video','audio']){
-      const stageClass=mode==='audio'?'live-video-stage live-audio-stage':'live-video-stage';
-      const gridClass=mode==='audio'?'live-guest-layout audio-guest-layout':'live-guest-layout';
-      const body='<main id="live-player-shell"><section id="live-video-stage" class="'+stageClass+'" style="width:100%;min-height:560px"><div id="live-guest-layout" class="'+gridClass+'">'+seatMarkup+'</div></section></main>';
-      await livePage.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+liveCss+'</style></head><body>'+body+'</body></html>');
-      for(const screen of screens){
-        let baseline=null;
-        const guestPositions=[];
-        for(const guest of guests){
-          const state=await livePage.evaluate(({screen,guest})=>{
-            const grid=document.querySelector('#live-guest-layout');
-            grid.dataset.liveLayout=screen;
-            grid.dataset.liveGuestLayout=guest;
-            const css=getComputedStyle(grid),host=getComputedStyle(grid.querySelector('.is-host'));
-            return {columns:css.gridTemplateColumns,stage:[document.querySelector('#live-video-stage').getBoundingClientRect().width,document.querySelector('#live-video-stage').getBoundingClientRect().height],screen:grid.dataset.liveLayout,guest:grid.dataset.liveGuestLayout,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
-          },{screen,guest});
-          if(baseline){
-            assertStableScreenGeometry([state.columns,state.stage,state.screen,state.seats],baseline,mode+' LIVE '+screen+' screen mode or stage geometry changed when only guest layout changed at '+viewport.name);
-            assert.equal(state.guest,guest,'LIVE guest selection did not apply independently');
-          }else baseline=[state.columns,state.stage,state.screen,state.seats];
-          guestPositions.push(state.host);
-          combinations++;
+    for(const product of ['LIVE','MeetWave']){
+      const page=await buildPage(browser,product,viewport,'occupied');
+      const signatures=new Set();
+      const productResults=[];
+      for(const definition of layouts){
+        const result=await applyLayout(page,product,definition.id);
+        report.lastMeasurement=result;
+        const summary=verify(result,definition,viewport,'occupied');
+        report.occupiedSeatChecks.push(summary);
+        signatures.add(signature(result));
+        productResults.push(result);
+        const selector=product==='LIVE'?'#live-video-stage':'#mw-screen-stage';
+        const png=await page.locator(selector).screenshot();
+        await compareCrop(browser,product,definition,viewport,png);
+      }
+      assert.equal(signatures.size,9,product+' must have nine independent geometries on '+viewport.name);
+      report.viewports.push({product,name:viewport.name,width:viewport.width,height:viewport.height,independentLayouts:signatures.size});
+      if(product==='MeetWave'){
+        const emptyPage=await buildPage(browser,'MeetWave',viewport,'empty');
+        for(const definition of layouts){
+          const result=await applyLayout(emptyPage,'MeetWave',definition.id);
+          report.emptySeatChecks.push(verify(result,definition,viewport,'empty'));
         }
-        assert.notDeepEqual(guestPositions[0],guestPositions[1],mode+' LIVE '+screen+' guest-box choices do not produce different host placement at '+viewport.name);
-        if(screen==='full-screen'&&viewport.name==='desktop'&&mode==='video'){
-          await livePage.screenshot({path:path.join(artifacts,'live-video-roundtable-1-desktop.png'),fullPage:true});
-        }
-        if(screen==='spotlight'&&viewport.name==='mobile'&&mode==='audio'){
-          await livePage.screenshot({path:path.join(artifacts,'live-audio-spotlight-mobile.png'),fullPage:true});
+        await emptyPage.close();
+        const liveResults=report.occupiedSeatChecks.filter(row=>row.product==='LIVE'&&row.viewport===viewport.name);
+        const mwResults=report.occupiedSeatChecks.filter(row=>row.product==='MeetWave'&&row.viewport===viewport.name);
+        for(const definition of layouts){
+          const liveRow=liveResults.find(row=>row.layout===definition.id);
+          const mwRow=mwResults.find(row=>row.layout===definition.id);
+          assert.ok(liveRow&&mwRow,'Both products must render '+definition.id+' on '+viewport.name);
+          assert.equal(liveRow.panels.length,mwRow.panels.length,
+            'LIVE and MeetWave panel counts differ for '+definition.id+' on '+viewport.name);
+          let maxRelativeDelta=0;
+          for(let index=0;index<liveRow.panels.length;index++){
+            const livePanel=liveRow.panels[index],mwPanel=mwRow.panels[index];
+            assert.equal(livePanel.index,mwPanel.index,
+              'LIVE and MeetWave seat order differs for '+definition.id+' on '+viewport.name);
+            if(definition.id==='fluid-panel'&&livePanel.index>0){
+              const liveAnchors={
+                right:liveRow.stage.width-livePanel.x-livePanel.width,
+                bottom:liveRow.stage.height-livePanel.y-livePanel.height,
+                width:livePanel.width,height:livePanel.height
+              };
+              const mwAnchors={
+                right:mwRow.stage.width-mwPanel.x-mwPanel.width,
+                bottom:mwRow.stage.height-mwPanel.y-mwPanel.height,
+                width:mwPanel.width,height:mwPanel.height
+              };
+              for(const metric of ['right','bottom','width','height']){
+                const delta=Math.abs(liveAnchors[metric]-mwAnchors[metric]);
+                assert.ok(delta<=2.5,
+                  'LIVE and MeetWave Fluid Panel '+metric+' anchor differs by '+delta.toFixed(2)+'px for seat '+livePanel.index+' on '+viewport.name+
+                  '; LIVE='+JSON.stringify(liveAnchors)+' MeetWave='+JSON.stringify(mwAnchors));
+              }
+              continue;
+            }
+            for(const metric of ['x','y','width','height']){
+              const dimension=(metric==='x'||metric==='width')?'width':'height';
+              const liveRatio=livePanel[metric]/liveRow.stage[dimension];
+              const mwRatio=mwPanel[metric]/mwRow.stage[dimension];
+              const delta=Math.abs(liveRatio-mwRatio);
+              maxRelativeDelta=Math.max(maxRelativeDelta,delta);
+              assert.ok(delta<=0.025,
+                'LIVE and MeetWave relative '+metric+' differs by '+delta.toFixed(4)+' for seat '+livePanel.index+' in '+definition.id+' on '+viewport.name+
+                '; LIVE stage='+JSON.stringify(liveRow.stage)+' MeetWave stage='+JSON.stringify(mwRow.stage));
+            }
+          }
+          report.geometryComparisons.push({
+            layout:definition.id,viewport:viewport.name,
+            result:'matched within 2.5% of each stage dimension',
+            maxRelativeDelta:Number(maxRelativeDelta.toFixed(4)),
+            liveStage:liveRow.stage,meetWaveStage:mwRow.stage
+          });
         }
       }
+      await page.close();
     }
-    await livePage.close();
-
-    const mwPage=await browser.newPage({viewport:{width:viewport.width,height:viewport.height}});
-    const mwBody='<main class="mw-meeting"><section id="mw-screen-stage" class="mw-screen-stage" style="width:100%;min-height:560px"><div id="mw-grid" class="live-video-stage mw-video-grid live-guest-layout">'+seatMarkup+'</div></section></main>';
-    await mwPage.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+meetwaveCss+'</style></head><body>'+mwBody+'</body></html>');
-    for(const screen of screens){
-      let baseline=null;
-      const guestPositions=[];
-      for(const guest of guests){
-        const state=await mwPage.evaluate(({screen,guest})=>{
-          const stage=document.querySelector('#mw-screen-stage'),grid=document.querySelector('#mw-grid');
-          stage.dataset.screenLayout=screen;grid.dataset.layout=screen;grid.dataset.guestLayout=guest;
-          const css=getComputedStyle(grid),host=getComputedStyle(grid.querySelector('.is-host'));
-          return {columns:css.gridTemplateColumns,stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height],screen:stage.dataset.screenLayout,gridScreen:grid.dataset.layout,guest:grid.dataset.guestLayout,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
-        },{screen,guest});
-        if(baseline){
-          assertStableScreenGeometry([state.columns,state.stage,state.screen,state.gridScreen,state.seats],baseline,'MeetWave '+screen+' screen mode or stage geometry changed when only guest layout changed at '+viewport.name);
-          assert.equal(state.guest,guest,'MeetWave guest selection did not apply independently');
-        }else baseline=[state.columns,state.stage,state.screen,state.gridScreen,state.seats];
-        guestPositions.push(state.host);
-        combinations++;
-      }
-      assert.notDeepEqual(guestPositions[0],guestPositions[1],'MeetWave '+screen+' guest-box choices do not produce different host placement at '+viewport.name);
-      if(screen==='fluid-grid'&&viewport.name==='desktop'){
-        await mwPage.screenshot({path:path.join(artifacts,'meetwave-fluid-grid-roundtable-1-desktop.png'),fullPage:true});
-      }
-      if(screen==='spotlight'&&viewport.name==='mobile'){
-        await mwPage.screenshot({path:path.join(artifacts,'meetwave-spotlight-roundtable-2-mobile.png'),fullPage:true});
-      }
-    }
-    await mwPage.close();
   }
+  report.result='passed';
+  report.summary={
+    layouts:9,products:2,viewports:3,
+    cropComparisons:report.screenshots.length,
+    occupiedSeatChecks:report.occupiedSeatChecks.length,
+    MeetWaveEmptySeatChecks:report.emptySeatChecks.length,
+    matchingLiveMeetWaveGeometries:report.geometryComparisons.length
+  };
+  fs.writeFileSync(path.join(artifacts,'visual-matrix.json'),JSON.stringify(report,null,2));
+  console.log(JSON.stringify({result:'passed',...report.summary},null,2));
+}catch(error){
+  report.result='failed';
+  report.error=String(error);
+  fs.writeFileSync(path.join(artifacts,'visual-matrix.json'),JSON.stringify(report,null,2));
+  throw error;
 }finally{
   await browser.close();
 }
-console.log(JSON.stringify({result:'passed',screenLayouts:7,guestBoxLayouts:2,viewports:2,liveModes:2,combinations,screenshots:4},null,2));
