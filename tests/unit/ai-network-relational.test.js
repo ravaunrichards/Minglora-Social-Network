@@ -95,7 +95,9 @@ test('Minglora routes identity APIs through the authenticated Supabase runtime g
 });
 
 test('AI workspace uses real relational identity results and separate name inputs', () => {
-  assert.match(ui, /request\('\/identities\?limit=100'\)/);
+  assert.match(ui, /request\('\/identities\?' \+ identityQuery\.toString\(\)\)/);
+  assert.match(ui, /limit: '100'/);
+  assert.match(ui, /offset: String\(/);
   assert.match(ui, /request\('\/categories'\)/);
   assert.match(ui, /name="firstName"/);
   assert.match(ui, /name="lastName"/);
