@@ -205,6 +205,7 @@
       {key:'live-pro',title:'LIVE Pro access',group:'Live Pro Access',description:'Review and manage eligible members’ LIVE Pro access using the existing access controls.',selector:'#admin-live-pro-access'},
       {key:'moderation',title:'Moderation reports',group:'Trust & Support',description:'Review member reports and take action through the existing moderation workflow.',selector:'#moderation-workspace'},
       {key:'support',title:'Member support inbox',group:'Trust & Support',description:'Review support requests and respond through the existing support workflow.',selector:'#moderator-support-workspace'},
+      {key:'permissions',title:'Administrator roles & permissions',group:'Administration',description:'Assign or revoke delegated roles while protecting Creator Hub as the sole platform owner.',selector:'#admin-rbac-management'},
       {key:'security',title:'Administrator security & devices',group:'Administration',description:'Manage authenticator protection, administrator sessions and connected authentication settings.',selector:'#admin-centre-settings'}
     ];
 
@@ -1061,6 +1062,7 @@
     panel.append(adminSettings);
     root.replaceChildren(panel);
     if (unlocked) window.MingloraAdminFinance?.mount(panel, adminCentreApi);
+    if (unlocked) window.MingloraAdminRbac?.mount(panel, adminCentreApi);
     root.dataset.adminCentreReady = 'true';
     if (unlocked) initializeInternalActivityFeed(panel);
 
