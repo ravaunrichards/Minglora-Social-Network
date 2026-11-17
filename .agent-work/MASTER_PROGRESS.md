@@ -234,3 +234,14 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Checkpoint commits: `d03cfe5` (single-image renderer), `471bb13` (range-sheet CSS), `afb1ac6` (HTML asset version), `b03f52d` (service-worker asset version), `71c1721` (Gifter reference assertions), `5a851be` (range-sheet assertions; intermediate delimiter corrected by `c8a07cd`), `bce8c9a` (documentation).
 - Source inspection confirms the range renderer has no badge-overlay image or overlay mapping, the overlay selector is absent from range-sheet CSS, and the milestone crop images remain referenced by the progression tracker.
 - Automated CI, merge and deployment verification: pending. Do not claim runtime deployment until Render confirms the new mainline commit is live.
+
+
+### Minglora LIVE + MeetWave guest layouts — original nine-crop completion (2026-11-17)
+- PR #464 merged into `main` by squash commit `464f508585ebb2cafe6353053cf691fbaec56a93`; superseded diverged draft PR #448 was closed without merging.
+- Preserved the nine original layouts as separate selections in both LIVE and MeetWave: Full Screen, Fluid Panel, Fluid Grid, Fixed Grid, Fixed Panel, Side by Side, Spotlight, Roundtable 1 and Roundtable 2. MeetWave now uses the same single nine-layout selector as LIVE; the old second Roundtable-only selector is removed.
+- Restored the exact original Full Screen PNG crop (blob `b74970433066a73a389aff5c7628eea8046b0cb7`) into `assets/Crop References/Guests Layout/Full Screen.png`, beside the other eight canonical PNG references. No JPG/generated substitute was used.
+- Corrected Fluid Panel thumbnail sizing, responsive stack spacing, lower-right anchors, desktop stage inset alignment, and LIVE empty invitation-seat sizing. The visual regression checks cover mobile, tablet and desktop.
+- Updated the current `public/index.html` asset URLs and the service-worker shell to v349 while preserving mainline ranking, Gifter, navigation and other unrelated changes.
+- Verification on the merged commit: full CI passed (automated tests, Supabase Auth provider acceptance and For You functional navigation). Original-crop Playwright QA passed for 9 layouts, 54 crop comparisons, 54 occupied-seat checks, 27 MeetWave empty-seat checks and 27 LIVE/MeetWave geometry comparisons. Evidence artifact: workflow run `44021797370`, artifact `14301541892`.
+- Post-merge source verification on `main`: all nine LIVE selectors and all nine MeetWave selectors are present; MeetWave uses one nine-layout selector; Full Screen PNG blob and all three index/service-worker asset versions are verified.
+- Render deployment was not triggered; no deployment success is claimed. The merged source is in `main`.
