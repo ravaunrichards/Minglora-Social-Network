@@ -136,6 +136,8 @@ function verify(result,definition,viewport,state){
     assert.ok(host.w>=result.stage.width*.88&&host.h>=result.stage.height*.88,label+' keeps one dominant panel; host='+JSON.stringify(host)+' stage='+JSON.stringify(result.stage));
     assert.ok(first&&second&&first.x>result.stage.width*.68&&second.x>result.stage.width*.68,label+' places two compact panels at the lower right');
     assert.ok(Math.abs(first.x-second.x)<3&&Math.abs(first.y-second.y)>first.h*.7,label+' stacks the compact panels vertically');
+    const stackGap=first.y-(second.y+second.h);
+    assert.ok(stackGap>=3&&stackGap<=10,label+' keeps the two lower-right thumbnails close together; gap='+stackGap);
   }
   if(definition.id==='fluid-grid'){
     const host=get(0),first=get(1),second=get(2);
@@ -249,6 +251,25 @@ try{
             const livePanel=liveRow.panels[index],mwPanel=mwRow.panels[index];
             assert.equal(livePanel.index,mwPanel.index,
               'LIVE and MeetWave seat order differs for '+definition.id+' on '+viewport.name);
+            if(definition.id==='fluid-panel'&&livePanel.index>0){
+              const liveAnchors={
+                right:liveRow.stage.width-livePanel.x-livePanel.width,
+                bottom:liveRow.stage.height-livePanel.y-livePanel.height,
+                width:livePanel.width,height:livePanel.height
+              };
+              const mwAnchors={
+                right:mwRow.stage.width-mwPanel.x-mwPanel.width,
+                bottom:mwRow.stage.height-mwPanel.y-mwPanel.height,
+                width:mwPanel.width,height:mwPanel.height
+              };
+              for(const metric of ['right','bottom','width','height']){
+                const delta=Math.abs(liveAnchors[metric]-mwAnchors[metric]);
+                assert.ok(delta<=2.5,
+                  'LIVE and MeetWave Fluid Panel '+metric+' anchor differs by '+delta.toFixed(2)+'px for seat '+livePanel.index+' on '+viewport.name+
+                  '; LIVE='+JSON.stringify(liveAnchors)+' MeetWave='+JSON.stringify(mwAnchors));
+              }
+              continue;
+            }
             for(const metric of ['x','y','width','height']){
               const dimension=(metric==='x'||metric==='width')?'width':'height';
               const liveRatio=livePanel[metric]/liveRow.stage[dimension];
