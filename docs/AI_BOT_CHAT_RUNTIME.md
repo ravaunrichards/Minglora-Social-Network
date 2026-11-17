@@ -51,6 +51,16 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 - The test identity, requests, conversation, messages, audit records, budget row, reservations and usage events were transaction-scoped fixtures. Post-rollback counts for all of those AI/chat tables were zero.
 - This was a sequential database RPC contract test, not a concurrent-session/load test. Billable provider-failure accounting, signed-in HTTP/device acceptance, live provider inference and the Render Node API release remain unverified. The runtime remains globally paused, execution-disabled and at zero workers.
 
+
+## Shared Creator Studio budget — source implementation only
+
+- Added an additive, not-yet-applied migration 20261117104500_minglora_creator_studio_shared_budget to the source branch. It creates separate Creator Studio reservation and usage-event tables; these records reference the owner/day budget row and do not create or depend on synthetic bot or AI identity records.
+- The same service-role-only minglora_ai_bot_chat_command RPC now has creator_begin_request, creator_complete_request and creator_fail_request actions. Both Creator Studio and chat reserve against, and settle through, the same locked owner/UTC-day budget row. Each reserve/settle/release path uses bounded leases and idempotent request IDs; provider-measured successful and billable failed usage is recorded, while non-billable failures release the reservation.
+- The chat get_usage and begin_request actions include Creator Studio usage and active reservations. This keeps chat from spending tokens already reserved by Creator Studio, and vice versa.
+- Creator Studio generation now calls the relational gateway only when Supabase persistence is active; local JSON-mode behavior is retained. Usage already settled in the relational ledger is marked in the legacy job snapshot so the same measured generation is not added twice to the legacy baseline.
+- The source branch extends the existing Edge gateway action allowlist, updates src/server.js and the AI Network service, and adds focused unit/contract tests.
+- **Not applied or deployed:** production still uses the existing baseline-only Creator Studio path until this migration and corresponding Node/Edge source are reviewed, merged and deployed. No production schema, Edge Function, Render service, provider credential or runtime control was changed. The source migration will be validated with a rollback-only SQL transaction before review.
+
 ## Acceptance still required
 
 1. Verify the existing Render workspace/service and deploy the current `src/server.js` backend from merged `main` without creating another service; this deployment is not yet confirmed.

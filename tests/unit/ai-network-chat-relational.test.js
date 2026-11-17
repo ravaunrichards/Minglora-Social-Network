@@ -41,7 +41,8 @@ test('chat RPC enforces service role, owner scope, idempotency and daily token r
 
 test('private Edge gateway has a narrow bot-chat command allowlist and rejects secrets', () => {
   assert.match(runtime, /"ai_bot_chat_command"/);
-  assert.match(runtime, /const supported = \["get_conversation", "get_usage", "begin_request", "complete_request", "fail_request"\]/);
+  assert.match(runtime, /const creatorBudgetActions = \["creator_begin_request", "creator_complete_request", "creator_fail_request"\]/);
+  assert.match(runtime, /const supported = \["get_conversation", "get_usage", "begin_request", "complete_request", "fail_request", \.\.\.creatorBudgetActions\]/);
   assert.match(runtime, /admin\.rpc\("minglora_ai_bot_chat_command"/);
   assert.match(runtime, /Credentials and secrets cannot be stored in AI bot conversations/);
 });
@@ -101,6 +102,16 @@ test('chat messages use stable per-conversation sequence numbers instead of time
   ]) {
     assert.ok(messageOrderMigration.includes(fragment), 'missing sequence-order migration fragment: ' + fragment);
   }
+});
+
+test('chat RPC now aggregates Creator Studio reservations and measured usage through the shared owner/day ledger', () => {
+  const sharedMigration = read('supabase/migrations/20261117104500_minglora_creator_studio_shared_budget.sql');
+  assert.match(sharedMigration, /ai_creator_studio_usage_events/i);
+  assert.match(sharedMigration, /ai_creator_studio_daily_token_reservations/i);
+  assert.match(sharedMigration, /creator_begin_request/i);
+  assert.match(sharedMigration, /creator_complete_request/i);
+  assert.match(sharedMigration, /creator_fail_request/i);
+  assert.match(sharedMigration, /for update/i);
 });
 
 test('documentation records the applied production foundation and outstanding acceptance gates', () => {

@@ -131,10 +131,10 @@ test('Creator Studio generation is owner-MFA protected, calls the moderation ada
   for (const token of [
     "if (method === 'POST' && parts[0] === 'creator-jobs' && parts[2] === 'generate'",
     'currentProviderStatus.manualDraftsAvailable',
-    'startAICreatorJobGeneration(db, user.id, parts[1])',
+    'startAICreatorJobGeneration(db, user.id, parts[1], { budgetRequestId })',
     'generateOpenAICreatorDraft({',
     'completeAICreatorJobGeneration(db, user.id, started.id, generated)',
-    'failAICreatorJobGeneration(db, user.id, started.id, safeMessage, { providerFailure: error })',
+    'failAICreatorJobGeneration(db, user.id, started.id, safeMessage, { providerFailure: error?.provider ? error : generated || error })',
     'await saveStore()',
     'Provider credentials and prompt overrides are not accepted',
     'No draft was generated'

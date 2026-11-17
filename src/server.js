@@ -3110,40 +3110,109 @@ async function route(req, res) {
         if (typeof draft.brief !== 'string' || draft.brief.trim().length < 10 || draft.brief.trim().length > 4000) {
           throw Object.assign(new Error('Creator Studio briefs must contain between 10 and 4,000 characters. No provider request was sent.'), { status: 400 });
         }
+
+        const relationalCreatorBudget = isSupabasePersistence();
         const creatorSettings = getAISettings(db, user.id);
         const creatorDailyUsage = getAICreatorDailyUsage(db, user.id);
+        const relationalUsage = relationalCreatorBudget
+          ? await runAIBotChatCommand('get_usage', { usage_date: creatorDailyUsage.date })
+          : { tokens_used: 0, reserved_tokens: 0 };
         const dailyTokenLimit = Math.max(0, Math.floor(Number(creatorSettings.dailyTokenBudget) || 0));
-        const availableDailyTokens = dailyTokenLimit - creatorDailyUsage.tokensUsed;
+        const totalDailyTokensUsed = creatorDailyUsage.tokensUsed +
+          Math.max(0, Number(relationalUsage?.tokens_used) || 0) +
+          Math.max(0, Number(relationalUsage?.reserved_tokens) || 0);
+        const availableDailyTokens = dailyTokenLimit - totalDailyTokensUsed;
         const configuredOutputLimit = Number(process.env.MINGLORA_AI_MAX_OUTPUT_TOKENS) || 1200;
         const requestedOutputLimit = Math.min(1200, Math.max(128, Math.floor(configuredOutputLimit)));
         const estimatedInputReserve = Math.ceil(draft.brief.length / 3) + 400;
         const allowedOutputTokens = Math.min(requestedOutputLimit, availableDailyTokens - estimatedInputReserve);
         if (allowedOutputTokens < 128) {
-          throw Object.assign(new Error('This request would exceed the remaining daily AI token budget. Adjust the budget or retry after the daily reset. No provider generation request was sent.'), { status: 429 });
+          throw Object.assign(new Error('This request would exceed the remaining shared daily AI token budget. Adjust the budget or retry after the daily reset. No provider generation request was sent.'), { status: 429 });
         }
+
         const providerHealth = await probeOpenAIProvider();
         if (!providerHealth.connected) {
           throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
         }
-        const started = startAICreatorJobGeneration(db, user.id, parts[1]);
+
+        const budgetRequestId = relationalCreatorBudget ? crypto.randomUUID() : null;
+        const started = startAICreatorJobGeneration(db, user.id, parts[1], { budgetRequestId });
         await saveStore();
+        let creatorReservationStarted = false;
+        let creatorBudgetSettled = false;
+        let generated = null;
         try {
-          const generated = await generateOpenAICreatorDraft({
+          if (relationalCreatorBudget) {
+            const reservation = await runAIBotChatCommand('creator_begin_request', {
+              request_id: started.providerBudgetRequestId,
+              job_id: started.id,
+              usage_date: creatorDailyUsage.date,
+              daily_token_budget: dailyTokenLimit,
+              baseline_used_tokens: creatorDailyUsage.tokensUsed,
+              reserve_tokens: estimatedInputReserve + allowedOutputTokens
+            });
+            if (reservation?.completed || reservation?.reused) {
+              throw Object.assign(new Error('This Creator Studio budget request has already been processed. No duplicate provider request was sent.'), { status: 409 });
+            }
+            if (reservation?.reserved !== true) {
+              throw Object.assign(new Error('Creator Studio could not reserve the shared AI token budget. No provider generation request was sent.'), { status: 503 });
+            }
+            creatorReservationStarted = true;
+          }
+
+          generated = await generateOpenAICreatorDraft({
             taskType: started.taskType,
             brief: started.brief,
             env: process.env,
             maxOutputTokens: allowedOutputTokens
           });
+
+          if (relationalCreatorBudget) {
+            const settlement = await runAIBotChatCommand('creator_complete_request', {
+              request_id: started.providerBudgetRequestId,
+              provider: generated.provider,
+              model: generated.model,
+              response_id: generated.responseId,
+              provider_request_id: generated.requestId,
+              usage: generated.usage
+            });
+            if (settlement?.completed !== true) {
+              throw Object.assign(new Error('Creator Studio provider usage could not be settled in the shared AI budget ledger.'), { status: 503 });
+            }
+            creatorBudgetSettled = true;
+          }
+
           const job = completeAICreatorJobGeneration(db, user.id, started.id, generated);
+          job.providerBudgetLedgeredAt = creatorBudgetSettled;
           await saveStore();
           return json(res, 200, { job });
         } catch (error) {
           const safeMessage = error?.safeForClient
             ? String(error.message || 'Provider generation failed.')
             : 'The AI provider request failed. No draft output was saved; check server logs without exposing credentials.';
-          failAICreatorJobGeneration(db, user.id, started.id, safeMessage, { providerFailure: error });
+          if (relationalCreatorBudget && creatorReservationStarted && started.providerBudgetRequestId) {
+            const billableSource = error?.provider ? error : generated || error;
+            try {
+              const failedReservation = await runAIBotChatCommand('creator_fail_request', {
+                request_id: started.providerBudgetRequestId,
+                error_code: 'creator_generation_failed',
+                reason: safeMessage,
+                provider: billableSource?.provider || '',
+                model: billableSource?.model || '',
+                response_id: billableSource?.responseId || '',
+                provider_request_id: billableSource?.requestId || '',
+                usage: billableSource?.usage && typeof billableSource.usage === 'object' ? billableSource.usage : {}
+              });
+              creatorBudgetSettled = failedReservation?.billableUsageRecorded === true || failedReservation?.completed === true;
+            } catch {
+              // Keep the legacy usage snapshot visible if the ledger could not be settled.
+              // The reservation expires after its bounded lease and is then excluded from budget totals.
+            }
+          }
+          const job = failAICreatorJobGeneration(db, user.id, started.id, safeMessage, { providerFailure: error?.provider ? error : generated || error });
+          job.providerBudgetLedgeredAt = creatorBudgetSettled;
           await saveStore();
-          return json(res, Number(error?.status) || 502, { error: safeMessage, job: (db.aiBotCreatorJobs || []).find(item => item.id === started.id && item.ownerId === user.id) || null });
+          return json(res, Number(error?.status) || 502, { error: safeMessage, job });
         }
       }
       if (method === 'POST' && sub === 'approvals') {
