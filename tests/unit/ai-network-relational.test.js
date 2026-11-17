@@ -86,6 +86,8 @@ test('bulk identity failures are labelled and retained for idempotent retry', ()
   assert.match(ui, /item\.idempotency_key/);
   assert.match(ui, /Failed rows are retained in the batch editor for retry/);
   assert.match(ui, /JSON\.stringify\(batchRetryItems\)/);
+  assert.match(ui, /pendingIdentityBulkRetryItems/);
+  assert.ok(ui.indexOf('if (kind === \'identity-bulk\') state.pendingIdentityBulkRetryItems = batchRetryItems;') < ui.indexOf('await refresh(message);'), 'Retry rows must be stored before the refreshed identity form renders.');
   assert.ok(ui.indexOf("if (batchFailures.length) {\n      setNotice") < ui.indexOf("if (batchRetryItems.length) {\n      const retryField"), 'Retry rows must be restored after the warning re-render.');
 });
 
