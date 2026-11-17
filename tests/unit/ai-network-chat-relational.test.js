@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const migration = read('supabase/migrations/20261117070000_minglora_ai_bot_conversations.sql');
+const messageOrderMigration = read('supabase/migrations/20261117102355_minglora_ai_bot_message_order.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const doc = read('docs/AI_BOT_CHAT_RUNTIME.md');
@@ -85,6 +86,21 @@ test('AI bot chat migration indexes every child-side foreign key lookup', () => 
     assert.ok(migration.includes('create index if not exists ' + name), 'missing covering index ' + name);
   }
   assert.ok(migration.includes('create index if not exists ai_bot_conversations_owner_user_idx\n on ai_network.ai_bot_conversations(owner_user_id);'));
+});
+
+test('chat messages use stable per-conversation sequence numbers instead of timestamp or UUID ordering', () => {
+  for (const fragment of [
+    'add column if not exists sequence_no bigint',
+    'row_number() over',
+    'unique (conversation_id,sequence_no)',
+    "v_conversation.message_count::bigint+1,'user'",
+    "v_conversation.message_count::bigint+2,'assistant'",
+    'order by m.sequence_no desc limit 20',
+    'jsonb_agg(q.item order by q.sequence_no)',
+    "'sequenceNo',m.sequence_no"
+  ]) {
+    assert.ok(messageOrderMigration.includes(fragment), 'missing sequence-order migration fragment: ' + fragment);
+  }
 });
 
 test('documentation records the applied production foundation and outstanding acceptance gates', () => {

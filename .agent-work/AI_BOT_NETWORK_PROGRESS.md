@@ -447,3 +447,13 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Deployed the existing `minglora-runtime-state` Edge Function as ACTIVE version 132 from merged `main`. The existing custom `x-minglora-api-key` guard and `verify_jwt=false` configuration were preserved; bot-chat command allowlist and handler are present in the deployed source.
 - Runtime safety remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No worker, schedule or autonomous execution was enabled.
 - **Still blocked/pending:** existing Render workspace/service confirmation and Node API release; designated owner MFA/reviewer desktop/mobile acceptance; actual deployed-RPC concurrency/idempotency/lease/budget/owner-isolation tests; real provider credential/health/inference; shared Creator Studio budget migration; full capacity/load/recovery benchmarks. No 10-billion or multi-region capacity is claimed.
+
+
+## AI bot conversation message-order repair — 2026-11-17
+
+- A rollback-only live database test before the repair found **2 of the 10 returned exchange pairs out of order**. Both messages in an exchange shared a timestamp, and the read query broke ties by random UUID. All 20 synthetic exchanges were rolled back; production chat tables remained empty.
+- Added and applied migration `20261117102355_minglora_ai_bot_message_order` in the existing Supabase project. `ai_bot_conversation_messages.sequence_no` is backfilled, positive and unique within each conversation; the RPC allocates consecutive user/assistant positions from the locked conversation's `message_count` and reads history by sequence.
+- After the repair, a rollback-only 20-round-trip stress test returned the latest 20 messages in sequence order 21–40 with **0 out-of-order pairs** and conversation message_count 40.
+- The same test verified completed-request retry reuse, 280 synthetic measured tokens with zero reservations remaining, over-budget request rejection, expired-lease recovery to attempt 2, owner isolation and non-billable failure cleanup. All synthetic identity/profile/message/request/budget/usage/audit rows were rolled back.
+- Production chat tables remain empty; no AI identity, human Auth user, provider credential or external inference was created. The existing Edge Function remains ACTIVE v132; workers remain paused, execution disabled and max worker count zero.
+- Render Node API deployment, designated owner MFA/reviewer desktop/mobile acceptance, real provider health/inference, shared Creator Studio budget integration and scale/load benchmarks remain outstanding. No 10-billion or multi-region capacity is claimed.

@@ -1,6 +1,6 @@
 # Minglora AI Bot Conversation Runtime
 
-**Status:** Owner-initiated chat code is merged to main. The additive relational chat migration is applied to the existing Minglora Supabase project as migration `20261117101442_minglora_ai_bot_conversations`; all six chat tables and the service-role-only RPC are live. The existing `minglora-runtime-state` Edge Function is ACTIVE at version 132 with its prior custom API-key authentication and `verify_jwt=false` preserved. The Render-backed Node API release, signed-in owner/MFA acceptance, a real provider credential and production inference remain unverified.
+**Status:** Owner-initiated chat code is merged to main. The additive relational chat migration is applied to the existing Minglora Supabase project as migration `20261117101442_minglora_ai_bot_conversations`; the deterministic message-order repair is applied as `20261117102355_minglora_ai_bot_message_order`; all six chat tables and the service-role-only RPC are live. The existing `minglora-runtime-state` Edge Function is ACTIVE at version 132 with its prior custom API-key authentication and `verify_jwt=false` preserved. The Render-backed Node API release, signed-in owner/MFA acceptance, a real provider credential and production inference remain unverified.
 
 ## Scope and safety
 
@@ -17,6 +17,8 @@ The additive migration supabase/migrations/20261117070000_minglora_ai_bot_conver
 - ai_bot_usage_events for measured successful and billable failed provider usage.
 - ai_bot_daily_token_budgets and ai_bot_daily_token_reservations for daily chat-budget rows and row-locked reservations.
 
+Messages carry a monotonic `sequence_no` within each conversation. The completion RPC allocates the user/assistant pair as adjacent sequence positions while holding the conversation row lock, and reads history by sequence rather than timestamps or random UUIDs. Existing messages are backfilled by request and role order.
+
 All six tables enable RLS, revoke direct access from public, anon and authenticated, and grant required backend table access only to service_role. The public.minglora_ai_bot_chat_command(text,uuid,jsonb) RPC is SECURITY INVOKER with an empty search path and service-role-only EXECUTE. It validates the signed-in Minglora profile and AI identity owner, locks the owner/date budget row to serialize concurrent bot-chat reservations, enforces request/attempt idempotency, persists the user/assistant pair only after output moderation, records provider usage and settles/releases reservations in the same transaction.
 
 The private runtime Edge Function exposes only get_conversation, get_usage, begin_request, complete_request and fail_request. It is deployed to the existing project as ACTIVE version 132; the existing custom API-key guard and `verify_jwt=false` setting were preserved. The Node server source uses this RPC path when Supabase persistence is configured, but its current Render deployment has not yet been verified or updated. Local JSON-mode unit tests keep the existing in-memory service path. Production does not silently fall back to JSONB when the relational command is unavailable.
@@ -32,7 +34,8 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 
 ## Explicitly not verified or deployed
 
-- The migration is applied in production as `20261117101442_minglora_ai_bot_conversations`. Live verification confirms six RLS-enabled tables, zero direct browser-role SELECT privileges, service-role table access, and a SECURITY INVOKER RPC with an empty search path and service-role-only EXECUTE. All 19 foreign keys across the six tables have valid covering indexes. The six chat tables currently contain zero rows.
+- The migration is applied in production as `20261117101442_minglora_ai_bot_conversations`.
+- The follow-up `20261117102355_minglora_ai_bot_message_order` migration backfilled `sequence_no`, added per-conversation uniqueness and updated the private RPC. A rollback-only 20-exchange database stress test returned sequence positions 21–40 with zero out-of-order pairs; it also verified idempotent completed-request reuse, owner isolation, budget rejection and expired-lease recovery. All fixture writes were rolled back. Live verification confirms six RLS-enabled tables, zero direct browser-role SELECT privileges, service-role table access, and a SECURITY INVOKER RPC with an empty search path and service-role-only EXECUTE. All 19 foreign keys across the six tables have valid covering indexes. The six chat tables currently contain zero rows.
 - No live OpenAI credential/model health result or production inference has been verified.
 - Chat now performs read-only recall from the separate owner-managed AI memory subsystem only when the identity has an explicit memory opt-in and a recorded consent timestamp. Short-term summaries may be included after that opt-in; long-term summaries are included only after the separate long-term opt-in. The adapter includes at most six bounded summaries, excludes credential-like text, labels them as untrusted context, and reserves token budget for them. The chat path does not automatically create, update or summarize memory entries. Disabling memory continues to clear entries through the existing owner-controlled memory settings RPC.
 - No email mailbox, independent AI population, employee or public social activity is created.
