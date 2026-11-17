@@ -1550,6 +1550,20 @@ async function route(req, res) {
         });
         return json(res, 200, result || { identities: [], total: 0, limit: 24, offset: 0 });
       }
+      if (method === 'GET' && parts[0] === 'public-profile' && parts.length === 2) {
+        const identityId = parts[1];
+        if (!aiIdentityIdPattern.test(identityId)) {
+          throw Object.assign(new Error('A valid AI identity ID is required.'), { status:400 });
+        }
+        const response = await requestSupabaseState('ai_public_identity_profile', {
+          actorUserId:user.id,
+          identityId
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('Individual AI profile details require Minglora Supabase persistence.'), { status:503 });
+        }
+        return json(res, 200, response?.result || {});
+      }
       if (method === 'GET' && sub === 'following') {
         const result = await runAIDiscoveryCommand('list_following');
         return json(res, 200, result || { following: [] });
