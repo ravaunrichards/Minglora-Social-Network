@@ -66,6 +66,27 @@ test('bot chat recalls only owner-consented memory and accounts for bounded memo
   assert.match(doc, /does not automatically create, update or summarize memory entries/i);
 });
 
+test('AI bot chat migration indexes every child-side foreign key lookup', () => {
+  const indexes = [
+    'ai_bot_conversations_identity_idx',
+    'ai_bot_conversations_owner_user_idx',
+    'ai_bot_chat_requests_identity_idx',
+    'ai_bot_chat_requests_conversation_owner_bot_identity_idx',
+    'ai_bot_chat_requests_requested_conversation_owner_bot_identity_idx',
+    'ai_bot_conversation_messages_identity_idx',
+    'ai_bot_conversation_messages_conversation_owner_bot_identity_idx',
+    'ai_bot_conversation_messages_request_owner_bot_identity_idx',
+    'ai_bot_usage_events_conversation_owner_bot_identity_idx',
+    'ai_bot_usage_events_request_owner_bot_identity_idx',
+    'ai_bot_daily_token_reservations_identity_idx',
+    'ai_bot_daily_token_reservations_request_owner_bot_identity_idx'
+  ];
+  for (const name of indexes) {
+    assert.ok(migration.includes('create index if not exists ' + name), 'missing covering index ' + name);
+  }
+  assert.ok(migration.includes('create index if not exists ai_bot_conversations_owner_user_idx\n on ai_network.ai_bot_conversations(owner_user_id);'));
+});
+
 test('documentation does not claim the new migration or Edge runtime is deployed', () => {
   assert.match(doc, /have \*\*not\*\* been applied or deployed/i);
   assert.match(doc, /Creator Studio usage is still reported as a baseline/i);
