@@ -36,16 +36,22 @@ test("Crop References use canonical folders and contain no duplicate image files
     "Screenshot_20261112_021333_TikTok(1).png",
     "Screenshot_20261112_021343_TikTok(1).png"
   ];
-  const guestNames = [
-    "Full Screen.png", "Fluid Panel.png", "Fluid Grid.png",
-    "Fixed Grid.png", "Fixed Panel.png", "Side by Side.png",
-    "Spotlight.png", "Roundtable 1.png", "Roundtable 2.png"
+  const guestCropNames = [
+    "Fluid Panel.png", "Fluid Grid.png", "Fixed Grid.png",
+    "Fixed Panel.png", "Side by Side.png", "Spotlight.png",
+    "Roundtable 1.png", "Roundtable 2.png"
+  ];
+  const guestOriginalNames = [
+    "Full Screen.jpg", "Fluid Panel.jpg", "Fluid Grid.jpg",
+    "Fixed Grid.jpg", "Fixed Panel.jpg", "Side by Side.jpg",
+    "Spotlight.jpg", "Roundtable 1.jpg", "Roundtable 2.jpg"
   ];
   const sourceFiles = [
     ...milestoneNames.map(name => path.join("assets", "Crop References", "Gifters Badges", name)),
     ...rangeNames.map(name => path.join("assets", "Crop References", "Gifter level range sheets", name)),
     ...rankingNames.map(name => path.join("assets", "Crop References", "Daily Ranking Badge", name)),
-    ...guestNames.map(name => path.join("assets", "Crop References", "Guests Layout", name)),
+    ...guestCropNames.map(name => path.join("assets", "Crop References", "Guests Layout", name)),
+    ...guestOriginalNames.map(name => path.join("assets", "Guests Layout", name)),
     path.join("assets", "Crop References", "Profile Picture", "ENIGMA.png")
   ];
   const hashes = new Map();
@@ -55,11 +61,21 @@ test("Crop References use canonical folders and contain no duplicate image files
     assert.ok(!hashes.has(hash), relativePath + " duplicates " + hashes.get(hash));
     hashes.set(hash, relativePath);
   }
-  assert.equal(sourceFiles.length, 28);
+  assert.equal(sourceFiles.length, 36);
   for (const name of milestoneNames) {
     assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", name)), name + " is in the canonical milestone folder");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "Png", name)), name + " has no legacy PNG duplicate");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", "Gifters Badges", "psd", name.replace(".png", ".psd"))), name + " has no legacy PSD duplicate");
+  }
+  const cropDirectory = path.join(root, "assets", "Crop References", "Guests Layout");
+  const originalDirectory = path.join(root, "assets", "Guests Layout");
+  for (const name of guestCropNames) {
+    assert.ok(fs.existsSync(path.join(cropDirectory, name)), name + " is an available cropped guest-layout reference");
+  }
+  assert.equal(fs.existsSync(path.join(cropDirectory, "Full Screen.png")), false,
+    "the intentionally removed Full Screen crop must not be restored");
+  for (const name of guestOriginalNames) {
+    assert.ok(fs.existsSync(path.join(originalDirectory, name)), name + " is an available uncropped guest-layout reference");
   }
   for (const name of rangeNames) {
     const stem = name.replace(".png", "");
@@ -120,12 +136,18 @@ test("Daily top-three ranking uses the supplied cropped first, second and third 
 
 });
 
-test("the nine uploaded guest-layout references are used as LIVE layout thumbnails", () => {
+test("both original JPGs and retained crop PNGs are served without recreating the Full Screen crop", () => {
   const layouts = ["full-screen", "fluid-panel", "fluid-grid", "fixed-grid", "fixed-panel", "side-by-side", "spotlight", "roundtable-1", "roundtable-2"];
   for (const layout of layouts) {
-    assert.ok(server.includes("/assets/live-guest-layouts/" + layout + ".png"), "missing route for " + layout);
-    assert.ok(serviceWorker.includes("/assets/live-guest-layouts/" + layout + ".png"), "missing cache entry for " + layout);
+    assert.ok(server.includes("/assets/live-guest-layouts/" + layout + ".png"), "missing preview route for " + layout);
+    assert.ok(server.includes("/assets/live-guest-layouts/" + layout + ".jpg"), "missing original JPG route for " + layout);
+    assert.ok(serviceWorker.includes("/assets/live-guest-layouts/" + layout + ".png?v=20261116-nine-complete-guest-layouts-1"), "missing crop/fallback cache entry for " + layout);
+    assert.ok(serviceWorker.includes("/assets/live-guest-layouts/" + layout + ".jpg?v=20261116-nine-complete-guest-layouts-1"), "missing original JPG cache entry for " + layout);
   }
+  assert.ok(server.includes("path.join(__dirname,'..','assets','Crop References','Guests Layout',crop)"));
+  assert.ok(server.includes("path.join(__dirname,'..','assets','Guests Layout',original)"));
+  assert.ok(server.includes("sendGuestReference(originalFile,'image/jpeg')"), "the removed Full Screen crop falls back to its existing JPG");
+  assert.doesNotMatch(server,/Guests Layout','png'/);
   assert.match(app, /live-layout-preview/);
 });
 
@@ -142,7 +164,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v348-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v349-nine-complete-guest-layouts-1/);
   assert.match(html, /app\.js\?v=20261116-standalone-rankings-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-sheet-single-layer-1/);
