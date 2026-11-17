@@ -1,0 +1,51 @@
+name: Minglora AI shared budget two-session concurrency
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/*minglora_ai_bot_conversations.sql'
+      - 'supabase/migrations/*minglora_ai_bot_message_order.sql'
+      - 'supabase/migrations/*creator_studio_shared_budget.sql'
+      - 'tests/integration/ai-network-shared-budget-concurrency.test.js'
+      - '.github/workflows/ai-network-budget-concurrency.yml'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-concurrency:
+    name: Real PostgreSQL shared-budget concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: minglora_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d minglora_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      AI_NETWORK_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/minglora_test
+    steps:
+      - name: Check out Minglora
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run two-session shared-budget integration tests
+        run: node --test tests/integration/ai-network-shared-budget-concurrency.test.js
