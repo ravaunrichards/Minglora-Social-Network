@@ -490,6 +490,11 @@ try {
   await createForm.locator('[name="timeZone"]').fill('America/Jamaica');
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
+  await createForm.locator('[name="qualifications"]').fill('Certificate in Digital Media, First Aid');
+  await createForm.locator('[name="education"]').fill('[{"institution":"Minglora Learning Institute","qualification":"Digital Media Certificate","year":2024}]');
+  await createForm.locator('[name="personality"]').fill('{"traits":["curious","warm"],"communication_style":"supportive"}');
+  await createForm.locator('[name="voicePreferences"]').fill('{"voice_style":"natural","pace":"measured"}');
+  await createForm.locator('[name="profileVisibility"]').selectOption('private');
   assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
   assert.equal(await createForm.locator('[name="lastName"]').inputValue(), 'Campbell', 'Identity surname input must remain filled after category refresh.');
   assert.equal(await createForm.locator('[name="username"]').inputValue(), 'nia_campbell', 'Identity username must remain filled after category refresh.');
@@ -518,6 +523,11 @@ try {
   assert.equal(identityCreateRequests[0].profile.time_zone, 'America/Jamaica');
   assert.equal(identityCreateRequests[0].languages.length, 2);
   assert.equal(identityCreateRequests[0].email.email_address, 'nia@example.test');
+  assert.deepEqual(identityCreateRequests[0].profile.qualifications, ['Certificate in Digital Media','First Aid']);
+  assert.deepEqual(identityCreateRequests[0].profile.education, [{institution:'Minglora Learning Institute',qualification:'Digital Media Certificate',year:2024}]);
+  assert.deepEqual(identityCreateRequests[0].profile.personality, {traits:['curious','warm'],communication_style:'supportive'});
+  assert.deepEqual(identityCreateRequests[0].profile.voice_preferences, {voice_style:'natural',pace:'measured'});
+  assert.equal(identityCreateRequests[0].profile.profile_visibility, 'private');
   assert.equal(identities.length, 2, 'The in-memory registry should refresh after creation.');
   await page.getByText('Email record: not_requested · unverified').waitFor({ state: 'visible' });
 
