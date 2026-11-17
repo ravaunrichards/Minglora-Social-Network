@@ -4486,7 +4486,8 @@ Deno.serve(async (req: Request) => {
     const actorUserId = String(input.actorUserId || "");
     const aiAction = String(input.aiAction || "");
     const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload) ? input.payload : {};
-    const supported = ["get_conversation", "get_usage", "begin_request", "complete_request", "fail_request"];
+    const creatorBudgetActions = ["creator_begin_request", "creator_complete_request", "creator_fail_request"];
+    const supported = ["get_conversation", "get_usage", "begin_request", "complete_request", "fail_request", ...creatorBudgetActions];
     if (!validUuid(actorUserId)) return json(400, { error: "A valid signed-in Minglora owner is required for AI bot conversations." });
     if (!supported.includes(aiAction)) return json(400, { error: "Unsupported AI bot conversation command." });
     const serialized = JSON.stringify(payload);
@@ -4494,11 +4495,17 @@ Deno.serve(async (req: Request) => {
     if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential|private[_-]?key)"\s*:/i.test(serialized)) {
       return json(400, { error: "Credentials and secrets cannot be stored in AI bot conversations." });
     }
-    if (aiAction !== "get_usage" && (!validUuid(String(payload.identity_id || "")) || !validUuid(String(payload.bot_id || "")))) {
+    if (!["get_usage", ...creatorBudgetActions].includes(aiAction) &&
+        (!validUuid(String(payload.identity_id || "")) || !validUuid(String(payload.bot_id || "")))) {
       return json(400, { error: "A valid AI bot and canonical identity are required." });
     }
-    if (["begin_request", "complete_request", "fail_request"].includes(aiAction) && !validUuid(String(payload.request_id || ""))) {
+    if (["begin_request", "complete_request", "fail_request", ...creatorBudgetActions].includes(aiAction) &&
+        !validUuid(String(payload.request_id || ""))) {
       return json(400, { error: "A valid AI bot chat request is required." });
+    }
+    if (["creator_begin_request"].includes(aiAction) &&
+        (typeof payload.job_id !== "string" || payload.job_id.trim().length < 1 || payload.job_id.trim().length > 180)) {
+      return json(400, { error: "A valid Creator Studio draft ID is required." });
     }
     if (["complete_request", "fail_request"].includes(aiAction) &&
         (!Number.isInteger(Number(payload.attempt_count)) || Number(payload.attempt_count) < 1)) {
