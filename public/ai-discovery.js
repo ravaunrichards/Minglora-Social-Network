@@ -180,10 +180,11 @@ async function bulkFollow(){
 }
 async function saveGroup(event){
  event.preventDefault();
- const groupName=String(new FormData(event.currentTarget).get('group_name')||'').trim();
+ const form=event.currentTarget;
+ const groupName=String(new FormData(form).get('group_name')||'').trim();
  try{
   await api('/saved-groups',{method:'POST',body:{group_name:groupName,filters:state.filters}});
-  event.currentTarget.reset();status('Search group saved to your Minglora account.','success');await loadGroups();
+  form.reset();status('Search group saved to your Minglora account.','success');await loadGroups();
  }catch(error){status(error.message,'error');}
 }
 function bind(){
