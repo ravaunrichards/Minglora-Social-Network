@@ -653,20 +653,61 @@
 }
 
 
-/* Gifter range sheets: crop the tall black source canvas in the viewport only.
-   The canonical PNG files remain byte-for-byte unchanged; the 1.72:1 window
-   keeps the full badge crest and bottom instruction line visible. */
-.gp-range-reference-figure{overflow:hidden}
-.gp-range-reference-figure img{
+/* Gifter reference sheets: keep the supplied PNGs unchanged, remove the
+   surrounding card frame, crop the source canvas in one viewport, and show
+   one matching high-quality badge crop over its softer embedded counterpart. */
+.gp-range-reference-figure{
+  overflow:visible;
+  gap:4px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.gp-range-reference-artwork{
+  position:relative;
   display:block;
   width:100%;
-  height:auto;
+  min-width:0;
   aspect-ratio:1.72 / 1;
+  overflow:hidden;
+  border-radius:7px;
+  background:transparent;
+  isolation:isolate;
+}
+.gp-range-reference-artwork > img{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:none;
+  min-width:0;
+  border:0;
+  border-radius:0;
+}
+.gp-range-reference-artwork > .gp-range-reference-sheet{
+  z-index:0;
   object-fit:cover;
   object-position:50% 54.5%;
-  border-radius:7px;
+}
+.gp-range-reference-artwork > .gp-range-reference-badge{
+  z-index:1;
+  top:-25%;
+  left:26%;
+  width:100%;
+  height:100%;
+  aspect-ratio:auto;
+  object-fit:contain;
+  object-position:center;
+  mix-blend-mode:lighten;
+  pointer-events:none;
+  user-select:none;
+  filter:drop-shadow(0 0 3px rgba(255,255,255,.88))
+    drop-shadow(0 0 8px rgba(255,218,122,.72));
 }
 @media(max-width:760px){
-  .gp-range-reference-figure{padding:4px;gap:3px}
-  .gp-range-reference-figure img{aspect-ratio:1.72 / 1;object-fit:cover;object-position:50% 54.5%}
+  .gp-range-reference-figure{padding:0;gap:3px}
+  .gp-range-reference-artwork{aspect-ratio:1.72 / 1}
 }

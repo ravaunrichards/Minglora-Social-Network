@@ -82,7 +82,7 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(!server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(!serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-badge-overlays-1/);
   assert.match(progressionStyles, /\.gp-level-index-item\.is-locked \.gp-level-index-art\{opacity:1\}/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
@@ -145,8 +145,8 @@ test("frontend and service-worker versions invalidate old assets and scripts", (
   assert.match(serviceWorker, /minglora-shell-v347-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-canvas-crop-2/);
-  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-badge-overlays-1/);
+  assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-badge-overlays-1/);
 });
 
 
@@ -184,13 +184,48 @@ test("Creator League displays the first 20 ranks with original first/second/thir
 
 
 
-test("Gifter range sheets crop the tall black source canvas in the display frame without editing canonical PNGs", () => {
+test("Gifter range sheets use one matching bright badge crop without editing the supplied PNGs", () => {
   const styles = read("public/gifter-progression.css");
+  const progression = read("public/gifter-progression.js");
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.match(styles, /\.gp-range-reference-figure\{overflow:hidden\}/);
-  assert.match(styles, /\.gp-range-reference-figure img\{[\s\S]*?aspect-ratio:1\.72 \/ 1[\s\S]*?object-fit:cover[\s\S]*?object-position:50% 54.5%/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-canvas-crop-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-canvas-crop-2"));
-  assert.match(styles, /\.gp-range-reference-figure img\{[\s\S]*?border-radius:7px/);
+  const mappings = [
+    ["lv-1-9.png", "range-1.png"],
+    ["lv-10-19.png", "range-2.png"],
+    ["lv-20-29.png", "range-3.png"],
+    ["lv-30-39.png", "range-4.png"],
+    ["lv-40-49.png", "range-5.png"],
+    ["lv-50-plus.png", "range-6.png"]
+  ];
+  for (const [sheet, badge] of mappings) {
+    const marker = 'file: "' + sheet + '"';
+    const start = progression.indexOf(marker);
+    assert.notEqual(start, -1, sheet + " remains in the range-sheet list");
+    const end = progression.indexOf("\n", start);
+    assert.ok(progression.slice(start, end).includes('badge: "' + badge + '"'), sheet + " uses its matching badge crop");
+  }
+  const rendererStart = progression.indexOf("function renderRangeReferenceSheets()");
+  const rendererEnd = progression.indexOf("function renderLevelDirectory(", rendererStart);
+  const renderer = progression.slice(rendererStart, rendererEnd);
+  assert.equal((renderer.match(/class='gp-range-reference-badge'/g) || []).length, 1,
+    "each sheet renders exactly one matching badge overlay");
+  assert.ok(renderer.includes("sheet.badge"));
+  assert.ok(renderer.includes("bright-stage-badge-overlays-2"));
+  assert.ok(styles.includes(".gp-range-reference-artwork{"));
+  assert.ok(styles.includes("aspect-ratio:1.72 / 1;"));
+  assert.ok(styles.includes(".gp-range-reference-artwork > .gp-range-reference-sheet{"));
+  assert.ok(styles.includes("object-position:50% 54.5%;"));
+  assert.ok(styles.includes(".gp-range-reference-artwork > .gp-range-reference-badge{"));
+  assert.ok(styles.includes("top:-25%;"));
+  assert.ok(styles.includes("left:26%;"));
+  assert.ok(styles.includes("mix-blend-mode:lighten;"));
+  assert.ok(styles.includes("object-fit:contain;"));
+  assert.ok(styles.includes(".gp-range-reference-figure{"));
+  assert.ok(styles.includes("padding:0;"));
+  assert.ok(styles.includes("background:transparent;"));
+  assert.ok(styles.includes("box-shadow:none;"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-range-badge-overlays-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261116-gifter-range-badge-overlays-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261116-gifter-range-badge-overlays-1"));
+  assert.ok(sw.includes("/gifter-progression.js?v=20261116-gifter-range-badge-overlays-1"));
 });
