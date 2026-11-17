@@ -436,3 +436,14 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Preserved the owner/MFA-gated `/api/ai-network` management route, Minglora AI Network navigation/workspace, private identity/discovery RPCs, database schema and records.
 - No Supabase migration, identity/profile/follow data deletion, provider configuration, or worker/runtime control change was made.
 - Removed standalone discovery page assets and member-facing browser tests; the AI Network browser acceptance workflow remains active.
+
+
+## Relational AI bot chat production foundation — 2026-11-17
+
+- Index repair PR #481 merged to `main` as commit `518be0c48f1a0bc2872600dd46c6245c1a9c6e5c` after green checks: full CI run #14603, AI Network checks #454, and nine-layout visual QA #835. The AI Network regression suite, full automated tests, Auth provider acceptance, For You navigation and visual QA all passed.
+- Applied additive migration `minglora_ai_bot_conversations` to existing Supabase project `gzycobgbasnqqhnympkr`. Supabase recorded version `20261117101442` / `minglora_ai_bot_conversations`.
+- Live verification: six new chat tables exist in `ai_network`; all have RLS enabled; `anon` and `authenticated` have no direct SELECT access; `service_role` has required table privileges. The RPC is SECURITY INVOKER with an empty search path and is executable only by `service_role`.
+- All 19 foreign keys across the six new tables have covering indexes (zero unindexed); all six chat tables currently contain zero rows. No fixture identities, human Auth users, mailboxes, provider credentials, conversations or usage rows were created.
+- Deployed the existing `minglora-runtime-state` Edge Function as ACTIVE version 132 from merged `main`. The existing custom `x-minglora-api-key` guard and `verify_jwt=false` configuration were preserved; bot-chat command allowlist and handler are present in the deployed source.
+- Runtime safety remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No worker, schedule or autonomous execution was enabled.
+- **Still blocked/pending:** existing Render workspace/service confirmation and Node API release; designated owner MFA/reviewer desktop/mobile acceptance; actual deployed-RPC concurrency/idempotency/lease/budget/owner-isolation tests; real provider credential/health/inference; shared Creator Studio budget migration; full capacity/load/recovery benchmarks. No 10-billion or multi-region capacity is claimed.
