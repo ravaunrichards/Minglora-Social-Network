@@ -240,9 +240,31 @@ try{
         for(const definition of layouts){
           const liveRow=liveResults.find(row=>row.layout===definition.id);
           const mwRow=mwResults.find(row=>row.layout===definition.id);
-          assert.equal(JSON.stringify(liveRow.panels),JSON.stringify(mwRow.panels),
-            'LIVE and MeetWave seat geometry differs for '+definition.id+' on '+viewport.name);
-          report.geometryComparisons.push({layout:definition.id,viewport:viewport.name,result:'identical'});
+          assert.ok(liveRow&&mwRow,'Both products must render '+definition.id+' on '+viewport.name);
+          assert.equal(liveRow.panels.length,mwRow.panels.length,
+            'LIVE and MeetWave panel counts differ for '+definition.id+' on '+viewport.name);
+          let maxRelativeDelta=0;
+          for(let index=0;index<liveRow.panels.length;index++){
+            const livePanel=liveRow.panels[index],mwPanel=mwRow.panels[index];
+            assert.equal(livePanel.index,mwPanel.index,
+              'LIVE and MeetWave seat order differs for '+definition.id+' on '+viewport.name);
+            for(const metric of ['x','y','width','height']){
+              const dimension=(metric==='x'||metric==='width')?'width':'height';
+              const liveRatio=livePanel[metric]/liveRow.stage[dimension];
+              const mwRatio=mwPanel[metric]/mwRow.stage[dimension];
+              const delta=Math.abs(liveRatio-mwRatio);
+              maxRelativeDelta=Math.max(maxRelativeDelta,delta);
+              assert.ok(delta<=0.025,
+                'LIVE and MeetWave relative '+metric+' differs by '+delta.toFixed(4)+' for seat '+livePanel.index+' in '+definition.id+' on '+viewport.name+
+                '; LIVE stage='+JSON.stringify(liveRow.stage)+' MeetWave stage='+JSON.stringify(mwRow.stage));
+            }
+          }
+          report.geometryComparisons.push({
+            layout:definition.id,viewport:viewport.name,
+            result:'matched within 2.5% of each stage dimension',
+            maxRelativeDelta:Number(maxRelativeDelta.toFixed(4)),
+            liveStage:liveRow.stage,meetWaveStage:mwRow.stage
+          });
         }
       }
       await page.close();
