@@ -459,3 +459,28 @@ body:has(#live-player-shell) .live-fullscreen-chat-slot>.live-chat-overlay .live
   body:has(#live-player-shell) .live-fullscreen-side-tabs button{padding-inline:5px!important}
   body:has(#live-player-shell) .live-panel-end-button{padding-inline:5px!important;gap:3px!important;font-size:8px!important}
 }
+
+
+/* After following, the Follow action becomes the compact orange Heart Me control. */
+body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me{
+  display:grid!important;place-items:center!important;
+  flex:0 0 32px!important;width:32px!important;height:32px!important;
+  min-width:32px!important;max-width:32px!important;min-height:32px!important;
+  margin:3px 0 0!important;padding:0!important;
+  border:1px solid rgba(255,164,48,.72)!important;border-radius:50%!important;
+  color:#ff8c00!important;background:rgba(255,140,0,.16)!important;
+  box-shadow:0 0 12px rgba(255,141,0,.22)!important;
+  font-size:21px!important;font-weight:950!important;line-height:1!important;
+  text-shadow:0 0 9px rgba(255,145,0,.35)!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me:hover{
+  border-color:#ffb04a!important;background:rgba(255,145,0,.25)!important;
+  color:#ff9a18!important;
+}
+@media(max-width:700px){
+  body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me{
+    flex-basis:29px!important;width:29px!important;height:29px!important;
+    min-width:29px!important;max-width:29px!important;min-height:29px!important;
+    margin-top:4px!important;font-size:19px!important;
+  }
+}
