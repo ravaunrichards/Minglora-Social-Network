@@ -75,3 +75,19 @@ test('Audio-only LIVE keeps its original speaker grid instead of becoming a flat
 test('Mobile audio-only LIVE reserves space above the bottom control dock', () => {
   assert.match(compact, /\.live-video-column #live-video-stage\.live-audio-stage\{[\s\S]*?inset:0 0 60px/);
 });
+
+
+test('LIVE multi-guest stage reserves its heading row instead of covering the host panel', () => {
+  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  assert.match(correction, /#live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?position:relative!important[\s\S]*?grid-row:1!important/);
+  assert.match(correction, /data-live-layout="fluid-panel"\}\{grid-template-rows:22px minmax\(0,1fr\)!important\}/);
+  assert.match(correction, /data-live-layout="fluid-grid"\}\{[\s\S]*?grid-template-rows:22px repeat\(2,minmax\(0,1fr\)\)!important/);
+});
+
+test('LIVE Fluid Panel guest seats are inset and size-clamped inside the video-stage border', () => {
+  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  assert.match(correction, /data-live-layout="fluid-panel"\}.*right:clamp\(8px,1vw,12px\)!important/s);
+  assert.match(correction, /max-width:calc\(100% - 16px\)!important;max-height:calc\(100% - 16px\)!important/);
+  assert.match(correction, /nth-child\(3\)\{\s*bottom:clamp\(8px,1vw,12px\)!important/);
+  assert.match(correction, /nth-child\(4\)\{\s*bottom:calc\(clamp\(8px,1vw,12px\)/);
+});
