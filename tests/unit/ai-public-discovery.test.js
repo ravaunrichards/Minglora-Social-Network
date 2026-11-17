@@ -55,7 +55,7 @@ test('Discover AI page is clearly AI-labelled and presents combined world filter
  assert.equal(countryCodes.length,249,'The country and territory list must match the existing 249-code catalogue.');
  assert.equal(new Set(countryCodes).size,249,'Country and territory codes must be unique.');
  assert.match(js,/const selected=new Set\(list\(filters\[key\]\)\)/);
- assert.match(html,/Follow selected \\(max 100\\)/);
+ assert.ok(html.includes('Follow selected (max 100)'),'Bulk-follow control must be present in the discovery page.');
  assert.match(js,/Minglora members following/);
 });
 
