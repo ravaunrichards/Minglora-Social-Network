@@ -84,6 +84,8 @@ declare
   v_result jsonb;
   v_to_address text;
   v_rows integer := 0;
+  v_inserted_count integer := 0;
+  v_identity_owner boolean := false;
   v_limit integer;
   v_offset integer;
   v_recipient_count integer;
@@ -164,10 +166,10 @@ begin
         update ai_network.ai_emails
         set last_received_at = now(), updated_at = now()
         where email_id = v_email.email_id;
-        v_rows := v_rows + 1;
+        v_inserted_count := v_inserted_count + 1;
       end if;
     end loop;
-    return jsonb_build_object('accepted', true, 'stored_count', v_rows);
+    return jsonb_build_object('accepted', true, 'stored_count', v_inserted_count);
   end if;
 
   if p_actor_user_id is null or not exists (
@@ -191,7 +193,7 @@ begin
     from ai_network.ai_identities i
     join ai_network.ai_names n on n.identity_id=i.identity_id
     where i.identity_id=v_identity_id and i.owner_user_id=p_actor_user_id
-      and i.identity_status in ('created','under_review','approved','active');
+      and i.status in ('created','under_review','approved','active');
     if not found then
       raise exception using errcode = 'P0002', message = 'AI identity was not found or is not eligible for email provisioning.';
     end if;
@@ -246,8 +248,8 @@ begin
   select exists (
     select 1 from ai_network.ai_identities i
     where i.identity_id=v_identity_id and i.owner_user_id=p_actor_user_id
-  ) into v_result;
-  if not coalesce((v_result#>>'{}')::boolean,false) then
+  ) into v_identity_owner;
+  if not v_identity_owner then
     raise exception using errcode = 'P0002', message = 'AI identity was not found for this Minglora owner.';
   end if;
 
