@@ -540,3 +540,13 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Latest AI identity/discovery browser acceptance **SUCCESS** (run 525) and nine-layout crop-reference visual QA **SUCCESS** (run 895); the nine-layout comparison passed across mobile, tablet and desktop, with screenshot/geometry evidence uploaded.
 - No production worker migration, Edge Function or Node/Render deployment was performed. Live worker tables remain absent. Live runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 - This source/test checkpoint does not verify signed-in owner/MFA HTTP acceptance, real provider credentials/inference, worker poll-loop hosting, email mailbox provisioning, production multi-session traffic, backup/restore, distributed storage or 10-billion identity capacity. PR #489 remains open and unmerged.
+
+## Tenant-aware identity shard routing primitive — source checkpoint (2026-11-17)
+
+- Added `backend/modules/ai-network/identity-shard-routing.js` on existing branch `feat/minglora-ai-network-bulk-retry-20261117` / open PR #489.
+- Added tenant-and-identity-derived logical partition IDs (default 4,096 virtual buckets), deterministic weighted rendezvous planning over active candidate shards, and a resolver that trusts only an explicitly supplied persisted directory record.
+- Existing mappings remain stable across shard-catalog changes. Tenant/identity mismatch, stale directory version, unknown physical shard, home-region mismatch, invalid lifecycle status, offline/disabled shard and writes to draining shards are rejected. Draining-shard reads remain allowed.
+- Added focused unit coverage in `tests/unit/ai-network-shard-routing.test.js`; CI verification for the new tests is pending at this checkpoint.
+- This is source-only and dormant. There is no durable identity-directory table/service, shard registry, physical shard database, data movement, regional replication/failover, discovery projection, production route integration or capacity benchmark.
+- No Supabase SQL/migration, production data, identity, Auth user, provider credential, mailbox, worker record, Edge Function or runtime control was changed by this slice. Runtime remains globally paused, execution disabled and worker cap zero.
+- Keep the 10-billion registered identity target and simultaneous execution capacity explicitly unverified. The next gates are CI verification, durable mapping persistence, repository integration and isolated measured load/recovery tests.
