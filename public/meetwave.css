@@ -2569,25 +2569,25 @@
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(10){grid-column:4!important;grid-row:5!important}
 
 
-/* MeetWave Fluid Panel guest seat clearance — move only Guest 1 and Guest 2
-   farther up and left so neither touches the host right border or bottom ribbon.
-   Keep the 9px vertical stack gap and leave the host and other layouts unchanged. */
+/* MeetWave Fluid Panel guest seat clearance — keep only Guest 1 and Guest 2
+   clearly above the host bottom ribbon, with a small visible gap.
+   Preserve horizontal placement, the 9px stack gap, host panel and other layouts. */
 .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
   right:clamp(42px,7vw,54px)!important;
 }
 .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){
-  bottom:clamp(30px,3vw,36px)!important;
+  bottom:clamp(64px,6vw,72px)!important;
 }
 .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
-  bottom:calc(clamp(30px,3vw,36px) + clamp(44px,15vw,120px) + 9px)!important;
+  bottom:calc(clamp(64px,6vw,72px) + clamp(44px,15vw,120px) + 9px)!important;
 }
 @media(max-width:780px){
   .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
-    bottom:calc(clamp(30px,3vw,36px) + clamp(44px,15vw,116px) + 9px)!important;
+    bottom:calc(clamp(64px,6vw,72px) + clamp(44px,15vw,116px) + 9px)!important;
   }
 }
 @media(max-width:420px){
   .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
-    bottom:calc(clamp(30px,3vw,36px) + clamp(44px,15vw,58px) + 9px)!important;
+    bottom:calc(clamp(64px,6vw,72px) + clamp(44px,15vw,58px) + 9px)!important;
   }
 }
