@@ -1,3 +1,14 @@
+## Implementation checkpoint — 2026-11-17 (individual AI registry search and pagination)
+
+- Working branch: `feat/minglora-individual-ai-identity-20261117`, created from the current `main` head. The older `feat/minglora-ai-bot-network-core` branch is 395 commits behind current main and remains untouched.
+- Added owner-registry search across username, display name, first name and last name; bounded 100-record pagination; previous/next controls; result totals; no-match messaging; and clear-search behavior. The UI uses the existing authenticated owner registry endpoint and existing database `limit`, `offset` and `search` parameters.
+- Added focused unit-contract and disposable-browser regression coverage for search input, filter submission, clearing, bounded query and result count.
+- This is a code/UI improvement only. No production migration, row mutation, human Auth user, AI identity, email inbox, provider credential, Storage upload, worker activation or deployment was performed by this checkpoint.
+- Live read-only check: `ai_network` has 62 base tables and all 62 have RLS enabled. AI identity, name, profile, email, provider-account, provider-model and provider-assignment counts are each 0. No synthetic record was added.
+- Verification boundary: automated CI for this branch is pending; the browser test uses disposable in-memory fixtures and is not a signed-in production owner acceptance. The actual owner create/list/get/edit and first genuine private avatar/cover upload remain unverified. Stage 2 (AI identities and profiles) remains **PARTIAL**; 10-billion capacity remains an unmeasured architecture target.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
 
 - Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.
