@@ -242,8 +242,8 @@ test('MeetWave Full Screen matches the single full-stage panel in the original c
 });
 
 test('Full Screen crop cannot be overridden by the retired guest-tray grid', () => {
-  assert.doesNotMatch(css, /\\.mw-meeting:not\\(\\.live-full-screen-active\\) #mw-screen-stage\\[data-screen-layout="full-screen"\\] #mw-grid\\[data-layout="full-screen"\\]\\{/);
+  assert.equal(css.includes('.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]{'), false);
   const contract=css.slice(css.lastIndexOf('/* NINE COMPLETE GUEST LAYOUTS'));
-  assert.match(contract, /#mw-grid\\[data-layout="full-screen"\\]\\{grid-template-columns:minmax\\(0,1fr\\)!important;grid-template-rows:minmax\\(0,1fr\\)!important\\}/);
-  assert.match(contract, /#mw-grid\\[data-layout="full-screen"\\]>:is\\(\\.live-guest-seat\\.is-guest,\\.mw-empty-seat\\)\\{display:none!important\\}/);
+  assert.ok(contract.includes('#mw-grid[data-layout="full-screen"]{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}'));
+  assert.ok(contract.includes('#mw-grid[data-layout="full-screen"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){display:none!important}'));
 });
