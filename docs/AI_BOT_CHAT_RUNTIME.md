@@ -1,44 +1,50 @@
 # Minglora AI Bot Conversation Runtime
 
-**Status:** Implemented on `feat/minglora-ai-network-owner-chat-20261116`; automated CI and signed-in production acceptance pending. This is a human-initiated owner/admin conversation path, not an autonomous worker runtime and not a production-scale conversation store.
+**Status:** Owner-initiated chat code is merged to main. A source-only relational persistence migration and private Edge Function gateway are being added on feat/minglora-ai-chat-relational-store-20261117. They have **not** been applied or deployed to the existing production Supabase project. Signed-in owner/MFA acceptance and a real provider credential remain external acceptance requirements.
 
-## Scope
+## Scope and safety
 
-The conversation path is restricted to the designated Minglora administrator with a verified reviewer/MFA session. It operates only against a bot already linked to a canonical record in the existing `ai_network` relational identity system. It does not create a new human Supabase Auth user or invent an AI identity.
+The conversation path is restricted to the designated Minglora administrator with a verified reviewer/MFA session. It operates only against a bot already linked to a canonical record in the existing ai_network identity system. It does not create a new human Supabase Auth user or invent an AI identity.
 
-The current provider adapter supports OpenAI only. Provider credentials and model selection are read only from the private server environment. Request bodies reject credential and provider-override fields. The adapter uses the OpenAI Moderations endpoint for input and output checks and the Responses endpoint for generation. Responses are requested with `store: false` and `tools: []`. The system prompt identifies the speaker as AI and forbids posts, messages to other members, scheduling, financial actions, security changes and administrative operations.
+The OpenAI-only adapter reads credentials and model selection from the private server environment. Browser requests cannot submit credentials, provider overrides or model overrides. Input and output are moderated; Responses generation uses store:false and tools:[]. Assistant messages disclose that the speaker is AI and are marked for human review. The model has no tools or permission to publish, message other people, schedule, spend, change security settings or execute administrative actions.
 
-A reply is saved only after successful generation and output moderation. Failed or unmoderated output is not saved as a conversation message. Actual provider token usage is recorded for both successful generations and billable failures. Daily usage checks include Creator Studio and chat usage. A conservative input reserve is deducted before generation, and one active owner chat is allowed per application process at a time. Request UUIDs, message hashes, owner/bot/identity binding and bounded retry leases provide safe retry behavior within the current persistence model.
+## Relational persistence design
+
+The additive migration supabase/migrations/20261117070000_minglora_ai_bot_conversations.sql defines six private tables in the existing ai_network schema:
+
+- ai_bot_conversations and ai_bot_conversation_messages for owner-scoped conversation history.
+- ai_bot_chat_requests for UUID idempotency, message hashes, attempt counters and five-minute recovery leases.
+- ai_bot_usage_events for measured successful and billable failed provider usage.
+- ai_bot_daily_token_budgets and ai_bot_daily_token_reservations for daily chat-budget rows and row-locked reservations.
+
+All six tables enable RLS, revoke direct access from public, anon and authenticated, and grant required backend table access only to service_role. The public.minglora_ai_bot_chat_command(text,uuid,jsonb) RPC is SECURITY INVOKER with an empty search path and service-role-only EXECUTE. It validates the signed-in Minglora profile and AI identity owner, locks the owner/date budget row to serialize concurrent bot-chat reservations, enforces request/attempt idempotency, persists the user/assistant pair only after output moderation, records provider usage and settles/releases reservations in the same transaction.
+
+The private runtime Edge Function exposes only get_conversation, get_usage, begin_request, complete_request and fail_request. The Node server uses this RPC path when Supabase persistence is configured. Local JSON-mode unit tests keep the existing in-memory service path. Production does not silently fall back to JSONB when the relational command is unavailable.
+
+The daily reservation ledger serializes concurrent bot-chat attempts. Creator Studio usage is still reported as a baseline from the existing runtime-state store; cross-feature atomic reservations between Creator Studio and bot chat remain a follow-up before simultaneous multi-feature traffic. The new tables are indexed but not time-partitioned, and no 10-billion or multi-region capacity is claimed.
 
 ## API behavior
 
-- `GET /api/ai-network/bots/:botId/conversation` reads the latest open owner-scoped conversation, after checking the bot's canonical relational AI identity.
-- `POST /api/ai-network/bots/:botId/chat` accepts only `message`, optional `conversationId` and `requestId`. Credentials, provider selection and model overrides are rejected.
-- Both endpoints remain behind the existing designated-admin and verified-MFA gate.
-- The UI labels assistant messages as AI and explains the restricted, non-autonomous action set.
+- GET /api/ai-network/bots/:botId/conversation reads the latest open relational owner-scoped conversation after verifying the bot's canonical identity.
+- POST /api/ai-network/bots/:botId/chat accepts only message, optional conversationId and requestId.
+- Both endpoints remain behind the designated-admin and verified-MFA gate.
+- Failed or unmoderated output is not saved as a conversation message. Billable failures still enter the usage ledger.
 
-## Persistence boundary and scale blocker
+## Explicitly not verified or deployed
 
-Conversation objects, messages, idempotency requests and usage events currently use the existing Minglora runtime-state compatibility adapter. That adapter persists an application state document through the existing `minglora_runtime_state` JSONB gateway with a revision check and serialized writes in one process. This is durable compatibility storage, but it is not an indexed, independently partitionable conversation/message data plane. The owner lock is process-local and is not a distributed lease or cross-region budget reservation.
+- The migration has not been applied to production Supabase; until the schema and Edge Function are deployed, production relational chat requests fail closed rather than falling back to the legacy JSONB message store.
+- No live OpenAI credential/model health result or production inference has been verified.
+- The chat path does not retrieve or write the separate owner-managed AI memory subsystem.
+- No email mailbox, independent AI population, employee or public social activity is created.
+- No worker, schedule, external tool, payout, coin action, administrative action or autonomous execution is enabled.
+- No production data, Auth user, provider secret, Edge Function deployment or Render service deployment was changed.
 
-Before enabling multi-instance or public AI conversation traffic, move conversations, messages, idempotency keys, token reservations and usage events to dedicated relational structures in the existing Supabase project. Add unique constraints, owner-scoped access, transactional idempotency, atomic budget reservations, partitioning/retention, a distributed job/lease mechanism and concurrency/recovery tests. Do not treat the current compatibility adapter as capable of 10-billion identity or chat scale.
+## Acceptance required
 
-## Explicitly not implemented by this slice
-
-- No live OpenAI credential/model health result has been accepted for production.
-- No production provider inference has been performed or claimed.
-- This path does not retrieve or write the separate AI memory subsystem; context is limited to the latest bounded conversation history.
-- No email mailbox is provisioned.
-- No independent AI population, employee or public-facing social activity is created.
-- No autonomous worker, schedule, external tool, post, member message, payout, coin action or administrative action is enabled.
-- No Supabase migration or production data change is required for this code slice.
-
-## Acceptance still required
-
-1. CI passes on the continuation branch.
-2. The designated owner signs in with the required MFA/reviewer session.
-3. A real, private server-side OpenAI credential and approved model are configured without exposing them to client requests.
-4. Provider probe and a real moderated request succeed; provider/model/usage evidence is recorded.
-5. Rejections, provider timeouts, stale leases, retry behavior, owner isolation and daily budget limits pass end-to-end checks.
-6. Desktop and mobile owner acceptance passes.
-7. Conversation persistence is moved to the normalized, transactionally safe data path before any multi-instance/public rollout.
+1. Apply the additive migration to the existing Minglora Supabase project after review and verification.
+2. Deploy the updated existing minglora-runtime-state Edge Function without changing its custom API-key authentication or verify_jwt=false configuration.
+3. Confirm all six tables have RLS and no browser-role privileges, and the RPC is executable only by service_role.
+4. Run transaction/idempotency, concurrency, lease-expiry, owner-isolation, budget, billable-failure and rollback tests against the deployed RPC.
+5. Sign in with the designated owner MFA/reviewer session and verify real desktop/mobile conversations.
+6. Configure a real private OpenAI credential/model, prove provider health and a moderated generation, then verify token usage.
+7. Migrate Creator Studio usage into the shared relational budget ledger before claiming fully atomic cross-feature budgets or enabling multi-instance/public traffic.

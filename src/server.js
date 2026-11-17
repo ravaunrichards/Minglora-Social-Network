@@ -1636,14 +1636,28 @@ async function route(req, res) {
           throw Object.assign(new Error('AI memory requires Minglora Supabase persistence.'), { status: 503 });
         }
         const response = await requestSupabaseState('ai_memory_command', {
-          actorUserId: user.id,
-          aiAction,
-          payload
+          actorUserId: user.id, aiAction, payload
         });
-        if (response?.skipped) {
-          throw Object.assign(new Error('AI memory is unavailable in local-only persistence mode.'), { status: 503 });
-        }
+        if (response?.skipped) throw Object.assign(new Error('AI memory is unavailable in local-only persistence mode.'), { status: 503 });
         return response?.result;
+      };
+
+      const runAIBotChatCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) throw Object.assign(new Error('Relational AI bot conversations require Minglora Supabase persistence.'), { status: 503 });
+        const response = await requestSupabaseState('ai_bot_chat_command', {
+          actorUserId: user.id, aiAction, payload
+        });
+        if (response?.skipped) throw Object.assign(new Error('Relational AI bot conversations are unavailable in local-only persistence mode.'), { status: 503 });
+        return response?.result;
+      };
+
+      const loadRelationalAIBotChatState = async (chatState, conversationId = null) => {
+        const stored = await runAIBotChatCommand('get_conversation', {
+          bot_id: chatState.bot.id, identity_id: chatState.bot.identityId,
+          conversation_id: conversationId || null
+        });
+        return {...chatState, conversation: stored?.conversation || null,
+          messages: Array.isArray(stored?.messages) ? stored.messages : []};
       };
 
       const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -2742,11 +2756,12 @@ async function route(req, res) {
         return json(res, 200, snapshot);
       }
       if (method === 'GET' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversation') {
-        const chatState = getAIBotConversation(db, user.id, parts[1], null);
-        const verifiedIdentity = await runAIIdentityCommand('get', { identity_id: chatState.bot.identityId });
-        if (String(verifiedIdentity?.identity?.identity_id || '') !== chatState.bot.identityId) {
+        const chatBase = getAIBotConversation(db, user.id, parts[1], null);
+        const verifiedIdentity = await runAIIdentityCommand('get', { identity_id: chatBase.bot.identityId });
+        if (String(verifiedIdentity?.identity?.identity_id || '') !== chatBase.bot.identityId) {
           throw Object.assign(new Error('The bot’s relational Minglora AI identity could not be verified.'), { status: 409 });
         }
+        const chatState = isSupabasePersistence() ? await loadRelationalAIBotChatState(chatBase) : chatBase;
         return json(res, 200, chatState);
       }
       if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'chat') {
@@ -2762,76 +2777,112 @@ async function route(req, res) {
         }
         activeAIBotChatOwners.add(user.id);
         try {
-        const chatState = getAIBotConversation(db, user.id, parts[1], input.conversationId || null);
-        const verifiedIdentity = await runAIIdentityCommand('get', { identity_id: chatState.bot.identityId });
-        if (String(verifiedIdentity?.identity?.identity_id || '') !== chatState.bot.identityId) {
-          throw Object.assign(new Error('The bot’s relational Minglora AI identity could not be verified.'), { status: 409 });
-        }
-        const request = beginAIBotChatRequest(db, user.id, {
-          botId: chatState.bot.id,
-          identityId: chatState.bot.identityId,
-          conversationId: chatState.conversation?.id || null,
-          requestId: input.requestId,
-          message: input.message
-        });
-        await saveStore();
-        if (request.reused) {
-          const previous = getAIBotConversation(db, user.id, parts[1], request.conversationId);
-          return json(res, 200, { ...previous, reused: true });
-        }
-        try {
-          const currentProviderStatus = getAIProviderStatus();
-          if (!currentProviderStatus.botChatAvailable) {
-            throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'), { status: 503 });
+          const relationalPersistence = isSupabasePersistence();
+          const chatBase = getAIBotConversation(db, user.id, parts[1], relationalPersistence ? null : (input.conversationId || null));
+          const verifiedIdentity = await runAIIdentityCommand('get', { identity_id: chatBase.bot.identityId });
+          if (String(verifiedIdentity?.identity?.identity_id || '') !== chatBase.bot.identityId) {
+            throw Object.assign(new Error('The bot’s relational Minglora AI identity could not be verified.'), { status: 409 });
           }
+          const chatState = relationalPersistence
+            ? await loadRelationalAIBotChatState(chatBase, input.conversationId || null)
+            : chatBase;
           const creatorSettings = getAISettings(db, user.id);
           const dailyUsage = getAICreatorDailyUsage(db, user.id);
+          const relationalUsage = relationalPersistence
+            ? await runAIBotChatCommand('get_usage', { usage_date: dailyUsage.date })
+            : { tokens_used: 0, reserved_tokens: 0 };
           const dailyTokenLimit = Math.max(0, Math.floor(Number(creatorSettings.dailyTokenBudget) || 0));
-          const availableDailyTokens = dailyTokenLimit - dailyUsage.tokensUsed;
-          const history = (Array.isArray(chatState.messages) ? chatState.messages : []).slice(-10).map(item => ({ role: item.role, content: item.content }));
+          const totalDailyTokensUsed = dailyUsage.tokensUsed +
+            Math.max(0, Number(relationalUsage?.tokens_used) || 0) +
+            Math.max(0, Number(relationalUsage?.reserved_tokens) || 0);
+          const availableDailyTokens = dailyTokenLimit - totalDailyTokensUsed;
+          const history = (Array.isArray(chatState.messages) ? chatState.messages : [])
+            .slice(-10).map(item => ({ role: item.role, content: item.content }));
           const contextLength = history.reduce((sum, item) => sum + String(item.content || '').length, 0);
           const estimatedInputReserve = Math.ceil((String(input.message).length + contextLength) / 3) + 500;
           const allowedOutputTokens = Math.min(700, availableDailyTokens - estimatedInputReserve);
           if (allowedOutputTokens < 128) {
             throw Object.assign(new Error('This conversation would exceed the remaining daily AI token budget. No provider generation request was sent.'), { status: 429 });
           }
-          const providerHealth = await probeOpenAIProvider();
-          if (!providerHealth.connected) {
-            throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+
+          let request;
+          if (relationalPersistence) {
+            const messageHash = crypto.createHash('sha256').update(String(input.message).trim()).digest('hex');
+            request = await runAIBotChatCommand('begin_request', {
+              bot_id: chatBase.bot.id, identity_id: chatBase.bot.identityId,
+              conversation_id: chatState.conversation?.id || null, request_id: input.requestId,
+              message: input.message, message_hash: messageHash, usage_date: dailyUsage.date,
+              daily_token_budget: dailyTokenLimit, baseline_used_tokens: dailyUsage.tokensUsed,
+              reserve_tokens: estimatedInputReserve + allowedOutputTokens
+            });
+          } else {
+            request = beginAIBotChatRequest(db, user.id, {
+              botId: chatBase.bot.id, identityId: chatBase.bot.identityId,
+              conversationId: chatState.conversation?.id || null,
+              requestId: input.requestId, message: input.message
+            });
+            await saveStore();
           }
-          const generated = await generateOpenAIBotReply({
-            bot: chatState.bot,
-            identity: verifiedIdentity.identity,
-            message: input.message,
-            history,
-            env: process.env,
-            maxOutputTokens: allowedOutputTokens
-          });
-          const saved = completeAIBotChatRequest(db, user.id, input.requestId, {
-            userMessage: input.message,
-            assistantMessage: generated.output,
-            provider: generated.provider,
-            model: generated.model,
-            responseId: generated.responseId,
-            providerRequestId: generated.requestId,
-            usage: generated.usage,
-            moderation: generated.moderation
-          });
-          await saveStore();
-          return json(res, 200, saved);
-        } catch (error) {
-          const safeMessage = error?.safeForClient
-            ? String(error.message || 'The AI bot could not complete this reply.')
-            : 'The AI bot could not complete this reply. No unmoderated output was saved.';
-          failAIBotChatRequest(db, user.id, input.requestId, safeMessage, { providerFailure: error });
-          await saveStore();
-          return json(res, Number(error?.status) || 502, {
-            error: safeMessage,
-            requestId: input.requestId,
-            retryable: true,
-            providerUsageRecorded: Boolean(error?.provider === 'openai' && Number(error?.usage?.total_tokens) > 0)
-          });
-        }
+
+          if (request.reused) {
+            const previous = relationalPersistence
+              ? await loadRelationalAIBotChatState(chatBase, request.conversationId || null)
+              : getAIBotConversation(db, user.id, parts[1], request.conversationId);
+            return json(res, 200, {...previous, reused: true});
+          }
+
+          try {
+            const currentProviderStatus = getAIProviderStatus();
+            if (!currentProviderStatus.botChatAvailable) {
+              throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'), { status: 503 });
+            }
+            const providerHealth = await probeOpenAIProvider();
+            if (!providerHealth.connected) {
+              throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+            }
+            const generated = await generateOpenAIBotReply({
+              bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
+              history, env: process.env, maxOutputTokens: allowedOutputTokens
+            });
+            let saved;
+            if (relationalPersistence) {
+              const completed = await runAIBotChatCommand('complete_request', {
+                bot_id: chatBase.bot.id, identity_id: chatBase.bot.identityId,
+                request_id: input.requestId, attempt_count: request.attemptCount,
+                user_message: input.message, assistant_message: generated.output,
+                provider: generated.provider, model: generated.model, response_id: generated.responseId,
+                provider_request_id: generated.requestId, usage: generated.usage, moderation: generated.moderation
+              });
+              saved = await loadRelationalAIBotChatState(chatBase, completed?.conversationId || null);
+            } else {
+              saved = completeAIBotChatRequest(db, user.id, input.requestId, {
+                userMessage: input.message, assistantMessage: generated.output,
+                provider: generated.provider, model: generated.model, responseId: generated.responseId,
+                providerRequestId: generated.requestId, usage: generated.usage, moderation: generated.moderation
+              });
+              await saveStore();
+            }
+            return json(res, 200, saved);
+          } catch (error) {
+            const safeMessage = error?.safeForClient
+              ? String(error.message || 'The AI bot could not complete this reply.')
+              : 'The AI bot could not complete this reply. No unmoderated output was saved.';
+            if (relationalPersistence) {
+              await runAIBotChatCommand('fail_request', {
+                bot_id: chatBase.bot.id, identity_id: chatBase.bot.identityId,
+                request_id: input.requestId, attempt_count: request.attemptCount,
+                error_code: error?.code || 'chat_failed', reason: safeMessage,
+                provider: error?.provider || '', model: error?.model || '', usage: error?.usage || {}
+              });
+            } else {
+              failAIBotChatRequest(db, user.id, input.requestId, safeMessage, {providerFailure: error});
+              await saveStore();
+            }
+            return json(res, Number(error?.status) || 502, {
+              error: safeMessage, requestId: input.requestId, retryable: true,
+              providerUsageRecorded: Boolean(error?.provider === 'openai' && Number(error?.usage?.total_tokens) > 0)
+            });
+          }
         } finally {
           activeAIBotChatOwners.delete(user.id);
         }
