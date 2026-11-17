@@ -1500,6 +1500,9 @@ async function route(req, res) {
         credentialSha256, aiAction, payload
       });
       if (response?.skipped) return json(res, 503, { error: 'AI worker runtime is unavailable in local-only persistence mode.' });
+      if (response?.result?.authenticated === false) {
+        return json(res, 401, { error: String(response.result.error || 'Worker credential is expired or revoked.') });
+      }
       return json(res, 200, { result: response?.result ?? null });
     } catch (error) {
       const status = Number(error?.status) || (/worker authentication failed|credential is expired or revoked/i.test(String(error?.message || '')) ? 401 : 503);
