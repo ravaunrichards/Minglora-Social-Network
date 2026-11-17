@@ -2424,9 +2424,9 @@
 .mw-meeting.live-full-screen-active #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:span 2!important;grid-row:span 2!important}
 /* END FINAL MEETWAVE LAYOUT INDEPENDENCE CONTRACT. */
 
-/* NINE COMPLETE GUEST LAYOUTS — direct panel/grid parity with LIVE.
-   Each preset repositions the same host plus eight guest/invitation panels.
-   Source references: nine JPG originals and eight retained PNG crops. */
+/* NINE COMPLETE GUEST LAYOUTS — source-matched panel counts and geometry.
+   All eight guest invitation seats remain in the DOM and server capacity is unchanged.
+   The Side by Side tenth visual cell is decorative, not a participant seat. */
 .mw-meeting #mw-screen-stage[data-screen-layout]{
   position:relative!important;display:block!important;box-sizing:border-box!important;
   width:100%!important;min-width:0!important;min-height:clamp(280px,56vh,680px)!important;
@@ -2461,136 +2461,152 @@
   font-size:clamp(6px,.62vw,8px)!important;line-height:1!important;
 }
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-layout-heading{
-  z-index:6!important;min-width:0!important;max-height:22px!important;margin:0!important;
+  position:absolute!important;z-index:6!important;top:5px!important;left:8px!important;right:8px!important;
+  width:auto!important;min-width:0!important;max-height:22px!important;margin:0!important;
   padding:2px 6px!important;border-radius:6px!important;background:rgba(8,13,22,.5)!important;
   color:#fff!important;font-size:9px!important;line-height:1.2!important;overflow:hidden!important;
+  pointer-events:none!important;
 }
 
-/* 1. FULL SCREEN — one wide host panel plus all eight guest panels below. */
+/* 1. FULL SCREEN — one host panel fills the whole meeting stage. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="full-screen"]{
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.62fr))!important;
-  grid-auto-rows:minmax(0,.62fr)!important;
+  display:block!important;position:relative!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="full-screen"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="full-screen"]>.live-guest-seat.is-host{
+  position:absolute!important;inset:0!important;z-index:1!important;width:100%!important;height:100%!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="full-screen"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
+  display:none!important;
+}
 
-/* 2. FLUID PANEL — full-stage host with eight equally sized floating guest panels. */
+/* 2. FLUID PANEL — full-stage host plus two stacked guest overlays at lower right. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]{
-  grid-template-columns:minmax(0,1fr)!important;grid-template-rows:22px minmax(0,1fr)!important;
+  display:block!important;position:relative!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>.live-guest-seat.is-host{
+  position:absolute!important;inset:0!important;z-index:1!important;width:100%!important;height:100%!important;
+}
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
-  position:absolute!important;z-index:4!important;bottom:8px!important;top:auto!important;
-  width:clamp(50px,16%,118px)!important;height:clamp(58px,13vh,104px)!important;
-  min-height:0!important;border:1px solid rgba(255,255,255,.26)!important;
+  position:absolute!important;z-index:4!important;right:8px!important;top:auto!important;
+  width:clamp(60px,22%,176px)!important;height:clamp(62px,26%,176px)!important;
+  min-height:0!important;max-width:24%!important;border:1px solid rgba(255,255,255,.28)!important;
   box-shadow:0 4px 14px rgba(0,0,0,.28)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){left:8px!important;bottom:8px!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){left:calc(8px + 17%)!important;bottom:8px!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(5){left:calc(8px + 34%)!important;bottom:8px!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(6){left:calc(8px + 51%)!important;bottom:8px!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(7){left:8px!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(8){left:calc(8px + 17%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(9){left:calc(8px + 34%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(10){left:calc(8px + 51%)!important;bottom:calc(8px + clamp(58px,13vh,104px) + 5px)!important}
-
-/* 3. FLUID GRID — dominant host panel and eight stacked guest panels. */
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]{
-  grid-template-columns:minmax(0,2.05fr) minmax(94px,.95fr)!important;
-  grid-template-rows:22px repeat(8,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){bottom:8px!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
+  bottom:calc(8px + clamp(62px,26%,176px) + 6px)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:2/10!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){grid-column:2!important;grid-row:auto!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(n+5){display:none!important}
 
-/* 4. FIXED GRID — exact three-column by three-row panel matrix. */
+/* 3. FLUID GRID — one large left panel and two stacked right panels. */
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]{
+  grid-template-columns:minmax(0,1.65fr) minmax(0,.9fr)!important;
+  grid-template-rows:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:1/3!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){
+  grid-column:2!important;grid-row:1!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){
+  grid-column:2!important;grid-row:2!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(n+5){display:none!important}
+
+/* 4. FIXED GRID — all nine panels in an exact three-by-three matrix. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-grid"]{
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
   grid-template-rows:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-grid"]>.live-guest-layout-heading{
-  position:absolute!important;top:3px!important;left:5px!important;z-index:5!important;
-  width:auto!important;max-width:calc(100% - 10px)!important;height:18px!important;padding:0 5px!important;
-  border-radius:5px!important;background:rgba(8,13,22,.56)!important;
-}
 
-/* 5. FIXED PANEL — large host panel plus eight stacked guest panels. */
+/* 5. FIXED PANEL — one large left panel and three stacked right panels. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]{
-  grid-template-columns:minmax(0,2fr) minmax(92px,.82fr)!important;
-  grid-template-rows:22px repeat(8,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
+  grid-template-columns:minmax(0,1.75fr) minmax(0,.9fr)!important;
+  grid-template-rows:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:2/10!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){grid-column:2!important;grid-row:auto!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1/4!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){grid-column:2!important;grid-row:1!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){grid-column:2!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(5){grid-column:2!important;grid-row:3!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(n+6){display:none!important}
 
-/* 6. SIDE BY SIDE — two broad top panels and all remaining guest panels below. */
+/* 6. SIDE BY SIDE — two large top panels and eight compact lower panel positions.
+   The tenth visual cell is decorative and does not increase participant capacity. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]{
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.62fr))!important;
-  grid-auto-rows:minmax(0,.62fr)!important;
+  grid-template-rows:minmax(0,1.65fr) repeat(2,minmax(0,.78fr))!important;
+  grid-auto-rows:minmax(0,.78fr)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]>.live-guest-seat.is-host{grid-column:1/3!important;grid-row:2!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){grid-column:3/5!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]>.live-guest-seat.is-host{grid-column:1/3!important;grid-row:1!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){grid-column:3/5!important;grid-row:1!important}
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(n+4){grid-column:span 1!important;grid-row:auto!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]::after{
+  content:""!important;display:block!important;grid-column:4!important;grid-row:3!important;
+  min-width:0!important;min-height:0!important;border:1px solid rgba(255,255,255,.22)!important;
+  border-radius:clamp(7px,1vw,14px)!important;
+  background:linear-gradient(145deg,rgba(36,52,75,.92),rgba(13,21,34,.96))!important;
+}
 
-/* 7. SPOTLIGHT — selected speaker wide above all other guest panels. */
+/* 7. SPOTLIGHT — one wide active-speaker panel above the remaining eight panels. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]{
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.62fr))!important;
-  grid-auto-rows:minmax(0,.62fr)!important;
+  grid-template-rows:minmax(0,1.7fr) repeat(2,minmax(0,.82fr))!important;
+  grid-auto-rows:minmax(0,.82fr)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-seat.is-spotlight{grid-column:1/-1!important;grid-row:2!important;z-index:2!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-seat:not(.is-spotlight),
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.mw-empty-seat{grid-column:span 1!important;grid-row:auto!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-seat.is-spotlight{
+  grid-column:1/-1!important;grid-row:1!important;z-index:2!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="spotlight"]>.live-guest-seat.is-host:not(.is-spotlight){
+  grid-column:1/-1!important;grid-row:1!important;z-index:2!important;
+}
 
 /* 8. ROUNDTABLE 1 — central host panel with four guest panels on each side. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]{
   grid-template-columns:minmax(0,.82fr) minmax(0,1.45fr) minmax(0,.82fr)!important;
-  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
+  grid-template-rows:repeat(4,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:2/6!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:2!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){grid-column:3!important;grid-row:2!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:3!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(6){grid-column:3!important;grid-row:3!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:4!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(8){grid-column:3!important;grid-row:4!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:5!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(10){grid-column:3!important;grid-row:5!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:1/5!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:1!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){grid-column:3!important;grid-row:1!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(6){grid-column:3!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:3!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(8){grid-column:3!important;grid-row:3!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:4!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(10){grid-column:3!important;grid-row:4!important}
 
-/* 9. ROUNDTABLE 2 — central host panel with two wider columns and outer guest rails. */
+/* 9. ROUNDTABLE 2 — centered host with two wider columns and outer guest rails. */
 .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]{
   grid-template-columns:minmax(70px,.78fr) minmax(0,1.45fr) minmax(0,1.45fr) minmax(70px,.78fr)!important;
-  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
+  grid-template-rows:repeat(4,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr)!important;
 }
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4!important;grid-row:2/6!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:2!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){grid-column:4!important;grid-row:2!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:3!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(6){grid-column:4!important;grid-row:3!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:4!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(8){grid-column:4!important;grid-row:4!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:5!important}
-.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(10){grid-column:4!important;grid-row:5!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4!important;grid-row:1/5!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:1!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(4){grid-column:4!important;grid-row:1!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(6){grid-column:4!important;grid-row:2!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:3!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(8){grid-column:4!important;grid-row:3!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:4!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.mw-empty-seat):nth-child(10){grid-column:4!important;grid-row:4!important}
 
-/* Responsive fit keeps every seat visible and preserves each preset's panel topology. */
 @media(max-width:760px){
-  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="full-screen"]{
-    grid-template-columns:repeat(3,minmax(0,1fr))!important;
-    grid-template-rows:22px minmax(0,1.5fr) repeat(3,minmax(0,.52fr))!important;
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){
+    width:clamp(52px,22%,86px)!important;height:clamp(54px,22%,92px)!important;
   }
-  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]{grid-template-columns:minmax(0,1.7fr) minmax(78px,.9fr)!important}
-  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]{grid-template-columns:minmax(0,1.6fr) minmax(76px,.85fr)!important}
-  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="side-by-side"]{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]{grid-template-columns:minmax(0,.68fr) minmax(0,1.35fr) minmax(0,.68fr)!important}
-  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]{grid-template-columns:minmax(0,.62fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,.62fr)!important}
-  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.mw-empty-seat){width:clamp(42px,16%,84px)!important;height:clamp(48px,13vh,88px)!important}
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fluid-grid"]{
+    grid-template-columns:minmax(0,1.5fr) minmax(0,.88fr)!important;
+  }
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="fixed-panel"]{
+    grid-template-columns:minmax(0,1.5fr) minmax(0,.82fr)!important;
+  }
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-1"]{
+    grid-template-columns:minmax(0,.68fr) minmax(0,1.35fr) minmax(0,.68fr)!important;
+  }
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="roundtable-2"]{
+    grid-template-columns:minmax(42px,.62fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(42px,.62fr)!important;
+  }
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat .live-guest-seat-meta{padding:4px 5px!important}
   .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid>.live-guest-seat .live-guest-seat-meta strong{font-size:7px!important}
 }
