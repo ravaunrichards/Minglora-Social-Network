@@ -281,8 +281,8 @@ try{
               assert.ok(mwAnchors.right>=20,
                 'MeetWave Fluid Panel guest seat must clear the host right border by at least 20px for seat '+livePanel.index+' on '+viewport.name+
                 '; MeetWave='+JSON.stringify(mwAnchors));
-              assert.ok(mwAnchors.bottom>=28,
-                'MeetWave Fluid Panel guest seat must clear the host lower ribbon by at least 28px for seat '+livePanel.index+' on '+viewport.name+
+              assert.ok(mwAnchors.bottom>=64,
+                'MeetWave Fluid Panel guest seat must clear the host lower ribbon by at least 64px for seat '+livePanel.index+' on '+viewport.name+
                 '; MeetWave='+JSON.stringify(mwAnchors));
               for(const metric of ['width','height']){
                 const delta=Math.abs(liveAnchors[metric]-mwAnchors[metric]);
