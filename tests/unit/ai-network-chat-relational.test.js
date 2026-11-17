@@ -103,6 +103,16 @@ test('chat messages use stable per-conversation sequence numbers instead of time
   }
 });
 
+test('chat RPC now aggregates Creator Studio reservations and measured usage through the shared owner/day ledger', () => {
+  const sharedMigration = read('supabase/migrations/20261117104500_minglora_creator_studio_shared_budget.sql');
+  assert.match(sharedMigration, /ai_creator_studio_usage_events/i);
+  assert.match(sharedMigration, /ai_creator_studio_daily_token_reservations/i);
+  assert.match(sharedMigration, /creator_begin_request/i);
+  assert.match(sharedMigration, /creator_complete_request/i);
+  assert.match(sharedMigration, /creator_fail_request/i);
+  assert.match(sharedMigration, /for update/i);
+});
+
 test('documentation records the applied production foundation and outstanding acceptance gates', () => {
   assert.match(doc, /migration is applied in production/i);
   assert.match(doc, /ACTIVE version 132/i);
