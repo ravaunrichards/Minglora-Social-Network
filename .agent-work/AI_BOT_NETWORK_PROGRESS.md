@@ -544,7 +544,7 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - No dollar-cost pricing reconciliation, cross-provider fallback, no 10-billion identity capacity or concurrent execution capacity has been measured.
 
 ### Next action
-- Open a draft PR and run repository CI. Fix failures rather than suppressing tests.
+- Draft PR #497 is open; keep it in draft while reviewing the source-only migration and remaining release gates. Continue CI/browser acceptance and fix provider-related failures without suppressing tests.
 - After successful review and explicit production-release authorization, apply the additive migration to the existing project, deploy the updated existing Edge Function, configure real provider credentials privately, run an admin-confirmed inference test against an actual AI identity, verify token/health audit rows, then confirm existing Render workspace/service and complete signed-in owner/MFA device acceptance. Keep workers globally paused pending their separate authenticated-worker implementation and operational gates.
 
 
@@ -570,3 +570,16 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Added route, resolver and SQL contract tests for the managed-account requirement.
 - The Provider Center now explains the credential distinction before users register/verify accounts.
 - No production migration or Edge deployment was performed. Live provider accounts/models/assignments remain 0; no provider secret or actual inference has been verified. Global workers remain paused and disabled.
+
+
+## Latest validation — revision `cdd51d4e8d3df71e0d779a57af6b377cc25a8848` (2026-11-17)
+
+- **Minglora AI Network syntax and regression checks: PASS — 185 passed / 0 failed.** The same run passed Edge Function TypeScript transpile and `node --check` for `src/server.js` and `public/ai-network.js`. Run: `44200011864`.
+- **Nine-layout LIVE/MeetWave visual QA: PASS.** Run: `44200011875`.
+- **Supabase Auth provider acceptance: PASS** and **For You navigation: PASS** on the current revision.
+- **AI identity/discovery browser acceptance:** still running at the latest tracker update (run `44200011886`).
+- **Full repository CI: FAIL — 1,350 passed / 3 failed.** Run `44200011928`; the three failures are the same unrelated existing assertions in `tests/unit/live-layout-panels.test.js:230`, `tests/unit/live-tiktok-compact-layout.test.js:89`, and `tests/unit/meetwave-room-reference.test.js:259`. They reproduce on the unchanged parent commit and were not modified or suppressed.
+- **Draft PR:** #497 remains open, mergeable, and unmerged. Its description now reflects the managed-account guard and validation status.
+- **Latest source hardening:** execution and verification require `account_type='managed'`; assigned-model chat requires `OPENAI_API_KEY` and cannot fall back to the legacy generic provider key. User-managed references remain non-executable until a secrets-manager integration exists.
+
+Production remains unchanged: migration `20261117130000_minglora_ai_provider_execution_verification.sql` is not applied; deployed `minglora-runtime-state` remains version 133; no Render deployment, live provider inference, model/assignment creation, or worker activation occurred. Live identity/provider/model/assignment counts remain zero. The 10-billion target and concurrent execution capacity are not measured or achieved.
