@@ -113,7 +113,7 @@ test('AI workspace uses real relational identity results and separate name input
   assert.match(ui, /current_country: currentCountry/);
   assert.match(ui, /Select a valid country of origin/);
   assert.match(ui, /Select a valid current country/);
-  assert.match(ui, /is_primary: index === 0/);
+  assert.match(ui, /if \(structuredLanguages\.length && primaryLanguageCount === 0\) structuredLanguages\[0\]\.is_primary = true/);
   assert.match(ui, /data-ai-form="identity-bulk"/);
   assert.match(ui, /JSON\.parse\(value\('items'\)\)/);
   assert.match(ui, /between 1 and 100 JSON objects/);
@@ -184,7 +184,7 @@ test('individual AI registration captures full profile metadata and structured l
     'voice_preferences: voicePreferences',
     "profile_visibility: value('profileVisibility') || 'private'",
     'payload.languages = structuredLanguages',
-    'Only one primary AI language'
+    'Choose only one primary AI language'
   ]) assert.ok(ui.includes(token), 'Missing registration profile field/behavior: ' + token);
   assert.match(ui, /An AI profile may have at most 30 education records/);
   assert.match(ui, /An AI profile may have at most 50 language records/);
@@ -196,7 +196,7 @@ test('AI identity gateway bounds payload size and rejects secret-shaped fields',
   assert.ok(identityCommandStart >= 0 && statusCommandStart > identityCommandStart);
   const handler = runtime.slice(identityCommandStart, statusCommandStart);
   assert.match(handler, /serializedPayload/);
-  assert.match(handler, /byteLength\(serializedPayload\)\s*>\s*200000/);
+  assert.match(handler, /encode\(serializedPayload\)\.byteLength\s*>\s*200000/);
   assert.match(handler, /access\[_-\]\?token\|password\|secret\|authorization\|cookie\|credential/);
   assert.match(handler, /cannot contain credentials or secrets/);
 });
