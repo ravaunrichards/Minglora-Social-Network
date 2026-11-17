@@ -62,7 +62,7 @@ test('bot chat recalls only owner-consented memory and accounts for bounded memo
   assert.match(server, /settings\.long_term_enabled === true/);
   assert.match(server, /history, memoryContext, env: process\.env/);
   assert.match(server, /memoryContextLength/);
-  assert.match(doc, /owner-consented memory summaries/i);
+  assert.match(doc, /explicit memory opt-in and a recorded consent timestamp/i);
   assert.match(doc, /does not automatically create, update or summarize memory entries/i);
 });
 
