@@ -694,19 +694,18 @@
 }
 .gp-range-reference-artwork > .gp-range-reference-badge{
   z-index:1;
-  top:0;
+  top:-25%;
   left:26%;
   width:100%;
   height:100%;
   aspect-ratio:auto;
   object-fit:contain;
   object-position:center;
+  mix-blend-mode:lighten;
   pointer-events:none;
   user-select:none;
-  filter:brightness(1.48) saturate(1.3) contrast(1.12)
-    drop-shadow(0 0 3px rgba(255,255,255,.88))
-    drop-shadow(0 0 8px rgba(255,218,122,.92))
-    drop-shadow(0 0 15px rgba(163,110,255,.72));
+  filter:drop-shadow(0 0 3px rgba(255,255,255,.88))
+    drop-shadow(0 0 8px rgba(255,218,122,.72));
 }
 @media(max-width:760px){
   .gp-range-reference-figure{padding:0;gap:3px}

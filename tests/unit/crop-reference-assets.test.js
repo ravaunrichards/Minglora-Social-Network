@@ -216,7 +216,9 @@ test("Gifter range sheets use one matching bright badge crop without editing the
   assert.ok(styles.includes(".gp-range-reference-artwork > .gp-range-reference-sheet{"));
   assert.ok(styles.includes("object-position:50% 54.5%;"));
   assert.ok(styles.includes(".gp-range-reference-artwork > .gp-range-reference-badge{"));
+  assert.ok(styles.includes("top:-25%;"));
   assert.ok(styles.includes("left:26%;"));
+  assert.ok(styles.includes("mix-blend-mode:lighten;"));
   assert.ok(styles.includes("object-fit:contain;"));
   assert.ok(styles.includes(".gp-range-reference-figure{"));
   assert.ok(styles.includes("padding:0;"));
