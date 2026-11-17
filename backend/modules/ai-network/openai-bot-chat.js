@@ -128,7 +128,7 @@ export async function verifyOpenAIModelExecution({
   if (provider && provider !== 'openai') {
     throw providerError('provider_not_selected', 'OpenAI is not the selected Minglora provider.', 409);
   }
-  const apiKey = String(env.OPENAI_API_KEY || (provider === 'openai' ? env.MINGLORA_AI_API_KEY : '') || '').trim();
+  const apiKey = String(env.OPENAI_API_KEY || (!assignedModel && provider === 'openai' ? env.MINGLORA_AI_API_KEY : '') || '').trim();
   if (!apiKey) throw providerError('missing_credentials', 'OpenAI is not configured in the private Minglora server environment.', 503);
   const model = String(assignedModel || '').trim();
   if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,179}$/.test(model)) {
