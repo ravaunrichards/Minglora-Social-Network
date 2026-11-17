@@ -2238,7 +2238,7 @@
     }
     if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-course','training-enrollment','attendance','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
-    const message = kind === 'memory-edit'
+    let message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
       : kind === 'memory-settings'
       ? 'AI memory consent and retention settings saved for this identity. Existing entries were cleared when memory was disabled.'
