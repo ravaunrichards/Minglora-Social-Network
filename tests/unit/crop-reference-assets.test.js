@@ -45,7 +45,7 @@ test("Crop References use canonical folders and contain no duplicate image files
     ...milestoneNames.map(name => path.join("assets", "Crop References", "Gifters Badges", name)),
     ...rangeNames.map(name => path.join("assets", "Crop References", "Gifter level range sheets", name)),
     ...rankingNames.map(name => path.join("assets", "Crop References", "Daily Ranking Badge", name)),
-    ...guestNames.map(name => path.join("assets", "Crop References", "Guests Layout", "png", name)),
+    ...guestNames.map(name => path.join("assets", "Crop References", "Guests Layout", name)),
     path.join("assets", "Crop References", "Profile Picture", "ENIGMA.png")
   ];
   const hashes = new Map();
