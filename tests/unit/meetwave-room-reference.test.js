@@ -240,3 +240,10 @@ test('MeetWave Full Screen matches the single full-stage panel in the original c
   assert.ok(js.includes('MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1'));
   assert.ok(js.includes('function ensureParticipantSeat(participant)'));
 });
+
+test('Full Screen crop cannot be overridden by the retired guest-tray grid', () => {
+  assert.doesNotMatch(css, /\\.mw-meeting:not\\(\\.live-full-screen-active\\) #mw-screen-stage\\[data-screen-layout="full-screen"\\] #mw-grid\\[data-layout="full-screen"\\]\\{/);
+  const contract=css.slice(css.lastIndexOf('/* NINE COMPLETE GUEST LAYOUTS'));
+  assert.match(contract, /#mw-grid\\[data-layout="full-screen"\\]\\{grid-template-columns:minmax\\(0,1fr\\)!important;grid-template-rows:minmax\\(0,1fr\\)!important\\}/);
+  assert.match(contract, /#mw-grid\\[data-layout="full-screen"\\]>:is\\(\\.live-guest-seat\\.is-guest,\\.mw-empty-seat\\)\\{display:none!important\\}/);
+});
