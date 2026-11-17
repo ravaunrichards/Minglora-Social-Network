@@ -584,6 +584,14 @@ try {
   assert.equal(memorySettings.memory_enabled, false, 'Disabling memory must revoke the stored consent.');
   assert.equal(memorySettings.long_term_enabled, false, 'Disabling memory must also disable long-term memory.');
 
+  // Untrusted public AI profile text must remain inert in HTML and attribute contexts.
+  const xssPayload = '<img id="ai-network-xss-probe" src="data:image/png;base64,AA==" onerror="window.__aiNetworkXss = true">';
+  const priorDisplayName = discoveryProfiles[0].name.display_name;
+  const priorBio = discoveryProfiles[0].profile.bio;
+  discoveryProfiles[0].name.display_name = xssPayload;
+  discoveryProfiles[0].profile.bio = xssPayload;
+  await page.evaluate(() => { window.__aiNetworkXss = false; });
+
   const discoveryForm = page.locator('form[data-ai-form="discovery"]');
   await discoveryForm.locator('[name="search"]').fill('educator');
   await discoveryForm.locator('[name="category_keys"]').selectOption(['ai_educators']);
@@ -593,6 +601,18 @@ try {
   await discoveryForm.locator('[name="profession"]').fill('Educator');
   await discoveryForm.locator('button[type="submit"]').click();
   await page.getByText('AI discovery filters applied.').waitFor({ state: 'visible' });
+  const discoveryResults = page.locator('.ai-network-discovery-results');
+  const discoveryText = await discoveryResults.textContent();
+  assert.ok(discoveryText?.includes(xssPayload), 'Untrusted profile markup should be displayed as literal text.');
+  assert.equal(await page.locator('#ai-network-xss-probe').count(), 0, 'Untrusted profile markup must not create an executable DOM element.');
+  assert.equal(await page.evaluate(() => window.__aiNetworkXss), false, 'An injected image error handler must never execute.');
+  assert.equal(
+    await discoveryResults.locator('input[name="identity_ids"]').first().getAttribute('aria-label'),
+    'Select ' + xssPayload,
+    'Untrusted accessible-name attributes must be escaped without losing their text value.'
+  );
+  discoveryProfiles[0].name.display_name = priorDisplayName;
+  discoveryProfiles[0].profile.bio = priorBio;
   const lastQuery = discoveryQueries[discoveryQueries.length - 1];
   assert.equal(lastQuery.search, 'educator');
   assert.equal(lastQuery.category_keys, 'ai_educators');
