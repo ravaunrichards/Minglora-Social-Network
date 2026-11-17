@@ -26,7 +26,7 @@ test('Host identity card matches the two-line LIVE reference: avatar/name above 
   assert.match(hud, /live-host-meta-row[\s\S]*?live-like-control live-like-count/);
   assert.match(hud, /id='live-heart-like'[\s\S]*?id='live-reaction-count'/);
   assert.doesNotMatch(hud, /<small>likes<\/small>/i);
-  assert.doesNotMatch(hud, /live-host-identity-copy[^]*?live-host-live-status/);
+  const identityCopy = hud.match(/<span class='live-host-identity-copy'>[\\s\\S]*?<\\/span>/)?.[0] || '';\n  assert.ok(identityCopy, 'host name remains inside the profile action');\n  assert.doesNotMatch(identityCopy, /live-host-live-status/, 'LIVE NOW and likes stay in the separate second row');
 });
 
 test('Follow stays separate from likes and is viewer-only; following changes it to Heart Me', () => {
