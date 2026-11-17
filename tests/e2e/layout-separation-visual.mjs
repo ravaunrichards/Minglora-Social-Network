@@ -25,7 +25,7 @@ const viewports=[
 const referenceDirectory=path.join(root,'assets/Crop References/Guests Layout');
 const artifacts=path.join(root,'artifacts/layout-separation-visual');
 fs.mkdirSync(artifacts,{recursive:true});
-const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css')+'\n'+read('public/live-tiktok-compact.css');
+const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css')+'\n'+read('public/live-tiktok-compact.css')+'\n'+read('public/live-interface-guardrails.css');
 const meetwaveCss=read('public/meetwave.css');
 const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;color:#fff;font-family:Arial,sans-serif}body{padding:0;box-sizing:border-box}';
 const report={
@@ -35,6 +35,8 @@ const report={
   layouts:layouts.map(item=>item.id),
   viewports:[],
   screenshots:[],
+  hostHeaderScreenshots:[],
+  hostHeaderChecks:[],
   occupiedSeatChecks:[],
   emptySeatChecks:[],
   geometryComparisons:[],
@@ -323,13 +325,134 @@ try{
       await page.close();
     }
   }
+
+  // Reference-check the host header independently from guest-stage geometry.
+  // The host row must keep the avatar/name above LIVE NOW + live likes, with Follow
+  // beside the card before following and the compact orange Heart Me heart afterward.
+  const headerViewports=[
+    {name:'small-phone',width:320,height:760},
+    {name:'phone',width:390,height:844},
+    {name:'tablet',width:820,height:1180},
+    {name:'desktop',width:1366,height:900}
+  ];
+  const headerStates=[
+    {name:'before-follow',role:'viewer',followed:false},
+    {name:'after-follow',role:'viewer',followed:true},
+    {name:'host',role:'host',followed:false}
+  ];
+  for(const viewport of headerViewports){
+    for(const state of headerStates){
+      const followMarkup=state.role==='viewer'
+        ?'<button type="button" id="live-follow-host" class="live-follow-button'+(state.followed?' is-heart-me':'')+'" aria-pressed="'+(state.followed?'true':'false')+'">'+(state.followed?'♥':'Follow')+'</button>'
+        :'';
+      const headerMarkup=
+        '<section id="live-player-shell" class="live-player-shell live-mode-video_audio">'+
+          '<header class="live-player-header"><div><span class="live-indicator">LIVE</span><strong>Minglora Live Room</strong></div></header>'+
+          '<div class="live-session-meta"><span>Video + Audio</span></div>'+
+          '<div class="live-player-layout">'+
+            '<div class="live-video-column">'+
+              '<div class="live-stage-topbar '+(state.role==='host'?'is-host':'')+'">'+
+                '<div class="live-stage-top-left">'+
+                  '<div class="live-host-profile-wrap">'+
+                    '<div class="live-host-identity-block">'+
+                      '<button type="button" class="live-host-profile" aria-label="Open Minglora Creator profile in LIVE">'+
+                        '<img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2732%27 fill=%27%236a55bd%27/%3E%3C/svg%3E" alt="">'+
+                        '<span class="live-host-identity-copy"><strong>Minglora Creator With A Long Display Name</strong></span>'+
+                      '</button>'+
+                      '<div class="live-host-meta-row">'+
+                        '<small class="live-host-live-status"><i class="live-host-live-dot"></i> LIVE NOW</small>'+
+                        '<div class="live-like-control live-like-count" aria-label="LIVE heart reactions"><button type="button" id="live-heart-like" class="live-heart-like" aria-label="Like this LIVE"><span aria-hidden="true">♥</span></button><strong id="live-reaction-count">12.4K</strong></div>'+
+                      '</div>'+
+                    '</div>'+
+                    followMarkup+
+                  '</div>'+
+                '</div>'+
+              '</div>'+
+              '<section id="live-video-stage" class="live-video-stage"></section>'+
+              '<div class="live-player-controls live-icon-controls" role="group" aria-label="LIVE controls"></div>'+
+            '</div>'+
+            '<aside id="live-fullscreen-chat-slot" class="live-fullscreen-chat-slot"><header class="live-fullscreen-side-head"><strong>LIVE PANEL</strong></header></aside>'+
+          '</div>'+
+        '</section>';
+      const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height},deviceScaleFactor:1});
+      await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+liveCss+'\n'+sizing+'</style></head><body>'+headerMarkup+'</body></html>');
+      await page.waitForFunction(()=>document.fonts?.status!=='loading');
+      const metrics=await page.evaluate(()=>{
+        const rect=selector=>{
+          const node=document.querySelector(selector);
+          if(!node)return null;
+          const r=node.getBoundingClientRect();
+          const style=getComputedStyle(node);
+          return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height,display:style.display,visibility:style.visibility,opacity:Number(style.opacity)};
+        };
+        const box=document.querySelector('.live-stage-topbar');
+        return {
+          viewport:{width:innerWidth,height:innerHeight},
+          topbar:rect('.live-stage-topbar'),
+          topbarClientWidth:box?.clientWidth||0,topbarScrollWidth:box?.scrollWidth||0,
+          identity:rect('.live-host-identity-block'),
+          profile:rect('.live-host-profile'),
+          avatar:rect('.live-host-profile img'),
+          name:rect('.live-host-profile strong'),
+          meta:rect('.live-host-meta-row'),
+          status:rect('.live-host-live-status'),
+          likes:rect('.live-like-control'),
+          heart:rect('.live-heart-like'),
+          count:rect('#live-reaction-count'),
+          follow:rect('#live-follow-host'),
+          topLeft:rect('.live-stage-top-left')
+        };
+      });
+      const label='LIVE host header '+viewport.name+' '+state.name;
+      for(const key of ['topbar','identity','profile','avatar','name','meta','status','likes','heart','count']){
+        const item=metrics[key];
+        assert.ok(item&&item.width>0&&item.height>0,label+' '+key+' is visible: '+JSON.stringify(metrics));
+        assert.ok(item.display!=='none'&&item.visibility!=='hidden'&&item.opacity>0,label+' '+key+' is not hidden');
+      }
+      const inside=(parent,child,key)=>{
+        assert.ok(child.x>=parent.x-1&&child.right<=parent.right+2&&child.y>=parent.y-1&&child.bottom<=parent.bottom+2,
+          label+' '+key+' stays inside its parent; '+JSON.stringify({parent,child}));
+      };
+      inside(metrics.topbar,metrics.identity,'identity card');
+      inside(metrics.identity,metrics.profile,'profile action');
+      inside(metrics.identity,metrics.meta,'LIVE/likes row');
+      inside(metrics.profile,metrics.avatar,'avatar');
+      inside(metrics.profile,metrics.name,'host name');
+      inside(metrics.meta,metrics.status,'LIVE NOW status');
+      inside(metrics.meta,metrics.likes,'likes');
+      assert.ok(metrics.meta.y>=metrics.profile.bottom-1,label+' LIVE NOW and likes appear below the avatar/name row');
+      assert.ok(metrics.status.right<=metrics.likes.x+2,label+' LIVE NOW and heart/count do not overlap');
+      assert.ok(metrics.avatar.right<metrics.name.x+2,label+' avatar and host name retain separate columns');
+      assert.ok(metrics.topbarScrollWidth<=metrics.topbarClientWidth+2,label+' topbar has no horizontal clipping/overflow: '+JSON.stringify(metrics));
+      if(state.role==='viewer'){
+        assert.ok(metrics.follow&&metrics.follow.width>0,label+' viewer follow action is present');
+        assert.ok(metrics.follow.x>=metrics.identity.right-1,label+' follow/Heart Me is separate from host identity and likes');
+        if(state.followed){
+          const expectedHeartSize=viewport.width>900?29:27;
+          assert.equal(metrics.follow.width,expectedHeartSize,label+' after-follow Heart Me retains the compact device-sized orange heart');
+        }else{
+          assert.ok(metrics.follow.width>=34,label+' before-follow action retains a readable Follow label at compact phone width');
+        }
+      }else{
+        assert.equal(metrics.follow,null,label+' host does not get a self-follow action');
+      }
+      const screenshot='host-header-'+viewport.name+'-'+state.name+'.png';
+      await page.screenshot({path:path.join(artifacts,screenshot),fullPage:true});
+      report.hostHeaderScreenshots.push(screenshot);
+      report.hostHeaderChecks.push({viewport:viewport.name,width:viewport.width,height:viewport.height,state:state.name,role:state.role,result:'passed',metrics});
+      await page.close();
+    }
+  }
+
   report.result='passed';
   report.summary={
     layouts:9,products:2,viewports:3,
     cropComparisons:report.screenshots.length,
     occupiedSeatChecks:report.occupiedSeatChecks.length,
     MeetWaveEmptySeatChecks:report.emptySeatChecks.length,
-    matchingLiveMeetWaveGeometries:report.geometryComparisons.length
+    matchingLiveMeetWaveGeometries:report.geometryComparisons.length,
+    hostHeaderChecks:report.hostHeaderChecks.length,
+    hostHeaderScreenshots:report.hostHeaderScreenshots.length
   };
   fs.writeFileSync(path.join(artifacts,'visual-matrix.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({result:'passed',...report.summary},null,2));

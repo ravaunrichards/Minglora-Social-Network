@@ -484,3 +484,177 @@ body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me:
     margin-top:4px!important;font-size:19px!important;
   }
 }
+
+/* Host identity + LIVE status + likes: compact reference-matched two-line header.
+   The host card owns the avatar/name and the LIVE NOW + heart total beneath it. */
+body:has(#live-player-shell) .live-stage-topbar .live-stage-top-left{
+  display:flex!important;align-items:center!important;flex-wrap:nowrap!important;
+  gap:7px!important;width:100%!important;min-width:0!important;max-width:100%!important;
+  overflow:visible!important;pointer-events:auto!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-profile-wrap{
+  display:flex!important;flex:0 1 auto!important;align-items:center!important;
+  gap:6px!important;min-width:0!important;max-width:100%!important;overflow:visible!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-identity-block{
+  display:flex!important;flex:0 1 auto!important;flex-direction:column!important;
+  justify-content:center!important;gap:0!important;min-width:0!important;
+  width:auto!important;max-width:min(56vw,280px)!important;
+  padding:3px 9px 3px 4px!important;border:1px solid rgba(255,255,255,.2)!important;
+  border-radius:22px!important;background:rgba(7,12,21,.72)!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.2)!important;
+  backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
+}
+body:has(#live-player-shell) .live-stage-topbar button.live-host-profile{
+  display:flex!important;flex:0 1 auto!important;align-items:center!important;
+  justify-content:flex-start!important;gap:7px!important;width:100%!important;
+  min-width:0!important;max-width:100%!important;height:31px!important;min-height:31px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;overflow:hidden!important;
+  text-align:left!important;white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-profile img{
+  display:block!important;flex:0 0 29px!important;width:29px!important;height:29px!important;
+  min-width:29px!important;min-height:29px!important;max-width:29px!important;
+  border:1px solid rgba(255,255,255,.26)!important;border-radius:50%!important;
+  object-fit:cover!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-profile .live-host-identity-copy{
+  display:block!important;flex:1 1 auto!important;min-width:0!important;max-width:100%!important;
+  overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-profile strong{
+  display:block!important;min-width:0!important;max-width:100%!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+  color:#fff!important;font-size:11px!important;font-weight:850!important;line-height:1.15!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:7px!important;min-width:0!important;min-height:14px!important;height:14px!important;
+  margin:0!important;padding:0 0 0 36px!important;overflow:visible!important;white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-live-status{
+  display:inline-flex!important;flex:0 0 auto!important;align-items:center!important;
+  gap:4px!important;margin:0!important;padding:0!important;border:0!important;
+  color:rgba(255,255,255,.88)!important;background:transparent!important;
+  font-size:8px!important;font-weight:800!important;line-height:1!important;
+  letter-spacing:.035em!important;white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-live-dot{
+  display:inline-block!important;flex:0 0 5px!important;width:5px!important;height:5px!important;
+  border-radius:50%!important;background:#ff4268!important;
+  box-shadow:0 0 7px rgba(255,66,104,.75)!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row .live-like-control{
+  position:static!important;display:inline-flex!important;flex:0 0 auto!important;
+  align-items:center!important;justify-content:flex-start!important;gap:2px!important;
+  min-width:0!important;min-height:14px!important;height:14px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;overflow:visible!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row .live-heart-like{
+  display:grid!important;place-items:center!important;flex:0 0 15px!important;
+  width:15px!important;height:15px!important;min-width:15px!important;min-height:15px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;color:#ff6684!important;
+  font-size:14px!important;line-height:1!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row .live-like-count>strong{
+  display:block!important;flex:0 0 auto!important;min-width:0!important;
+  color:#fff!important;font-size:9px!important;font-weight:850!important;
+  line-height:1!important;white-space:nowrap!important;font-variant-numeric:tabular-nums!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-follow-button{
+  display:inline-flex!important;flex:0 0 auto!important;align-items:center!important;
+  justify-content:center!important;min-width:0!important;min-height:30px!important;height:30px!important;
+  margin:0!important;padding:0 10px!important;border-radius:18px!important;
+  font-size:10px!important;font-weight:850!important;line-height:1!important;white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me{
+  display:grid!important;place-items:center!important;flex:0 0 29px!important;
+  width:29px!important;height:29px!important;min-width:29px!important;max-width:29px!important;
+  min-height:29px!important;margin:0!important;padding:0!important;
+  border:1px solid rgba(255,164,48,.82)!important;border-radius:50%!important;
+  color:#ff9a18!important;background:rgba(255,140,0,.18)!important;
+  box-shadow:0 0 11px rgba(255,141,0,.25)!important;
+  font-size:19px!important;font-weight:950!important;line-height:1!important;
+}
+body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me:hover{
+  border-color:#ffb04a!important;background:rgba(255,145,0,.27)!important;color:#ffad35!important;
+}
+@media(min-width:901px){
+  body:has(#live-player-shell) .live-stage-topbar .live-host-identity-block{max-width:min(30vw,300px)!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row{gap:8px!important}
+}
+@media(max-width:900px){
+  body:has(#live-player-shell) .live-stage-topbar .live-stage-top-left{gap:5px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile-wrap{gap:5px!important;max-width:100%!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-identity-block{
+    max-width:min(58vw,225px)!important;padding:2px 7px 2px 3px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar button.live-host-profile{
+    gap:6px!important;height:30px!important;min-height:30px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile img{
+    flex-basis:28px!important;width:28px!important;height:28px!important;
+    min-width:28px!important;min-height:28px!important;max-width:28px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile strong{font-size:10px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row{
+    min-height:13px!important;height:13px!important;padding-left:34px!important;gap:6px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-live-status{font-size:7px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row .live-like-control{
+    min-height:13px!important;height:13px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row .live-heart-like{
+    flex-basis:14px!important;width:14px!important;height:14px!important;
+    min-width:14px!important;min-height:14px!important;font-size:13px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row .live-like-count>strong{font-size:9px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-follow-button{
+    min-height:28px!important;height:28px!important;padding:0 8px!important;font-size:9px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-follow-button.is-heart-me{
+    flex-basis:27px!important;width:27px!important;height:27px!important;
+    min-width:27px!important;max-width:27px!important;min-height:27px!important;
+    padding:0!important;font-size:18px!important;
+  }
+}
+@media(max-width:380px){
+  body:has(#live-player-shell) .live-stage-topbar .live-host-identity-block{max-width:57vw!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile strong{font-size:9px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-meta-row{gap:4px!important;padding-left:33px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-live-status{font-size:7px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-follow-button{padding-inline:6px!important}
+}
+
+/* Final compact-height correction: keep the two-line identity card inside the
+   reserved 50/52px host row, including narrow 320px phones. */
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block{
+  padding:2px 7px 2px 3px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block button.live-host-profile{
+  flex:0 0 28px!important;height:28px!important;min-height:28px!important;max-height:28px!important;
+  align-self:flex-start!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block button.live-host-profile img{
+  flex:0 0 26px!important;width:26px!important;height:26px!important;
+  min-width:26px!important;min-height:26px!important;max-width:26px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-meta-row{
+  min-height:12px!important;height:12px!important;max-height:12px!important;
+  padding-left:33px!important;gap:5px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-meta-row .live-like-control{
+  min-height:12px!important;height:12px!important;
+}
+body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-meta-row .live-heart-like{
+  flex-basis:13px!important;width:13px!important;height:13px!important;
+  min-width:13px!important;min-height:13px!important;font-size:12px!important;
+}
+@media(min-width:901px){
+  body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-identity-block{
+    padding:2px 8px 2px 3px!important;
+  }
+}

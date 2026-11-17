@@ -2818,16 +2818,22 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
-  // Keep host name and heart/count on the first line; LIVE NOW sits directly below the name.
+  // Match the supplied TikTok LIVE header: host avatar/name first, then LIVE NOW + the live heart total directly beneath it.
+  // Follow remains a separate viewer action; after following it becomes the existing orange Heart Me action.
   const liveStageHud=
     "<div class='live-stage-topbar "+(role==="host"?"is-host":"")+"'>"+
       "<div class='live-stage-top-left'>"+
         "<div class='live-host-profile-wrap'>"+
-          "<button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
-            "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
-            "<span class='live-host-identity-copy'><strong>"+esc(liveHostName)+"</strong><small class='live-host-live-status'><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
-          "</button>"+
-          "<div class='live-like-control live-like-count' aria-label='LIVE heart reactions'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong></div>"+
+          "<div class='live-host-identity-block'>"+
+            "<button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
+              "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
+              "<span class='live-host-identity-copy'><strong>"+esc(liveHostName)+"</strong></span>"+
+            "</button>"+
+            "<div class='live-host-meta-row'>"+
+              "<small class='live-host-live-status'><i class='live-host-live-dot'></i> LIVE NOW</small>"+
+              "<div class='live-like-control live-like-count' aria-label='LIVE heart reactions'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong></div>"+
+            "</div>"+
+          "</div>"+
           (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button"+(session.host?.following?' is-heart-me':'')+"' aria-label='"+(session.host?.following?'Send Heart Me gift and join the host Fan Club for 1 Coin':'Follow LIVE host')+"' title='"+(session.host?.following?'Send Heart Me gift and join the host Fan Club for 1 Coin':'Follow this host')+"' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'♥':'Follow')+"</button>":"")+
         "</div>"+
       "</div>"+
