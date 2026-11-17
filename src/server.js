@@ -1472,7 +1472,100 @@ async function route(req, res) {
   if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !p.startsWith('/api/internal/video-transcode/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
-  if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
+if (p === '/api/ai-discovery' || p.startsWith('/api/ai-discovery/')) {
+    const user = sessionUser(req);
+    try {
+      requireAuth(user);
+      if (!isSupabasePersistence()) {
+        throw Object.assign(new Error('AI profile discovery requires Minglora Supabase persistence.'), { status: 503 });
+      }
+      const sub = p.slice('/api/ai-discovery'.length).replace(/^\/+/, '');
+      const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const runPublicAIDiscovery = async (aiAction, payload = {}) => {
+        const serialized = JSON.stringify(payload);
+        if (serialized.length > 20000 ||
+            /"(?:api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential|private[_-]?key)"\s*:/i.test(serialized)) {
+          throw Object.assign(new Error('Discovery requests cannot contain credentials or oversized payloads.'), { status: 400 });
+        }
+        const response = await requestSupabaseState('ai_discovery_command', {
+          actorUserId: user.id, aiAction, payload
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI profile discovery is unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+      const readBody = async maxBytes => {
+        const input = await body(req, maxBytes);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Discovery input must be a JSON object.'), { status: 400 });
+        }
+        return input;
+      };
+      if (method === 'GET' && parts.length === 0) {
+        const rawFilters = url.searchParams.get('filters') || '{}';
+        if (rawFilters.length > 16384) throw Object.assign(new Error('Discovery filters are limited to 16 KB.'), { status: 400 });
+        let filters;
+        try { filters = JSON.parse(rawFilters); }
+        catch { throw Object.assign(new Error('Discovery filters must be valid JSON.'), { status: 400 }); }
+        if (!filters || typeof filters !== 'object' || Array.isArray(filters)) {
+          throw Object.assign(new Error('Discovery filters must be a JSON object.'), { status: 400 });
+        }
+        const limit = Number(url.searchParams.get('limit') || 24);
+        const offset = Number(url.searchParams.get('offset') || 0);
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0 || offset > 1000000) {
+          throw Object.assign(new Error('Choose a page size from 1 to 100 and a valid result offset.'), { status: 400 });
+        }
+        const result = await runPublicAIDiscovery('discover', { filters, limit, offset });
+        return json(res, 200, result || { identities: [], total: 0, limit, offset, hasMore: false });
+      }
+      if (method === 'GET' && parts.length === 1 && parts[0] === 'following') return json(res, 200, await runPublicAIDiscovery('list_following'));
+      if (method === 'GET' && parts.length === 1 && parts[0] === 'follow-requests') return json(res, 200, await runPublicAIDiscovery('list_follow_requests'));
+      if (method === 'GET' && parts.length === 1 && parts[0] === 'saved-groups') return json(res, 200, await runPublicAIDiscovery('list_saved_groups'));
+      if (method === 'POST' && parts.length === 1 && parts[0] === 'follows') {
+        const input = await readBody(6000);
+        if (!uuid.test(String(input.identity_id || ''))) throw Object.assign(new Error('A valid AI identity ID is required.'), { status: 400 });
+        return json(res, 200, await runPublicAIDiscovery('follow', { identity_id: input.identity_id }));
+      }
+      if (method === 'POST' && parts.length === 2 && parts[0] === 'follows' && parts[1] === 'bulk') {
+        const input = await readBody(24000);
+        if (!Array.isArray(input.identity_ids) || input.identity_ids.length < 1 || input.identity_ids.length > 100 || input.identity_ids.some(id => !uuid.test(String(id)))) {
+          throw Object.assign(new Error('Bulk follow requires between 1 and 100 valid AI identity IDs.'), { status: 400 });
+        }
+        return json(res, 200, await runPublicAIDiscovery('bulk_follow', { identity_ids: [...new Set(input.identity_ids.map(String))] }));
+      }
+      if (method === 'DELETE' && parts.length === 2 && parts[0] === 'follows') {
+        if (!uuid.test(parts[1])) throw Object.assign(new Error('A valid AI identity ID is required.'), { status: 400 });
+        return json(res, 200, await runPublicAIDiscovery('unfollow', { identity_id: parts[1] }));
+      }
+      if (method === 'PATCH' && parts.length === 2 && parts[0] === 'follow-requests') {
+        if (!uuid.test(parts[1])) throw Object.assign(new Error('A valid AI follow request ID is required.'), { status: 400 });
+        const input = await readBody(6000), decision = String(input.decision || '').toLowerCase();
+        if (!['approve','decline'].includes(decision)) throw Object.assign(new Error('Choose approve or decline for the follow request.'), { status: 400 });
+        return json(res, 200, await runPublicAIDiscovery('review_follow_request', { follow_id: parts[1], decision }));
+      }
+      if (method === 'POST' && parts.length === 1 && parts[0] === 'saved-groups') {
+        const input = await readBody(20000);
+        if (String(input.group_name || '').trim().length < 2 || String(input.group_name || '').length > 80 || !input.filters || typeof input.filters !== 'object' || Array.isArray(input.filters)) {
+          throw Object.assign(new Error('A saved search needs a name and a valid filter object.'), { status: 400 });
+        }
+        return json(res, 200, await runPublicAIDiscovery('save_discovery_group', { group_name: String(input.group_name).trim(), filters: input.filters }));
+      }
+      if (method === 'DELETE' && parts.length === 2 && parts[0] === 'saved-groups') {
+        if (!uuid.test(parts[1])) throw Object.assign(new Error('A valid saved discovery group ID is required.'), { status: 400 });
+        return json(res, 200, await runPublicAIDiscovery('delete_saved_group', { group_id: parts[1] }));
+      }
+      throw Object.assign(new Error('The requested AI discovery operation was not found.'), { status: 404 });
+    } catch (error) {
+      const message = String(error?.message || 'AI discovery request failed.');
+      const status = Number.isInteger(error?.status) ? error.status
+        : /unsupported action|unsupported AI discovery command|function .*minglora_ai_discovery_command.*does not exist|could not find the function|schema cache/i.test(message) ? 503
+        : error?.code === '42501' ? 403 : error?.code === 'P0002' ? 404 : error?.code === '23505' ? 409 : 500;
+      return json(res, status, { error: message.slice(0, 240) });
+    }
+  }
+    if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
     const user = sessionUser(req);
     try {
       requireAuth(user);
