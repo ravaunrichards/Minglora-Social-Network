@@ -276,16 +276,14 @@ try{
                 bottom:mwRow.stage.height-mwPanel.y-mwPanel.height,
                 width:mwPanel.width,height:mwPanel.height
               };
-              // LIVE Fluid Panel intentionally has a larger right/bottom safe inset than
-              // MeetWave so guest thumbnails clear the host-stage border lines.
-              const rightInsetDelta=liveAnchors.right-mwAnchors.right;
-              const bottomInsetDelta=liveAnchors.bottom-mwAnchors.bottom;
-              assert.ok(rightInsetDelta>=10&&rightInsetDelta<=56,
-                'LIVE Fluid Panel guest seat must sit 10–56px farther inside the host right frame for seat '+livePanel.index+' on '+viewport.name+
-                '; LIVE='+JSON.stringify(liveAnchors)+' MeetWave='+JSON.stringify(mwAnchors));
-              assert.ok(bottomInsetDelta>=10&&bottomInsetDelta<=32,
-                'LIVE Fluid Panel guest seat must sit 10–32px farther inside the host bottom frame for seat '+livePanel.index+' on '+viewport.name+
-                '; LIVE='+JSON.stringify(liveAnchors)+' MeetWave='+JSON.stringify(mwAnchors));
+              // MeetWave Fluid Panel thumbnails must keep their own minimum safe
+              // inset from the host border/ribbon; they are no longer tied to LIVE offsets.
+              assert.ok(mwAnchors.right>=20,
+                'MeetWave Fluid Panel guest seat must clear the host right border by at least 20px for seat '+livePanel.index+' on '+viewport.name+
+                '; MeetWave='+JSON.stringify(mwAnchors));
+              assert.ok(mwAnchors.bottom>=28,
+                'MeetWave Fluid Panel guest seat must clear the host lower ribbon by at least 28px for seat '+livePanel.index+' on '+viewport.name+
+                '; MeetWave='+JSON.stringify(mwAnchors));
               for(const metric of ['width','height']){
                 const delta=Math.abs(liveAnchors[metric]-mwAnchors[metric]);
                 assert.ok(delta<=2.5,
