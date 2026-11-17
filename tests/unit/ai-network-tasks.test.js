@@ -93,21 +93,22 @@ test('leases use recovery, concurrency limits and require verified provider heal
   assert.ok(migration.includes('check ((status=\'running\' and worker_id is not null'));
 });
 
-test('worker execution remains inaccessible without an independent worker credential', () => {
-  assert.ok(migration.includes('AI worker authentication is not deployed; task execution is disabled.'));
+test('human task gateway cannot invoke worker leases; workers use a separate credential-authenticated gateway', () => {
   assert.ok(migration.includes("if v_action in ('claim_next_task','heartbeat_task','complete_task','fail_task')"));
+  assert.ok(migration.includes('AI worker authentication is not deployed; task execution is disabled.'));
   const handlerStart = runtime.indexOf('if (action === "ai_task_command")');
   const handlerEnd = runtime.indexOf('if (action === "ai_provider_command")', handlerStart);
   const handler = runtime.slice(handlerStart, handlerEnd);
-  for (const action of ['create_task','list_tasks','approve_task','reject_task','cancel_task']) {
-    assert.ok(handler.includes('"' + action + '"'), 'Missing user task command: ' + action);
-  }
   const allowlistStart = handler.indexOf('const supportedTaskCommands = [');
   const allowlistEnd = handler.indexOf('];', allowlistStart);
   const allowlist = handler.slice(allowlistStart, allowlistEnd);
   for (const action of ['claim_next_task','heartbeat_task','complete_task','fail_task']) {
-    assert.ok(!allowlist.includes('"' + action + '"'), 'Worker command must not be gateway-allowlisted: ' + action);
+    assert.ok(!allowlist.includes('"' + action + '"'), 'Human task gateway must not accept worker actions: ' + action);
   }
+  assert.ok(runtime.includes('if (action === "ai_worker_runtime_command")'));
+  assert.ok(runtime.includes('minglora_ai_worker_runtime_command'));
+  assert.ok(runtime.includes('if (action === "ai_worker_admin_command")'));
+  assert.ok(runtime.includes('minglora_ai_worker_admin_command'));
 });
 
 test('Node task API requires authorized platform staff and exposes no worker execution route', () => {
