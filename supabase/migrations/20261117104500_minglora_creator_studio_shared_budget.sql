@@ -183,6 +183,11 @@ begin
    raise exception using errcode='22023',message='A valid Creator Studio budget request ID is required.';
   end if;
   v_request_id:=(v_payload->>'request_id')::uuid;
+  select r.usage_date into v_usage_date from ai_network.ai_creator_studio_daily_token_reservations r
+   where r.request_id=v_request_id and r.owner_user_id=p_actor_user_id;
+  if not found then raise exception using errcode='P0002',message='The Creator Studio budget reservation was not found.'; end if;
+  perform 1 from ai_network.ai_bot_daily_token_budgets b
+   where b.owner_user_id=p_actor_user_id and b.usage_date=v_usage_date for update;
   select r.* into v_creator_reservation from ai_network.ai_creator_studio_daily_token_reservations r
    where r.request_id=v_request_id and r.owner_user_id=p_actor_user_id for update;
   if not found then raise exception using errcode='P0002',message='The Creator Studio budget reservation was not found.'; end if;
@@ -227,6 +232,11 @@ begin
    raise exception using errcode='22023',message='A valid Creator Studio budget request ID is required.';
   end if;
   v_request_id:=(v_payload->>'request_id')::uuid;
+  select r.usage_date into v_usage_date from ai_network.ai_creator_studio_daily_token_reservations r
+   where r.request_id=v_request_id and r.owner_user_id=p_actor_user_id;
+  if not found then raise exception using errcode='P0002',message='The Creator Studio budget reservation was not found.'; end if;
+  perform 1 from ai_network.ai_bot_daily_token_budgets b
+   where b.owner_user_id=p_actor_user_id and b.usage_date=v_usage_date for update;
   select r.* into v_creator_reservation from ai_network.ai_creator_studio_daily_token_reservations r
    where r.request_id=v_request_id and r.owner_user_id=p_actor_user_id for update;
   if not found then raise exception using errcode='P0002',message='The Creator Studio budget reservation was not found.'; end if;
@@ -448,6 +458,8 @@ begin
   select r.usage_date into v_usage_date from ai_network.ai_bot_daily_token_reservations r
    where r.request_id=v_request_id and r.attempt_count=v_attempt;
   if v_usage_date is null then raise exception using errcode='55000',message='The AI bot chat budget reservation is missing.'; end if;
+  perform 1 from ai_network.ai_bot_daily_token_budgets b
+   where b.owner_user_id=p_actor_user_id and b.usage_date=v_usage_date for update;
   insert into ai_network.ai_bot_usage_events(
    owner_user_id,bot_id,identity_id,conversation_id,request_id,attempt_count,usage_date,operation,provider,model,
    input_tokens,output_tokens,total_tokens,rejected_or_failed,created_at
@@ -483,6 +495,8 @@ begin
   select r.usage_date into v_usage_date from ai_network.ai_bot_daily_token_reservations r
    where r.request_id=v_request_id and r.attempt_count=v_attempt;
   if v_usage_date is null then raise exception using errcode='55000',message='The AI bot chat budget reservation is missing.'; end if;
+  perform 1 from ai_network.ai_bot_daily_token_budgets b
+   where b.owner_user_id=p_actor_user_id and b.usage_date=v_usage_date for update;
   if v_provider='openai' and v_total_tokens>0 and char_length(v_model)>0 then
    insert into ai_network.ai_bot_usage_events(
     owner_user_id,bot_id,identity_id,conversation_id,request_id,attempt_count,usage_date,operation,provider,model,
