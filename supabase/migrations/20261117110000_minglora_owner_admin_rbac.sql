@@ -12,7 +12,7 @@ ALTER TABLE public.minglora_platform_staff
     'owner','admin','moderator','reviewer',
     'super_administrator','finance_administrator','technical_administrator',
     'security_administrator','content_administrator','creator_manager',
-    'marketplace_manager','support_administrator','read_only_auditor'
+    'support_administrator','read_only_auditor'
   ));
 
 CREATE TABLE IF NOT EXISTS public.minglora_admin_role_definitions (
@@ -61,7 +61,6 @@ INSERT INTO public.minglora_admin_role_definitions(role_key,display_name,descrip
  ('security_administrator','Security Administrator','Security posture, access reviews and incident visibility.',true),
  ('content_administrator','Content Administrator','Content operations and moderation workflows.',true),
  ('creator_manager','Creator Manager','Creator support, verification and creator operations.',true),
- ('marketplace_manager','Marketplace Manager','Marketplace operations and seller workflows.',true),
  ('support_administrator','Support Administrator','Member support and limited member lookup.',true),
  ('read_only_auditor','Read-only Auditor','Read-only access to approved audit and operational reports.',true)
 ON CONFLICT (role_key) DO NOTHING;
@@ -87,8 +86,6 @@ INSERT INTO public.minglora_admin_permission_catalog(permission_key,display_name
  ('content:manage','Content management','Manage approved content workflows.','high'),
  ('creators:read','Creator operations view','View creator operational records.','medium'),
  ('creators:manage','Creator management','Manage approved creator workflows.','high'),
- ('marketplace:read','Marketplace operations view','View marketplace operational records.','medium'),
- ('marketplace:manage','Marketplace management','Manage approved marketplace workflows.','high'),
  ('audit:read','Audit history','Read administrator audit history.','high')
 ON CONFLICT (permission_key) DO NOTHING;
 
@@ -101,14 +98,12 @@ FROM (VALUES
  ('super_administrator','settings:manage'),('super_administrator','finance:read'),('super_administrator','finance:manage'),
  ('super_administrator','technical:read'),('super_administrator','technical:manage'),('super_administrator','security:read'),
  ('super_administrator','security:manage'),('super_administrator','content:read'),('super_administrator','content:manage'),
- ('super_administrator','creators:read'),('super_administrator','creators:manage'),('super_administrator','marketplace:read'),
- ('super_administrator','marketplace:manage'),('super_administrator','audit:read'),
+ ('super_administrator','creators:read'),('super_administrator','creators:manage'),('super_administrator','audit:read'),
  ('finance_administrator','finance:read'),('finance_administrator','finance:manage'),('finance_administrator','audit:read'),
  ('technical_administrator','technical:read'),('technical_administrator','technical:manage'),('technical_administrator','audit:read'),
  ('security_administrator','security:read'),('security_administrator','security:manage'),('security_administrator','audit:read'),
  ('content_administrator','content:read'),('content_administrator','content:manage'),('content_administrator','moderation:read'),('content_administrator','moderation:manage'),
  ('creator_manager','creators:read'),('creator_manager','creators:manage'),('creator_manager','verification:review'),('creator_manager','support:read'),
- ('marketplace_manager','marketplace:read'),('marketplace_manager','marketplace:manage'),('marketplace_manager','support:read'),
  ('support_administrator','support:read'),('support_administrator','support:manage'),('support_administrator','members:read'),
  ('read_only_auditor','platform:read'),('read_only_auditor','finance:read'),('read_only_auditor','security:read'),('read_only_auditor','technical:read'),('read_only_auditor','audit:read')
 ) AS mapping(role_key,permission_key)
@@ -219,6 +214,9 @@ BEGIN
   SELECT * INTO v_staff FROM public.minglora_platform_staff WHERE user_id=v_target_id;
 
   IF v_action='grant' THEN
+    IF v_staff.user_id IS NOT NULL AND v_staff.role='owner' THEN
+      RAISE EXCEPTION 'Existing owner staff assignments are protected from delegated-role changes.' USING ERRCODE='42501';
+    END IF;
     v_role := lower(btrim(coalesce(p_payload->>'role','')));
     IF v_role='super_administrator' THEN
       RAISE EXCEPTION 'Super Administrator is reserved and cannot be assigned while Creator Hub is the sole owner.' USING ERRCODE='42501';

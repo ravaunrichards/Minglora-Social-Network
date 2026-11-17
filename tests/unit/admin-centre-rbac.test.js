@@ -9,6 +9,7 @@ const server = read('../../src/server.js');
 const ui = read('../../public/admin-centre-rbac.js');
 const admin = read('../../public/admin-centre.js');
 const html = read('../../public/admin-centre.html');
+const docs = read('../../docs/ADMIN_RBAC_FOUNDATION.md');
 
 testRunner('RBAC migration preserves all existing staff assignments at installation', () => {
   assert.match(migration, /does not update, insert, deactivate, or promote any[\s\S]*existing minglora_platform_staff row/i);
@@ -53,4 +54,16 @@ testRunner('Admin Centre loads the owner-only delegated roles workspace', () => 
   assert.match(ui, /Protected sole owner/);
   assert.match(ui, /email-confirmed Minglora account/);
   assert.match(ui, /rbacAction:'revoke'/);
+});
+
+
+testRunner('delegated grants cannot demote any existing owner staff assignment', () => {
+  const grantBranch = migration.split("IF v_action='grant' THEN")[1]?.split("ELSIF v_action='revoke' THEN")[0] || '';
+  assert.match(grantBranch, /v_staff\.user_id IS NOT NULL AND v_staff\.role='owner'/);
+  assert.match(grantBranch, /Existing owner staff assignments are protected from delegated-role changes/);
+});
+
+testRunner('removed Marketplace does not appear in the delegated administrator catalogue', () => {
+  assert.doesNotMatch(migration, /marketplace/i);
+  assert.doesNotMatch(docs, /marketplace/i);
 });

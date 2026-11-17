@@ -14,7 +14,7 @@ This change introduces the first implementation slice for delegated administrato
 - This initial slice manages assignments and the canonical role catalogue. Existing application routes remain owner-restricted until each route is separately migrated to permission-scoped authorization.
 
 ## Roles
-Finance Administrator, Technical Administrator, Security Administrator, Content Administrator, Creator Manager, Marketplace Manager, Support Administrator and Read-only Auditor are assignable. Super Administrator is visible as a reserved system role but cannot be granted.
+Finance Administrator, Technical Administrator, Security Administrator, Content Administrator, Creator Manager, Support Administrator and Read-only Auditor are assignable. Super Administrator is visible as a reserved system role but cannot be granted.
 
 ## Deployment status
 Source only. The migration and Edge Function changes must pass CI and be reviewed before deployment. Do not apply the migration or deploy the Edge Function as part of this change. Existing production staff assignments and AI runtime safety settings remain unchanged.
