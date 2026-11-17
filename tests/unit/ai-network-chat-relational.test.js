@@ -53,8 +53,8 @@ test('Supabase-backed server persists relational chat while local JSON mode reta
   assert.match(server, /runAIBotChatCommand\('complete_request'/);
   assert.match(server, /runAIBotChatCommand\('fail_request'/);
   assert.match(server, /runAIBotChatCommand\('get_usage'/);
-  assert.match(server, /runAIProviderExecutionCommand\('resolve_execution'/);
-  assert.ok(server.indexOf("runAIProviderExecutionCommand('resolve_execution'") < server.indexOf("runAIBotChatCommand('begin_request'"));
+  assert.match(server, /runAIProviderExecutionCommand\(\s*'resolve_execution'/);
+  assert.ok(server.indexOf("runAIProviderExecutionCommand(") < server.indexOf("runAIBotChatCommand('begin_request'"));
   assert.match(server, /loadRelationalAIBotChatState/);
   assert.match(server, /await saveStore\(\)/);
 });

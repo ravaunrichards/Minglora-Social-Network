@@ -69,12 +69,12 @@ test('server resolves assignments before token reservation and routes only throu
   const start = server.indexOf("if (p === '/api/ai-network'");
   const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
   const route = server.slice(start, end);
-  assert.match(route, /runAIProviderExecutionCommand\('resolve_execution'/);
+  assert.match(route, /runAIProviderExecutionCommand\(\s*'resolve_execution'/);
   assert.match(route, /probeAssignedProvider\(/);
   assert.match(route, /generateAIProviderReply\(\{\s*assignment: providerAssignment/);
   assert.ok(route.includes("parts[2] === 'verify'"));
   assert.ok(route.includes("requestSupabaseState('ai_provider_execution_command'"));
-  assert.ok(route.indexOf("runAIProviderExecutionCommand('resolve_execution'") < route.indexOf("runAIBotChatCommand('begin_request'"));
+  assert.ok(route.indexOf("runAIProviderExecutionCommand(") < route.indexOf("runAIBotChatCommand('begin_request'"));
 });
 
 test('provider assignment UI exposes verify-and-activate without a browser credential field', () => {
