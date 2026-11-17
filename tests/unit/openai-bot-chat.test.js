@@ -119,8 +119,9 @@ test('owner-consented memory is provided as bounded untrusted context and long-t
     }
   });
   const memoryMessage = generationPayload.input.find(item =>
-    item.role === 'developer' && JSON.stringify(item).includes('Owner-consented AI memory summaries'));
+    item.role === 'user' && JSON.stringify(item).includes('Owner-consented AI memory summaries'));
   assert.ok(memoryMessage);
+  assert.equal(memoryMessage.role, 'user', 'stored memory must never be elevated to developer authority');
   const memoryText = memoryMessage.content[0].text;
   assert.match(memoryText, /prefers concise captions/);
   assert.doesNotMatch(memoryText, /works in Kingston/);
@@ -171,8 +172,9 @@ test('AI memory recall is capped and excludes credential-like summaries', async 
     }
   });
   const memoryMessage = generationPayload.input.find(item =>
-    item.role === 'developer' && JSON.stringify(item).includes('Owner-consented AI memory summaries'));
+    item.role === 'user' && JSON.stringify(item).includes('Owner-consented AI memory summaries'));
   assert.ok(memoryMessage);
+  assert.equal(memoryMessage.role, 'user', 'stored memory must never be elevated to developer authority');
   const serialized = memoryMessage.content[0].text;
   assert.doesNotMatch(serialized, /do-not-send-this-value/);
   const encoded = serialized.slice(serialized.indexOf('['));
