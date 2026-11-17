@@ -183,7 +183,7 @@ test('Full Screen has its own expand icon with no guest panels; Fluid Panel keep
   const iconMap=app.slice(app.indexOf('function liveLayoutIcon'),app.indexOf('function applyLiveScreenLayout'));
   assert.ok(iconMap.includes("fullscreen:'full-screen'"), "Full Screen maps to its own supplied preview");
   assert.ok(iconMap.includes("fluidPanel:'fluid-panel'"), "Fluid Panel maps to its own supplied preview");
-  assert.match(iconMap, /src='\/assets\/live-guest-layouts\/"\+reference\+"\.png'/);
+  assert.match(iconMap, /src='\/assets\/live-guest-layouts\/"\+reference\+"\.png\?v=20261117-live-room-access-previews-1/);
   assert.ok(iconMap.includes("class='live-layout-preview'"), "layout previews use the shared preview image renderer");
 });
 
@@ -196,4 +196,32 @@ test('Full Screen keeps the compact centered host stage and visible guest seats'
   assert.match(styles, /max-height:min\(78dvh,760px\)/);
   assert.match(styles, /aspect-ratio:4 \/ 5/);
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{[\s\S]*?width:100%[\s\S]*?height:100%/);
+});
+
+test('LIVE manager exposes every tool without a clipped horizontal shortcut strip',()=>{
+  const manager=tiktok.slice(tiktok.indexOf('/* LIVE room manager accessibility'));
+  assert.match(manager,/\.live-tools-shortcuts\{[\s\S]*?display:grid!important/);
+  assert.match(manager,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+  assert.match(manager,/overflow:visible!important/);
+  assert.match(manager,/\.live-tools-content\{[\s\S]*?overflow-x:auto!important[\s\S]*?overflow-y:auto!important/);
+  assert.match(manager,/#live-tools-drawer\{[\s\S]*?height:94dvh!important[\s\S]*?max-height:94dvh!important/);
+  assert.match(manager,/\.live-tools-shortcuts button\.live-tools-shortcut\{[\s\S]*?min-width:0!important/);
+});
+
+test('LIVE layout selector shows the real supplied crop previews at readable size',()=>{
+  const manager=tiktok.slice(tiktok.indexOf('/* LIVE room manager accessibility'));
+  assert.match(manager,/\.live-layout-options\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(manager,/\.live-layout-option \.live-layout-preview\{[\s\S]*?width:56px!important[\s\S]*?height:76px!important/);
+  assert.match(app,/src='\/assets\/live-guest-layouts\//);
+  assert.match(app,/loading='eager'/);
+});
+
+test('Side by Side preserves all ten supplied positions while Spotlight starts with the host in the wide tile',()=>{
+  assert.match(app,/activeLiveScreenLayout==='side-by-side'\)specs\.push\(\{key:'empty:side-by-side-extra',empty:true,seatNumber:10\}\)/);
+  assert.match(app,/activeLiveScreenLayout==='spotlight'&&spec\.isHost\?" is-spotlight":""/);
+  const contract=tiktok.slice(tiktok.indexOf('/* FINAL NINE GUEST LAYOUTS'));
+  assert.match(contract,/SIDE BY SIDE[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(contract,/SPOTLIGHT[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(contract,/roundtable-1[\s\S]*?grid-template-rows:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(contract,/roundtable-2[\s\S]*?grid-template-rows:repeat\(4,minmax\(0,1fr\)\)/);
 });

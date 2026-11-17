@@ -1329,7 +1329,7 @@ function liveLayoutIcon(name){
     roundtable2:'roundtable-2'
   };
   const reference=references[name]||'full-screen';
-  return "<img class='live-layout-preview' src='/assets/live-guest-layouts/"+reference+".png' alt='' loading='lazy' decoding='async'>";
+  return "<img class='live-layout-preview' src='/assets/live-guest-layouts/"+reference+".png?v=20261117-live-room-access-previews-1' alt='"+esc(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.icon===name)?.label||'LIVE guest layout')+" preview' loading='eager' decoding='async'>";
 }
 function applyLiveScreenLayout(value){
   activeLiveScreenLayout=normalizeLiveScreenLayout(value);
@@ -2030,6 +2030,8 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     person,isHost:false
   }));
   if(!fullScreenHostOnly)while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
+  // Side by Side has ten positions in the supplied crop; keep one empty invitation seat at the current 9-person room capacity.
+  if(activeLiveScreenLayout==='side-by-side')specs.push({key:'empty:side-by-side-extra',empty:true,seatNumber:10});
   const previous=new Map(Array.from(root.children).filter(node=>node.dataset?.seatKey).map(node=>[node.dataset.seatKey,node]));
   const header=document.createElement("div");
   header.className="live-guest-layout-heading";
@@ -2053,7 +2055,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||"").join("").toUpperCase()||"M";
     const status=speaking?"Speaking":connected?(muted?"Microphone muted":"Microphone connected"):spec.isHost?"Waiting for host":"Connecting to stage";
     const hasVideo=Boolean(media.querySelector(".live-video-element"));
-    seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
+    seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(activeLiveScreenLayout==='spotlight'&&spec.isHost?" is-spotlight":"")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
     seat.dataset.seatKey=spec.key;seat.dataset.participant=identity;
     seat.setAttribute("aria-label",name+" · "+(spec.isHost?"Host":"Guest speaker")+" · "+status);
     seat.innerHTML="<span class='live-guest-seat-tag'>"+(spec.isHost?"HOST":"GUEST")+"</span>"+

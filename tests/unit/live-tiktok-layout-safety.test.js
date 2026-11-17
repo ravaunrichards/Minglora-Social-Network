@@ -43,10 +43,16 @@ test('Fluid Panel has one dominant host tile and a vertical guest rail', () => {
   assert.ok(fix.includes('grid-column:2!important'));
 });
 
-test('Fluid and Fixed Grid use equal tiles and compact two-column phone grids', () => {
+test('Fluid Grid keeps its tall-left/two-right crop and Fixed Grid stays 3x3 on phones', () => {
+  assert.ok(fix.includes('data-live-layout="fluid-grid"]{'));
+  assert.ok(fix.includes('grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important'));
+  assert.ok(fix.includes('grid-template-rows:repeat(2,minmax(0,1fr))!important'));
+  assert.ok(fix.includes('data-live-layout="fixed-grid"]{'));
   assert.ok(fix.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
-  assert.ok(fix.includes('grid-template-rows:26px repeat(3,minmax(0,1fr))!important'));
+  assert.ok(fix.includes('grid-template-rows:repeat(3,minmax(0,1fr))!important'));
   const phoneLayouts = fix.slice(fix.lastIndexOf('@media(max-width:900px)'));
-  assert.ok(phoneLayouts.includes('grid-template-columns:repeat(2,minmax(0,1fr))!important'));
-  assert.ok(phoneLayouts.includes('grid-template-rows:24px repeat(5,minmax(0,1fr))!important'));
+  assert.ok(phoneLayouts.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(phoneLayouts.includes('grid-template-rows:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(phoneLayouts.includes('grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important'));
+  assert.ok(phoneLayouts.includes('grid-template-rows:repeat(2,minmax(0,1fr))!important'));
 });
