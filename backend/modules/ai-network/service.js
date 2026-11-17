@@ -374,6 +374,23 @@ export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(budgetRequestId))) {
     throw fail(400, 'A valid Creator Studio budget request ID is required.');
   }
+  if (job.providerBudgetLedgeredAt === true && Number(job.providerUsage?.total_tokens) > 0) {
+    const history = Array.isArray(job.providerUsageHistory) ? job.providerUsageHistory : [];
+    history.push({
+      provider: job.provider || 'openai',
+      model: job.providerModel || null,
+      responseId: job.providerResponseId || null,
+      requestId: job.providerRequestId || null,
+      usage: { ...job.providerUsage },
+      completedAt: job.providerCompletedAt || null
+    });
+    job.providerUsageHistory = history.slice(-50);
+    job.providerUsage = null;
+    job.provider = null;
+    job.providerModel = null;
+    job.providerResponseId = null;
+    job.providerRequestId = null;
+  }
   job.providerBudgetRequestId = budgetRequestId == null ? null : String(budgetRequestId).toLowerCase();
   job.providerBudgetLedgeredAt = false;
   job.providerExecution = 'running';
@@ -770,7 +787,10 @@ export function getAIPerformanceSummary(db, ownerId) {
   const runs = ownerRows(db.aiBotRuns, ownerId).filter(run => botIds.has(run.botId));
   const tokenUse = runs.reduce((sum, run) => sum + Math.max(0, Number(run.totalTokens) || 0), 0);
   const creatorDraftTokenUse = ownerRows(db.aiBotCreatorJobs, ownerId)
-    .reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0);
+    .reduce((sum, job) => sum +
+      (Array.isArray(job.providerUsageHistory) ? job.providerUsageHistory : [])
+        .reduce((historyTotal, attempt) => historyTotal + Math.max(0, Number(attempt.usage?.total_tokens) || 0), 0) +
+      Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0);
   const botChatTokenUse = ownerRows(db.aiBotUsageEvents, ownerId)
     .filter(event => event.operation === 'bot_chat')
     .reduce((sum, event) => sum + Math.max(0, Number(event.usage?.total_tokens) || 0), 0);
