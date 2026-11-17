@@ -1,0 +1,265 @@
+import test, { before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import pg from 'pg';
+
+const { Pool } = pg;
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const databaseUrl = process.env.AI_NETWORK_TEST_DATABASE_URL;
+let pool;
+
+async function installFixture() {
+  await pool.query(`
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    CREATE ROLE anon NOLOGIN;
+    CREATE ROLE authenticated NOLOGIN;
+    CREATE ROLE service_role NOLOGIN BYPASSRLS;
+    GRANT service_role TO postgres;
+
+    CREATE TABLE public.profiles (id uuid PRIMARY KEY);
+    CREATE SCHEMA ai_network;
+
+    CREATE TABLE ai_network.ai_identities (
+      identity_id uuid PRIMARY KEY,
+      owner_user_id uuid NOT NULL REFERENCES public.profiles(id),
+      created_by_user_id uuid REFERENCES public.profiles(id),
+      status text NOT NULL,
+      enabled boolean NOT NULL DEFAULT true,
+      supervision_level text NOT NULL
+    );
+
+    CREATE TABLE ai_network.ai_organizations (
+      organization_id uuid PRIMARY KEY,
+      owner_user_id uuid NOT NULL REFERENCES public.profiles(id),
+      status text NOT NULL
+    );
+
+    CREATE TABLE ai_network.ai_provider_accounts (
+      provider_account_id uuid PRIMARY KEY,
+      owner_user_id uuid NOT NULL REFERENCES public.profiles(id),
+      status text NOT NULL,
+      health_status text NOT NULL
+    );
+
+    CREATE TABLE ai_network.ai_provider_assignments (
+      identity_id uuid NOT NULL REFERENCES ai_network.ai_identities(identity_id),
+      provider_account_id uuid NOT NULL REFERENCES ai_network.ai_provider_accounts(provider_account_id),
+      assignment_status text NOT NULL,
+      provider_health_status text NOT NULL,
+      PRIMARY KEY(identity_id,provider_account_id)
+    );
+
+    GRANT USAGE ON SCHEMA public, ai_network TO service_role;
+    GRANT SELECT ON public.profiles TO service_role;
+    GRANT SELECT, INSERT, UPDATE ON ai_network.ai_identities, ai_network.ai_organizations,
+      ai_network.ai_provider_accounts, ai_network.ai_provider_assignments TO service_role;
+  `);
+
+  await pool.query(read('supabase/migrations/20261114022051_minglora_ai_durable_task_queue_and_approvals.sql'));
+  await pool.query(read('supabase/migrations/20261117130000_minglora_ai_worker_principals.sql'));
+}
+
+async function asService(work) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE service_role');
+    const result = await work(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function admin(action, actorId, payload = {}) {
+  return asService(async client => {
+    const { rows } = await client.query(
+      'SELECT public.minglora_ai_worker_admin_command($1,$2,$3::jsonb) AS result',
+      [action,actorId,JSON.stringify(payload)]
+    );
+    return rows[0].result;
+  });
+}
+
+async function worker(action, credentialHash, payload = {}) {
+  return asService(async client => {
+    const { rows } = await client.query(
+      'SELECT public.minglora_ai_worker_runtime_command($1,$2,$3::jsonb) AS result',
+      [action,credentialHash,JSON.stringify(payload)]
+    );
+    return rows[0].result;
+  });
+}
+
+async function addIdentity(ownerId) {
+  const identityId = crypto.randomUUID();
+  const accountId = crypto.randomUUID();
+  await asService(async client => {
+    await client.query(
+      'INSERT INTO ai_network.ai_identities(identity_id,owner_user_id,created_by_user_id,status,enabled,supervision_level) VALUES ($1,$2,$2,$3,true,$4)',
+      [identityId,ownerId,'active','hybrid_autonomy']
+    );
+    await client.query(
+      'INSERT INTO ai_network.ai_provider_accounts(provider_account_id,owner_user_id,status,health_status) VALUES ($1,$2,$3,$4)',
+      [accountId,ownerId,'configured','healthy']
+    );
+    await client.query(
+      'INSERT INTO ai_network.ai_provider_assignments(identity_id,provider_account_id,assignment_status,provider_health_status) VALUES ($1,$2,$3,$4)',
+      [identityId,accountId,'active','healthy']
+    );
+  });
+  return identityId;
+}
+
+async function addTask(ownerId, identityId, title, priority) {
+  const taskId = crypto.randomUUID();
+  await asService(client => client.query(
+    `INSERT INTO ai_network.ai_task_queue(
+      task_id,owner_user_id,identity_id,task_title,task_type,action_class,task_payload,
+      autonomy_mode,requires_approval,status,priority,scheduled_for,max_attempts,
+      token_budget,cost_limit_usd,idempotency_key,created_by_user_id
+    ) VALUES ($1,$2,$3,$4,'content.prepare','content','{}'::jsonb,
+      'hybrid_autonomy',false,'queued',$5,now(),3,0,0,$6,$2)`,
+    [taskId,ownerId,identityId,title,priority,'worker-test-' + taskId]
+  ));
+  return taskId;
+}
+
+function credential() {
+  const raw = 'mngw_' + crypto.randomBytes(32).toString('base64url');
+  return { raw, sha256: crypto.createHash('sha256').update(raw,'utf8').digest('hex') };
+}
+
+function expiry(hours = 8) {
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
+before(async () => {
+  assert.ok(databaseUrl, 'AI_NETWORK_TEST_DATABASE_URL must point to the disposable CI PostgreSQL service.');
+  pool = new Pool({ connectionString: databaseUrl, max: 8 });
+  await installFixture();
+});
+
+after(async () => {
+  if (pool) await pool.end();
+});
+
+test('worker credentials are one-way digests, scoped to granted identities and blocked by the global pause', async () => {
+  const ownerId = crypto.randomUUID();
+  await pool.query('INSERT INTO public.profiles(id) VALUES ($1)',[ownerId]);
+  const grantedIdentity = await addIdentity(ownerId);
+  const ungrantedIdentity = await addIdentity(ownerId);
+  const ungrantedTaskId = await addTask(ownerId,ungrantedIdentity,'Unassigned task',1);
+  const firstTaskId = await addTask(ownerId,grantedIdentity,'Granted task one',10);
+  const secondTaskId = await addTask(ownerId,grantedIdentity,'Granted task two',20);
+  const firstCredential = credential();
+
+  const created = await admin('create_worker',ownerId,{
+    worker_name:'CI isolated worker',
+    credential_sha256:firstCredential.sha256,
+    credential_expires_at:expiry(),
+    identity_ids:[grantedIdentity],
+    allowed_action_classes:['read_only','content'],
+    max_concurrent_tasks:1
+  });
+  const workerId = created.worker.worker_id;
+  assert.ok(workerId);
+  assert.equal(created.worker.status,'active');
+  assert.deepEqual(created.worker.identity_ids,[grantedIdentity]);
+  const stored = await pool.query(
+    'SELECT credential_sha256,status FROM ai_network.ai_worker_principals WHERE worker_id=$1',
+    [workerId]
+  );
+  assert.equal(stored.rows[0].credential_sha256,firstCredential.sha256);
+  assert.notEqual(stored.rows[0].credential_sha256,firstCredential.raw);
+
+  const paused = await worker('claim_next_task',firstCredential.sha256);
+  assert.equal(paused.claimed,false);
+  assert.equal(paused.reason,'runtime_paused_or_disabled');
+
+  await asService(client => client.query(
+    `UPDATE ai_network.ai_task_runtime_controls
+        SET global_paused=false,execution_enabled=true,max_concurrent_workers=4,lease_seconds=120
+      WHERE control_key='primary'`
+  ));
+
+  const claimed = await worker('claim_next_task',firstCredential.sha256);
+  assert.equal(claimed.claimed,true);
+  assert.equal(claimed.task_id,firstTaskId);
+  assert.equal(claimed.identity_id,grantedIdentity);
+  assert.notEqual(claimed.task_id,ungrantedTaskId);
+
+  const concurrent = await worker('claim_next_task',firstCredential.sha256);
+  assert.equal(concurrent.claimed,false);
+  assert.equal(concurrent.reason,'worker_concurrency_limit_reached');
+
+  const heartbeat = await worker('heartbeat_task',firstCredential.sha256,{
+    task_id:claimed.task_id,lease_token:claimed.lease_token
+  });
+  assert.equal(heartbeat.renewed,true);
+
+  const completed = await worker('complete_task',firstCredential.sha256,{
+    task_id:claimed.task_id,lease_token:claimed.lease_token,
+    task_result:{outcome:'completed',source:'isolated-postgres-test'}
+  });
+  assert.equal(completed.task.status,'succeeded');
+
+  const next = await worker('claim_next_task',firstCredential.sha256);
+  assert.equal(next.claimed,true);
+  assert.equal(next.task_id,secondTaskId);
+  const failed = await worker('fail_task',firstCredential.sha256,{
+    task_id:next.task_id,lease_token:next.lease_token,failure_reason:'Retryable test failure'
+  });
+  assert.equal(failed.task.status,'queued');
+
+  const noGrantedTask = await worker('claim_next_task',firstCredential.sha256);
+  assert.equal(noGrantedTask.claimed,false);
+  assert.equal(noGrantedTask.reason,'no_due_task_with_granted_identity_and_healthy_provider');
+
+  const rotatedCredential = credential();
+  const rotated = await admin('rotate_worker',ownerId,{
+    worker_id:workerId,credential_sha256:rotatedCredential.sha256,credential_expires_at:expiry(4)
+  });
+  assert.equal(rotated.worker.credential_version,2);
+  await assert.rejects(
+    worker('claim_next_task',firstCredential.sha256),
+    error => error.code === '42501'
+  );
+
+  const thirdTaskId = await addTask(ownerId,grantedIdentity,'Task after rotation',30);
+  const afterRotation = await worker('claim_next_task',rotatedCredential.sha256);
+  assert.equal(afterRotation.claimed,true);
+  assert.equal(afterRotation.task_id,thirdTaskId);
+
+  const revoked = await admin('revoke_worker',ownerId,{
+    worker_id:workerId,reason:'CI revoke assertion'
+  });
+  assert.equal(revoked.worker.status,'revoked');
+  const released = await pool.query(
+    'SELECT status,worker_id,lease_token FROM ai_network.ai_task_queue WHERE task_id=$1',
+    [thirdTaskId]
+  );
+  assert.equal(released.rows[0].status,'queued');
+  assert.equal(released.rows[0].worker_id,null);
+  assert.equal(released.rows[0].lease_token,null);
+  await assert.rejects(
+    worker('claim_next_task',rotatedCredential.sha256),
+    error => error.code === '42501'
+  );
+
+  const eventTypes = await pool.query(
+    'SELECT event_type FROM ai_network.ai_worker_events WHERE worker_id=$1 ORDER BY occurred_at',
+    [workerId]
+  );
+  assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_created'));
+  assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_credential_rotated'));
+  assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_revoked'));
+});
