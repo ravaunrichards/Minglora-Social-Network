@@ -1023,3 +1023,84 @@ body:has(#live-player-shell) .live-layout-option>span{
     grid-auto-flow:row!important;
   }
 }
+
+
+/* LIVE stage-safe multi-guest geometry: keep the title clear of the host seat. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-layout-heading{
+  position:relative!important;inset:auto!important;grid-column:1/-1!important;grid-row:1!important;
+  z-index:3!important;align-self:stretch!important;justify-self:stretch!important;
+  display:flex!important;align-items:center!important;min-width:0!important;width:auto!important;
+  min-height:22px!important;max-height:22px!important;height:22px!important;
+  margin:0!important;padding:2px 6px!important;box-sizing:border-box!important;
+  overflow:hidden!important;transform:none!important;pointer-events:none!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]{
+  grid-template-rows:22px minmax(0,1fr)!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:2!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
+  position:absolute!important;z-index:10!important;top:auto!important;left:auto!important;
+  right:clamp(8px,1vw,12px)!important;
+  width:clamp(48px,15vw,108px)!important;height:clamp(44px,15vw,108px)!important;
+  min-width:0!important;min-height:0!important;
+  max-width:calc(100% - 16px)!important;max-height:calc(100% - 16px)!important;
+  box-sizing:border-box!important;flex:0 0 auto!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
+  bottom:clamp(8px,1vw,12px)!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+  bottom:calc(clamp(8px,1vw,12px) + clamp(44px,15vw,108px) + clamp(8px,1vw,12px))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{
+  grid-template-rows:22px repeat(2,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:2/4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:2!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:2!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{
+  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]{
+  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:2/5!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:2!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:2!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(5){grid-column:2!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]{
+  grid-template-rows:22px minmax(0,1.55fr) repeat(2,minmax(0,.72fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat.is-host{grid-column:1/3!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:3/5!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(n+4){grid-column:span 1!important;grid-row:auto!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]{
+  grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.72fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-spotlight{grid-column:1/-1!important;grid-row:2!important;z-index:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]{
+  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:2/6!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:3!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(6){grid-column:3!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(8){grid-column:3!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:5!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(10){grid-column:3!important;grid-row:5!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]{
+  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4!important;grid-row:2/6!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){grid-column:1!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){grid-column:4!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(5){grid-column:1!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(6){grid-column:4!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(7){grid-column:1!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(8){grid-column:4!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(9){grid-column:1!important;grid-row:5!important}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(10){grid-column:4!important;grid-row:5!important}
