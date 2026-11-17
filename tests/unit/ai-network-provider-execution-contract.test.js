@@ -22,6 +22,8 @@ test('provider execution health ledger is private, append-only from the server a
   assert.ok(migration.includes('current_user <> \'service_role\''));
   assert.ok(migration.includes('revoke all on function public.minglora_ai_provider_execution_command'));
   assert.ok(migration.includes('grant execute on function public.minglora_ai_provider_execution_command(text,uuid,jsonb) to service_role'));
+  assert.ok(migration.includes('v_account_type <> \'managed\''));
+  assert.ok(migration.includes('Only Minglora-managed provider accounts can use the private server-side OpenAI credential'));
 });
 
 test('only a successful moderated inference smoke test can activate an assignment',()=>{
@@ -57,6 +59,7 @@ test('administrator execution verification uses persisted model metadata, a fres
     "parts[2] === 'verify'",
     "runAIProviderCommand('list_provider_assignments')",
     "runAIProviderCommand('list_provider_models')",
+    "account.account_type !== 'managed'",
     "probeOpenAIProvider({ model: model.model_identifier })",
     "verifyOpenAIModelExecution({ model: model.model_identifier",
     "runAIProviderExecutionCommand('verify_assignment'",

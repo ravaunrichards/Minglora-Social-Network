@@ -29,6 +29,9 @@ export function resolveAssignedProviderRoute(identityId, assignmentRows, modelCa
   if (!providerName || providerName !== String(account.provider_name || '').trim().toLowerCase()) {
     return { ok: false, reason: 'provider_account_mismatch' };
   }
+  if (account.account_type !== 'managed') {
+    return { ok: false, reason: 'provider_account_not_managed' };
+  }
   if (assignment.provider_health_status !== 'healthy' ||
       account.status !== 'configured' || account.health_status !== 'healthy') {
     return { ok: false, reason: 'provider_not_healthy' };

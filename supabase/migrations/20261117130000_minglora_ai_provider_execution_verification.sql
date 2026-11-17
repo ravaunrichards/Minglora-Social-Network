@@ -56,6 +56,7 @@ declare
   v_note text := '';
   v_assignment_status text;
   v_account_status text;
+  v_account_type text;
 begin
   if current_user <> 'service_role' then
     raise exception using errcode = '42501', message = 'AI provider execution verification is restricted to the Minglora server runtime.';
@@ -113,9 +114,9 @@ begin
   end if;
 
   select a.identity_id,a.provider_account_id,a.model_id,a.assignment_status,
-         m.provider_name,m.model_identifier,pa.provider_name,pa.status
+         m.provider_name,m.model_identifier,pa.provider_name,pa.status,pa.account_type
     into v_identity_id,v_provider_account_id,v_model_id,v_assignment_status,
-         v_provider_name,v_model_identifier,v_account_provider_name,v_account_status
+         v_provider_name,v_model_identifier,v_account_provider_name,v_account_status,v_account_type
   from ai_network.ai_provider_assignments a
   join ai_network.ai_identities i on i.identity_id=a.identity_id
   join ai_network.ai_provider_models m on m.model_id=a.model_id
@@ -135,6 +136,9 @@ begin
   end if;
   if v_provider_name <> 'openai' then
     raise exception using errcode = '0A000', message = 'This Minglora execution adapter currently supports OpenAI text models only.';
+  end if;
+  if v_account_type <> 'managed' then
+    raise exception using errcode = '42501', message = 'Only Minglora-managed provider accounts can use the private server-side OpenAI credential. User-managed provider accounts require a supported secrets-manager integration.';
   end if;
   if not exists (
     select 1

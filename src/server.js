@@ -2487,6 +2487,9 @@ async function route(req, res) {
           String(item?.model_id || '') === String(assignment.model_id || '')
         );
         const account = row.provider_account || {};
+        if (account.account_type !== 'managed') {
+          throw Object.assign(new Error('Only Minglora-managed provider accounts can use the private server-side OpenAI credential. User-managed accounts require a supported secrets-manager integration.'), { status: 409 });
+        }
         if (!model || !model.is_active || model.text_capability !== true ||
             !Array.isArray(assignment.assigned_capabilities) || !assignment.assigned_capabilities.includes('text')) {
           throw Object.assign(new Error('This assignment does not reference an active text-capable model with text permission.'), { status: 409 });
@@ -2929,6 +2932,7 @@ async function route(req, res) {
               model_not_active: 'The AI identity assignment references a model that is not active in the provider catalogue.',
               provider_account_mismatch: 'The provider account does not match the assigned model.',
               provider_not_healthy: 'The assigned provider account has not passed a recent execution verification.',
+              provider_account_not_managed: 'This assignment must use a Minglora-managed provider account. User-managed credentials need an approved secrets-manager integration.',
               text_capability_not_assigned: 'Text generation is not enabled for this AI identity assignment.',
               provider_adapter_not_available: 'The selected provider adapter is not implemented for live model execution.',
               model_identifier_invalid: 'The selected model identifier is invalid.'

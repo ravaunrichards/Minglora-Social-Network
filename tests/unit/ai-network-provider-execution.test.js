@@ -17,7 +17,7 @@ function fixture(overrides={}) {
         model_id:modelId,fallback_model_id:fallbackId,routing_priority:10,
         assigned_capabilities:['text'],assignment_status:'active',provider_health_status:'healthy'
       },
-      provider_account:{provider_account_id:accountId,provider_name:'openai',status:'configured',health_status:'healthy'}
+      provider_account:{provider_account_id:accountId,provider_name:'openai',account_type:'managed',status:'configured',health_status:'healthy'}
     }],
     models:[
       {model_id:modelId,provider_name:'openai',model_identifier:'gpt-test-primary',model_name:'Primary',text_capability:true,is_active:true},
@@ -39,6 +39,12 @@ test('resolves an active, healthy, text-capable persisted OpenAI assignment',()=
 test('does not resolve another AI identity assignment',()=>{
   const f=fixture();
   assert.equal(resolveAssignedProviderRoute('66666666-6666-4666-8666-666666666666',f.rows,f.models).reason,'active_assignment_missing');
+});
+
+test('rejects user-managed provider account references for platform server credentials',()=>{
+  const f=fixture();
+  f.rows[0].provider_account.account_type='user';
+  assert.equal(resolveAssignedProviderRoute(id,f.rows,f.models).reason,'provider_account_not_managed');
 });
 
 test('requires active assignment and provider plus account health',()=>{
