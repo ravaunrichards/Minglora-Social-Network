@@ -1,4 +1,4 @@
-name: Minglora seven-plus-two layout visual QA
+name: Minglora nine complete guest-layout visual QA
 
 on:
   pull_request:
@@ -10,10 +10,10 @@ permissions:
 
 jobs:
   layout-matrix:
-    name: LIVE and MeetWave layout independence matrix
+    name: LIVE and MeetWave nine-layout reference matrix
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out repository
+      - name: Check out Minglora Social Network
         uses: actions/checkout@v7
       - name: Set up Node.js 24
         uses: actions/setup-node@v7
@@ -26,13 +26,13 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check visual test syntax
         run: node --check tests/e2e/layout-separation-visual.mjs
-      - name: Render every screen and guest-box combination
+      - name: Compare all nine guest layouts on mobile, tablet and desktop
         run: node tests/e2e/layout-separation-visual.mjs
-      - name: Upload layout screenshots
+      - name: Upload JPG, crop PNG and rendered layout comparisons
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: minglora-seven-plus-two-layout-visual-evidence
-          path: artifacts/layout-separation-visual/
+          name: minglora-nine-complete-guest-layout-visual-evidence
+          path: artifacts/nine-guest-layout-visual/
           if-no-files-found: warn
           retention-days: 7
