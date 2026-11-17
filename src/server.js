@@ -51,7 +51,7 @@ import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_J
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
-import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { probeAssignedProvider, generateAIProviderReply } from '../backend/modules/ai-network/provider-execution.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2122,6 +2122,30 @@ async function route(req, res) {
         }
       };
 
+      const runAIProviderExecutionCommand = async (aiAction, payload = {}, { requireModerator = true } = {}) => {
+        if (requireModerator && !isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator may verify or activate AI provider assignments.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI provider execution requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_provider_execution_command', {
+            actorUserId: user.id, aiAction, payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI provider execution is unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI provider execution command|function .*minglora_ai_provider_execution_command.*does not exist|could not find the function|schema cache|provider execution migration/i.test(message)) {
+            throw Object.assign(new Error('The Minglora provider execution migration and private runtime gateway must be deployed before this operation is available. No provider assignment was activated.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const runAIHRCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2530,6 +2554,47 @@ async function route(req, res) {
       }
 
       if (parts[0] === 'provider-assignments' && parts.length === 3 &&
+          parts[2] === 'verify' && method === 'POST') {
+        const assignmentId = parts[1];
+        if (!aiIdentityIdPattern.test(assignmentId)) {
+          throw Object.assign(new Error('A valid provider assignment ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 2000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length) {
+          throw Object.assign(new Error('Provider verification does not accept credentials or client-supplied model overrides.'), { status: 400 });
+        }
+        const candidate = await runAIProviderExecutionCommand('get_assignment_for_verification', {
+          assignment_id: assignmentId
+        });
+        const health = await probeAssignedProvider({
+          providerName: candidate?.provider_name,
+          modelIdentifier: candidate?.model_identifier,
+          env: process.env
+        });
+        if (!health.connected) {
+          await runAIProviderExecutionCommand('record_probe_result', {
+            assignment_id: assignmentId,
+            outcome: 'unavailable',
+            probe_method: 'model_retrieval',
+            http_status: health.httpStatus,
+            note: health.note
+          });
+          return json(res, 409, { verified: false, health, assignment: { assignment_id: assignmentId, status: 'inactive' } });
+        }
+        const activated = await runAIProviderExecutionCommand('activate_verified_assignment', {
+          assignment_id: assignmentId,
+          provider_name: candidate.provider_name,
+          model_identifier: candidate.model_identifier,
+          probe_status: health.status,
+          probe_method: 'model_retrieval',
+          checked_at: health.checkedAt,
+          http_status: health.httpStatus,
+          note: health.note
+        });
+        return json(res, 200, { verified: true, health, assignment: activated });
+      }
+
+      if (parts[0] === 'provider-assignments' && parts.length === 3 &&
           parts[2] === 'status' && method === 'PATCH') {
         const assignmentId = parts[1];
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assignmentId)) {
@@ -2798,6 +2863,14 @@ async function route(req, res) {
           if (String(verifiedIdentity?.identity?.identity_id || '') !== chatBase.bot.identityId) {
             throw Object.assign(new Error('The bot’s relational Minglora AI identity could not be verified.'), { status: 409 });
           }
+          const providerAssignment = await runAIProviderExecutionCommand(
+            'resolve_execution',
+            { identity_id: chatBase.bot.identityId, capability: 'text' },
+            { requireModerator: false }
+          );
+          if (String(providerAssignment?.identity_id || '') !== chatBase.bot.identityId) {
+            throw Object.assign(new Error('Minglora could not confirm an active provider assignment for this AI identity.'), { status: 409 });
+          }
           const chatState = relationalPersistence
             ? await loadRelationalAIBotChatState(chatBase, input.conversationId || null)
             : chatBase;
@@ -2852,17 +2925,15 @@ async function route(req, res) {
           }
 
           try {
-            const currentProviderStatus = getAIProviderStatus();
-            if (!currentProviderStatus.botChatAvailable) {
-              throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'), { status: 503 });
-            }
-            const providerHealth = await probeOpenAIProvider();
-            if (!providerHealth.connected) {
-              throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
-            }
-            const generated = await generateOpenAIBotReply({
-              bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
-              history, memoryContext, env: process.env, maxOutputTokens: allowedOutputTokens
+            const generated = await generateAIProviderReply({
+              assignment: providerAssignment,
+              bot: chatBase.bot,
+              identity: verifiedIdentity.identity,
+              message: input.message,
+              history,
+              memoryContext,
+              env: process.env,
+              maxOutputTokens: allowedOutputTokens
             });
             let saved;
             if (relationalPersistence) {
