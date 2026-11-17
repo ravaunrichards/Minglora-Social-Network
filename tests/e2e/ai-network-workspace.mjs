@@ -522,7 +522,7 @@ try {
   await createForm.locator('[name="personalityDescription"]').fill('Warm, curious and supportive AI personality.');
   await createForm.locator('[name="personalityTraits"]').fill('empathetic, curious, patient');
   await createForm.locator('[name="communicationStyle"]').fill('warm and clear');
-  await createForm.locator('[name="education"]').fill('Bachelor of Education\\nLanguage-learning specialization');
+  await createForm.locator('[name="education"]').fill('Bachelor of Education\nLanguage-learning specialization');
   await createForm.locator('[name="qualifications"]').fill('BA Education, TESOL');
   await createForm.locator('[name="voicePreferences"]').fill('{"voice":"neutral","pace":"measured"}');
   await createForm.locator('[name="profileVisibility"]').selectOption('public');
