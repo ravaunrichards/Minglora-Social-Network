@@ -104,6 +104,7 @@ test('legacy Creator Studio usage excludes generations already recorded in the r
   assert.equal(retried.providerBudgetLedgeredAt, false);
   assert.equal(retried.providerUsage, null);
   assert.equal(retried.providerUsageHistory[0].usage.total_tokens, 60);
+  assert.equal(retried.providerUsageHistory[0].budgetLedgeredAt, true);
   assert.equal(getAICreatorDailyUsage(db, 'owner-1', { now }).tokensUsed, 60,
     'a previously ledgered retry must not be counted again as legacy JSON usage');
 
