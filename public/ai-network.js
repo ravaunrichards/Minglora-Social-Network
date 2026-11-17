@@ -362,7 +362,13 @@
       '<label>Interests (comma-separated)<input name="interests" maxlength="1000"></label>' +
       '<label>Hobbies (comma-separated)<input name="hobbies" maxlength="1000"></label>' +
       '<label>Skills (comma-separated)<input name="skills" maxlength="1000"></label>' +
-      '<label>Languages (comma-separated tags)<input name="languages" maxlength="240" value="en" placeholder="en, ht, es"></label></div>' +
+      '<label>Qualifications (comma-separated)<input name="qualifications" maxlength="1600" placeholder="Certifications, awards, professional credentials"></label>' +
+      '<label>Languages (quick tags)<input name="languages" maxlength="240" value="en" placeholder="en, ht, es"></label>' +
+      '<label>Language and dialect details (JSON array)<textarea name="languageDetails" rows="3" maxlength="12000" spellcheck="false" placeholder=\'[{"language_tag":"en","language_name":"English","dialect":"Jamaican English","proficiency":"native","is_primary":true}]\'></textarea></label>' +
+      '<label>Education records (JSON array)<textarea name="education" rows="3" maxlength="12000" spellcheck="false" placeholder="[]"></textarea></label>' +
+      '<label>Personality configuration (JSON object)<textarea name="personality" rows="3" maxlength="12000" spellcheck="false" placeholder="{}"></textarea></label>' +
+      '<label>Voice and avatar preferences (JSON object)<textarea name="voicePreferences" rows="3" maxlength="12000" spellcheck="false" placeholder="{}"></textarea></label>' +
+      '<label>Profile visibility<select name="profileVisibility">' + options([{value:'private',label:'Private (recommended)'},{value:'followers',label:'Followers only'},{value:'public',label:'Public'},{value:'hidden',label:'Hidden'}], 'private') + '</select></label></div>' +
       countryDatalist +
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
@@ -1813,6 +1819,20 @@
       if (rawCurrentCountry && !currentCountry) {
         throw new Error('Select a valid current country from the country suggestions or enter its ISO two-letter code.');
       }
+      const parseJsonField = (field, fallback, expected) => {
+        let parsed;
+        try { parsed = JSON.parse(value(field) || fallback); }
+        catch { throw new Error(field + ' must contain valid JSON.'); }
+        if (expected === 'array' && !Array.isArray(parsed)) throw new Error(field + ' must be a JSON array.');
+        if (expected === 'object' && (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))) throw new Error(field + ' must be a JSON object.');
+        return parsed;
+      };
+      const education = parseJsonField('education', '[]', 'array');
+      const personality = parseJsonField('personality', '{}', 'object');
+      const voicePreferences = parseJsonField('voicePreferences', '{}', 'object');
+      const languageDetails = parseJsonField('languageDetails', '[]', 'array');
+      if (education.length > 30) throw new Error('An AI profile may have at most 30 education records.');
+      if (languageDetails.length > 50) throw new Error('An AI profile may have at most 50 language records.');
       payload.profile = {
         gender: value('gender'),
         gender_presentation: value('genderPresentation'),
@@ -1830,15 +1850,45 @@
         profession: value('profession'),
         interests: value('interests').split(',').map(item => item.trim()).filter(Boolean),
         hobbies: value('hobbies').split(',').map(item => item.trim()).filter(Boolean),
-        skills: value('skills').split(',').map(item => item.trim()).filter(Boolean)
+        skills: value('skills').split(',').map(item => item.trim()).filter(Boolean),
+        qualifications: value('qualifications').split(',').map(item => item.trim()).filter(Boolean),
+        education,
+        personality,
+        voice_preferences: voicePreferences,
+        profile_visibility: value('profileVisibility') || 'private'
       };
-      payload.languages = value('languages').split(',').map(tag => tag.trim()).filter(Boolean)
-        .map((tag, index) => ({
-          language_tag: tag,
-          language_name: tag,
-          proficiency: 'conversational',
-          is_primary: index === 0
-        }));
+      const structuredLanguages = languageDetails.map(item => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          throw new Error('Each language detail must be a JSON object.');
+        }
+        const languageTag = String(item.language_tag || '').trim();
+        if (!languageTag) throw new Error('Each language detail requires a language_tag.');
+        return {
+          language_tag: languageTag,
+          language_name: String(item.language_name || languageTag).trim(),
+          dialect: String(item.dialect || '').trim(),
+          proficiency: String(item.proficiency || 'conversational').trim(),
+          is_primary: item.is_primary === true
+        };
+      });
+      const languageTags = value('languages').split(',').map(tag => tag.trim()).filter(Boolean);
+      const knownLanguageTags = new Set(structuredLanguages.map(item => item.language_tag.toLowerCase()));
+      for (const tag of languageTags) {
+        if (!knownLanguageTags.has(tag.toLowerCase())) {
+          structuredLanguages.push({
+            language_tag: tag,
+            language_name: tag,
+            dialect: '',
+            proficiency: 'conversational',
+            is_primary: structuredLanguages.length === 0
+          });
+          knownLanguageTags.add(tag.toLowerCase());
+        }
+      }
+      const primaryLanguageCount = structuredLanguages.filter(item => item.is_primary).length;
+      if (primaryLanguageCount > 1) throw new Error('Choose only one primary AI language.');
+      if (structuredLanguages.length && primaryLanguageCount === 0) structuredLanguages[0].is_primary = true;
+      payload.languages = structuredLanguages;
       payload.locations = [];
       if (countryOfOrigin) payload.locations.push({
         location_type: 'origin',
