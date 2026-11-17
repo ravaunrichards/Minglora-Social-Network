@@ -61,25 +61,29 @@ The six supplied source files are:
 
 The first three routes supply the daily podium placement frames; the latter three supply the daily Top Gifters avatar frames. Period selection and ranking data remain driven by confirmed LIVE gifts.
 
-## 4. LIVE Guest Layout References
+## 4. LIVE and MeetWave Guest Layout References
 
-**Source folder:** `Guests Layout/png/`
+**Uncropped originals:** `assets/Guests Layout/`
 
-Nine layout previews:
+Nine original JPG references are retained:
 
-- `Full Screen.png`
-- `Fluid Panel.png`
-- `Fluid Grid.png`
-- `Fixed Grid.png`
-- `Fixed Panel.png`
-- `Side by Side.png`
-- `Spotlight.png`
-- `Roundtable 1.png`
-- `Roundtable 2.png`
+- `Full Screen.jpg`
+- `Fluid Panel.jpg`
+- `Fluid Grid.jpg`
+- `Fixed Grid.jpg`
+- `Fixed Panel.jpg`
+- `Side by Side.jpg`
+- `Spotlight.jpg`
+- `Roundtable 1.jpg`
+- `Roundtable 2.jpg`
 
-**Application routes:** `/assets/live-guest-layouts/full-screen.png`, `fluid-panel.png`, `fluid-grid.png`, `fixed-grid.png`, `fixed-panel.png`, `side-by-side.png`, `spotlight.png`, `roundtable-1.png`, and `roundtable-2.png`.
+**Cropped references:** `assets/Crop References/Guests Layout/`
 
-These images are layout previews, not replacements for the responsive LIVE layout implementation. The set represents seven host-selectable layouts and the two separately selectable Roundtable guest-box layouts.
+Eight cropped PNGs are retained for Fluid Panel, Fluid Grid, Fixed Grid, Fixed Panel, Side by Side, Spotlight, Roundtable 1 and Roundtable 2. **Full Screen.png was intentionally removed and must not be restored or regenerated.** Full Screen uses its existing uncropped `Full Screen.jpg` only.
+
+**Application routes:** Each preset has an original JPG route at `/assets/live-guest-layouts/{layout}.jpg`. The existing `.png` thumbnail routes serve the cropped PNG where one exists and fall back to the original JPG for Full Screen. The application does not create a replacement crop or duplicate source file.
+
+**Layout contract:** LIVE and MeetWave each expose the same nine mutually exclusive, complete guest layouts: Full Screen, Fluid Panel, Fluid Grid, Fixed Grid, Fixed Panel, Side by Side, Spotlight, Roundtable 1 and Roundtable 2. Every layout owns its full panel/grid arrangement. Roundtable 1 and Roundtable 2 are complete layouts, not secondary guest-box overlays or add-ons to another screen layout. The host plus eight guest seats and their participant/invitation records remain supported across the presets.
 
 ## 5. Default Profile Picture
 
