@@ -60,6 +60,7 @@ test('administrator execution verification uses persisted model metadata, a fres
     "runAIProviderCommand('list_provider_assignments')",
     "runAIProviderCommand('list_provider_models')",
     "account.account_type !== 'managed'",
+    "Only Minglora-managed provider accounts can use the private server-side OpenAI credential",
     "probeOpenAIProvider({ model: model.model_identifier })",
     "verifyOpenAIModelExecution({ model: model.model_identifier",
     "runAIProviderExecutionCommand('verify_assignment'",

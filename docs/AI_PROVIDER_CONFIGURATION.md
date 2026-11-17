@@ -106,3 +106,9 @@ SMTP, Resend, SendGrid, Postmark, Mailgun and Amazon SES are represented in the 
 ### Existing credentials are preserved
 
 This change adds blank template fields only. It does not edit any local .env, Render service environment, Supabase Edge Function secret, provider account, user credential, live API key, mailbox or running service. Do not paste existing credentials into the repository to populate the template.
+
+
+## Provider account ownership boundary
+
+The first executable adapter is the Minglora-managed OpenAI account path. Its private server environment key must not be used to verify or execute a user-managed account reference. The API route, provider route resolver and service-role activation function all reject accounts whose persisted account_type is not `managed`. User-managed account references remain registrable but are not executable until an approved secrets-manager integration resolves their individual credential reference. Assigned-model chat calls also ignore the legacy global `MINGLORA_AI_API_KEY`; they require `OPENAI_API_KEY` for a managed assignment.
+

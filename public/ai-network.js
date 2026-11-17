@@ -1043,7 +1043,7 @@
       '<button class="secondary" type="submit">Check OpenAI API connection</button></form>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
-      : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. A model assignment becomes active only after its billable moderated inference test succeeds.</p>';
+      : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. A model assignment becomes active only after its billable moderated inference test succeeds. The current OpenAI adapter can use only a Minglora-managed account with the private server credential; user-managed provider references remain inactive until a supported secrets-manager integration is available.</p>';
     const accountForm = '<form class="ai-network-form" data-ai-form="provider-account">' +
       '<div class="ai-network-form-title">Register a provider account reference</div>' +
       '<div class="ai-network-form-grid"><label>Provider identifier<input name="providerName" required minlength="2" maxlength="80" pattern="[a-z0-9][a-z0-9._-]+" placeholder="openai"></label>' +

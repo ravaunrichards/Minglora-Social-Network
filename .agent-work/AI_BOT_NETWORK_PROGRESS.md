@@ -560,3 +560,13 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - PR #497 remains open as a **draft**, unmerged, with 16 changed files. No production schema migration, Edge Function deployment, Render deployment, provider credential or provider/account/model/assignment records were changed by this work.
 - Production provider inference remains unverified because the live catalog has zero provider accounts, models and assignments. Global worker pause/execution-disabled/zero-worker controls are unchanged.
 - The CI failure above means the repository is not fully green; provider feature acceptance is green, but the overall PR must not be represented as a full green build.
+
+
+## Managed provider credential isolation — 2026-11-17
+
+- Hardened the existing PR #497 feature branch so only persisted `account_type='managed'` provider accounts can use Minglora's private server-side OpenAI credential.
+- Enforced the ownership boundary in the chat route resolver, the administrator verification API and the service-role activation RPC. User-managed account references remain recorded as user-managed and cannot be activated through the platform key until a dedicated secrets-manager lookup is implemented.
+- Assigned-model chat inference now uses only `OPENAI_API_KEY`; it will not fall back to the legacy generic `MINGLORA_AI_API_KEY`. A regression test verifies that no provider request is made when only that generic key exists.
+- Added route, resolver and SQL contract tests for the managed-account requirement.
+- The Provider Center now explains the credential distinction before users register/verify accounts.
+- No production migration or Edge deployment was performed. Live provider accounts/models/assignments remain 0; no provider secret or actual inference has been verified. Global workers remain paused and disabled.
