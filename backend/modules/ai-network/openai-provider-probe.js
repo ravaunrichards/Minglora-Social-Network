@@ -35,7 +35,9 @@ export async function probeOpenAIProvider({
   model: assignedModel = null
 } = {}) {
   const checkedAt = checkedAtIso(now);
-  const selectedProvider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
+  const selectedProvider = assignedModel
+    ? 'openai'
+    : String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   const apiKey = String(
     env.OPENAI_API_KEY ||
     (selectedProvider === 'openai' ? env.MINGLORA_AI_API_KEY : '') ||
