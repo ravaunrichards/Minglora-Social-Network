@@ -279,3 +279,45 @@ test('worker credentials are one-way digests, scoped to granted identities and b
   assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_credential_rotated'));
   assert.ok(eventTypes.rows.some(row => row.event_type === 'worker_revoked'));
 });
+
+test('expired worker credentials are invalidated and audited without rolling back the unauthorized response', async () => {
+  const ownerId = crypto.randomUUID();
+  await pool.query('INSERT INTO public.profiles(id) VALUES ($1)',[ownerId]);
+  const identityId = await addIdentity(ownerId);
+  const workerCredential = credential();
+  const created = await admin('create_worker',ownerId,{
+    worker_name:'Expiry lifecycle worker',
+    credential_sha256:workerCredential.sha256,
+    credential_expires_at:expiry(),
+    identity_ids:[identityId],
+    allowed_action_classes:['read_only'],
+    max_concurrent_tasks:1
+  });
+  const workerId = created.worker.worker_id;
+
+  await asService(client => client.query(
+    "UPDATE ai_network.ai_worker_principals SET credential_expires_at=now()-interval '1 second' WHERE worker_id=$1",
+    [workerId]
+  ));
+
+  const rejected = await worker('claim_next_task',workerCredential.sha256);
+  assert.equal(rejected.authenticated,false);
+  assert.equal(rejected.error,'Worker credential is expired or revoked.');
+
+  const persisted = await pool.query(
+    'SELECT status,credential_sha256 FROM ai_network.ai_worker_principals WHERE worker_id=$1',
+    [workerId]
+  );
+  assert.equal(persisted.rows[0].status,'expired');
+  assert.equal(persisted.rows[0].credential_sha256,null);
+
+  const expiryEvents = await pool.query(
+    "SELECT count(*)::integer AS count FROM ai_network.ai_worker_events WHERE worker_id=$1 AND event_type='worker_credential_expired'",
+    [workerId]
+  );
+  assert.equal(expiryEvents.rows[0].count,1);
+  await assert.rejects(
+    worker('claim_next_task',workerCredential.sha256),
+    error => error.code === '42501'
+  );
+});
