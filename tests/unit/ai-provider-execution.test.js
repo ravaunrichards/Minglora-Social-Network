@@ -9,6 +9,7 @@ const assignment = {
   assignment_status: 'active',
   provider_health_status: 'healthy',
   provider_account_status: 'configured',
+  account_type: 'managed',
   provider_account_health_status: 'healthy',
   text_capability: true,
   assigned_capabilities: ['text']
@@ -32,9 +33,15 @@ test('assigned provider probe uses the database-selected model rather than a glo
   const result = await probeAssignedProvider({
     providerName: 'openai',
     modelIdentifier: 'assigned-model-v2',
-    env: { OPENAI_API_KEY: 'server-only-test-key', OPENAI_DEFAULT_MODEL: 'wrong-global-model' },
-    fetchImpl: async url => {
+    env: {
+      OPENAI_API_KEY: 'server-only-test-key',
+      OPENAI_DEFAULT_MODEL: 'wrong-global-model',
+      MINGLORA_AI_PROVIDER: 'anthropic',
+      MINGLORA_AI_API_KEY: 'must-not-be-used'
+    },
+    fetchImpl: async (url, options) => {
       requestedUrl = url;
+      assert.equal(options.headers.Authorization, 'Bearer server-only-test-key');
       return response(200, { id: 'assigned-model-v2', object: 'model', owned_by: 'openai' });
     },
     now: () => new Date('2026-11-17T22:00:00.000Z')
@@ -67,8 +74,14 @@ test('chat dispatch uses exact assigned model and applies both input and output 
     bot,
     identity,
     message: 'Please introduce yourself.',
-    env: { OPENAI_API_KEY: 'server-only-test-key', OPENAI_DEFAULT_MODEL: 'wrong-global-model' },
+    env: {
+      OPENAI_API_KEY: 'server-only-test-key',
+      OPENAI_DEFAULT_MODEL: 'wrong-global-model',
+      MINGLORA_AI_PROVIDER: 'anthropic',
+      MINGLORA_AI_API_KEY: 'must-not-be-used'
+    },
     fetchImpl: async (url, options) => {
+      assert.equal(options.headers.Authorization, 'Bearer server-only-test-key');
       calls.push({ url, payload: options.body ? JSON.parse(options.body) : {} });
       if (url.endsWith('/responses')) return generated();
       return clear();
@@ -100,5 +113,18 @@ test('inactive assignments and mismatched AI identities are rejected before prov
     env: { OPENAI_API_KEY: 'test' },
     fetchImpl: async () => { calls += 1; }
   }), error => error.code === 'identity_unlinked');
+  assert.equal(calls, 0);
+});
+
+test('identity execution never falls back to a legacy global provider credential', async () => {
+  let calls = 0;
+  await assert.rejects(generateAIProviderReply({
+    assignment,
+    bot,
+    identity,
+    message: 'Hello',
+    env: { MINGLORA_AI_PROVIDER: 'openai', MINGLORA_AI_API_KEY: 'legacy-global-key' },
+    fetchImpl: async () => { calls += 1; }
+  }), error => error.code === 'missing_credentials');
   assert.equal(calls, 0);
 });

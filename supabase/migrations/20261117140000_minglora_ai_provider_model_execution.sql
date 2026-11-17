@@ -63,6 +63,7 @@ declare
   v_account_status text;
   v_account_health text;
   v_provider_name text;
+  v_account_type text;
   v_provider_identifier text;
   v_model_identifier text;
   v_model_name text;
@@ -106,10 +107,10 @@ begin
     v_identity_id := (v_payload->>'identity_id')::uuid;
 
     select a.assignment_id,a.identity_id,a.provider_account_id,a.assignment_status,a.provider_health_status,
-      a.assigned_capabilities,pa.status,pa.health_status,m.provider_name,pa.provider_identifier,
+      a.assigned_capabilities,pa.status,pa.health_status,pa.account_type,m.provider_name,pa.provider_identifier,
       m.model_identifier,m.model_name,m.text_capability,m.is_active
     into v_assignment_id,v_identity_id,v_account_id,v_assignment_status,v_assignment_health,
-      v_assigned_capabilities,v_account_status,v_account_health,v_provider_name,v_provider_identifier,
+      v_assigned_capabilities,v_account_status,v_account_health,v_account_type,v_provider_name,v_provider_identifier,
       v_model_identifier,v_model_name,v_text_capability,v_model_active
     from ai_network.ai_identities i
     join ai_network.ai_provider_assignments a on a.identity_id=i.identity_id
@@ -123,6 +124,7 @@ begin
       and a.provider_health_status='healthy'
       and pa.owner_user_id=p_actor_user_id
       and pa.status='configured'
+      and pa.account_type='managed'
       and pa.health_status='healthy'
       and pa.last_checked_at >= now()-interval '15 minutes'
       and a.last_checked_at >= now()-interval '15 minutes'
@@ -148,6 +150,7 @@ begin
       'provider_health_status',v_assignment_health,
       'provider_account_status',v_account_status,
       'provider_account_health_status',v_account_health,
+      'account_type',v_account_type,
       'text_capability',v_text_capability,
       'assigned_capabilities',to_jsonb(v_assigned_capabilities)
     ) into v_result;
@@ -160,10 +163,10 @@ begin
   v_assignment_id := (v_payload->>'assignment_id')::uuid;
 
   select a.identity_id,a.provider_account_id,a.assignment_status,a.provider_health_status,
-    pa.status,pa.health_status,m.provider_name,pa.provider_identifier,m.model_identifier,
+    pa.status,pa.health_status,pa.account_type,m.provider_name,pa.provider_identifier,m.model_identifier,
     m.model_name,m.text_capability,m.is_active,a.assigned_capabilities
   into v_identity_id,v_account_id,v_assignment_status,v_assignment_health,
-    v_account_status,v_account_health,v_provider_name,v_provider_identifier,v_model_identifier,
+    v_account_status,v_account_health,v_account_type,v_provider_name,v_provider_identifier,v_model_identifier,
     v_model_name,v_text_capability,v_model_active,v_assigned_capabilities
   from ai_network.ai_provider_assignments a
   join ai_network.ai_identities i on i.identity_id=a.identity_id
@@ -194,6 +197,7 @@ begin
       'provider_health_status',v_assignment_health,
       'provider_account_status',v_account_status,
       'provider_account_health_status',v_account_health,
+      'account_type',v_account_type,
       'text_capability',v_text_capability,
       'assigned_capabilities',to_jsonb(v_assigned_capabilities)
     );
@@ -253,9 +257,10 @@ begin
       raise exception using errcode='22023',message='Provider/model verification evidence does not match the assigned model.';
     end if;
     if v_assignment_status not in ('pending','active') or v_account_status in ('disabled','revoked') or
+       v_account_type is distinct from 'managed' or
        v_model_active is distinct from true or v_text_capability is distinct from true or
        not ('text'=any(v_assigned_capabilities)) then
-      raise exception using errcode='55000',message='This assignment is not eligible for text-model activation.';
+      raise exception using errcode='55000',message='Only eligible platform-managed text-model assignments can use the Minglora server environment credential. User-managed provider credentials need an approved secrets-manager integration.';
     end if;
     v_secret_environment_variable:=case v_provider_name when 'openai' then 'OPENAI_API_KEY' else null end;
     if v_secret_environment_variable is null then

@@ -58,7 +58,10 @@ export async function probeAssignedProvider({
     return unavailable(provider, model, 'invalid_model',
       'The assigned model identifier is missing or invalid. No provider request was sent.');
   }
-  const probe = await adapter.probe({ env, fetchImpl, now, timeoutMs, modelIdentifier: model });
+  const assignedEnvironment = { ...env, MINGLORA_AI_PROVIDER: '', MINGLORA_AI_API_KEY: '' };
+  const probe = await adapter.probe({
+    env: assignedEnvironment, fetchImpl, now, timeoutMs, modelIdentifier: model
+  });
   return {
     ...probe,
     providerId: provider,
@@ -103,6 +106,7 @@ export async function generateAIProviderReply({
   if (assignment?.assignment_status !== 'active' ||
       assignment?.provider_health_status !== 'healthy' ||
       assignment?.provider_account_status !== 'configured' ||
+      assignment?.account_type !== 'managed' ||
       assignment?.provider_account_health_status !== 'healthy' ||
       assignment?.text_capability !== true ||
       !Array.isArray(assignment?.assigned_capabilities) ||
@@ -112,8 +116,10 @@ export async function generateAIProviderReply({
     });
     throw error;
   }
+  const assignedEnvironment = { ...env, MINGLORA_AI_PROVIDER: '', MINGLORA_AI_API_KEY: '' };
   return adapter.generate({
-    bot, identity, message, history, memoryContext, env, fetchImpl, timeoutMs,
+    bot, identity, message, history, memoryContext,
+    env: assignedEnvironment, fetchImpl, timeoutMs,
     maxOutputTokens, modelIdentifier: model
   });
 }
