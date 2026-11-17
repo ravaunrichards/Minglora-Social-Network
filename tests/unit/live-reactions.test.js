@@ -10,6 +10,7 @@ const app = read('public/app.js');
 const server = read('src/server.js');
 const styles = read('public/styles.css');
 const guestLayouts = read('public/live-tiktok-compact.css');
+const liveGuardrails = read('public/live-interface-guardrails.css');
 
 test('LIVE likes have a white-to-red heart button and also respond to stage taps', () => {
   assert.ok(app.includes("class='live-stage-topbar "));
@@ -119,4 +120,18 @@ test('Guest camera can be disabled by the host and voice rings can be switched o
   assert.match(app, /name='voiceRings' checked/);
   assert.match(app, /session\.liveSettings\?\.voiceRings!==false/);
   assert.match(app, /playCallTone\(\[620,820\],520\)/);
+});
+
+
+test('LIVE Follow becomes the orange Heart Me action after following the host',()=>{
+  assert.match(app,/id='live-follow-host' class='live-follow-button/);
+  assert.match(app,/follow\.classList\.toggle\('is-heart-me',following\)/);
+  assert.match(app,/follow\.textContent=following\?'♥':'Follow'/);
+  assert.match(app,/Send Heart Me gift and join the host Fan Club for 1 Coin/);
+  assert.match(app,/async function joinLiveHostFanClub\(session,triggerButton\)/);
+  assert.match(app,/if\(following\)\{await joinLiveHostFanClub\(session,button\);return;\}/);
+  assert.match(app,/fan-club\/join/);
+  assert.match(app,/id='live-fan-club-join-panel'/);
+  assert.match(liveGuardrails,/live-follow-button\.is-heart-me[\s\S]*?color:#ff8c00/);
+  assert.doesNotMatch(app,/id='live-fan-club-join' class='live-fan-club-join'/);
 });

@@ -1118,3 +1118,27 @@ body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-gues
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){bottom:2px!important}
   body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){bottom:calc(2px + clamp(44px,15vw,120px) + clamp(4px,1vw,8px))!important}
 }
+
+
+/* Fluid Panel guest safe zone — keep both floating guest seats fully inside
+   the host stage instead of touching/crossing its right or bottom frame lines. */
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
+  right:clamp(20px,3vw,30px)!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
+  bottom:clamp(18px,2.5vw,22px)!important;
+}
+body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+  bottom:calc(clamp(18px,2.5vw,22px) + clamp(44px,15vw,120px) + clamp(10px,1.2vw,14px))!important;
+}
+@media(min-width:901px){
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){
+    right:clamp(32px,3.5vw,48px)!important;
+  }
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
+    bottom:clamp(24px,2.5vw,34px)!important;
+  }
+  body:has(#live-player-shell) #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+    bottom:calc(clamp(24px,2.5vw,34px) + clamp(44px,15vw,120px) + clamp(12px,1.2vw,16px))!important;
+  }
+}
