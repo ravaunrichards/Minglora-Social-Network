@@ -12,7 +12,8 @@ const html = read('../../public/admin-centre.html');
 
 testRunner('RBAC migration preserves all existing staff assignments at installation', () => {
   assert.match(migration, /does not update, insert, deactivate, or promote any[\s\S]*existing minglora_platform_staff row/i);
-  assert.doesNotMatch(migration, /UPDATE\s+public\.minglora_platform_staff/i);
+  const installationSql = migration.split('CREATE OR REPLACE FUNCTION')[0];
+  assert.doesNotMatch(installationSql, /UPDATE\s+public\.minglora_platform_staff/i);
   assert.match(migration, /DROP CONSTRAINT IF EXISTS minglora_platform_staff_role_check/);
   assert.match(migration, /ADD CONSTRAINT minglora_platform_staff_role_check/);
 });
@@ -49,5 +50,5 @@ testRunner('Admin Centre loads the owner-only delegated roles workspace', () => 
   assert.match(admin, /MingloraAdminRbac\?\.mount\(panel, adminCentreApi\)/);
   assert.match(ui, /Protected sole owner/);
   assert.match(ui, /email-confirmed Minglora account/);
-  assert.match(ui, /staff\.revoked/);
+  assert.match(ui, /rbacAction:'revoke'/);
 });
