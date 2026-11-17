@@ -41,9 +41,9 @@ test('chat and Creator Studio share the same locked owner/day budget accounting'
   assert.match(migration, /for update/i);
   assert.match(migration, /shared daily AI token budget/i);
   assert.match(migration, /reservationOverrun/i);
-  assert.equal((migration.match(/join ai_network\\.ai_bot_chat_requests q/g) || []).length, 3,
+  assert.equal(migration.split('join ai_network.ai_bot_chat_requests q').length - 1, 3,
     'get_usage, Creator Studio reserve and chat reserve must ignore expired chat leases');
-  assert.equal((migration.match(/from ai_network\\.ai_bot_daily_token_budgets b[\\s\\S]{0,180}?for update/gi) || []).length, 6,
+  assert.equal((migration.match(/from ai_network\.ai_bot_daily_token_budgets b[\s\S]{0,180}?for update/gi) || []).length, 6,
     'both workloads must serialize reserve and settlement on the same owner/day budget row');
   assert.match(migration, /lease_expires_at>v_now/i);
   assert.match(chatMigration, /ai_bot_daily_token_budgets[\s\S]*?for update/i);
