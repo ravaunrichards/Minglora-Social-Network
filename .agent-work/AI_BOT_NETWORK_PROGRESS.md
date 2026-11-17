@@ -515,3 +515,29 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 Source work is being prepared on feat/minglora-provider-model-execution-20261117. It adds an assignment-bound adapter contract, model-specific OpenAI model probing and inference, a private health-audit table, a service-role-only verification/activation/routing RPC, and a human-admin verify-and-activate action. Bot chat is being changed to resolve the AI identity's owner-scoped active assignment before reserving tokens, and to route only through installed adapters. Existing moderation, no-tools/no-external-actions, memory consent, and daily token reservation remain required.
 
 Current live Supabase baseline at inspection: 0 AI identities, 0 provider accounts and 0 provider assignments. No provider secret was available to prove live inference. Production migration and Edge/Render deployment have not been applied. Autonomous workers remain globally paused and disabled. Only OpenAI has an executable adapter in this source slice; other catalogued providers remain blocked until adapters and credentials are verified.
+
+
+## Provider/model execution — implementation and integration checkpoint (2026-11-17)
+
+**Source branch:** feat/minglora-provider-model-execution-20261117
+
+Implemented in source:
+- Server-side provider adapter registry, currently with an OpenAI chat adapter only.
+- Assignment-specific model selection for both OpenAI model access checks and Responses API generation; no silent global-default fallback.
+- Bot-chat route resolves the identity's owner-scoped active assignment before creating a token reservation.
+- Private Edge Function command allowlist and service-role RPC gateway for provider verification, activation, health-failure recording and execution routing.
+- Admin Provider & Model Assignment Center action to verify/re-check a pending or active assignment and activate only after the exact assigned model is reachable.
+- New RLS-protected provider health audit table and service-role-only SQL execution command.
+- Existing moderation, consent-gated memory, response storage disabled, no tools or external actions, shared token budget, and human-initiated chat controls remain in the path.
+- Regression tests updated/added for assigned-model execution and provider health verification.
+
+**Not yet production complete:**
+- The new Supabase migration is source-only and has not been applied.
+- The modified minglora-runtime-state Edge Function has not been deployed.
+- The modified Node backend has not been deployed to Render.
+- No live provider secret was inspected or tested; therefore no real provider connection, successful inference, active provider assignment or provider health is claimed.
+- Only OpenAI currently has an implemented execution adapter. Other catalogue providers remain non-executable until their own adapters and secrets are configured and tested.
+- Render service deployment remains blocked because no Render workspace has been selected; do not infer or create another workspace.
+- Global AI workers remain paused and disabled; the interactive owner-initiated chat route is separate and does not enable autonomous workers.
+
+**Live Supabase baseline at inspection:** 0 AI identities, 0 provider accounts and 0 provider assignments. All 62 existing ai_network tables had RLS enabled. No production data was inserted, updated or deleted by this source work.

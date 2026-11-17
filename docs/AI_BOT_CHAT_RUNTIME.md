@@ -92,3 +92,12 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 - Rollback-only live RPC acceptance passed reserve/reuse, measured settle/idempotency, non-billable release, billable failure usage, shared daily usage, over-budget rejection and cross-owner denial. Post-rollback identity, budget and Creator Studio rows remain zero.
 - The Render auto-deploy to minglora-social-network-temp is live and durable Supabase persistence is ready; this temporary service is not verified as the correct production target.
 - Workers remain globally paused, execution disabled and max workers zero.
+
+
+## Provider/model routing — implementation update (2026-11-17)
+
+Bot chat resolves the selected AI identity's database-owned provider assignment before starting a token reservation. The browser cannot specify or override a provider or model. The resolver requires an enabled, owner-owned active AI identity, an active text assignment, a configured and healthy provider account, a healthy assignment and model, and health evidence from the last 15 minutes. The server dispatches to an installed adapter only. OpenAI is the sole installed inference adapter in this release; unsupported providers fail closed.
+
+An authorized platform administrator can verify a pending assignment from the Provider & Model Assignment Center. The Node server probes the exact assigned model through the private server environment, then calls a service-role-only database function to record health and activate it. Failed health probes are audited and cannot activate an assignment. No credentials are accepted from the browser or persisted in profile/provider assignment fields. The existing database assignment-activation trigger remains enabled.
+
+The new database migration and Edge Function changes are source-only on the feature branch. The production schema and Edge Function have not been updated; no production AI provider assignment has been activated. No live provider inference is claimed until production deployment and an owner-initiated end-to-end test succeed.
