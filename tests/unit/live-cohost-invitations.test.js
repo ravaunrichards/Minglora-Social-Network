@@ -54,6 +54,8 @@ test('The invitee must already be connected to the LIVE room before acceptance i
   const route = server.slice(start, end);
   assert.match(route, /listLiveKitParticipants\(session\.roomName\)/);
   assert.match(route, /participant\.identity === user\.id/);
+  assert.doesNotMatch(route, /allowGuestRequests/,
+    'direct invitations stay available when audience hand-raises are disabled');
   assert.match(route, /requestSupabaseState\('live_cohost_invitation_accept'/);
   assert.ok(route.indexOf('listLiveKitParticipants(session.roomName)') < route.indexOf("requestSupabaseState('live_cohost_invitation_accept'"));
   assert.match(route, /request\.status = 'accepted'/);
