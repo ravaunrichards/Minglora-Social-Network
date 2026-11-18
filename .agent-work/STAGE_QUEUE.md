@@ -153,4 +153,4 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - First connected sources: owner/MFA-protected AI high-impact approvals and relational AI task approvals.
 - Safety: preserve existing decision endpoints, audit records, owner/MFA checks, reason requirements for task approvals, and independent worker/provider execution gates; do not seed demo requests or execute work on approval.
 - Acceptance: live owner-session smoke test for real request discovery, Approve and Reject, audit result, polling, mobile layout and no-duplicate decisions. External push/email delivery and additional department producers remain separate work.
-- Status: IMPLEMENTED IN BRANCH — automated CI and production owner-session acceptance pending.
+- Status: IMPLEMENTED IN BRANCH — site-wide in-app notifications and Approval Center actions; automated CI and production owner-session acceptance pending.
