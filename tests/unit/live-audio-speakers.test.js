@@ -117,10 +117,10 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
   assert.ok(index.includes('/app.js?v=20261118-side-by-side-guest-seat-nine-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2'));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
   assert.ok(serviceWorker.includes("'/app.js?v=20261118-side-by-side-guest-seat-nine-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
-  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2')"));
+  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3')"));
   assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'));
   assert.ok(serviceWorker.includes("'/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'"));
   assert.doesNotMatch(fit,/data-live-guest-layout=/);
@@ -170,8 +170,8 @@ test('Audio LIVE Full Screen keeps its single full-stage host tile above the mob
   assert.ok(rule.includes('#live-guest-layout[data-live-layout="full-screen"]:is(.audio-guest-layout){grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}'));
   assert.ok(rule.includes('#live-guest-layout[data-live-layout="full-screen"]:is(.audio-guest-layout)>.live-guest-seat.is-host{grid-column:1!important;grid-row:1!important}'));
   assert.ok(rule.includes('>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){display:none!important}'));
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2'));
-  assert.ok(serviceWorker.includes("'/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2'"));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
+  assert.ok(serviceWorker.includes("'/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'"));
 });
 
 test('Side by Side alone exposes and enforces a ninth LIVE guest seat', () => {
