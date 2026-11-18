@@ -216,10 +216,11 @@ test('LIVE layout selector shows the real supplied crop previews at readable siz
   assert.match(app,/loading='eager'/);
 });
 
-test('Side by Side alone exposes Guest seat 9 while Spotlight starts with the host in the wide tile',()=>{
-  assert.match(app,/const guestSeatLimit=activeLiveScreenLayout==='side-by-side'\?9:8/);
+test('Audio Only LIVE Side by Side exposes Guest seat 9 while Video + Audio retains eight guest seats',()=>{
+  assert.match(app,/const guestSeatLimit=audioOnly&&activeLiveScreenLayout==='side-by-side'\?9:8/);
   assert.match(app,/guests\.slice\(0,guestSeatLimit\)/);
   assert.match(app,/while\(specs\.length<guestSeatLimit\+1\)/);
+  assert.match(app,/if\(!audioOnly&&activeLiveScreenLayout==='side-by-side'\)specs\.push/);
   assert.match(app,/Guest seat "\+esc\(spec\.seatNumber\)/);
   assert.match(app,/activeLiveScreenLayout==='spotlight'&&spec\.isHost\?" is-spotlight":""/);
   assert.match(app,/activeLiveScreenLayout==='spotlight'&&spec\.isHost\?" is-spotlight":""/);
