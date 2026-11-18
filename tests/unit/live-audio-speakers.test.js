@@ -163,7 +163,7 @@ test('Audio LIVE uses all nine reference grids without covering seat panels', ()
 });
 
 test('Audio LIVE Full Screen keeps its single full-stage host tile above the mobile header row', () => {
-  const start=guestLayouts.indexOf('/* 1. FULL SCREEN — exactly one full-height participant panel. */');
+  const start=guestLayouts.lastIndexOf('/* 1. FULL SCREEN — exactly one full-height participant panel. */');
   const end=guestLayouts.indexOf('/* 2. FLUID PANEL',start);
   const rule=guestLayouts.slice(start,end);
   assert.ok(start>=0&&end>start);
