@@ -244,3 +244,25 @@
     margin-right:0;
   }
 }
+
+/* HR action forms use one column at tablet widths to avoid intrinsic-width overflow. */
+@media(max-width:900px){
+  .ai-network-page .ai-network-hr-workspace .ai-network-inline-form{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    gap:8px;
+  }
+  .ai-network-page .ai-network-hr-workspace .ai-network-inline-form label{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-page .ai-network-hr-workspace .ai-network-inline-form button{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+}
