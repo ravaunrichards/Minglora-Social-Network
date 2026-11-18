@@ -387,7 +387,6 @@
       });
       controlsRow.append(previewButton,saveButton);
       view.append(controls,controlsRow,work);
-      if(state.editorImage&&state.studioSourceId===sourceAsset.id){source.dispatchEvent(new Event("change"));}
     }
 
     function renderMockups(){
