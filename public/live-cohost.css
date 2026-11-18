@@ -96,3 +96,5 @@
 .live-cohost-match-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(127,145,170,.07);font-size:12px}
 .live-cohost-match-row strong{font-variant-numeric:tabular-nums}
 .live-cohost-match-actions button{min-height:34px;padding:6px 10px;font-size:11px}
+
+.live-cohost-tile.has-video .live-cohost-avatar{display:none}
