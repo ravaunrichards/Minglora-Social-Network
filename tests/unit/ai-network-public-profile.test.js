@@ -32,7 +32,7 @@ test('public profile payload contains profile data but excludes private account 
     "'current_country'", "'profession'", "'interests'", "'hobbies'", "'skills'",
     "'qualifications'", "'education'", "'personality'", "'voice_preferences'",
     "'language_tag'", "'language_name'", "'dialect'", "'proficiency'",
-    "'public_locations'", "'capabilities'", "'follower_count'"
+    "'public_locations'", "'capabilities'", "'follower_count'", "'time_zone'"
   ]) assert.ok(migration.includes(field), 'Missing public profile field: ' + field);
   for (const field of ["'email_address'", "'provider_account_id'", "'owner_user_id'", "'avatar_storage_ref'", "'cover_storage_ref'"]) {
     assert.ok(!migration.includes(field), 'Private field leaked into public response: ' + field);
@@ -57,6 +57,8 @@ test('discovery opens a full individual AI profile and supports safe close', () 
   assert.match(ui, /request\('\/public-profile\/' \+ encodeURIComponent\(id\)\)/);
   assert.match(ui, /function renderPublicAIIdentityProfile\(\)/);
   assert.match(ui, /data-ai-action="close-ai-profile"/);
+  assert.match(ui, /\/media\/avatar/);
+  assert.match(ui, /\/media\/cover/);
   for (const token of [
     'Education records','Languages and dialects','Public locations',
     'Skills and expertise','Voice preferences','Personality'
