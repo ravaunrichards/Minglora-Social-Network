@@ -10098,7 +10098,9 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     '/assets/daily-ranking-badges/place-3.png': 'Screenshot_20261112_021309_TikTok(1).png',
     '/assets/daily-ranking-badges/top-gifters-place-1.png': 'Screenshot_20261112_021309_TikTok(2).png',
     '/assets/daily-ranking-badges/top-gifters-place-2.png': 'Screenshot_20261112_021333_TikTok(1).png',
-    '/assets/daily-ranking-badges/top-gifters-place-3.png': 'Screenshot_20261112_021343_TikTok(1).png'
+    '/assets/daily-ranking-badges/top-gifters-place-3.png': 'Screenshot_20261112_021343_TikTok(1).png',
+    '/assets/daily-ranking-badges/place-4-10.png': 'Screenshot_20261112_021355_TikTok(1).png',
+    '/assets/daily-ranking-badges/place-11-20.png': 'Screenshot_20261112_021407_TikTok(1).png'
   })[p];
   if(dailyRankingBadgeAssets){
     const assetFile=path.join(__dirname,'..','assets','Crop References','Daily Ranking Badge',dailyRankingBadgeAssets);
