@@ -601,11 +601,12 @@ export function settleExpiredLeagueMatches(db, now = new Date()) {
   }
   return completed;
 }
-function gifterRankAfterGift(match, side, senderId, giftAmount, now) {
+function gifterRankAfterGift(db, match, side, senderId, giftAmount, now) {
   if (!senderId) return 0;
+  const validGiftIds = new Set((db.creatorLeagueGiftLedger || []).filter(item => !item.refundedAt && item.status !== "refunded").map(item => String(item.giftId || "")));
   const totals = new Map();
   for (const item of match.events || []) {
-    if (item.type !== "gift_score" || item.side !== side || !item.senderId) continue;
+    if (item.type !== "gift_score" || item.side !== side || !item.senderId || !validGiftIds.has(String(item.giftId || ""))) continue;
     const id = String(item.senderId);
     const current = totals.get(id) || { userId: id, points: 0, firstAt: item.createdAt || "" };
     current.points += Math.max(0, asNumber(item.rawPoints));
@@ -703,7 +704,7 @@ export function recordLiveGiftForLeagues(db, details) {
     const matchesGift = match.giftMode !== "specific" || match.selectedGiftCode === details.giftCode;
     if (matchesGift && Date.parse(match.startedAt || "") <= now.getTime() && Date.parse(match.endsAt || "") > now.getTime()) {
       match.activeEffects = (match.activeEffects || []).filter(item => Date.parse(item.expiresAt || "") > now.getTime());
-      const senderRank = gifterRankAfterGift(match, side, senderId, amount, now);
+      const senderRank = gifterRankAfterGift(db, match, side, senderId, amount, now);
       let multiplier = 1;
       const triggeredEffects = [];
       const random = typeof details.random === "function" ? details.random : Math.random;
