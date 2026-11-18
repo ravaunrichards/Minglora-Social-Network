@@ -1377,13 +1377,13 @@ body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-sta
   right:clamp(8px,1vw,12px)!important;left:auto!important;top:auto!important;
 }
 body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
-  bottom:clamp(8px,1vw,12px)!important;
-}
-body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
   bottom:calc(clamp(8px,1vw,12px) + clamp(44px,15vw,120px) + 8px)!important;
 }
+body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+  bottom:clamp(8px,1vw,12px)!important;
+}
 @media(max-width:420px){
-  body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
+  body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3){
     bottom:calc(clamp(8px,1vw,12px) + clamp(44px,15vw,58px) + 6px)!important;
   }
 }
