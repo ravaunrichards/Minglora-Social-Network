@@ -9,12 +9,13 @@
     "dev": "node --watch src/server.js",
     "test": "node --test tests/*.test.js tests/unit/*.test.js",
     "check:repo": "node scripts/check-repository.mjs",
-    "prestart": "node scripts/generate-minglora-gifts.mjs && node scripts/generate-minglora-sound-library.mjs && node scripts/generate-live-gift-motion-index.mjs && node scripts/generate-minglora-live-asset-manifest.mjs",
+    "prestart": "node scripts/generate-minglora-gifts.mjs && node scripts/generate-minglora-sound-library.mjs && node scripts/validate-authentic-audio-library.mjs && node scripts/generate-live-gift-motion-index.mjs && node scripts/generate-minglora-live-asset-manifest.mjs",
     "build:gifts": "node scripts/generate-minglora-gifts.mjs",
     "build:sounds": "node scripts/generate-minglora-sound-library.mjs",
     "build:live-gift-motion": "node scripts/generate-live-gift-motion-index.mjs",
     "build:live-asset-manifest": "node scripts/generate-minglora-live-asset-manifest.mjs",
-    "audit:live-image-metadata": "node scripts/audit-minglora-live-image-metadata.mjs"
+    "audit:live-image-metadata": "node scripts/audit-minglora-live-image-metadata.mjs",
+    "check:audio-library": "node scripts/validate-authentic-audio-library.mjs"
   },
   "engines": {
     "node": "24.x"
