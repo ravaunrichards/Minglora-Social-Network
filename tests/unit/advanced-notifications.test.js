@@ -92,3 +92,51 @@ test('Notification changes are broadcast only to the authenticated recipient acc
   assert.match(app,/message\.type==='notification:new'[\s\S]*pollBrowserNotifications\(\)/);
   assert.match(app,/message\.type==='notification:changed'[\s\S]*updateNotificationDot\(\)/);
 });
+
+
+test('Mandatory AI task approval notices appear in the account inbox with direct review controls',()=>{
+  assert.match(server,/ai_task_approval/);
+  assert.match(server,/Minglora AI approval required/);
+  assert.match(app,/data-notice-ai-approval/);
+  assert.match(app,/Approve task/);
+  assert.match(app,/Reject/);
+  assert.match(app,/\/ai-network\/tasks\/\'+encodeURIComponent\(taskId\)\+\'\/approval/);
+  assert.match(app,/AI task approval recorded/);
+  assert.match(app,/item\.type==='ai_task_approval'\?'Minglora AI approval required'/);
+});
+
+
+test('AI task approval push notifications offer a review action that opens the owner inbox',()=>{
+  assert.match(server,/ai_task_approval:'Minglora AI approval required'/);
+  assert.match(server,/ai_approval:'Minglora AI approval required'/);
+  assert.match(server,/aiTaskId:notification\.aiTaskId\|\|null/);
+  assert.match(worker,/(type==='ai_task_approval'\|\|type==='ai_approval')\?\[\{action:'approve',title:'Approve'\},\{action:'reject',title:'Reject'\}\]/);
+  assert.match(worker,/if\(approvalType&&\(event\.action==='approve'\|\|event\.action==='reject'\)\)/);
+  assert.match(worker,/credentials:'include'/);
+  assert.match(worker,/openInbox/);
+  assert.match(worker,/aiTaskId/);
+  assert.match(app,/type==='ai_task_approval'\?'Minglora AI approval required'/);
+});
+
+
+test('AI task approval notifications resolve after approve, reject or cancel',()=>{
+  assert.match(server,/function resolveAINetworkTaskApprovalNotification\(userId,taskId,decision\)/);
+  assert.match(server,/item\.aiTaskDecision=decision/);
+  assert.match(server,/resolveAINetworkTaskApprovalNotification\(user\.id,taskId,input\.status\)/);
+  assert.match(server,/resolveAINetworkTaskApprovalNotification\(user\.id,taskId,'cancelled'\)/);
+  assert.match(app,/item\.type==='ai_task_approval'&&item\.aiTaskDecision/);
+  assert.match(app,/Approval recorded/);
+});
+
+
+test('High-impact AI action reviews also create mandatory owner notifications with Approve and Reject actions',()=>{
+  assert.match(server,/function notifyAINetworkBotApproval\(user,approval\)/);
+  assert.match(server,/approval\?\.status!=='pending_human_review'/);
+  assert.match(server,/item\.type==='ai_approval'&&item\.aiApprovalId===approvalId/);
+  assert.match(server,/notify\(user\.id,null,'ai_approval'/);
+  assert.match(server,/resolveAINetworkBotApprovalNotification\(userId,approvalId,decision\)/);
+  assert.match(server,/resolveAINetworkBotApprovalNotification\(user\.id,parts\[1\],input\.decision\)/);
+  assert.match(app,/data-approval-kind="bot"/);
+  assert.match(app,/Approve action/);
+  assert.match(app,/Approve task/);
+});

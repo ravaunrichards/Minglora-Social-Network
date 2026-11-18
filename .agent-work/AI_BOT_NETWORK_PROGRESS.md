@@ -1,3 +1,18 @@
+## Owner-authorized Corporate Governance, HR and admin-approval notifications — 2026-11-18
+
+- Owner authorization was received through the in-chat Minglora Owner Acceptance Center. This authorizes continued implementation and release preparation; it does not waive signed-in owner/MFA, device, provider-readiness or production-security acceptance.
+- Current release candidate: draft PR #518, branch `feat/ai-hr-disciplinary-cases-current-main-acceptance-20261118`, based on latest `main` SHA `89d678de53703b9b7e4837c7fe12aea4e4854345`. Previous PR #515 was closed without merge as superseded.
+- Corporate HR candidate adds confidential organization-scoped employee disciplinary cases, append-only case history, moderator-gated routes/Edge Function commands, and HR workspace controls for case creation, investigation notes and reasoned status transitions. Investigations, findings and sanctions remain human-managed.
+- Candidate migration `20261118044600_minglora_ai_hr_disciplinary_cases` sorts after production ledger `20261118042949`. The exact renamed SQL ran in explicit `BEGIN ... ROLLBACK`; RLS, least-privilege table grants, append-only case history, SECURITY INVOKER/empty search_path and service-role-only RPC checks passed. Post-rollback verification confirmed both tables, RPC and ledger row are absent.
+- Owner notifications are source-implemented for both current AI approval paths: durable task approvals (`pending_approval`) and high-impact AI action approvals (`pending_human_review`). Notifications are deduplicated, remain visible despite ordinary notification preferences, and show matching Approve/Reject controls in the app inbox. Browser push notifications offer direct Approve/Reject actions through the same same-origin, session-authenticated administrator/MFA-gated API; if push authorization fails, the inbox opens without recording a decision. Outcomes update the notification; approval records a human decision only and does not execute the task/action.
+- Responsive CSS fixes address compact-phone overflow and tablet-width HR action forms. Earlier browser runs failed at 320px and later at tablet width; these corrections are included, but a fresh exact-head browser workflow still must pass.
+- Latest candidate head prior to the tracker update: `44950a9a40297cc0db95bb5b18f6dcf308cf63ff`. Full CI, AI Network regression, Chromium browser acceptance and nine-layout visual QA were queued for this head. Results from older commits are not transferable.
+- Live Supabase inventory: 62/62 `ai_network` tables RLS-enabled; 15 AI categories, 20 department templates and 20 position templates. No live AI workforce, organization, team or task population was created by this candidate.
+- No candidate production migration, Edge Function deployment or Render deployment has happened. Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Provider credentials, health, worker identity and inference are not verified.
+- Remaining gates: exact-head workflows pass; signed-in owner/MFA browser/device acceptance; owner notification end-to-end acceptance; coordinated migration/Edge Function/Render release; verified provider/worker readiness; complete HR/workforce and operational lifecycle. Do not claim 10-billion capacity.
+
+---
+
 ## Production acceptance checkpoint — 2026-11-18 (owner RBAC repair)
 
 - Owner-controlled administrator RBAC repair PR #516 is merged to `main` as `70519e0d0333dc5fcf23e838aa8680e1bdf77fcb`. The original source migration had an invalid dollar-quote delimiter on the append-only audit trigger; the merged fix corrects it and adds a regression test.

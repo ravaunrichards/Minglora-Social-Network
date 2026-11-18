@@ -904,10 +904,10 @@ async function deliverUserPush(userId,notification){
   if(!subscriptions.length)return;
   const stale=new Set();
   const payload=JSON.stringify({
-    title:({live:'Minglora LIVE',live_moderator:'LIVE moderator update',call:'Incoming Minglora call',message:'New Minglora message',profile_view:'Profile view',friend:'Friend update',reaction:'Post reaction',comment:'New comment',follow:'New follower',gift:'You received a gift',fan_club:'Fan Club update',meetwave_invite:'MeetWave invitation',league_match:'League match update'})[notification.type]||'Minglora account update',
+    title:({live:'Minglora LIVE',live_moderator:'LIVE moderator update',call:'Incoming Minglora call',message:'New Minglora message',profile_view:'Profile view',friend:'Friend update',reaction:'Post reaction',comment:'New comment',follow:'New follower',gift:'You received a gift',fan_club:'Fan Club update',meetwave_invite:'MeetWave invitation',league_match:'League match update',ai_task_approval:'Minglora AI approval required',ai_approval:'Minglora AI approval required'})[notification.type]||'Minglora account update',
     body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
     tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
-    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,sellerId:notification.sellerId||null,roomId:notification.roomId||null,invitationId:notification.invitationId||null,matchId:notification.matchId||null}
+    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,aiTaskId:notification.aiTaskId||null,aiApprovalId:notification.aiApprovalId||null,sellerId:notification.sellerId||null,roomId:notification.roomId||null,invitationId:notification.invitationId||null,matchId:notification.matchId||null}
   });
   await Promise.all(subscriptions.map(async subscription=>{
     try{
@@ -935,7 +935,7 @@ function notificationPreferenceKey(type){
   if(type==='meetwave_invite')return 'meetWave';
   if(['video_remix','video_collaboration_invite','video_collaboration_response'].includes(type))return 'interactions';
   if(type==='league_match')return 'leagues';
-  if(['account_security','verification_application','verification_status','admin_alert'].includes(type))return 'account';
+  if(['account_security','verification_application','verification_status','admin_alert','ai_task_approval','ai_approval'].includes(type))return 'account';
   return null;
 }
 function notificationTypeEnabled(preferences,type){
@@ -945,14 +945,65 @@ function notificationTypeEnabled(preferences,type){
 const notify = (userId, actorId, type, text, extra = {}) => {
   const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;
   const prefs=getUserSettings(recipient).notifications;
-  if(!notificationTypeEnabled(prefs,type)||(!prefs.inApp&&!prefs.push))return;
+  const mandatoryApproval=type==='ai_task_approval'||type==='ai_approval';
+  if((!mandatoryApproval&&!notificationTypeEnabled(prefs,type))||(!prefs.inApp&&!prefs.push&&!mandatoryApproval))return;
   const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
-  if(prefs.inApp){
+  if(prefs.inApp||mandatoryApproval){
     db.notifications.unshift(notification);
     publishNotificationEvent(userId,'notification:new',notification.id);
   }
   if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
 };
+function notifyAINetworkTaskApproval(user,task){
+  const taskId=String(task?.task_id||'').trim();
+  if(!user?.id||!taskId||task?.status!=='pending_approval'||task?.requires_approval!==true)return false;
+  db.notifications ||= [];
+  if(db.notifications.some(item=>item.userId===user.id&&item.type==='ai_task_approval'&&item.aiTaskId===taskId))return false;
+  const title=String(task.task_title||'AI task').trim().slice(0,180)||'AI task';
+  const actionClass=String(task.action_class||'other').slice(0,32);
+  const before=db.notifications.length;
+  notify(user.id,null,'ai_task_approval',
+    'Approval required: '+title+'. Action class: '+actionClass+'. Review the task details before deciding.',
+    {aiTaskId:taskId,aiTaskTitle:title,aiTaskActionClass:actionClass});
+  return db.notifications.length>before;
+}
+function notifyAINetworkBotApproval(user,approval){
+  const approvalId=String(approval?.id||'').trim();
+  if(!user?.id||!approvalId||approval?.status!=='pending_human_review')return false;
+  db.notifications ||= [];
+  if(db.notifications.some(item=>item.userId===user.id&&item.type==='ai_approval'&&item.aiApprovalId===approvalId))return false;
+  const summary=String(approval.summary||'High-impact AI action').trim().slice(0,500)||'High-impact AI action';
+  const actionType=String(approval.actionType||'other').slice(0,50);
+  const before=db.notifications.length;
+  notify(user.id,null,'ai_approval',
+    'AI action approval required: '+summary+'. Action type: '+actionType+'. Review the request before deciding.',
+    {aiApprovalId:approvalId,aiApprovalSummary:summary,aiActionType:actionType});
+  return db.notifications.length>before;
+}
+function resolveAINetworkBotApprovalNotification(userId,approvalId,decision){
+  if(!userId||!approvalId||!['approve','reject'].includes(decision))return false;
+  let changed=false;
+  for(const item of (db.notifications||[])){
+    if(item.userId===userId&&item.type==='ai_approval'&&item.aiApprovalId===approvalId&&!item.aiApprovalDecision){
+      item.aiApprovalDecision=decision;
+      item.aiApprovalDecisionAt=now();
+      changed=true;
+    }
+  }
+  return changed;
+}
+function resolveAINetworkTaskApprovalNotification(userId,taskId,decision){
+  if(!userId||!taskId||!['approved','rejected','cancelled'].includes(decision))return false;
+  let changed=false;
+  for(const item of (db.notifications||[])){
+    if(item.userId===userId&&item.type==='ai_task_approval'&&item.aiTaskId===taskId&&!item.aiTaskDecision){
+      item.aiTaskDecision=decision;
+      item.aiTaskDecisionAt=now();
+      changed=true;
+    }
+  }
+  return changed;
+}
 function publishNotificationEvent(userId,type,notificationId=null){
   if(!userId||!['notification:new','notification:changed'].includes(type))return 0;
   return messengerRealtime?.publish([userId],{type,notificationId:notificationId||null})||0;
@@ -2174,6 +2225,32 @@ async function route(req, res) {
         }
       };
 
+      const runAIHRDisciplinaryCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora administrator may manage confidential disciplinary cases.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI HR disciplinary records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_hr_disciplinary_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI HR disciplinary records require Supabase persistence.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI HR disciplinary command|function .*minglora_ai_hr_disciplinary_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The additive AI HR disciplinary migration and private runtime gateway must be deployed first. No case data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const runAIHRTalentCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2396,6 +2473,10 @@ async function route(req, res) {
           throw Object.assign(new Error('AI task input must be a JSON object.'), { status: 400 });
         }
         const result = await runAITaskCommand('create_task', input);
+        if(result?.task?.status==='pending_approval'&&result.task.requires_approval===true){
+          const notificationCreated=notifyAINetworkTaskApproval(user,result.task);
+          if(notificationCreated)await saveStore();
+        }
         return json(res, result?.reused ? 200 : 201, result || {});
       }
       if (parts[0] === 'tasks' && parts.length === 3 && method === 'PATCH' && parts[2] === 'approval') {
@@ -2410,6 +2491,10 @@ async function route(req, res) {
         input.task_id = taskId;
         input.reason = String(input.reason || '');
         const result = await runAITaskCommand(input.status === 'approved' ? 'approve_task' : 'reject_task', input);
+        if(result?.task&&resolveAINetworkTaskApprovalNotification(user.id,taskId,input.status)){
+          await saveStore();
+          publishNotificationEvent(user.id,'notification:changed');
+        }
         return json(res, 200, result || {});
       }
       if (parts[0] === 'tasks' && parts.length === 3 && method === 'POST' && parts[2] === 'cancel') {
@@ -2423,6 +2508,10 @@ async function route(req, res) {
         }
         input.task_id = taskId;
         const result = await runAITaskCommand('cancel_task', input);
+        if(result?.task&&resolveAINetworkTaskApprovalNotification(user.id,taskId,'cancelled')){
+          await saveStore();
+          publishNotificationEvent(user.id,'notification:changed');
+        }
         return json(res, 200, result || {});
       }
 
@@ -2654,6 +2743,45 @@ async function route(req, res) {
           }
         }
       }
+      if (parts[0] === 'organizations' && parts.length >= 3 && parts[2] === 'disciplinary-cases') {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const basePayload = { organization_id: organizationId };
+        const readCaseBody = async () => {
+          const input = await body(req, 16000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI HR disciplinary input must be a JSON object.'), { status: 400 });
+          }
+          return { ...basePayload, ...input, organization_id: organizationId };
+        };
+        if (parts.length === 3 && method === 'GET') {
+          const cases = await runAIHRDisciplinaryCommand('list_disciplinary_cases', basePayload);
+          return json(res, 200, { disciplinary_cases: Array.isArray(cases) ? cases : [] });
+        }
+        if (parts.length === 3 && method === 'POST') {
+          const input = await readCaseBody();
+          const result = await runAIHRDisciplinaryCommand('create_disciplinary_case', input);
+          return json(res, result?.reused ? 200 : 201, result || {});
+        }
+        if (parts.length === 5) {
+          const caseId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(caseId)) {
+            throw Object.assign(new Error('A valid disciplinary case ID is required.'), { status: 400 });
+          }
+          const input = await readCaseBody();
+          input.case_id = caseId;
+          if (parts[4] === 'notes' && method === 'POST') {
+            return json(res, 201, await runAIHRDisciplinaryCommand('add_disciplinary_case_note', input) || {});
+          }
+          if (parts[4] === 'status' && method === 'PATCH') {
+            return json(res, 200, await runAIHRDisciplinaryCommand('set_disciplinary_case_status', input) || {});
+          }
+        }
+        throw Object.assign(new Error('Disciplinary case route was not found.'), { status: 404 });
+      }
+
       if (parts[0] === 'organizations' && parts.length >= 3 &&
           ['training-courses', 'training-enrollments', 'attendance'].includes(parts[2])) {
         const organizationId = parts[1];
@@ -3217,13 +3345,16 @@ async function route(req, res) {
       }
       if (method === 'POST' && sub === 'approvals') {
         const approval = createAIApprovalRequest(db, user.id, await body(req, 8000));
+        const notificationCreated=notifyAINetworkBotApproval(user,approval);
         await saveStore();
         return json(res, 201, { approval });
       }
       if (method === 'PATCH' && parts[0] === 'approvals' && parts.length === 2) {
         const input = await body(req, 4000);
         const approval = decideAIApproval(db, user.id, parts[1], input.decision);
+        const notificationResolved=resolveAINetworkBotApprovalNotification(user.id,parts[1],input.decision);
         await saveStore();
+        if(notificationResolved)publishNotificationEvent(user.id,'notification:changed');
         return json(res, 200, { approval });
       }
       if (method === 'POST' && sub === 'companion/consent') {
@@ -9892,7 +10023,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
         if(db.notifications.length!==before)await saveStore();
-        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&notificationTypeEnabled(prefs,n.type)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)})):[];
+        const notifications=db.notifications.filter(n=>n.userId===user.id&&(prefs.inApp||n.type==='ai_task_approval'||n.type==='ai_approval')&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&(n.type==='ai_task_approval'||n.type==='ai_approval'||notificationTypeEnabled(prefs,n.type))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)}));
         const unreadCount=notifications.filter(item=>!item.read).length;
         const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
         return json(res,200,{notifications,unreadCount,categoryCounts});

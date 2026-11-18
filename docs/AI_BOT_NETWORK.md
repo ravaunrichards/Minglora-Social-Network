@@ -1,3 +1,13 @@
+## Corporate Governance, HR and owner approval notifications — current release candidate (2026-11-18)
+
+Draft [PR #518](https://github.com/ravaunrichards/Minglora-Social-Network/pull/518) adds confidential, organization-scoped employee disciplinary case records and append-only case history to the HR workspace. Authorized administrators can open a case, add investigation notes and make reasoned status transitions. Investigations, findings and sanctions remain human-managed.
+
+The same candidate routes both existing AI approval types into Minglora's account notifications: durable AI task requests requiring approval and high-impact AI action records awaiting human review. Notifications are deduplicated, appear in the owner inbox regardless of ordinary notification preferences, and provide matching Approve/Reject controls. Browser push alerts also expose direct Approve/Reject actions through the session-authenticated administrator/MFA-gated same-origin API; when authorization is unavailable, the action is not recorded and the inbox opens for a signed-in review. The recorded decision updates the notification but does not execute the underlying task or action.
+
+The HR migration is `supabase/migrations/20261118044600_minglora_ai_hr_disciplinary_cases.sql`, ordered after production ledger `20261118042949`. The exact renamed migration passed an explicit rollback contract for RLS, least-privilege grants, append-only history and the service-role-only SECURITY INVOKER RPC. Post-rollback verification found no retained tables, RPC or ledger entry. It has not been applied to production.
+
+Owner approved continuation through the in-chat Owner Acceptance Center. PR #518 remains DRAFT pending exact-head CI, browser/layout checks, signed-in owner/MFA acceptance and device review. No PR #518 production migration, Edge Function deployment or Render deployment is claimed. AI worker execution remains paused and disabled.
+
 ## 10-billion identity scale architecture
 
 The design baseline, routing model, shard/data-plane plan, region consistency rules, migration gates and measurable capacity acceptance criteria are documented in [AI Bot Network Scale Architecture](AI_BOT_NETWORK_SCALE_ARCHITECTURE.md). This is a design document only: it does not assert deployed shards, 10-billion capacity, regional failover, or worker concurrency.

@@ -156,3 +156,113 @@
 .ai-network-chat-message small{color:var(--muted,#69778d);font-size:.72rem}
 .ai-network-bot-chat .ai-network-form{margin-top:2px}
 @media(max-width:760px){.ai-network-bot-chat-heading{align-items:center}.ai-network-chat-thread{max-height:48vh;padding:8px}.ai-network-chat-message{max-width:100%}}
+
+
+/* Keep organization identity readable when action controls need a second line. */
+.ai-network-organization-row{display:flex;flex-wrap:wrap;align-items:flex-start}
+.ai-network-organization-row>.ai-network-list-main{flex:1 1 280px;min-width:min(100%,280px)}
+.ai-network-organization-row>.ai-network-organization-actions{flex:0 1 auto;min-width:0;max-width:100%}
+.ai-network-organization-row>.ai-network-hr-workspace{flex:1 0 100%;min-width:0}
+
+/* Keep the corporate HR workspace bounded by the available phone width. */
+@media(max-width:560px){
+  .ai-network-organization-row,
+  .ai-network-organization-row>.ai-network-list-main,
+  .ai-network-organization-row>.ai-network-organization-actions,
+  .ai-network-organization-row>.ai-network-hr-workspace{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-organization-row{flex-direction:column}
+  .ai-network-organization-actions{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch}
+  .ai-network-organization-actions form,
+  .ai-network-organization-actions button{width:100%;min-width:0;max-width:100%}
+  .ai-network-hr-workspace,
+  .ai-network-hr-workspace>*,
+  .ai-network-hr-workspace .ai-network-form,
+  .ai-network-hr-workspace .ai-network-inline-form{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-hr-workspace .ai-network-inline-form label{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+}
+
+/* Explicitly bound the workspace grid and its cards to the mobile content box. */
+.ai-network-page>.ai-network-grid,
+.ai-network-page .ai-network-grid{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+}
+.ai-network-page .ai-network-grid>*{
+  min-width:0;
+  max-width:100%;
+}
+@media(max-width:560px){
+  .ai-network-page>.ai-network-grid{
+    grid-template-columns:minmax(0,1fr);
+  }
+  .ai-network-page .ai-network-grid>.ai-network-card{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-page .ai-network-grid>.ai-network-card>*{
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-page .ai-network-grid .ai-network-form-grid{
+    grid-template-columns:minmax(0,1fr);
+  }
+}
+
+/* The HR workspace must stack below the organization summary on narrow screens. */
+@media(max-width:560px){
+  .ai-network-page .ai-network-organization-row{
+    display:flex;
+    flex-direction:column!important;
+    flex-wrap:nowrap!important;
+    align-items:stretch;
+  }
+  .ai-network-page .ai-network-organization-row>.ai-network-list-main,
+  .ai-network-page .ai-network-organization-row>.ai-network-organization-actions,
+  .ai-network-page .ai-network-organization-row>.ai-network-hr-workspace{
+    flex:0 0 auto!important;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-page .ai-network-organization-row>.ai-network-hr-workspace{
+    flex-basis:auto!important;
+    margin-left:0;
+    margin-right:0;
+  }
+}
+
+/* HR action forms use one column at tablet widths to avoid intrinsic-width overflow. */
+@media(max-width:900px){
+  .ai-network-page .ai-network-hr-workspace .ai-network-inline-form{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    gap:8px;
+  }
+  .ai-network-page .ai-network-hr-workspace .ai-network-inline-form label{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-page .ai-network-hr-workspace .ai-network-inline-form button{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+}

@@ -237,7 +237,69 @@ function aiApiResponse(req, url, body) {
   if (method === 'GET' && pathname === '/provider-models') return { provider_models: [] };
   if (method === 'GET' && pathname === '/provider-assignments') return { assignments: [] };
   if (method === 'GET' && pathname === '/tasks') return { tasks: [], runtime: taskRuntime };
-  if (method === 'GET' && pathname === '/organizations') return { organizations: [] };
+  if (method === 'GET' && pathname === '/organizations') return { organizations: [structuredClone(organizationFixture)] };
+  const organizationRoute = pathname.match(/^\/organizations\/([0-9a-f-]+)(?:\/(.*))?$/i);
+  if (organizationRoute && organizationRoute[1] === fixtureOrganizationId) {
+    const resource = organizationRoute[2] || '';
+    if (method === 'GET') {
+      const responses = {
+        departments: { departments: [{ department: { department_id: fixtureDepartmentId, display_name: 'People Operations' } }] },
+        positions: { positions: [{ position_id: fixturePositionId, display_name: 'People Operations Specialist', job_family: 'human_resources', hierarchy_level: 40, status: 'active' }] },
+        vacancies: { vacancies: [] },
+        applications: { applications: [] },
+        employees: { employees: [structuredClone(employeeFixture)] },
+        'performance-reviews': { performance_reviews: [] },
+        'succession-plans': { succession_plans: [] },
+        promotions: { promotions: [] },
+        'training-courses': { training_courses: [] },
+        'training-enrollments': { training_enrollments: [] },
+        attendance: { attendance: [] },
+        'disciplinary-cases': { disciplinary_cases: disciplinaryCases.map(item => structuredClone(item)) }
+      };
+      return responses[resource] || { error: 'Unknown organization fixture route.' };
+    }
+    if (resource === 'disciplinary-cases' && method === 'POST') {
+      disciplinaryRequests.creates.push(structuredClone(body));
+      const record = {
+        case_id: randomUUID(), organization_id: fixtureOrganizationId,
+        employment_id: body.employment_id, case_category: body.case_category,
+        severity: body.severity, case_status: 'open', incident_date: body.incident_date,
+        case_title: body.case_title, summary: body.summary, details: body.details || '',
+        idempotency_key: body.idempotency_key, opened_by_user_id: 'ai-network-browser-qa-member',
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+      };
+      const wrapper = {
+        case: record,
+        identity: { identity_id: ownerIdentityId, display_name: 'Ari Morgan', username: 'ari_morgan' },
+        position_name: 'People Operations Specialist',
+        history: [{ event_id: randomUUID(), action: 'case_opened', new_status: 'open', note: '', occurred_at: new Date().toISOString() }]
+      };
+      disciplinaryCases.push(wrapper);
+      return { case: structuredClone(record), reused: false };
+    }
+    const caseRoute = resource.match(/^disciplinary-cases\/([0-9a-f-]+)\/(notes|status)$/i);
+    if (caseRoute) {
+      const wrapper = disciplinaryCases.find(item => item.case.case_id === caseRoute[1]);
+      if (!wrapper) return { error: 'Fixture disciplinary case not found.' };
+      if (caseRoute[2] === 'notes' && method === 'POST') {
+        disciplinaryRequests.notes.push(structuredClone(body));
+        const event = { event_id: randomUUID(), action: 'note_added', new_status: wrapper.case.case_status, note: body.note, occurred_at: new Date().toISOString() };
+        wrapper.history.push(event);
+        wrapper.case.updated_at = event.occurred_at;
+        return { event: structuredClone(event), reused: false };
+      }
+      if (caseRoute[2] === 'status' && method === 'PATCH') {
+        disciplinaryRequests.statuses.push(structuredClone(body));
+        const previous = wrapper.case.case_status;
+        wrapper.case.case_status = body.status;
+        wrapper.case.updated_at = new Date().toISOString();
+        const event = { event_id: randomUUID(), action: 'case_status_changed', previous_status: previous, new_status: body.status, note: body.reason, occurred_at: wrapper.case.updated_at };
+        wrapper.history.push(event);
+        return { case: structuredClone(wrapper.case), reused: false };
+      }
+    }
+    return { error: 'Unsupported HR fixture operation.' };
+  }
   if (method === 'GET' && pathname === '/department-templates') return { templates: departmentTemplates };
   if (method === 'GET' && pathname === '/position-templates') return { templates: positionTemplates };
 
@@ -327,6 +389,43 @@ const member = {
   platformRole: 'platform_owner'
 };
 
+const fixtureOrganizationId = '44444444-4444-4444-8444-444444444444';
+const fixtureEmploymentId = '55555555-5555-4555-8555-555555555555';
+const fixtureDepartmentId = '66666666-6666-4666-8666-666666666666';
+const fixturePositionId = '77777777-7777-4777-8777-777777777777';
+let disciplinaryCases = [];
+const disciplinaryRequests = { creates: [], notes: [], statuses: [] };
+const organizationFixture = {
+  organization: {
+    organization_id: fixtureOrganizationId,
+    organization_name: 'Minglora HR Acceptance Fixture',
+    organization_slug: 'minglora-hr-acceptance-fixture',
+    organization_type: 'company',
+    status: 'active'
+  },
+  department_count: 1,
+  position_count: 1
+};
+const employeeFixture = {
+  employment: {
+    employment_id: fixtureEmploymentId,
+    organization_id: fixtureOrganizationId,
+    department_id: fixtureDepartmentId,
+    position_id: fixturePositionId,
+    employment_status: 'active',
+    employment_type: 'full_time',
+    workload_percentage: 100,
+    start_date: '2025-01-01',
+    manager_employment_id: null
+  },
+  identity: {
+    identity_id: ownerIdentityId,
+    display_name: 'Ari Morgan',
+    first_name: 'Ari',
+    last_name: 'Morgan'
+  },
+  position_name: 'People Operations Specialist'
+};
 let adminAccess = false;
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', 'http://127.0.0.1');
@@ -656,6 +755,72 @@ try {
   assert.equal(savedGroups.length, 1);
   assert.equal(savedGroups[0].filters.genders[0], 'female');
 
+  // The HR workspace must exercise real UI forms against disposable organization and employee fixtures.
+  const organizationCard = page.locator('.ai-network-card').filter({
+    has: page.getByRole('heading', { name: 'Corporate Governance & Workforce' })
+  });
+  await organizationCard.scrollIntoViewIfNeeded();
+  const organizationDiagnostics = await page.evaluate(() => {
+    const matches = [...document.querySelectorAll('strong')].filter(node => node.textContent.trim() === 'Minglora HR Acceptance Fixture');
+    return {
+      pageTitle: document.querySelector('.ai-network-page h1')?.textContent || '',
+      adminAccessUpdated: document.querySelector('.ai-network-hero-status')?.textContent || '',
+      organizationRows: document.querySelectorAll('.ai-network-organization-row').length,
+      matches: matches.map(node => {
+        const chain = [];
+        let current = node;
+        for (let level = 0; current && level < 7; level += 1, current = current.parentElement) {
+          const style = getComputedStyle(current);
+          const rect = current.getBoundingClientRect();
+          chain.push({
+            tag: current.tagName, className: String(current.className || ''),
+            hidden: current.hidden, ariaHidden: current.getAttribute('aria-hidden'),
+            display: style.display, flexDirection: style.flexDirection,
+            flexBasis: style.flexBasis, flexWrap: style.flexWrap,
+            visibility: style.visibility, opacity: style.opacity,
+            width: rect.width, height: rect.height
+          });
+        }
+        return chain;
+      })
+    };
+  });
+  console.error('[AI HR organization diagnostics]', JSON.stringify(organizationDiagnostics));
+  await page.getByText('Minglora HR Acceptance Fixture', { exact: true }).waitFor({ state: 'visible' });
+  const caseForm = page.locator('form[data-ai-form="disciplinary-case"]');
+  await caseForm.locator('[name="employmentId"]').selectOption(fixtureEmploymentId);
+  await caseForm.locator('[name="caseCategory"]').selectOption('conduct');
+  await caseForm.locator('[name="severity"]').selectOption('medium');
+  await caseForm.locator('[name="incidentDate"]').fill(new Date(Date.now() - 86400000).toISOString().slice(0,10));
+  await caseForm.locator('[name="caseTitle"]').fill('HR disciplinary browser acceptance');
+  await caseForm.locator('[name="summary"]').fill('Verify confidential case creation from the HR workspace.');
+  await caseForm.locator('[name="details"]').fill('This is a disposable in-memory browser fixture; no production employee record is used.');
+  await caseForm.locator('button[type="submit"]').click();
+  await page.getByText('Confidential case opened and audit history recorded.').waitFor({ state: 'visible' });
+  assert.equal(disciplinaryRequests.creates.length, 1, 'The HR case form must submit exactly one create request.');
+  assert.equal(disciplinaryRequests.creates[0].employment_id, fixtureEmploymentId);
+  assert.equal(disciplinaryCases.length, 1, 'The case must be present after the HR workspace refresh.');
+  assert.equal(disciplinaryCases[0].case.case_status, 'open');
+
+  const disciplinaryRow = page.locator('.ai-network-hr-row').filter({ hasText: 'HR disciplinary browser acceptance' });
+  await disciplinaryRow.waitFor({ state: 'visible' });
+  const noteForm = disciplinaryRow.locator('form[data-ai-form="disciplinary-case-note"]');
+  await noteForm.locator('[name="note"]').fill('Owner-reviewed fixture note for the disciplinary case.');
+  await noteForm.locator('button[type="submit"]').click();
+  await page.getByText('Confidential case note added to history.').waitFor({ state: 'visible' });
+  assert.equal(disciplinaryRequests.notes.length, 1, 'Adding a confidential investigation note must call the API once.');
+  assert.equal(disciplinaryCases[0].history.length, 2);
+
+  const updatedDisciplinaryRow = page.locator('.ai-network-hr-row').filter({ hasText: 'HR disciplinary browser acceptance' });
+  const statusForm = updatedDisciplinaryRow.locator('form[data-ai-form="disciplinary-case-status"]');
+  await statusForm.locator('[name="status"]').selectOption('under_review');
+  await statusForm.locator('[name="reason"]').fill('Investigation started by the HR administrator.');
+  await statusForm.locator('button[type="submit"]').click();
+  await page.getByText('Case status updated with an audit reason.').waitFor({ state: 'visible' });
+  assert.equal(disciplinaryRequests.statuses.length, 1, 'Case status transitions must be persisted.');
+  assert.equal(disciplinaryCases[0].case.case_status, 'under_review');
+  assert.equal(disciplinaryCases[0].history.length, 3, 'Case creation, note and status transition must appear in history.');
+
   const viewports = [
     { name: 'compact-phone', width: 320, height: 740 },
     { name: 'standard-phone', width: 390, height: 844 },
@@ -677,14 +842,45 @@ try {
         documentScrollWidth: document.documentElement.scrollWidth,
         viewportWidth: window.innerWidth,
         identityEditorVisible: Boolean(document.querySelector('form[data-ai-form="identity-edit"]')),
-        discoveryVisible: Boolean(document.querySelector('form[data-ai-form="discovery"]'))
+        discoveryVisible: Boolean(document.querySelector('form[data-ai-form="discovery"]')),
+        corporateGovernanceVisible: Boolean(document.querySelector('.ai-network-organization-row')),
+        disciplinaryCaseVisible: Boolean(document.querySelector('form[data-ai-form="disciplinary-case"]')),
+        gridChildren: [...(root?.querySelectorAll('.ai-network-grid > *') || [])].map(element => {
+          const rect = element.getBoundingClientRect();
+          return {
+            tag: element.tagName, className: String(element.className || '').slice(0, 120),
+            width: Math.round(rect.width), right: Math.round(rect.right),
+            scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+            text: String(element.textContent || '').trim().slice(0, 120)
+          };
+        }),
+        overflowingElements: [...document.querySelectorAll('.ai-network-page *')].map(element => {
+          const rect = element.getBoundingClientRect();
+          const boundary = root?.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            tag: element.tagName, className: String(element.className || '').slice(0, 120),
+            text: String(element.textContent || '').trim().slice(0, 100),
+            width: Math.round(rect.width), right: Math.round(rect.right),
+            scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+            excess: element.scrollWidth - element.clientWidth,
+            rightOverflow: boundary ? rect.right - boundary.right : 0,
+            leftOverflow: boundary ? boundary.left - rect.left : 0,
+            minWidth: style.minWidth, gridColumns: style.gridTemplateColumns,
+            parentClass: String(element.parentElement?.className || '').slice(0, 120)
+          };
+        }).filter(item => item.rightOverflow > 2 || item.leftOverflow > 2 || item.excess > 2)
+          .sort((a,b) => Math.max(b.rightOverflow,b.leftOverflow,b.excess) - Math.max(a.rightOverflow,a.leftOverflow,a.excess))
+          .slice(0, 40)
       };
     });
+    const geometrySummary = JSON.stringify(geometry);
     assert.ok(geometry.rootWidth > 0, viewport.name + ': AI Network workspace must render.');
-    assert.ok(geometry.rootScrollWidth <= geometry.rootClientWidth + 2, viewport.name + ': AI workspace must not overflow horizontally.');
-    assert.ok(geometry.mainScrollWidth <= geometry.mainClientWidth + 2, viewport.name + ': main content must not overflow horizontally.');
-    assert.ok(geometry.documentScrollWidth <= geometry.viewportWidth + 2, viewport.name + ': viewport must not overflow horizontally.');
+    assert.ok(geometry.rootScrollWidth <= geometry.rootClientWidth + 2, viewport.name + ': AI workspace must not overflow horizontally. ' + geometrySummary);
+    assert.ok(geometry.mainScrollWidth <= geometry.mainClientWidth + 2, viewport.name + ': main content must not overflow horizontally. ' + geometrySummary);
+    assert.ok(geometry.documentScrollWidth <= geometry.viewportWidth + 2, viewport.name + ': viewport must not overflow horizontally. ' + geometrySummary);
     assert.ok(geometry.identityEditorVisible && geometry.discoveryVisible, viewport.name + ': identity and discovery controls must remain available.');
+    assert.ok(geometry.corporateGovernanceVisible && geometry.disciplinaryCaseVisible, viewport.name + ': corporate HR controls must remain available.');
     await page.screenshot({
       path: path.join(artifactsDir, 'ai-network__' + viewport.name + '.jpg'),
       type: 'jpeg', quality: 78, fullPage: true
@@ -708,6 +904,10 @@ try {
     memoryEntryUpdates: memoryRequests.updates.length,
     memoryEntryDeletes: memoryRequests.deletes.length,
     savedDiscoveryGroups: savedGroups.length,
+    disciplinaryCaseCreates: disciplinaryRequests.creates.length,
+    disciplinaryCaseNotes: disciplinaryRequests.notes.length,
+    disciplinaryCaseStatusUpdates: disciplinaryRequests.statuses.length,
+    disciplinaryCaseHistoryEvents: disciplinaryCases[0]?.history?.length || 0,
     viewportsChecked: viewports.length,
     screenshotsCaptured: screenshots,
     externalApiRequests: externalApiRequests.length,

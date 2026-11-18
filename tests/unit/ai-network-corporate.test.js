@@ -89,5 +89,6 @@ test('AI workspace displays actual organization records and provisions template 
   assert.match(ui, /state\.positionTemplates\.map/);
   assert.match(ui, /record\.department_count/);
   assert.match(ui, /record\.position_count/);
-  assert.match(ui, /Recruitment, employee appointments, reporting-chain changes/);
+  assert.match(ui, /This workspace connects organization structure, recruitment, appointment and employment history/);
+  assert.match(ui, /Payroll, real-money transfers and automated employment sanctions are not enabled/);
 });

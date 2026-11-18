@@ -1,3 +1,15 @@
+## Owner-authorized Corporate Governance, HR and approval notifications — 2026-11-18
+
+- Owner authorized release preparation through the in-chat Owner Acceptance Center; signed-in owner/MFA and desktop/mobile acceptance are separate gates.
+- Current candidate PR #518 is draft on `feat/ai-hr-disciplinary-cases-current-main-acceptance-20261118`, based on latest `main`. PR #515 was superseded and closed without merge.
+- HR disciplinary migration `20261118044600_minglora_ai_hr_disciplinary_cases` follows live ledger `20261118042949`. Exact migration rollback contract passed; no table, RPC or migration ledger residue remains.
+- Both current AI approval flows now generate owner notifications: durable AI task approvals and high-impact bot action reviews. Inbox and browser push expose Approve/Reject actions; decisions use existing admin/MFA-gated APIs and are logged, but do not execute the underlying work.
+- Latest current-head full CI, AI Network checks, browser acceptance and nine-layout visual QA are queued. Earlier phone/tablet overflows were corrected, but only exact-head pass results count.
+- No candidate production migration, Edge Function deployment or Render deploy has happened. Keep workers paused. Complete signed-in owner/device and notification acceptance before coordinating the production release.
+- Corporate Governance/HR remains **PARTIAL** until the full lifecycle and independent acceptance gates pass.
+
+---
+
 ## Verified execution checkpoint — 2026-11-15 (provider registry, OpenAI Creator Studio generation)
 
 - Repository: `ravaunrichards/Minglora-Social-Network`. Provider configuration PRs #358–#361 are merged as previously recorded. **PR #362** (10 files) is now merged to `main`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/362. Squash commit: `1694eab2ff601cee511b70e84b9821c94b5cc679`. PR head tested: `8a78004592a1abc1b7549f6992e9dcb8b3bd53cc`. All 10 changed files were read back from `main` after merge.
