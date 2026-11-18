@@ -1,3 +1,15 @@
+## Avery Morgan single-identity release queue — 2026-11-18
+
+- Scope: the existing Avery Morgan identity only (`1d0aa263-9a67-4d82-b53c-09223f9ed278`). Do not add a second identity.
+- Identity exists and is private/disabled/fully supervised. Existing OpenAI assignment is pending with an unconfigured account and unknown health; no credentials or operational inference have been verified.
+- Existing primary email is a reserved `.invalid` placeholder. Current-main email implementation converts that same row, is idempotent, and keeps inbox/message data private.
+- Rollback-only DB acceptance passed first provision + same-key retry against the existing row. The transaction rolled back; production is unchanged.
+- Branch `feat/avery-ai-email-provisioning-mainline-20261118` contains the service adapter, migration, Edge Function RPC handler, server API/webhook, admin UI, tests, docs and CI wiring. No deployment has been made.
+- Next: pass current-main CI/review; then owner/MFA acceptance, private Resend key/domain/DNS/webhook setup, approved migration, existing Edge Function/service deployment, and signed live send/receive/read/idempotency/security checks.
+- Keep provider inference and workers disabled until their separate verified provider/runtime gates are passed.
+
+---
+
 ## Verified execution checkpoint — 2026-11-15 (provider registry, OpenAI Creator Studio generation)
 
 - Repository: `ravaunrichards/Minglora-Social-Network`. Provider configuration PRs #358–#361 are merged as previously recorded. **PR #362** (10 files) is now merged to `main`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/362. Squash commit: `1694eab2ff601cee511b70e84b9821c94b5cc679`. PR head tested: `8a78004592a1abc1b7549f6992e9dcb8b3bd53cc`. All 10 changed files were read back from `main` after merge.
