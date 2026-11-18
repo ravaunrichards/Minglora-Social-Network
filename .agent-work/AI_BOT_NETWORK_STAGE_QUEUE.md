@@ -48,7 +48,7 @@
 
 ## Source checkpoint — 2026-11-17 (visibility-aware individual profile detail)
 
-- Added source migration `20261117120000_minglora_ai_public_identity_profiles.sql` with a service-role-only read function. It requires an enabled, active AI identity and enforces public visibility, approved active followers for followers-only/private profiles, owner-only hidden access, and two-way block denial.
+- Added source migration `20261117120000_minglora_ai_public_identity_profiles.sql` with a service-role-only read function. It requires an enabled, active AI identity and enforces public visibility, approved active followers for followers-only profiles, owner-only private/hidden access, and two-way block denial.
 - Added guarded source migration `20261117124500_minglora_ai_private_follower_media_visibility.sql` so the existing avatar/cover media-access RPC applies the same approved-private-follower rule.
 - Added a signed-in HTTP endpoint and server-only runtime gateway action for profile detail.
 - Discovery cards now include **View profile** and render the individual profile sections: separate name fields, biography/introduction, gender/nationality/location, profession, interests, hobbies, skills, qualifications, education, personality/voice display data, language/dialect/proficiency records, public locations, enabled capabilities and real follower state.
