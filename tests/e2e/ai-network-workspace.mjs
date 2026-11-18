@@ -40,6 +40,12 @@ const initialIdentity = {
 };
 let identities = [structuredClone(initialIdentity)];
 let savedGroups = [];
+let following = [{
+  identity_id:discoveryProfiles[1].identity_id,
+  follow_status:'active',
+  name:{ display_name:discoveryProfiles[1].name.display_name, username:discoveryProfiles[1].name.username },
+  category_key:discoveryProfiles[1].category_key
+}];
 let identityCreateRequests = [];
 let identityPatchRequests = [];
 let discoveryQueries = [];
@@ -221,7 +227,15 @@ function aiApiResponse(req, url, body) {
     if (!fixture) return { error:'AI profile not found.' };
     return {
       identity: { identity_id:identityId, population:'independent', category_key:fixture.category_key, subcategory:'Learning support', created_at:'2026-11-17T12:00:00Z' },
-      name: { first_name:'Nia', middle_name:'Grace', last_name:'Campbell', full_name:'Nia Grace Campbell', display_name:'Nia Campbell', username:'nia_campbell', profile_identifier:'nia-campbell' },
+      name: {
+        first_name:fixture.name.first_name,
+        middle_name:identityId === discoveryProfiles[0].identity_id ? 'Grace' : '',
+        last_name:fixture.name.last_name,
+        full_name:[fixture.name.first_name,identityId === discoveryProfiles[0].identity_id ? 'Grace' : '',fixture.name.last_name].filter(Boolean).join(' '),
+        display_name:fixture.name.display_name,
+        username:fixture.name.username,
+        profile_identifier:fixture.name.username
+      },
       profile: {
         bio:'AI-labelled learning and study support.', introduction:'Hello, I am Nia, an AI educator.',
         gender:'female', gender_presentation:'feminine', nationality:'Jamaican',
@@ -240,7 +254,7 @@ function aiApiResponse(req, url, body) {
       follower_count:3, is_following:false, follow_requested:false, viewer_is_owner:false
     };
   }
-  if (method === 'GET' && pathname === '/following') return { following: [] };
+  if (method === 'GET' && pathname === '/following') return { following: structuredClone(following) };
   if (method === 'GET' && pathname === '/follow-requests') return { requests: [] };
   if (method === 'GET' && pathname === '/saved-groups') return { groups: savedGroups };
   if (method === 'GET' && pathname === '/provider-accounts') return { provider_accounts: [] };
@@ -663,6 +677,15 @@ try {
   await publicProfile.locator('[data-ai-action="close-ai-profile"]').click();
   await publicProfile.waitFor({ state:'detached' });
 
+  const followedProfileButton = page.locator('.ai-network-discovery-following [data-ai-action="view-ai-profile"]');
+  await followedProfileButton.waitFor({ state:'visible' });
+  await followedProfileButton.click();
+  await publicProfile.waitFor({ state:'visible' });
+  await publicProfile.getByText('Jay Reid').waitFor({ state:'visible' });
+  assert.equal(publicProfileRequests.length, 2, 'Approved followers must have a profile-detail entry point from their following list.');
+  await publicProfile.locator('[data-ai-action="close-ai-profile"]').click();
+  await publicProfile.waitFor({ state:'detached' });
+
   const bulkForm = page.locator('form[data-ai-form="bulk-follow"]');
   await bulkForm.locator('input[name="identity_ids"]').first().check();
   await bulkForm.locator('button[type="submit"]').click();
@@ -723,6 +746,7 @@ try {
     identityCreates: identityCreateRequests.length,
     identityProfileUpdates: identityPatchRequests.length,
     publicProfileReads: publicProfileRequests.length,
+    followedProfilesListed: following.length,
     combinedDiscoveryQueries: discoveryQueries.length,
     bulkFollowRequests: bulkFollowRequests.length,
     memorySettingsUpdates: memoryRequests.settings.length,
