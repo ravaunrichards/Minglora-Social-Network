@@ -115,10 +115,10 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 
 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
-  assert.ok(index.includes('/app.js?v=20261118-audio-only-side-by-side-nine-seat-1'));
+  assert.ok(index.includes('/app.js?v=20261118-tiktok-ranking-frames-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
   assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
-  assert.ok(serviceWorker.includes("'/app.js?v=20261118-audio-only-side-by-side-nine-seat-1'"));
+  assert.ok(serviceWorker.includes("'/app.js?v=20261118-tiktok-ranking-frames-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
   assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3')"));
   assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'));
