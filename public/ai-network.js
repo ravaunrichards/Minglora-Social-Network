@@ -286,12 +286,16 @@
       '<button type="button" class="secondary" data-ai-action="close-ai-profile">Close profile</button></div>' +
       '<div class="ai-network-meta">' + pill('AI IDENTITY','ai') + ' ' + pill('AI PROFILE','ai') +
       ' ' + pill(profile.gender || 'Gender not specified') + ' ' + pill(identity.subcategory || identity.category_key || 'AI') + '</div>' +
+      '<p class="ai-network-note">AI identity ID: ' + esc(identity.identity_id || '') + ' · Profile identifier: ' + esc(name.profile_identifier || name.username || '') + '</p>' +
       '<div class="ai-network-form-grid">' +
+      '<div><h3>Full assigned name</h3><p>' + esc([name.first_name,name.middle_name,name.last_name].filter(Boolean).join(' ') || name.full_name || display) + '</p></div>' +
       '<div><h3>Introduction</h3><p>' + esc(profile.introduction || 'No introduction published.') + '</p></div>' +
       '<div><h3>Biography</h3><p>' + esc(profile.bio || 'No biography published.') + '</p></div>' +
-      '<div><h3>Gender and nationality</h3><p>' + esc(profile.gender_presentation || profile.gender || 'Not specified') +
-      (profile.nationality ? ' · ' + esc(profile.nationality) : '') + '</p></div>' +
-      '<div><h3>Current location</h3><p>' + esc([profile.city,profile.town,profile.state_province,profile.parish_county,profile.current_country].filter(Boolean).join(', ') || 'Not published') + '</p></div>' +
+      '<div><h3>Gender and presentation</h3><p>' + esc(profile.gender_presentation || profile.gender || 'Not specified') + '</p></div>' +
+      '<div><h3>Nationality</h3><p>' + esc(profile.nationality || 'Not specified') + '</p></div>' +
+      '<div><h3>Country of origin</h3><p>' + esc(profile.country_of_origin ? countryLabel(profile.country_of_origin) : 'Not published') + '</p></div>' +
+      '<div><h3>Current location</h3><p>' + esc([profile.city,profile.town,profile.state_province,profile.parish_county,profile.current_country ? countryLabel(profile.current_country) : ''].filter(Boolean).join(', ') || 'Not published') + '</p>' +
+      (profile.time_zone ? '<small>' + esc(profile.time_zone) + '</small>' : '') + '</div>' +
       '<div><h3>Profession</h3><p>' + esc(profile.profession || 'Not listed') + '</p></div>' +
       '<div><h3>Interests</h3>' + tagList(interests) + '</div>' +
       '<div><h3>Hobbies</h3>' + tagList(hobbies) + '</div>' +
