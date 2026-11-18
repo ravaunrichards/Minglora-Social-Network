@@ -57,6 +57,12 @@ testRunner('Admin Centre loads the owner-only delegated roles workspace', () => 
 });
 
 
+testRunner('Current administrator assignments show only active staff records', () => {
+  assert.match(ui, /const staff=Array\\.isArray\\(data\\.staff\\)\\?data\\.staff\\.filter\\(member=>member&&member\\.active===true\\):\\[\\];/);
+  assert.match(ui, /active administrator assignment\\(s\\)/i);
+  assert.doesNotMatch(ui, /Existing assignments are shown as stored/);
+});
+
 testRunner('RBAC append-only trigger function uses valid dollar-quoted SQL delimiters', () => {
   const triggerFunction = migration.split('CREATE OR REPLACE FUNCTION public.prevent_minglora_admin_rbac_audit_mutation()')[1] || '';
   assert.ok(triggerFunction.includes("SET search_path TO ''\nAS $$"));
