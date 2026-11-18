@@ -41,6 +41,7 @@ test("platform Top Gifters offers period filters, earned rank titles and working
   assert.match(addon, /position >= 4 && position <= 20/);
   assert.match(addon, /place-4-10/);
   assert.match(addon, /place-11-20/);
+  assert.match(css, /\.minglora-gifter-row \.minglora-gifter-ranked-frame-art/);
   assert.match(addon, /data-top-gifter-profile/);
   assert.match(addon, /window\.openProfile\(userId\)/);
 });
