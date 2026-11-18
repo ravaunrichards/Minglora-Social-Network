@@ -54,6 +54,7 @@ export function validateAuthenticAudioAsset(asset) {
   if (asset.attributionRequired !== true && asset.attributionRequired !== false) errors.push("attributionRequired must be explicitly true or false.");
   if (asset.attributionRequired === true && (typeof asset.attributionText !== "string" || !asset.attributionText.trim())) errors.push("Attribution text is required by this license.");
   if (asset.commercialUseAllowed !== true) errors.push("Commercial use must be explicitly permitted.");
+  if (/\\bNC\\b|non[-\\s]?commercial|noncommercial/i.test(String(asset.licenseName || ""))) errors.push("A non-commercial license cannot be used for Minglora commercial features.");
   if (asset.redistributionAllowed !== true) errors.push("Online playback/redistribution by Minglora must be explicitly permitted.");
   if (asset.authenticityVerified !== true) errors.push("A human reviewer must verify that this is an authentic recording.");
   if (!validTimestamp(asset.authenticityReviewedAt)) errors.push("authenticityReviewedAt must record the human authenticity review.");
