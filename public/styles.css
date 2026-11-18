@@ -7590,6 +7590,6 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 
 
 /* Daily LIVE Top 4–10 / Top 11–20 reference frames. The numeric place remains separate from the frame. */
-.live-ranking-row>.live-ranking-avatar-frame{position:relative;display:inline-grid;place-items:center;flex:0 0 45px;min-width:45px;width:45px;height:54px;isolation:isolate}
+.live-ranking-row>span.live-ranking-avatar-frame:not(.live-daily-podium):not(.live-ranking-position){position:relative;display:inline-grid;place-items:center;flex:0 0 45px;min-width:45px;width:45px;height:54px;isolation:isolate}
 .live-ranking-row .live-ranking-avatar-frame-art{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;border-radius:0;object-fit:contain;pointer-events:none}
 .live-ranking-row .live-ranking-avatar-image{position:absolute;z-index:1;left:50%;top:44%;width:56%;height:56%;transform:translate(-50%,-50%);border:1.5px solid #fff;border-radius:50%;object-fit:cover}
