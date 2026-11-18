@@ -7068,7 +7068,7 @@ async function route(req, res) {
           return json(res,error.status||400,{error:error.message||'The League Match challenge could not be created.'});
         }
       }
-      let leagueMatchAction=p.match(/^\\/api\\/leagues\\/matches\\/([^/]+)\\/(accept|support|powerups)$/);
+      let leagueMatchAction=p.match(/^\/api\/leagues\/matches\/([^/]+)\/(accept|support|powerups)$/);
       if(method==='POST'&&leagueMatchAction){
         let match=(db.creatorLeagueMatches||[]).find(item=>item.id===leagueMatchAction[1]);
         if(!match)return json(res,404,{error:'League Match not found.'});
