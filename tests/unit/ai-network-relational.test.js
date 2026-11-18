@@ -207,7 +207,7 @@ test('new AI identities default to private at database and RPC layers', () => {
   assert.match(privateVisibilityMigration, /alter table ai_network\.ai_profiles[\s\S]*alter column profile_visibility set default 'private'/i);
   assert.match(privateVisibilityMigration, /pg_get_functiondef\([\s\S]*minglora_ai_identity_command/);
   assert.match(privateVisibilityMigration, /v_old_default[\s\S]*else ''public'' end/);
-  assert.match(privateVisibilityMigration, /v_new_default[\s\S]*then v_profile->>'profile_visibility' else ''private'' end/);
+  assert.match(privateVisibilityMigration, /v_new_default[\s\S]*then v_profile->>''profile_visibility'' else ''private'' end/);
   assert.match(privateVisibilityMigration, /if v_old_count = 1 then[\s\S]*execute replace\(v_function_definition, v_old_default, v_new_default\)/);
   assert.match(privateVisibilityMigration, /elsif v_old_count = 0 and strpos\(v_function_definition, v_new_default\) > 0/);
   assert.match(privateVisibilityMigration, /refusing to rewrite it/);
