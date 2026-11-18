@@ -91,6 +91,8 @@ test('disciplinary case records are private, organization-scoped and append-only
   assert.match(disciplinaryMigration,/revoke all on table[\\s\\S]*from public,anon,authenticated/);
   assert.match(disciplinaryMigration,/grant select,insert,update on ai_network\\.ai_employee_disciplinary_cases to service_role/);
   assert.match(disciplinaryMigration,/grant select,insert on ai_network\\.ai_employee_disciplinary_case_history to service_role/);
+  assert.match(disciplinaryMigration,/revoke all on table[\\s\\S]*from public,anon,authenticated,service_role/);
+  assert.match(disciplinaryMigration,/organization_id uuid not null references ai_network\\.ai_organizations\\(organization_id\\) on delete restrict/);
   assert.match(disciplinaryMigration,/security invoker/i);
   assert.match(disciplinaryMigration,/current_user<>'service_role'/);
   assert.match(disciplinaryMigration,/set search_path=''/);
