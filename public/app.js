@@ -2022,11 +2022,13 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
   const hostIdentity=String(hostParticipant?.identity||session?.hostId||"minglora-host");
   const hostName=hostParticipant?.name||session?.host?.name||(role==="host"?state.user?.name:"Minglora host")||"Minglora host";
-  const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!root.closest(".live-audio-stage");
+  const audioOnly=Boolean(root.closest(".live-audio-stage"));
+  const hasGuestStageMedia=audioOnly?participantHasLiveAudio:participantHasLiveStageMedia;
+  const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!audioOnly;
   const guests=[];
-  if(role==="guest"&&local&&participantHasLiveStageMedia(local))guests.push(local);
+  if(role==="guest"&&local&&hasGuestStageMedia(local))guests.push(local);
   for(const person of remotes){
-    if(person.identity===session?.hostId||!participantHasLiveStageMedia(person))continue;
+    if(person.identity===session?.hostId||!hasGuestStageMedia(person))continue;
     if(!guests.some(item=>item.identity===person.identity))guests.push(person);
   }
   root.classList.toggle("live-host-only-layout",fullScreenHostOnly);

@@ -12,6 +12,8 @@ const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const fit = read('public/live-room-fit.css');
 const guestLayouts = read('public/live-tiktok-compact.css');
+const index = read('public/index.html');
+const serviceWorker = read('public/sw.js');
 
 test('Audio LIVE shows connected microphone publishers even when nobody is actively speaking', () => {
   assert.match(app, /function participantHasLiveAudio\(/);
@@ -110,6 +112,14 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 });
 
 
+test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
+  assert.ok(index.includes('/app.js?v=20261117-audio-only-mic-guest-seats-1'));
+  assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
+  assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
+  assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
+  assert.doesNotMatch(fit,/data-live-guest-layout=/);
+});
+
 test('Audio LIVE follows the Video LIVE panel grid without collapsing or clipping the speaker roster', () => {
   assert.match(fit, /\.live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:42px minmax\(0,1fr\) 40px!important/);
   assert.match(fit, /\.live-audio-stage \.audio-guest-layout\{[\s\S]*?grid-row:2!important/);
@@ -121,12 +131,23 @@ test('Audio LIVE follows the Video LIVE panel grid without collapsing or clippin
   assert.match(app, /function renderLiveSpeakerRoster\(/);
 });
 
+test('Audio-only guest seats use microphone publishers while video LIVE keeps its media-track check', () => {
+  const guestStart=app.indexOf('function renderLiveGuestLayout(');
+  const guestEnd=app.indexOf('\nfunction renderLiveViewerPanel(',guestStart);
+  const guestRenderer=app.slice(guestStart,guestEnd);
+  assert.ok(guestStart>=0&&guestEnd>guestStart);
+  assert.match(guestRenderer,/const audioOnly=Boolean\(root\.closest\("\.live-audio-stage"\)\)/);
+  assert.match(guestRenderer,/const hasGuestStageMedia=audioOnly\?participantHasLiveAudio:participantHasLiveStageMedia/);
+  assert.match(guestRenderer,/hasGuestStageMedia\(local\)/);
+  assert.match(guestRenderer,/hasGuestStageMedia\(person\)/);
+});
+
 const AUDIO_LIVE_LAYOUTS = [
   'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
-  'side-by-side','spotlight'
+  'side-by-side','spotlight','roundtable-1','roundtable-2'
 ];
 
-test('Audio LIVE defines a real rounded grid template for each of the seven screen presets', () => {
+test('Audio LIVE defines a real rounded grid template for all nine guest layouts', () => {
   for (const layout of AUDIO_LIVE_LAYOUTS) {
     const selectorIndex = fit.indexOf(`data-live-layout="${layout}"`);
     assert.ok(selectorIndex >= 0, layout + ' selector must exist');
@@ -139,6 +160,8 @@ test('Audio LIVE defines a real rounded grid template for each of the seven scre
   assert.match(fit, /border-radius:18px!important/);
   assert.match(fit, /border-radius:50%!important/);
   assert.match(fit, /\.live-audio-stage #live-guest-layout\.audio-guest-layout/);
+  assert.match(fit, /data-live-layout="roundtable-1"[^}]*grid-template-columns:[^;]+!important[^}]*grid-template-rows:22px repeat\(4,minmax\(0,1fr\)\)!important/);
+  assert.match(fit, /data-live-layout="roundtable-2"[^}]*grid-template-columns:[^;]+!important[^}]*grid-template-rows:22px repeat\(4,minmax\(0,1fr\)\)!important/);
 });
 
 test('All nine Audio LIVE guest presets share the unified layout state and synchronization', () => {
