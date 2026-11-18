@@ -118,7 +118,7 @@ test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and servi
   assert.ok(index.includes('/app.js?v=20261118-audio-only-side-by-side-nine-seat-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
   assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
-  assert.ok(serviceWorker.includes("'/app.js?v=20261118-side-by-side-guest-seat-nine-1'"));
+  assert.ok(serviceWorker.includes("'/app.js?v=20261118-audio-only-side-by-side-nine-seat-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
   assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3')"));
   assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'));
@@ -154,7 +154,8 @@ test('Audio LIVE uses all nine reference grids without covering seat panels', ()
   assert.match(safeAudioScene,/\.live-audio-scene\{[\s\S]*?display:none!important/);
   assert.match(safeAudioScene,/#live-player-shell #live-video-stage\.live-audio-stage #live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?width:1px!important;[\s\S]*?height:1px!important;[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app,/stage\?\.insertAdjacentHTML\("beforebegin",liveStageHud\)/);
-  assert.match(audioVisualMatrix,/products:\['LIVE','AUDIO LIVE','MeetWave'\]/);
+  assert.match(audioVisualMatrix,/products:selectedProducts/);
+  assert.match(audioVisualMatrix,/MINGLORA_VISUAL_PRODUCTS/);
   assert.match(audioVisualMatrix,/audioHeaderGap/);
   assert.match(audioContract,/#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app, /class='live-guest-layout audio-guest-layout'/);
