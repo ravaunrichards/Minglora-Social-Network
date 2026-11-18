@@ -12,8 +12,8 @@ test('Admin Centre exposes clearly named navigation departments including Brand 
   const groups = [...groupOrder[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
   assert.deepEqual(groups, [
     'Dashboard',
-    'Brand Identity',
     'AI Operations',
+    'Brand Identity',
     'Profile & Community',
     'User Management',
     'Creator Finance',
