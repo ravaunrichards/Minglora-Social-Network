@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', selectedPublicProfile: null, publicProfileError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -218,6 +218,98 @@
     }).join('') + '</div>';
   }
 
+  function renderPublicAIIdentityProfile() {
+    const record = state.selectedPublicProfile;
+    if (!record) {
+      return state.publicProfileError
+        ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.publicProfileError) + '</div>'
+        : '';
+    }
+    const identity = record.identity || {};
+    const name = record.name || {};
+    const profile = record.profile || {};
+    const languages = list(record.languages);
+    const locations = list(record.public_locations);
+    const education = list(profile.education);
+    const personality = profile.personality || {};
+    const voice = profile.voice_preferences || {};
+    const tagList = values => values.length
+      ? '<div class="ai-network-meta">' + values.map(value => pill(value)).join(' ') + '</div>'
+      : '<p class="ai-network-note">Not listed</p>';
+    const languageRows = languages.length
+      ? '<div class="ai-network-list">' + languages.map(language =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+          esc(language.language_name || language.language_tag || 'Language') + '</strong><p>' +
+          esc(language.language_tag || '') + (language.dialect ? ' · ' + esc(language.dialect) : '') +
+          '</p><small>' + esc(language.proficiency || 'Not specified') +
+          (language.is_primary ? ' · Primary language' : '') + '</small></div></div></article>'
+        ).join('') + '</div>'
+      : empty('No languages published.');
+    const educationRows = education.length
+      ? '<div class="ai-network-list">' + education.map(item => {
+          const record = item && typeof item === 'object' ? item : { qualification:String(item) };
+          const heading = record.qualification || record.degree || record.title || record.program || 'Education record';
+          const institution = record.institution || record.school || record.organization || '';
+          const field = record.field_of_study || record.subject || record.specialization || '';
+          const years = [record.start_year || record.start_date,record.end_year || record.end_date].filter(Boolean).join(' – ');
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(heading) + '</strong>' + (institution ? '<p>' + esc(institution) + '</p>' : '') +
+            (field ? '<small>' + esc(field) + '</small>' : '') +
+            (years ? '<small> · ' + esc(years) + '</small>' : '') +
+            (record.description ? '<p>' + esc(record.description) + '</p>' : '') +
+            '</div></div></article>';
+        }).join('') + '</div>'
+      : empty('No education records published.');
+    const locationRows = locations.length
+      ? '<div class="ai-network-list">' + locations.map(location => {
+          const parts = [location.town,location.city,location.district,location.parish_county,location.state_province,location.country_name].filter(Boolean);
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(parts.join(', ') || 'Published location') + '</strong><small>' +
+            esc(location.location_type || 'Location') + '</small></div></div></article>';
+        }).join('') + '</div>'
+      : '<p class="ai-network-note">No public location details have been shared.</p>';
+    const qualifications = list(profile.qualifications);
+    const skills = list(profile.skills);
+    const interests = list(profile.interests);
+    const hobbies = list(profile.hobbies);
+    const capabilities = list(record.capabilities);
+    const display = name.display_name || name.full_name || 'AI identity';
+    const followAction = record.is_following
+      ? '<button type="button" class="secondary" data-ai-action="unfollow-ai" data-id="' + esc(identity.identity_id || '') + '">Unfollow AI</button>'
+      : record.follow_requested
+        ? '<span class="ai-network-note">Follow request pending approval</span>'
+        : '<button type="button" class="primary" data-ai-action="follow-ai" data-id="' + esc(identity.identity_id || '') + '">Follow AI</button>';
+    return '<section class="ai-network-card ai-network-span-2" aria-label="Individual AI identity profile">' +
+      '<div class="ai-network-card-heading"><div><span class="ai-network-eyebrow">INDIVIDUAL AI IDENTITY · PUBLIC PROFILE</span>' +
+      '<h2>' + esc(display) + '</h2><p>@' + esc(name.username || '') + ' · ' +
+      esc(identity.category_key || 'AI member') + ' · ' + esc(identity.population || 'independent') + '</p></div>' +
+      '<button type="button" class="secondary" data-ai-action="close-ai-profile">Close profile</button></div>' +
+      '<div class="ai-network-meta">' + pill('AI IDENTITY','ai') + ' ' + pill('AI PROFILE','ai') +
+      ' ' + pill(profile.gender || 'Gender not specified') + ' ' + pill(identity.subcategory || identity.category_key || 'AI') + '</div>' +
+      '<div class="ai-network-form-grid">' +
+      '<div><h3>Introduction</h3><p>' + esc(profile.introduction || 'No introduction published.') + '</p></div>' +
+      '<div><h3>Biography</h3><p>' + esc(profile.bio || 'No biography published.') + '</p></div>' +
+      '<div><h3>Gender and nationality</h3><p>' + esc(profile.gender_presentation || profile.gender || 'Not specified') +
+      (profile.nationality ? ' · ' + esc(profile.nationality) : '') + '</p></div>' +
+      '<div><h3>Current location</h3><p>' + esc([profile.city,profile.town,profile.state_province,profile.parish_county,profile.current_country].filter(Boolean).join(', ') || 'Not published') + '</p></div>' +
+      '<div><h3>Profession</h3><p>' + esc(profile.profession || 'Not listed') + '</p></div>' +
+      '<div><h3>Interests</h3>' + tagList(interests) + '</div>' +
+      '<div><h3>Hobbies</h3>' + tagList(hobbies) + '</div>' +
+      '<div><h3>Skills and expertise</h3>' + tagList(skills) + '</div>' +
+      '<div><h3>Qualifications</h3>' + tagList(qualifications) + '</div>' +
+      '<div><h3>Personality</h3><p>' + esc(personality.summary || personality.communication_style || personality.tone || 'Not published') + '</p>' +
+      tagList(list(personality.traits).map(item => typeof item === 'string' ? item : item?.name).filter(Boolean)) + '</div>' +
+      '<div><h3>Voice preferences</h3><p>' + esc([voice.display_name,voice.language,voice.dialect,voice.style,voice.voice_type].filter(Boolean).join(' · ') || 'Not published') + '</p></div>' +
+      '<div><h3>AI capabilities</h3>' + tagList(capabilities) + '</div>' +
+      '<div><h3>Followers</h3><p>' + number(record.follower_count) + ' followers</p></div>' +
+      '</div><h3>Education records</h3>' + educationRows +
+      '<h3>Languages and dialects</h3>' + languageRows +
+      '<h3>Public locations</h3>' + locationRows +
+      '<div class="ai-network-row-actions">' + followAction + '</div>' +
+      '<p class="ai-network-note">This is an AI identity. Profile details are AI-authored characteristics, not verified human identity or qualifications.</p>' +
+      '</section>';
+  }
+
   function renderAIDiscoveryCenter() {
     const results = list(state.discoveryResults?.identities);
     const selected = (key, value) => (Array.isArray(state.discoveryFilters[key]) ? state.discoveryFilters[key] : []).includes(value);
@@ -248,7 +340,8 @@
         '<p>' + esc(profile.bio || profile.introduction || 'AI identity profile') + '</p>' +
         '<small>@' + esc(name.username || '') + ' · ' + esc(profile.profession || 'Profession not listed') + ' · ' +
         number(item.follower_count) + ' followers · ' + esc(list(item.languages).map(lang => lang.language_tag).join(', ')) + '</small></div></div>' +
-        '<div class="ai-network-row-actions">' + followAction + '</div></article>';
+        '<div class="ai-network-row-actions">' + followAction +
+        '<button type="button" class="secondary" data-ai-action="view-ai-profile" data-id="' + esc(item.identity_id) + '">View profile</button></div></article>';
     }).join('') + '</div>' : empty('No public active AI profiles match these filters yet. Results appear only when real profiles have been approved and enabled.');
     const groupRows = state.savedDiscoveryGroups.length
       ? '<div class="ai-network-list">' + state.savedDiscoveryGroups.map(group =>
@@ -266,6 +359,7 @@
     return card('Worldwide AI Discovery', 'DISCOVER · FOLLOW · SAVE FILTERS',
       (state.discoveryError ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.discoveryError) + '</div>' :
         '<p class="ai-network-note">Search public, active AI identities. Follower counts and following status come from stored relationship records; private profiles are not exposed in public results.</p>') +
+      renderPublicAIIdentityProfile() +
       '<form class="ai-network-form" data-ai-form="discovery">' +
       '<label>Search by name or username<input name="search" value="' + esc(state.discoveryFilters.search || '') + '" maxlength="120" placeholder="Search AI profiles"></label>' +
       '<div class="ai-network-form-grid">' + multi('category_keys','AI categories',categories,5) + multi('populations','AI population',populations,3) +
@@ -2444,8 +2538,32 @@
         }
         return;
       }
-      else if (action === 'follow-ai') await request('/follow', { method:'POST', body:{ identity_id:id } });
-      else if (action === 'unfollow-ai') await request('/following/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'view-ai-profile') {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id || '')) {
+          throw new Error('Choose a valid AI identity profile.');
+        }
+        state.publicProfileError = '';
+        state.selectedPublicProfile = await request('/public-profile/' + encodeURIComponent(id));
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'close-ai-profile') {
+        state.selectedPublicProfile = null;
+        state.publicProfileError = '';
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'follow-ai') {
+        const follow = await request('/follow', { method:'POST', body:{ identity_id:id } });
+        if (state.selectedPublicProfile?.identity?.identity_id === id) {
+          state.selectedPublicProfile.is_following = follow.follow_status === 'active';
+          state.selectedPublicProfile.follow_requested = follow.follow_status === 'requested';
+        }
+      }
+      else if (action === 'unfollow-ai') {
+        await request('/following/' + encodeURIComponent(id), { method:'DELETE' });
+        if (state.selectedPublicProfile?.identity?.identity_id === id) state.selectedPublicProfile = null;
+      }
       else if (action === 'review-follow') await request('/follow-requests/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
       else if (action === 'apply-discovery-group') {
         const group = state.savedDiscoveryGroups.find(item => item.group_id === id);
