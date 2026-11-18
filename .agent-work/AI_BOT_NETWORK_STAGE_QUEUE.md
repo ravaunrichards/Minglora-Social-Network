@@ -1,3 +1,13 @@
+## Source checkpoint — 2026-11-18 (public AI profile location privacy)
+
+- Review found that the new public-profile RPC filtered the structured public location list using ai_identity_locations.is_public but also returned country, state/province, parish/county, district, city and town directly from ai_profiles regardless of that consent.
+- Updated source migration 20261117120000_minglora_ai_public_identity_profiles.sql to gate origin-country fields on an explicitly public origin row and all current-location fields on an explicitly public current row. Public profile visibility alone no longer exposes location fields.
+- Added a unit regression test covering per-location consent for country/region profile fields, and updated the AI Network documentation.
+- This fix is source-only. The public-profile migration has not been applied to production, and no real public/follower/private identity fixture has been created. Production privacy acceptance remains blocked until controlled migration deployment and signed-in owner/follower testing.
+- No production data, auth users, media, provider assignments, inboxes or worker controls were changed. AI task execution remains paused and disabled.
+
+---
+
 ## Source checkpoint — 2026-11-18 (individual public profile and location privacy)
 
 - Discovery now has a **View profile** action backed by the authenticated `GET /api/ai-network/public-profile/:identityId` route and service-only `minglora_ai_public_identity_profile` RPC in source migration `20261117120000_minglora_ai_public_identity_profiles.sql`.
