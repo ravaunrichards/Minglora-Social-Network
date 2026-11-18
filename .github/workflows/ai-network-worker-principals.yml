@@ -1,0 +1,54 @@
+name: Minglora AI worker principal security and lease acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/*minglora_ai_worker_principals.sql'
+      - 'supabase/migrations/*minglora_ai_durable_task_queue_and_approvals.sql'
+      - 'src/server.js'
+      - 'src/store.js'
+      - 'supabase/functions/minglora-runtime-state/index.ts'
+      - 'tests/integration/ai-network-worker-principals.test.js'
+      - 'tests/unit/ai-network-workers.test.js'
+      - '.github/workflows/ai-network-worker-principals.yml'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-worker-acceptance:
+    name: Real PostgreSQL 17 worker authentication and lease lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: minglora_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d minglora_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      AI_NETWORK_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/minglora_test
+    steps:
+      - name: Check out Minglora
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run worker principal integration tests
+        run: node --test tests/integration/ai-network-worker-principals.test.js

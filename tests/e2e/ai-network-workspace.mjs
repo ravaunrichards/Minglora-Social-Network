@@ -48,6 +48,8 @@ let identityBatchRetryRequests = [];
 let identityBatches = [];
 let discoveryQueries = [];
 let bulkFollowRequests = [];
+let workers = [];
+const workerRequests = { creates:[], rotates:[], revokes:[] };
 let memorySettings = {
   identity_id: ownerIdentityId, memory_enabled:false, long_term_enabled:false,
   short_term_retention_days:7, long_term_retention_days:365, max_entries:500
@@ -288,6 +290,35 @@ function aiApiResponse(req, url, body) {
   if (method === 'GET' && pathname === '/provider-accounts') return { provider_accounts: [] };
   if (method === 'GET' && pathname === '/provider-models') return { provider_models: [] };
   if (method === 'GET' && pathname === '/provider-assignments') return { assignments: [] };
+  if (method === 'GET' && pathname === '/workers') return { workers:workers.map(item => structuredClone(item)) };
+  if (method === 'POST' && pathname === '/workers') {
+    workerRequests.creates.push(structuredClone(body));
+    const worker = {
+      worker_id:randomUUID(), worker_name:body.workerName, status:'active',
+      identity_ids:[...(body.identityIds || [])],
+      allowed_action_classes:[...(body.allowedActionClasses || [])],
+      credential_version:1, credential_expires_at:new Date(Date.now() + Number(body.expiresInHours || 8) * 3600000).toISOString(),
+      max_concurrent_tasks:Number(body.maxConcurrentTasks || 1), last_authenticated_at:null
+    };
+    workers.push(worker);
+    return { worker:structuredClone(worker), credential:'mngw_browser_fixture_credential_once' };
+  }
+  const workerRoute = pathname.match(/^\/workers\/([0-9a-f-]+)\/(rotate|revoke)$/i);
+  if (method === 'POST' && workerRoute) {
+    const worker = workers.find(item => item.worker_id === workerRoute[1]);
+    if (!worker) return { error:'Fixture worker not found.' };
+    if (workerRoute[2] === 'rotate') {
+      workerRequests.rotates.push({ worker_id:worker.worker_id, ...structuredClone(body) });
+      worker.credential_version += 1;
+      worker.credential_expires_at = new Date(Date.now() + Number(body.expiresInHours || 8) * 3600000).toISOString();
+      worker.status = 'active';
+      return { worker:structuredClone(worker), credential:'mngw_browser_fixture_rotated_once' };
+    }
+    workerRequests.revokes.push({ worker_id:worker.worker_id, ...structuredClone(body) });
+    worker.status = 'revoked';
+    worker.revoked_at = new Date().toISOString();
+    return { worker:structuredClone(worker), revoked:true };
+  }
   if (method === 'GET' && pathname === '/tasks') return { tasks: [], runtime: taskRuntime };
   if (method === 'GET' && pathname === '/organizations') return { organizations: [] };
   if (method === 'GET' && pathname === '/department-templates') return { templates: departmentTemplates };
@@ -764,6 +795,38 @@ try {
   assert.equal(savedGroups.length, 1);
   assert.equal(savedGroups[0].filters.genders[0], 'female');
 
+  await page.getByText('Worker principals & credential governance').waitFor({ state:'visible' });
+  const workerForm = page.locator('form[data-ai-form="worker-create"]');
+  await workerForm.locator('[name="workerName"]').fill('Minglora content worker QA');
+  await workerForm.locator('[name="expiresInHours"]').selectOption('4');
+  await workerForm.locator('[name="maxConcurrentTasks"]').fill('2');
+  await workerForm.locator('input[name="identityIds"]').first().check();
+  await workerForm.locator('input[name="allowedActionClasses"][value="read_only"]').check();
+  await workerForm.locator('input[name="allowedActionClasses"][value="content"]').check();
+  await workerForm.locator('button[type="submit"]').click();
+  await page.getByText('Copy this worker credential now.', { exact:false }).waitFor({ state:'visible' });
+  await page.getByText('mngw_browser_fixture_credential_once').waitFor({ state:'visible' });
+  assert.equal(workerRequests.creates.length, 1, 'Worker registration must submit one server-side credential request.');
+  assert.deepEqual(workerRequests.creates[0].identityIds, [ownerIdentityId], 'Workers must be explicitly scoped to selected active AI identities.');
+  assert.deepEqual(workerRequests.creates[0].allowedActionClasses.sort(), ['content','read_only']);
+  assert.equal(workerRequests.creates[0].expiresInHours, 4);
+  assert.equal(workers.length, 1);
+  assert.ok(!Object.hasOwn(workers[0], 'credential'), 'The worker registry must never expose or persist the raw credential in its list record.');
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('[data-ai-action="worker-rotate"]').first().click();
+  await page.getByText('mngw_browser_fixture_rotated_once').waitFor({ state:'visible' });
+  assert.equal(workerRequests.rotates.length, 1, 'Worker credential rotation must call the dedicated route.');
+  assert.equal(workers[0].credential_version, 2);
+
+  await page.locator('[data-ai-action="worker-credential-dismiss"]').click();
+  await page.getByText('mngw_browser_fixture_rotated_once').waitFor({ state:'hidden' });
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('[data-ai-action="worker-revoke"]').first().click();
+  await page.getByText('revoked', { exact:true }).waitFor({ state:'visible' });
+  assert.equal(workerRequests.revokes.length, 1, 'Worker revocation must call the dedicated route.');
+  assert.equal(workers[0].status, 'revoked');
+
   const viewports = [
     { name: 'compact-phone', width: 320, height: 740 },
     { name: 'standard-phone', width: 390, height: 844 },
@@ -816,6 +879,9 @@ try {
     memoryEntryUpdates: memoryRequests.updates.length,
     memoryEntryDeletes: memoryRequests.deletes.length,
     savedDiscoveryGroups: savedGroups.length,
+    workerPrincipalCreates: workerRequests.creates.length,
+    workerCredentialRotations: workerRequests.rotates.length,
+    workerPrincipalRevocations: workerRequests.revokes.length,
     viewportsChecked: viewports.length,
     screenshotsCaptured: screenshots,
     externalApiRequests: externalApiRequests.length,

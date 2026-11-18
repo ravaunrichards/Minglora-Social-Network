@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', aiWorkers: [], workerError: '', revealedWorkerCredential: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -696,6 +696,17 @@
     }
   }
 
+async function loadAIWorkerRegistry() {
+    state.workerError = '';
+    try {
+      const result = await request('/workers');
+      state.aiWorkers = list(result.workers);
+    } catch (error) {
+      state.aiWorkers = [];
+      state.workerError = error.message || 'AI worker principal registry is unavailable.';
+    }
+  }
+
   async function loadAIProviderRegistry() {
     state.providerError = '';
     try {
@@ -1248,6 +1259,7 @@
 
   function renderAITaskQueueCenter() {
     const tasks = list(state.aiTasks);
+    const workers = list(state.aiWorkers);
     const identities = list(state.identityRegistry?.identities).filter(row =>
       row.identity?.status === 'active' && row.identity?.enabled === true
     );
@@ -1310,6 +1322,55 @@
         '<label>Task payload (JSON object)<textarea name="taskPayload" rows="3" maxlength="65536" placeholder="{}" required>{}</textarea></label>' +
         '<button class="primary" type="submit">Save task to queue</button></form>'
       : '<p class="ai-network-note">No active, enabled AI identity is available. Create and authorize an AI identity before queuing a task.</p>';
+    const workerRows = workers.length
+      ? '<div class="ai-network-list">' + workers.map(worker => {
+          const status = worker.status || 'unknown';
+          const grants = list(worker.identity_ids);
+          const active = status === 'active';
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(worker.worker_name || 'AI worker') + '</strong><div class="ai-network-meta">' +
+            pill(status, active ? 'success' : status === 'revoked' ? 'warning' : 'neutral') + ' ' +
+            pill(list(worker.allowed_action_classes).join(', ') || 'no permissions') +
+            '</div><small>Credential v' + number(worker.credential_version) + ' · Expires ' +
+            esc(date(worker.credential_expires_at)) + ' · Max concurrent tasks ' + number(worker.max_concurrent_tasks) +
+            '</small><small>Granted AI identities: ' + grants.length + ' · Last authenticated ' +
+            esc(worker.last_authenticated_at ? date(worker.last_authenticated_at) : 'Never') + '</small></div></div>' +
+            '<div class="ai-network-row-actions">' +
+            (active ? '<button type="button" class="secondary" data-ai-action="worker-rotate" data-id="' + esc(worker.worker_id) + '">Rotate credential</button>' : '') +
+            (active ? '<button type="button" class="secondary" data-ai-action="worker-revoke" data-id="' + esc(worker.worker_id) + '">Revoke</button>' : '') +
+            '</div></article>';
+        }).join('') + '</div>'
+      : empty('No separately authenticated AI worker principals are registered.');
+    const workerIdentityChoices = identityOptions.length
+      ? '<fieldset class="ai-network-choice-list"><legend>AI identities this worker may serve</legend>' +
+        identityOptions.map(option => '<label><input type="checkbox" name="identityIds" value="' + esc(option.value) + '" checked> ' + esc(option.label) + '</label>').join('') +
+        '</fieldset>'
+      : '<p class="ai-network-note">Create at least one active, enabled AI identity before provisioning a worker.</p>';
+    const workerForm = identityOptions.length
+      ? '<form class="ai-network-form" data-ai-form="worker-create">' +
+        '<div class="ai-network-form-title">Register a separately authenticated worker</div>' +
+        '<p class="ai-network-note">The bearer credential is shown once and only its SHA-256 digest is stored. Credentials expire within 24 hours. Workers are limited to read-only/content tasks, explicitly granted identities and a per-worker concurrency cap. Global execution remains paused until separately approved.</p>' +
+        '<div class="ai-network-form-grid">' +
+        '<label>Worker name<input name="workerName" required minlength="2" maxlength="120" placeholder="Minglora content worker"></label>' +
+        '<label>Credential lifetime<select name="expiresInHours">' + options([{value:'1',label:'1 hour'},{value:'4',label:'4 hours'},{value:'8',label:'8 hours'},{value:'12',label:'12 hours'},{value:'24',label:'24 hours'}], '8') + '</select></label>' +
+        '<label>Maximum concurrent tasks<input type="number" name="maxConcurrentTasks" min="1" max="32" value="1" required></label></div>' +
+        '<fieldset class="ai-network-choice-list"><legend>Allowed task classes</legend>' +
+        '<label><input type="checkbox" name="allowedActionClasses" value="read_only" checked> Read only</label>' +
+        '<label><input type="checkbox" name="allowedActionClasses" value="content" checked> Content</label></fieldset>' +
+        workerIdentityChoices +
+        '<button class="primary" type="submit">Register worker and reveal credential</button></form>'
+      : workerIdentityChoices;
+    const workerCredential = state.revealedWorkerCredential
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status"><strong>Copy this worker credential now. It will not be displayed again after dismissal or page refresh.</strong><pre><code>' +
+        esc(state.revealedWorkerCredential) + '</code></pre><button type="button" class="secondary" data-ai-action="worker-credential-dismiss">Dismiss credential</button></div>'
+      : '';
+    const workerStatus = state.workerError
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.workerError) + '</div>'
+      : '';
+    const workerCenter = '<section class="ai-network-subsection"><h4>Worker principals & credential governance</h4>' +
+      workerStatus + workerCredential + workerForm +
+      '<div><h5>Registered workers (' + number(workers.length) + ')</h5>' + workerRows + '</div>' +
+      '<p class="ai-network-note">Worker credentials authenticate only the worker API. They do not enable task execution, change the global pause, connect a model, or grant social, external, financial, security or moderation actions.</p></section>';
     const pending = tasks.filter(task => task.status === 'pending_approval').length;
     const queued = tasks.filter(task => task.status === 'queued').length;
     const running = tasks.filter(task => task.status === 'running').length;
@@ -1318,7 +1379,7 @@
       '<div><span>Shown pending approval</span><strong>' + number(pending) + '</strong></div>' +
       '<div><span>Shown queued</span><strong>' + number(queued) + '</strong></div>' +
       '<div><span>Shown running leases</span><strong>' + number(running) + '</strong></div></div>' +
-      createForm + '<div><h4>Task history</h4>' + taskRows + '</div>' +
+      createForm + workerCenter + '<div><h4>Task history</h4>' + taskRows + '</div>' +
       '<p class="ai-network-note">Safety state is read from the persisted runtime-control row. Worker execution stays paused and disabled by default. Tasks are stored and approvals are audited, but no task executes until a separate verified worker, provider adapter and secrets integration are deployed.</p>',
       'ai-network-span-2');
   }
@@ -1809,6 +1870,7 @@
       await loadAIDiscovery();
       await loadAIProviderRegistry();
       await loadAITaskQueue();
+      await loadAIWorkerRegistry();
       await loadAIOrganizationRegistry();
       await loadAIDelegations();
       paintSnapshot();
@@ -1829,6 +1891,7 @@
     await loadAIDiscovery();
     await loadAIProviderRegistry();
     await loadAITaskQueue();
+    await loadAIWorkerRegistry();
     await loadAIOrganizationRegistry();
     await loadAIDelegations();
     paintSnapshot();
@@ -2178,6 +2241,17 @@
       if (!taskId) throw new Error('Task details are missing.');
       path = '/tasks/' + encodeURIComponent(taskId) + '/cancel';
       payload.reason = value('reason');
+    } else if (kind === 'worker-create') {
+      path = '/workers';
+      const identityIds = data.getAll('identityIds').map(item => String(item).trim()).filter(Boolean);
+      const allowedActionClasses = data.getAll('allowedActionClasses').map(item => String(item).trim()).filter(Boolean);
+      if (identityIds.length < 1 || identityIds.length > 100) throw new Error('Select between one and 100 active AI identities for this worker.');
+      if (!allowedActionClasses.length || allowedActionClasses.some(item => !['read_only','content'].includes(item))) throw new Error('Select read-only and/or content task permissions.');
+      payload.workerName = value('workerName');
+      payload.identityIds = identityIds;
+      payload.allowedActionClasses = allowedActionClasses;
+      payload.expiresInHours = Number(value('expiresInHours'));
+      payload.maxConcurrentTasks = Number(value('maxConcurrentTasks'));
     } else if (kind === 'provider-account') {
       path = '/provider-accounts';
       payload.provider_name = value('providerName').toLowerCase();
@@ -2493,6 +2567,7 @@
     const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
+    if (kind === 'worker-create') state.revealedWorkerCredential = String(result.credential || '');
     if (kind === 'provider-health-probe') state.providerHealth = result;
     if (kind === 'bot-chat') {
       state.botChat = result;
@@ -2643,6 +2718,23 @@
         state.identityRegistryOffset = 0;
       }
       else if (action === 'reload') return await load();
+      else if (action === 'worker-credential-dismiss') {
+        state.revealedWorkerCredential = '';
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'worker-rotate') {
+        if (!id) throw new Error('Choose a valid worker before rotating its credential.');
+        if (!window.confirm('Rotate this worker credential? The old credential will stop working immediately and any active lease will be returned to the queue.')) return;
+        const result = await request('/workers/' + encodeURIComponent(id) + '/rotate', { method:'POST', body:{ expiresInHours:8 } });
+        state.revealedWorkerCredential = String(result.credential || '');
+      }
+      else if (action === 'worker-revoke') {
+        if (!id) throw new Error('Choose a valid worker before revoking its credential.');
+        if (!window.confirm('Revoke this worker? Its credential will stop working immediately and any active lease will be returned to the queue.')) return;
+        await request('/workers/' + encodeURIComponent(id) + '/revoke', { method:'POST', body:{ reason:'Revoked by the designated Minglora administrator.' } });
+        state.revealedWorkerCredential = '';
+      }
       else if (action === 'email-provision') {
         if (!id) throw new Error('Choose an AI identity before provisioning email.');
         const result = await request('/identities/' + encodeURIComponent(id) + '/email/provision', { method:'POST', body:{} });

@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
     "internal_activity_feed", "admin_finance_command",
     "admin_finance_attachment_prepare", "admin_finance_attachment_complete", "admin_finance_attachment_download",
     "admin_rbac_command", "admin_brand_command", "admin_brand_upload_prepare", "admin_brand_upload_complete", "admin_brand_asset_url", "brand_public_manifest", "admin_users_list", "admin_user_set_ban", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_bot_chat_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_worker_admin_command", "ai_worker_runtime_command", "ai_bot_chat_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -4590,6 +4590,60 @@ Deno.serve(async (req: Request) => {
         : code === "23505" || code === "55000" ? 409
           : code === "54000" ? 429 : 400;
       return json(status, { error: String(error.message || "Minglora AI bot conversation request failed.").slice(0, 240) });
+    }
+    return json(200, { result: data });
+  }
+
+if (action === "ai_worker_admin_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedWorkerAdminCommands = ["create_worker", "list_workers", "rotate_worker", "revoke_worker"];
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora administrator is required for worker administration." });
+    }
+    if (!supportedWorkerAdminCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI worker administration command." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_worker_admin_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404
+        : code === "23505" ? 409 : code === "54000" ? 429 : 400;
+      return json(status, { error: String(error.message || "Minglora worker administration failed.").slice(0, 240) });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_worker_runtime_command") {
+    const aiAction = String(input.aiAction || "");
+    const credentialSha256 = String(input.credentialSha256 || "").toLowerCase();
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedWorkerRuntimeCommands = ["claim_next_task", "heartbeat_task", "complete_task", "fail_task"];
+    if (!/^[0-9a-f]{64}$/.test(credentialSha256)) {
+      return json(401, { error: "Worker authentication failed." });
+    }
+    if (!supportedWorkerRuntimeCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI worker runtime command." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_worker_runtime_command", {
+      p_action: aiAction,
+      p_credential_sha256: credentialSha256,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404
+        : code === "54000" ? 429 : 400;
+      return json(status, { error: String(error.message || "Minglora AI worker request failed.").slice(0, 240) });
     }
     return json(200, { result: data });
   }
