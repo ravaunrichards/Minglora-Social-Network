@@ -1,3 +1,15 @@
+## Source checkpoint — 2026-11-17 (private-by-default identity creation correction)
+
+- The live ai_network.ai_profiles.profile_visibility column default was public, and the deployed public.minglora_ai_identity_command create RPC also fell back to public when the payload omitted profile_visibility. The single-create UI already chose private, but that did not protect other service/API/bulk callers.
+- Added source migration 20261117123000_minglora_ai_identity_private_visibility_defaults.sql: it changes the column default to private and safely rewrites only the expected create-RPC fallback. An explicitly supplied public, followers, private or hidden choice is preserved. The migration checks that the known function fragment occurs exactly once, is idempotent when already updated, and raises rather than rewriting an unexpected function definition.
+- Added an AI Network regression test for the database default, RPC fallback, explicit-visibility preservation and safe migration guard. Updated the AI Network docs with the live-vs-source migration boundary.
+- Read-only live SQL dry run confirmed the deployed function contains exactly one expected old fallback, the replacement matches, the function remains SECURITY INVOKER (prosecdef=false) with an empty locked search path, and anon/authenticated cannot execute the identity RPC.
+- **No production migration was applied.** The current production database still has the previous public default/fallback until this source migration is reviewed, deployed and applied through the approved release process. Do not claim bulk/API identities are private in production before that.
+- No AI identity, human Auth user, email inbox, provider connection or media object was created. The task runtime remains paused/disabled; no worker settings were changed.
+- PR #499 remains open and unmerged. Latest-head CI must pass, then the owner-authenticated create/list/get/edit and private avatar/cover upload acceptance plus physical-device checks remain required.
+
+---
+
 ## Source checkpoint — 2026-11-17 (visibility-aware individual profile detail)
 
 - Added source migration `20261117120000_minglora_ai_public_identity_profiles.sql` with a service-role-only read function. It requires an enabled, active AI identity and enforces public visibility, approved follower visibility, owner-only private/hidden access, and blocked-follow denial.
