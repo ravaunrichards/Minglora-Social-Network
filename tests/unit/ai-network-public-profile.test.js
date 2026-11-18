@@ -19,7 +19,7 @@ test('individual AI profile RPC enforces active state and visibility rules', () 
     "v_identity.status <> 'active'",
     "v_identity.enabled is not true",
     "v_profile.profile_visibility = 'followers' and not v_is_following",
-    "v_profile.profile_visibility not in ('public', 'followers')",
+    "coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers')",
     "f.follow_status = 'active'",
     "public.user_blocks b",
     "b.blocker_id = p_actor_user_id",
@@ -61,6 +61,9 @@ test('discovery opens a full individual AI profile and supports safe close', () 
   assert.match(ui, /request\('\/public-profile\/' \+ encodeURIComponent\(id\)\)/);
   assert.match(ui, /function renderPublicAIIdentityProfile\(\)/);
   assert.match(ui, /data-ai-action="close-ai-profile"/);
+  assert.match(ui, /ai-network-discovery-following/);
+  assert.match(ui, /data-source="following"/);
+  assert.match(ui, /Waiting for profile-owner approval/);
   assert.match(ui, /name="sharePublicLocations"/);
   assert.match(ui, /is_public:sharePublicLocations/);
   assert.match(ui, /\/media\/avatar/);
