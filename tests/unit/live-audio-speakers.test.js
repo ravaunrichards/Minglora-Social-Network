@@ -12,6 +12,7 @@ const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const fit = read('public/live-room-fit.css');
 const guestLayouts = read('public/live-tiktok-compact.css');
+const audioGuardrails = read('public/live-interface-guardrails.css');
 const index = read('public/index.html');
 const serviceWorker = read('public/sw.js');
 
@@ -119,10 +120,12 @@ test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and servi
   assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
   assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1')"));
+  assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-1'));
+  assert.ok(serviceWorker.includes("'/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-1'"));
   assert.doesNotMatch(fit,/data-live-guest-layout=/);
 });
 
-test('Audio LIVE uses the full stage for the same nine reference grids; metadata stays overlaid', () => {
+test('Audio LIVE uses all nine reference grids without covering seat panels', () => {
   const referenceStart=guestLayouts.indexOf('/* FINAL NINE GUEST LAYOUTS');
   const referenceEnd=guestLayouts.indexOf("/* Responsive fit scales tile proportions without changing a crop's row/column count.",referenceStart);
   const audioStart=guestLayouts.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
@@ -143,7 +146,10 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   assert.match(audioContract,/#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
   assert.ok(audioContract.includes('#live-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
     'Audio LIVE guest panels must occupy the single full-stage row, not the retired row 2');
-  assert.match(audioContract,/\.live-audio-scene\{[\s\S]*?position:absolute!important/);
+  const safeAudioScene=audioGuardrails.slice(audioGuardrails.lastIndexOf('/* Audio LIVE seat visibility:'));
+  assert.match(safeAudioScene,/\.live-audio-scene\{[\s\S]*?display:none!important/);
+  assert.match(safeAudioScene,/#live-player-shell #live-video-stage\.live-audio-stage #live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?width:1px!important;[\s\S]*?height:1px!important;[\s\S]*?clip-path:inset\(50%\)!important/);
+  assert.match(app,/stage\?\.insertAdjacentHTML\("beforebegin",liveStageHud\)/);
   assert.match(audioContract,/#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app, /class='live-guest-layout audio-guest-layout'/);
   assert.match(app, /function renderLiveGuestLayout\(/);
