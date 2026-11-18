@@ -83,7 +83,9 @@ test('Mobile audio-only LIVE reserves space above the bottom control dock', () =
 
 
 test('LIVE multi-guest stage reserves its heading row instead of covering the host panel', () => {
-  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  const correctionStart=compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry');
+  const audioParityStart=compact.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
+  const correction=compact.slice(correctionStart,audioParityStart>correctionStart?audioParityStart:undefined);
   assert.match(correction, /#live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?position:relative!important[\s\S]*?grid-row:1!important/);
   assert.match(correction, /data-live-layout="full-screen"\]\{\s*grid-template-rows:22px minmax\(0,1fr\)!important/);
   assert.match(correction, /data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{\s*grid-column:1!important;grid-row:2!important/);
@@ -92,7 +94,9 @@ test('LIVE multi-guest stage reserves its heading row instead of covering the ho
 });
 
 test('LIVE Fluid Panel guest seats are inset and size-clamped inside the video-stage border', () => {
-  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  const correctionStart=compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry');
+  const audioParityStart=compact.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
+  const correction=compact.slice(correctionStart,audioParityStart>correctionStart?audioParityStart:undefined);
   assert.match(correction, /data-live-layout="fluid-panel"\][\s\S]*?right:clamp\(8px,1vw,12px\)!important/);
   assert.match(correction, /width:clamp\(48px,15vw,120px\)!important;height:clamp\(44px,15vw,120px\)!important/);
   assert.match(correction, /max-width:none!important;max-height:none!important/);
