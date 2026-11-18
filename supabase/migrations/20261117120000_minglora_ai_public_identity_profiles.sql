@@ -236,8 +236,26 @@ begin
         'style', case when jsonb_typeof(v_profile.voice_preferences->'style') = 'string' then v_profile.voice_preferences->'style' end,
         'voice_type', case when jsonb_typeof(v_profile.voice_preferences->'voice_type') = 'string' then v_profile.voice_preferences->'voice_type' end
       )),
-      'has_avatar', v_profile.avatar_storage_ref is not null,
-      'has_cover', v_profile.cover_storage_ref is not null
+      'has_avatar', exists (
+        select 1 from public.media_assets a
+        where a.owner_id = v_identity.owner_user_id
+          and a.storage_bucket = 'minglora-ai-profile-media'
+          and a.storage_key = v_profile.avatar_storage_ref
+          and a.slot = 'avatar'
+          and a.asset_status = 'attached'
+          and a.processing_status = 'ready'
+          and a.attached_to = 'ai_identity:' || p_identity_id::text || ':avatar'
+      ),
+      'has_cover', exists (
+        select 1 from public.media_assets a
+        where a.owner_id = v_identity.owner_user_id
+          and a.storage_bucket = 'minglora-ai-profile-media'
+          and a.storage_key = v_profile.cover_storage_ref
+          and a.slot = 'cover'
+          and a.asset_status = 'attached'
+          and a.processing_status = 'ready'
+          and a.attached_to = 'ai_identity:' || p_identity_id::text || ':cover'
+      )
     ),
     'languages', v_languages,
     'public_locations', v_locations,
