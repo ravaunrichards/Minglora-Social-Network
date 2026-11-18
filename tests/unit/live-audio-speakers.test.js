@@ -123,13 +123,13 @@ test('Audio LIVE follows the Video LIVE panel grid without collapsing or clippin
 
 test('Audio-only guest seats use microphone publishers while video LIVE keeps its media-track check', () => {
   const guestStart=app.indexOf('function renderLiveGuestLayout(');
-  const guestEnd=app.indexOf('\\nfunction renderLiveViewerPanel(',guestStart);
+  const guestEnd=app.indexOf('\nfunction renderLiveViewerPanel(',guestStart);
   const guestRenderer=app.slice(guestStart,guestEnd);
   assert.ok(guestStart>=0&&guestEnd>guestStart);
-  assert.match(guestRenderer,/const audioOnly=Boolean\\(root\\.closest\\("\\.live-audio-stage"\\)\\)/);
-  assert.match(guestRenderer,/const hasGuestStageMedia=audioOnly\\?participantHasLiveAudio:participantHasLiveStageMedia/);
-  assert.match(guestRenderer,/hasGuestStageMedia\\(local\\)/);
-  assert.match(guestRenderer,/hasGuestStageMedia\\(person\\)/);
+  assert.match(guestRenderer,/const audioOnly=Boolean\(root\.closest\("\.live-audio-stage"\)\)/);
+  assert.match(guestRenderer,/const hasGuestStageMedia=audioOnly\?participantHasLiveAudio:participantHasLiveStageMedia/);
+  assert.match(guestRenderer,/hasGuestStageMedia\(local\)/);
+  assert.match(guestRenderer,/hasGuestStageMedia\(person\)/);
 });
 
 const AUDIO_LIVE_LAYOUTS = [
@@ -150,8 +150,8 @@ test('Audio LIVE defines a real rounded grid template for all nine guest layouts
   assert.match(fit, /border-radius:18px!important/);
   assert.match(fit, /border-radius:50%!important/);
   assert.match(fit, /\.live-audio-stage #live-guest-layout\.audio-guest-layout/);
-  assert.match(fit, /data-live-layout="roundtable-1"[^}]*grid-template-columns:[^;]+!important[^}]*grid-template-rows:22px repeat\\(4,minmax\\(0,1fr)\\)!important/);
-  assert.match(fit, /data-live-layout="roundtable-2"[^}]*grid-template-columns:[^;]+!important[^}]*grid-template-rows:22px repeat\\(4,minmax\\(0,1fr)\\)!important/);
+  assert.match(fit, /data-live-layout="roundtable-1"[^}]*grid-template-columns:[^;]+!important[^}]*grid-template-rows:22px repeat\(4,minmax\(0,1fr\)\)!important/);
+  assert.match(fit, /data-live-layout="roundtable-2"[^}]*grid-template-columns:[^;]+!important[^}]*grid-template-rows:22px repeat\(4,minmax\(0,1fr\)\)!important/);
 });
 
 test('All nine Audio LIVE guest presets share the unified layout state and synchronization', () => {
