@@ -1,12 +1,12 @@
-## Current owner-authorized Corporate Governance, HR and Supervision release — 2026-11-18
+## Owner-authorized Corporate Governance, HR and admin-approval notifications — 2026-11-18
 
-- Owner approval received in the in-chat Minglora Owner Acceptance Center to continue implementation and verified release preparation. Signed-in owner/MFA and device acceptance remain separate gates.
-- Current candidate: draft PR #518, branch `feat/ai-hr-disciplinary-cases-current-main-acceptance-20261118`, based on latest `main` SHA `89d678de53703b9b7e4837c7fe12aea4e4854345`. PR #515 was closed without merge as superseded.
-- Candidate migration is `20261118044600_minglora_ai_hr_disciplinary_cases`, ordered after the live `20261118042949_minglora_owner_admin_rbac` migration. Run the renamed SQL body inside BEGIN/ROLLBACK and verify no residual objects/ledger row before any production apply.
-- Latest candidate head `83b80034e360d738be7dbbd465c08f7ac91db958`: automated CI, AI Network regression, Chromium browser acceptance and nine-layout visual QA are awaiting fresh results. Earlier browser attempts exposed compact-phone and tablet form overflow; latest CSS changes address those specific widths. Do not mark browser acceptance passed until the exact latest SHA passes.
-- Required after green automated checks: signed-in designated-owner/MFA API acceptance and desktop/mobile review; inspect the admin approval notification requirement (pending approvals must surface as owner notifications with direct approve/reject actions); then coordinated review of migration, Edge Function and existing Render release.
-- No production migration, disciplinary records, Edge Function update or Render deployment for this candidate has been performed. Do not start workers; provider readiness and execution capacity remain unverified.
-- Corporate Governance/HR acceptance remains **PARTIAL** until the full HR lifecycle, owner/device flow and all independent gates pass.
+- Owner authorized continued work through the in-chat Owner Acceptance Center. This is workflow authorization, not signed-in production acceptance.
+- Draft PR #518: `feat/ai-hr-disciplinary-cases-current-main-acceptance-20261118`; current branch head before tracker update `51a6486e317f2b12e49129c60571bafcb0372986`; base latest `main` SHA `89d678de53703b9b7e4837c7fe12aea4e4854345`. PR #515 closed without merge.
+- HR disciplinary migration `20261118044600_minglora_ai_hr_disciplinary_cases` follows live migration `20261118042949`. Exact migration rollback contract passed, with no retained tables/function/ledger row after rollback.
+- Both current AI approval paths now create owner notifications in the existing inbox: durable task approvals (`pending_approval`) and high-impact bot-action approvals (`pending_human_review`). Notifications carry direct Approve/Reject actions, review through the existing admin/MFA-gated API, and display the decision afterward. Push provides a Review shortcut into the inbox. The source is still a draft candidate, not a deployed feature.
+- Current-head workflows (full CI, AI Network checks, Chromium browser acceptance and nine-layout visual QA) are pending. Responsive fixes target compact phone and tablet overflow; fresh runs must pass on exact head.
+- Remaining release gates: current-head tests pass; signed-in owner/MFA and desktop/mobile acceptance; actual in-app notification review; coordinated Supabase migration, Edge Function and confirmed Render deployment; provider and worker readiness. Keep workers paused.
+- Production migration, disciplinary table/RPC deployment, Edge Function deployment and Render deployment for this PR have not been performed. Corporate Governance/HR remains **PARTIAL** pending verification and real workflow acceptance.
 
 ---
 
