@@ -130,10 +130,10 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   const videoReference=guestLayouts.slice(referenceStart,referenceEnd)
     .replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage');
   const audioContract=guestLayouts.slice(audioStart);
-  const layoutRules=(source,layout)=>[...source.matchAll(/([^{}]+)\\{([^{}]*)\\}/g)]
+  const layoutRules=(source,layout)=>[...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .map(match=>({
       selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage'),
-      body:match[2].trim().replace(/\\s+/g,' ')
+      body:match[2].trim().replace(/\s+/g,' ')
     }))
     .filter(rule=>rule.selector.includes('data-live-layout="'+layout+'"'));
   for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']){
