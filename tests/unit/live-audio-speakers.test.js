@@ -115,10 +115,10 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
   assert.ok(index.includes('/app.js?v=20261117-audio-only-mic-guest-seats-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1'));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1'));
   assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
-  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1')"));
+  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1')"));
   assert.doesNotMatch(fit,/data-live-guest-layout=/);
 });
 
@@ -129,10 +129,11 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   assert.ok(referenceStart>=0&&referenceEnd>referenceStart&&audioStart>referenceEnd);
   const videoReference=guestLayouts.slice(referenceStart,referenceEnd)
     .replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage');
-  const audioContract=guestLayouts.slice(audioStart);
+  const audioSafetyStart=guestLayouts.indexOf('/* AUDIO LIVE reference clearance',audioStart);
+  const audioContract=guestLayouts.slice(audioStart,audioSafetyStart>audioStart?audioSafetyStart:undefined);
   const layoutRules=(source,layout)=>[...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .map(match=>({
-      selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage'),
+      selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage').replaceAll('#live-guest-layout.audio-guest-layout','#live-guest-layout'),
       body:match[2].trim().replace(/\s+/g,' ')
     }))
     .filter(rule=>rule.selector.includes('data-live-layout="'+layout+'"'));
@@ -141,7 +142,7 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
       layout+' Audio LIVE guest geometry must match its reference layout');
   }
   assert.match(audioContract,/#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
-  assert.ok(audioContract.includes('#live-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
+  assert.ok(audioContract.includes('#live-guest-layout.audio-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
     'Audio LIVE guest panels must occupy the single full-stage row, not the retired row 2');
   assert.match(audioContract,/\.live-audio-scene\{[\s\S]*?position:absolute!important/);
   assert.match(audioContract,/#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
@@ -198,4 +199,21 @@ test('All nine Audio LIVE guest presets share the unified layout state and synch
   assert.doesNotMatch(app,/live-guest-layout-options|data-live-guest-layout=/);
   assert.match(app,/topic:"minglora-live-layout"/);
   assert.match(app,/applyLiveScreenLayout\(nextLayout\)/);
+});
+
+
+test('Audio LIVE clears both top overlays from the guest seats and keeps Fluid Panel thumbnails at the reference edge', () => {
+  const finalSafety=guestLayouts.slice(guestLayouts.lastIndexOf('/* AUDIO LIVE reference clearance'));
+  assert.ok(finalSafety.includes('padding:40px clamp(5px,.65vw,9px) clamp(5px,.65vw,9px)!important;'),
+    'the stage labels have a reserved strip above every audio guest grid');
+  assert.match(finalSafety,/:nth-child\(3\)\{\s*bottom:calc\(clamp\(8px,1vw,12px\) \+ clamp\(44px,15vw,120px\) \+ 8px\)!important;/,
+    'Fluid Panel Guest 1 is the upper right thumbnail');
+  assert.match(finalSafety,/:nth-child\(4\)\{\s*bottom:clamp\(8px,1vw,12px\)!important;/,
+    'Fluid Panel Guest 2 is the lower right thumbnail');
+  assert.ok(finalSafety.includes('#live-player-shell #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout.live-guest-layout'),
+    'the final spacing override outranks legacy audio fit rules');
+  assert.ok(finalSafety.includes('left:auto!important;right:8px!important;')&&finalSafety.includes('justify-content:flex-end!important;text-align:right!important;'),
+    'the seat-count label is right-anchored away from the LIVE AUDIO pill');
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1'));
+  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1')"));
 });
