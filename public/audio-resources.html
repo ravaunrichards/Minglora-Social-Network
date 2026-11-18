@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Minglora · Real Audio Sources</title>
+<style>
+:root{color-scheme:light;--ink:#172033;--muted:#64748b;--line:#dbe3ed;--panel:#fff;--wash:#f5f7fb;--accent:#254b87}
+*{box-sizing:border-box}body{margin:0;background:var(--wash);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{width:min(1120px,calc(100% - 32px));margin:28px auto 64px}
+header,.notice,.tools,.group{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+header{margin-bottom:16px}h1{font-size:clamp(25px,4vw,36px);line-height:1.15;margin:0 0 10px}h2{font-size:19px;margin:0 0 8px}p{margin:6px 0;color:var(--muted)}
+a{color:var(--accent);overflow-wrap:anywhere}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #8bb8ff;outline-offset:2px}
+.notice{border-left:5px solid #b7791f;margin:16px 0}.notice strong{color:var(--ink)}
+.tools{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin:16px 0}
+input,select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:white;color:var(--ink);font:inherit}
+#summary{font-size:13px;color:var(--muted);padding:0 2px 12px}
+.groups{display:grid;gap:14px}.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:12px}
+.source{border:1px solid var(--line);border-radius:11px;padding:12px;min-width:0}
+.source strong{display:block;margin-bottom:5px}.source small{display:block;color:var(--muted);font-size:12px;margin-top:6px}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:11px;color:var(--muted);margin:2px 4px 2px 0}
+.types{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.type{background:#f1f5f9;border-radius:7px;padding:5px 8px;font-size:12px}
+footer{margin-top:18px;color:var(--muted);font-size:13px}
+@media(max-width:640px){main{width:min(100% - 20px,1120px);margin:10px auto 40px}.tools{grid-template-columns:1fr}header,.notice,.tools,.group{padding:15px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Minglora Real Audio Resource Directory</h1>
+  <p>80 candidate source listings across general effects, game audio, wildlife, archives, music, international libraries and discovery tools.</p>
+  <p><a href="/">Return to Minglora</a></p>
+</header>
+<section class="notice" aria-labelledby="policy-title">
+  <strong id="policy-title">Strict acceptance rule</strong>
+  <p>These are discovery links, not pre-approved licenses. Review the exact recording's license, attribution, commercial-use permission and right to host/stream it on Minglora. Only verified real-world recordings can be accepted. AI voices, robotic voices, synthesized tones, oscillator sounds and procedural effects are rejected.</p>
+  <p>No recording is considered installed until its original file is present, its SHA-256 checksum matches, its provenance and rights are recorded, and a person has listened to and tested playback.</p>
+</section>
+<section class="tools" aria-label="Search audio sources">
+  <input id="search" type="search" placeholder="Search source names or categories" aria-label="Search sources">
+  <select id="category" aria-label="Filter source category"><option value="">All seven categories</option></select>
+</section>
+<div id="summary" role="status" aria-live="polite">Loading source directory…</div>
+<div id="groups" class="groups"></div>
+<section class="group" style="margin-top:16px">
+  <h2>Required audio coverage</h2>
+  <p>These are Minglora's requested collection types. A source listing does not mean that any required type has already been acquired.</p>
+  <div id="types" class="types"></div>
+</section>
+<footer>Every asset is reviewed independently. Duplicate discovery URLs are retained where they appeared in the supplied directory. Last directory revision: 18 November 2026.</footer>
+</main>
+<script src="/audio-resources.js" defer></script>
+</body>
+</html>
