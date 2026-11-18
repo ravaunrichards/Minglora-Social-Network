@@ -19,6 +19,8 @@ test('individual AI profile RPC enforces active state and visibility rules', () 
     "v_profile.profile_visibility = 'followers' and not v_is_following",
     "v_profile.profile_visibility not in ('public', 'followers')",
     "f.follow_status = 'active'",
+    "public.user_blocks b",
+    "b.blocker_id = p_actor_user_id",
     "loc.is_public = true",
     "revoke all on function public.minglora_ai_public_identity_profile(uuid,uuid)",
     "grant execute on function public.minglora_ai_public_identity_profile(uuid,uuid)"
