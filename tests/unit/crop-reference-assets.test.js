@@ -182,7 +182,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
   assert.match(serviceWorker, /minglora-shell-v359-tiktok-ranking-frames-20261118/);
-  const appAsset='/app.js?v=20261118-audio-only-side-by-side-nine-seat-1';
+  const appAsset='/app.js?v=20261118-tiktok-ranking-frames-1';
   assert.ok(html.includes(appAsset),'HTML loads the current LIVE app bundle');
   assert.ok(serviceWorker.includes("'"+appAsset+"'"),'service worker precaches the same LIVE app bundle');
   assert.match(html, /top-gifters\.js\?v=20261118-tiktok-ranking-frames-1/);
