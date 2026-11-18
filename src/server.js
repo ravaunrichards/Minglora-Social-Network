@@ -1907,9 +1907,6 @@ async function route(req, res) {
         return json(res, 200, response?.result || { requested_count: identityIds.length, succeeded_count: 0, failed_count: identityIds.length, results: [], failed: [] });
       }
       if (method === 'GET' && sub === 'identities/batches') {
-        if (!isModerator(user, req)) {
-          throw Object.assign(new Error('Only an authorized Minglora administrator can view AI identity import history.'), { status: 403 });
-        }
         const batchUrl = new URL(req.url || '/', 'http://localhost');
         const requestedLimit = Number.parseInt(batchUrl.searchParams.get('limit') || '12', 10);
         const result = await runAIIdentityBatchCommand('list_batches', {
@@ -1920,9 +1917,6 @@ async function route(req, res) {
 
       if (method === 'POST' && parts[0] === 'identities' && parts[1] === 'batches' &&
           parts.length === 4 && parts[3] === 'retry') {
-        if (!isModerator(user, req)) {
-          throw Object.assign(new Error('Only an authorized Minglora administrator can retry AI identity imports.'), { status: 403 });
-        }
         const batchId = parts[2];
         if (!aiIdentityIdPattern.test(batchId)) {
           throw Object.assign(new Error('A valid AI identity batch ID is required.'), { status: 400 });
