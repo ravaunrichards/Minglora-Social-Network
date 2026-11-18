@@ -110,8 +110,10 @@ test('AI task approval push notifications offer a review action that opens the o
   assert.match(server,/ai_task_approval:'Minglora AI approval required'/);
   assert.match(server,/ai_approval:'Minglora AI approval required'/);
   assert.match(server,/aiTaskId:notification\.aiTaskId\|\|null/);
-  assert.match(worker,/(type==='ai_task_approval'\|\|type==='ai_approval')\?\[\{action:'review',title:'Review approval'\}\]/);
-  assert.match(worker,/event\.action==='review'&&\(data\.type==='ai_task_approval'\|\|data\.type==='ai_approval'\)/);
+  assert.match(worker,/(type==='ai_task_approval'\|\|type==='ai_approval')\?\[\{action:'approve',title:'Approve'\},\{action:'reject',title:'Reject'\}\]/);
+  assert.match(worker,/if\(approvalType&&\(event\.action==='approve'\|\|event\.action==='reject'\)\)/);
+  assert.match(worker,/credentials:'include'/);
+  assert.match(worker,/openInbox/);
   assert.match(worker,/aiTaskId/);
   assert.match(app,/type==='ai_task_approval'\?'Minglora AI approval required'/);
 });
