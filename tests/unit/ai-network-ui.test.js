@@ -63,6 +63,15 @@ test('OpenAI manual draft status is not shown as a persistent readiness message'
   assert.ok(moduleSource.includes('manualDraftsAvailable'));
 });
 
+test('AI Network workspace exposes a live setup checklist and separates provider gates from identity work', () => {
+  assert.ok(ui.includes('function renderAICentreReadiness(snapshot)'));
+  assert.ok(ui.includes('AI Centre Readiness'));
+  assert.ok(ui.includes('without configuring a model provider.'));
+  assert.ok(ui.includes('No provider account row or browser key entry is required'));
+  assert.ok(ui.includes('Global pause: '));
+  assert.ok(ui.includes('This does not block identity, profile or organization setup.'));
+});
+
 test('AI Network workspace exposes all ten recommendations and true measured/empty states', () => {
   for (const label of [
     'Bot Personality Laboratory', 'Bot Teams', 'Smart Activity Scheduling', 'Bot Performance Center',
