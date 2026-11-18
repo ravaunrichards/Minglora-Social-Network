@@ -967,6 +967,18 @@ function notifyAINetworkTaskApproval(user,task){
     {aiTaskId:taskId,aiTaskTitle:title,aiTaskActionClass:actionClass});
   return db.notifications.length>before;
 }
+function resolveAINetworkTaskApprovalNotification(userId,taskId,decision){
+  if(!userId||!taskId||!['approved','rejected','cancelled'].includes(decision))return false;
+  let changed=false;
+  for(const item of (db.notifications||[])){
+    if(item.userId===userId&&item.type==='ai_task_approval'&&item.aiTaskId===taskId&&!item.aiTaskDecision){
+      item.aiTaskDecision=decision;
+      item.aiTaskDecisionAt=now();
+      changed=true;
+    }
+  }
+  return changed;
+}
 function publishNotificationEvent(userId,type,notificationId=null){
   if(!userId||!['notification:new','notification:changed'].includes(type))return 0;
   return messengerRealtime?.publish([userId],{type,notificationId:notificationId||null})||0;
@@ -2454,6 +2466,10 @@ async function route(req, res) {
         input.task_id = taskId;
         input.reason = String(input.reason || '');
         const result = await runAITaskCommand(input.status === 'approved' ? 'approve_task' : 'reject_task', input);
+        if(result?.task&&resolveAINetworkTaskApprovalNotification(user.id,taskId,input.status)){
+          await saveStore();
+          publishNotificationEvent(user.id,'notification:changed');
+        }
         return json(res, 200, result || {});
       }
       if (parts[0] === 'tasks' && parts.length === 3 && method === 'POST' && parts[2] === 'cancel') {
@@ -2467,6 +2483,10 @@ async function route(req, res) {
         }
         input.task_id = taskId;
         const result = await runAITaskCommand('cancel_task', input);
+        if(result?.task&&resolveAINetworkTaskApprovalNotification(user.id,taskId,'cancelled')){
+          await saveStore();
+          publishNotificationEvent(user.id,'notification:changed');
+        }
         return json(res, 200, result || {});
       }
 
