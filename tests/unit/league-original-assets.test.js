@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { readFileSync as requireService } from "node:fs";
 
 const repository = new URL("../../", import.meta.url);
 const leagueFiles = [
@@ -88,18 +89,28 @@ test("Leaderboard top-three rows follow the supplied No.1/No.2/No.3 layout with 
   assert.match(league, /minglora:open-profile/);
 });
 
-test("Match Power-Ups retain their existing IDs and original behavior", () => {
+test("six Match Power-Ups use the new reference deck while legacy identifiers remain readable", () => {
+  const service = requireService(new URL('../../backend/modules/leagues/service.js', import.meta.url), 'utf8');
   for (const [id, icon] of [
-    ["momentum_boost", "powerup-momentum"],
-    ["score_multiplier", "powerup-multiplier"],
-    ["shield", "powerup-shield"],
-    ["time_boost", "powerup-time"]
+    ["boosting_glove", "powerup-glove"],
+    ["magic_mist", "powerup-mist"],
+    ["stun_hammer", "powerup-hammer"],
+    ["time_maker", "powerup-time-maker"],
+    ["boosters", "powerup-boosters"],
+    ["speed_challenge", "powerup-speed"]
   ]) {
-    assert.ok(league.includes('"' + id + '":leagueAssetIcon("' + icon + '"'), id + " keeps its original functional identifier");
+    assert.ok(league.includes(id), id + " is selectable in League Arena");
+    assert.ok(league.includes('"' + id + '":"' + icon + '"'), id + " uses its original Minglora SVG card");
     assert.ok(artwork.includes('<symbol id="' + icon + '"'), "missing " + icon + " artwork");
   }
+  for (const legacyId of ["momentum_boost", "score_multiplier", "shield", "time_boost"]) {
+    assert.ok(service.includes(legacyId), legacyId + " remains supported by the legacy backend adapter");
+    assert.ok(artwork.includes('<symbol id="' + ({momentum_boost:"powerup-momentum",score_multiplier:"powerup-multiplier",shield:"powerup-shield",time_boost:"powerup-time"}[legacyId]) + '"'), legacyId + " legacy artwork remains available");
+  }
+  assert.match(league, /MINGLORA MATCH POWER-UP DECK/);
   assert.match(league, /data-powerup-select=/);
-  assert.match(league, /activateSelectedPowerup/);
+  assert.match(league, /My Power-Up Backpack/);
+  assert.doesNotMatch(league, /activateSelectedPowerup/);
   assert.match(index, /leagues\.css\?v=20261117-avatar-rankings-sync-1/);
   assert.match(index, /leagues\.js\?v=20261117-avatar-rankings-sync-1/);
 });
