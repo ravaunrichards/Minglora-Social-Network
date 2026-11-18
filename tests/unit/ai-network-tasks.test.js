@@ -164,3 +164,10 @@ test('AI task approval notification actions use the MFA-protected task decision 
   assert.match(server,/if \(parts\[0\] === 'tasks' && parts\.length === 3 && method === 'PATCH' && parts\[2\] === 'approval'\)/);
   assert.match(ui,/data-ai-form="task-approval"/);
 });
+
+
+test('A task approval or cancellation resolves its owner notification',()=>{
+  assert.match(server,/resolveAINetworkTaskApprovalNotification\(user\.id,taskId,input\.status\)/);
+  assert.match(server,/resolveAINetworkTaskApprovalNotification\(user\.id,taskId,'cancelled'\)/);
+  assert.match(server,/publishNotificationEvent\(user\.id,'notification:changed'\)/);
+});
