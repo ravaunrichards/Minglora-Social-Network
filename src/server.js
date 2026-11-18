@@ -5749,9 +5749,12 @@ async function route(req, res) {
         }
         const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
-          item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+          item.sessionId === session.id && ['invited', 'accepted', 'connected'].includes(item.status)
         ).length;
         if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
+        await requestSupabaseState('live_cohost_invite', {
+          broadcastId: session.id, hostId: user.id, userId: target.id, guestSeatLimit
+        });
         const invitedAt = now();
         const invitation = {
           id: uid(), sessionId: session.id, userId: target.id, role: 'guest', status: 'invited',
@@ -5767,7 +5770,7 @@ async function route(req, res) {
       if (method === 'POST' && liveCohostAcceptMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveCohostAcceptMatch[1] && item.status === 'live');
         if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE invitation is not available.' });
-        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowGuestRequests === false || session.liveSettings?.allowCoHost === false) {
+        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowCoHost === false) {
           return json(res, 403, { error: 'The host has disabled Co-host invitations for this LIVE.' });
         }
         const request = (db.liveSpeakerRequests || []).find(item =>
@@ -5787,6 +5790,9 @@ async function route(req, res) {
           item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
         ).length;
         if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
+        await requestSupabaseState('live_cohost_invitation_accept', {
+          broadcastId: session.id, userId: user.id, guestSeatLimit
+        });
         request.status = 'accepted';
         request.acceptedAt = now();
         request.reviewedAt = now();
