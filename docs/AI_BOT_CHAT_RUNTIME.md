@@ -1,6 +1,6 @@
 # Minglora AI Bot Conversation Runtime
 
-**Status:** Owner-initiated chat code is merged to main. The additive relational chat migration is applied to the existing Minglora Supabase project as migration `20261117101442_minglora_ai_bot_conversations`; the deterministic message-order repair is applied as `20261117102355_minglora_ai_bot_message_order`; all six chat tables and the service-role-only RPC are live. The existing `minglora-runtime-state` Edge Function is ACTIVE at version 132 with its prior custom API-key authentication and `verify_jwt=false` preserved. The Render-backed Node API release, signed-in owner/MFA acceptance, a real provider credential and production inference remain unverified.
+**Status (verified 2026-11-18):** Owner-initiated chat code is merged to main and is included in the live Render deployment of the user-confirmed `minglora-social-network-temp` service (deployment `dep-dbujetui0phs73b41lu0`, commit `b7e692edd6a35bb804a3b478c8fe454dda7651b8`). The chat migration is applied as `20261117101442_minglora_ai_bot_conversations`; message-order repair is applied as `20261117102355_minglora_ai_bot_message_order`; shared Creator Studio/chat budget migration is applied as `20261117111426_minglora_creator_studio_shared_budget`. The six chat tables and service-role-only RPC are live. `minglora-runtime-state` is ACTIVE at version 135 with the existing custom API-key authentication and `verify_jwt=false` preserved. Production AI provider credentials/model are still absent, so live inference and signed-in owner/MFA device acceptance remain pending.
 
 ## Scope and safety
 
@@ -32,7 +32,7 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 - Both endpoints remain behind the designated-admin and verified-MFA gate.
 - Failed or unmoderated output is not saved as a conversation message. Billable failures still enter the usage ledger.
 
-## Explicitly not verified or deployed
+## Current production acceptance boundaries
 
 - The migration is applied in production as `20261117101442_minglora_ai_bot_conversations`.
 - The follow-up `20261117102355_minglora_ai_bot_message_order` migration backfilled `sequence_no`, added per-conversation uniqueness and updated the private RPC. A rollback-only 20-exchange database stress test returned sequence positions 21–40 with zero out-of-order pairs; it also verified idempotent completed-request reuse, owner isolation, budget rejection and expired-lease recovery. All fixture writes were rolled back. Live verification confirms six RLS-enabled tables, zero direct browser-role SELECT privileges, service-role table access, and a SECURITY INVOKER RPC with an empty search path and service-role-only EXECUTE. All 19 foreign keys across the six tables have valid covering indexes. The six chat tables currently contain zero rows.
@@ -63,9 +63,9 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 
 ## Acceptance still required
 
-1. Confirm the intended production Render workspace/service; the currently linked minglora-social-network-temp service is live but is not a confirmed production target.
+1. The production target is confirmed: use the existing minglora-social-network-temp service on main. It is a free, single-instance deployment; retain it for the current stage and plan a capacity review before worker scale-out.
 2. Use the designated Minglora owner session with verified MFA/reviewer state to exercise the real AI identity/chat and Creator Studio flows on desktop and mobile.
-3. Configure a real private OpenAI credential/model, verify provider health, perform moderated inference and confirm measured usage. No credential or live inference is claimed as present.
+3. Configure a real private OpenAI credential/model in Render, verify provider health, perform moderated inference and confirm measured usage. No credential or live inference is currently present. For the first owner-initiated chat/draft path, provider account and model metadata rows are optional; the private key/model and successful read-only probe are the required provider steps.
 4. Run independent concurrent sessions against the deployed Supabase RPC, followed by owner-isolation, budget/lease, billable failure and recovery checks under production-like traffic.
 5. Verify consent-gated memory recall with memory disabled, short-term enabled, long-term enabled only by its separate opt-in, expiry cleanup, owner isolation and credential-like summary exclusion.
 6. Benchmark identity and chat storage, query/write throughput, capacity, backup restoration, disaster recovery and regional failover before making any 10-billion or multi-region capacity claim.
@@ -92,3 +92,16 @@ The daily reservation ledger serializes concurrent bot-chat attempts. Creator St
 - Rollback-only live RPC acceptance passed reserve/reuse, measured settle/idempotency, non-billable release, billable failure usage, shared daily usage, over-budget rejection and cross-owner denial. Post-rollback identity, budget and Creator Studio rows remain zero.
 - The Render auto-deploy to minglora-social-network-temp is live and durable Supabase persistence is ready; this temporary service is not verified as the correct production target.
 - Workers remain globally paused, execution disabled and max workers zero.
+
+
+## Live production readiness checkpoint — 2026-11-18
+
+- The owner explicitly confirmed the existing Render service `minglora-social-network-temp` as the production deployment target. This supersedes historical notes above that said target confirmation was pending. The service remains attached to `main`, automatic deploy-on-commit is enabled, and no new Render service or paid infrastructure was created.
+- Current deployment: `dep-dbujetui0phs73b41lu0`, commit `b7e692edd6a35bb804a3b478c8fe454dda7651b8`, status **LIVE**. Startup logs confirm Supabase Auth configured, durable Supabase persistence ready and LiveKit connected.
+- Current readiness log: provider `not_configured`; AI credentials absent; bot chat unavailable; Creator Studio generation unavailable; AI execution disabled. The deployed Node source contains the moderated OpenAI bot-chat adapter, Creator Studio adapter and read-only model-access probe. The first human-initiated chat path needs a private OpenAI API key and model plus a successful probe; provider-account/model-assignment metadata is not a prerequisite.
+- Existing Supabase project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY; `minglora-runtime-state` is ACTIVE at version 135. Production has 62 AI schema tables and all 62 have RLS enabled. Browser roles have no `ai_network` schema usage or direct table access; the private service-role gateway remains the intended path.
+- Live counts: 15 active categories; 0 identities, identity names, profiles, email records, provider accounts/models/assignments; 1 organization; 20 departments; 0 employment records; 0 bot conversations/messages; 0 tasks and 0 pending approvals. No synthetic records were added.
+- Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. This deliberately blocks autonomous task execution, not identity/profile creation, organization configuration, HR setup, provider metadata or approval review.
+- The private AI profile-media bucket is absent and provisions on the first genuine owner-authorized upload. Text-only profiles do not require it; real upload and device-visibility acceptance remains pending.
+- Continue now: identity/profile work; Bot Personality Lab draft creation; categories; organization/departments/positions/HR records; memory consent/settings; approval workflows; provider metadata and UI/API hardening. External/owner gates: OpenAI private key/model and live inference; signed-in designated-owner/MFA desktop/mobile acceptance; real avatar/cover upload; email provider/mailbox. Engineering gates: independent worker identity/authentication and claim/heartbeat/complete/failure paths; normalization of remaining JSONB state before multi-instance workers; backup/recovery and measured capacity/region benchmarks.
+- The 10-billion identity target remains a design objective only; there is no production load benchmark, sharding rollout or regional failover result.
