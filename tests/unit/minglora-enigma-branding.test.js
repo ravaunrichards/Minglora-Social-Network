@@ -30,16 +30,21 @@ test("Enigma replaces the old M artwork across all active Minglora brand surface
     assert.equal(source.includes("/assets/Logo/Logo.jpg"), false, "old M logo is not referenced by active branding");
   }
 
-  assert.ok(index.includes("minglora-branding.css?v=20261116-enigma-logo-1"));
+  assert.ok(index.includes("minglora-branding.css?v=20261118-admin-centre-brand-crop-1"));
   assert.ok(help.includes("help-center.css?v=20261116-enigma-logo-1"));
   assert.ok(adminHtml.includes("admin-centre.css?v=20261117-approval-center-1"));
   assert.ok(brandCss.includes("object-fit:cover!important;object-position:center 12%!important"));
+  assert.ok(brandCss.includes("border-radius:13px!important;background:transparent!important;box-shadow:none!important"), "main website header uses the Admin Centre logo shape");
+  assert.ok(brandCss.includes("object-fit:cover;object-position:center 12%;border:0;border-radius:13px;background:transparent;box-shadow:none"), "sign-in logo uses the same crop and rounded shape");
+  assert.ok(brandCss.includes(".mtop .logo img{display:block;object-fit:cover;object-position:center 12%;border:0;border-radius:13px;background:transparent;box-shadow:none}"), "secondary website headers use the same treatment");
+  assert.ok(brandCss.includes("border-radius:13px!important;overflow:hidden}"), "Creator Studio brand mark uses the same rounded crop");
+  assert.ok(adminHtml.includes("brand-manifest.js?v=20261118-brand-manifest-1"), "Admin Centre consumes the approved Logo Center placement");
   assert.ok(helpCss.includes(".hc-brand img{border-radius:13px;object-fit:cover;object-position:center 12%}"));
   assert.ok(adminHtml.includes('<img class="admin-centre-brand-mark"'));
   assert.ok(adminCss.includes("object-fit:cover;"));
   assert.ok(adminCss.includes("object-position:center 12%;"));
   assert.ok(manifest.includes('"type": "image/png"'));
-  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v359-self-updating-1'"));
+  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v360-admin-centre-brand-crop-1'"));
   assert.ok(serviceWorker.includes("icon:'" + brandUrl + "'"));
   assert.ok(serviceWorker.includes("badge:'" + brandUrl + "'"));
 });
