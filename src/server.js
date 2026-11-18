@@ -6673,7 +6673,28 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/leagues/matches'){
         await syncRefundedGiftActivity();
-        const matches=listCreatorLeagueMatches(db,db.users,user.id);
+        const broadcastId=String(url.searchParams.get('broadcastId')||'');
+        const viewerSession=broadcastId?(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live'):null;
+        if(broadcastId&&!viewerSession)return json(res,404,{error:'The LIVE session for this Match Power-Up view is unavailable.'});
+        if(viewerSession){
+          if(blockedBetween(user.id,viewerSession.hostId))return json(res,404,{error:'LIVE session not found.'});
+          let canView=viewerSession.hostId===user.id||viewerSession.visibility==='public'||
+            (viewerSession.visibility==='friends'&&isFriend(user.id,viewerSession.hostId));
+          if(!canView&&viewerSession.visibility==='subscribers'){
+            try{
+              if(isSupabasePersistence()){
+                const access=await requestSupabaseState('subscription_access_check',{userId:user.id,creatorIds:[viewerSession.hostId]});
+                canView=(access.authorizedCreatorIds||[]).includes(viewerSession.hostId);
+              }else{
+                canView=listActiveCreatorSubscriptions(db.creatorSubscriptions,viewerSession.hostId).some(item=>item.subscriberId===user.id);
+              }
+            }catch{canView=false;}
+          }
+          if(!canView)return json(res,404,{error:'LIVE session not found.'});
+        }
+        const matches=listCreatorLeagueMatches(db,db.users,user.id,new Date(),{
+          broadcastId,viewerHostId:viewerSession?.hostId||''
+        });
         await saveStore();
         return json(res,200,{matches});
       }
@@ -6727,11 +6748,43 @@ async function route(req, res) {
           }else if(action==='support'){
             supportCreatorLeagueMatch(db,match,user.id,String(input.side||''));
           }else{
-            useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''),new Date());
+            const broadcastId=String(input.broadcastId||'');
+            const session=(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live');
+            if(!session||![match.challengerSessionId,match.opponentSessionId].includes(session.id)){
+              return json(res,403,{error:'Use a Backpack card while watching the linked creator\'s active LIVE match.'});
+            }
+            if(blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
+            const side=session.id===match.challengerSessionId?'challenger':'opponent';
+            if(session.hostId===user.id)return json(res,403,{error:'Creators cannot use their own viewer Backpack cards.'});
+            const canView=session.visibility==='public'||(session.visibility==='friends'&&isFriend(user.id,session.hostId));
+            if(!canView&&session.visibility!=='subscribers')return json(res,404,{error:'LIVE session not found.'});
+            if(session.visibility==='subscribers'){
+              let subscriberAccess=false;
+              try{
+                if(isSupabasePersistence()){
+                  const access=await requestSupabaseState('subscription_access_check',{userId:user.id,creatorIds:[session.hostId]});
+                  subscriberAccess=(access.authorizedCreatorIds||[]).includes(session.hostId);
+                }else{
+                  subscriberAccess=listActiveCreatorSubscriptions(db.creatorSubscriptions,session.hostId).some(item=>item.subscriberId===user.id);
+                }
+              }catch{subscriberAccess=false;}
+              if(!subscriberAccess)return json(res,404,{error:'LIVE session not found.'});
+            }
+            let participants=[];
+            try{participants=await listLiveKitParticipants(session.roomName);}
+            catch{return json(res,503,{error:'Minglora could not verify your LIVE room connection. Try again shortly.'});}
+            if(!participants.some(item=>item.identity===user.id)){
+              return json(res,403,{error:'Connect to the creator\'s LIVE room before using a Power-Up card.'});
+            }
+            useCreatorLeaguePowerup(db,match,user.id,String(input.inventoryCardId||''),side,new Date());
           }
           match=(db.creatorLeagueMatches||[]).find(item=>item.id===match.id)||match;
           await saveStore();
-          const publicMatch=listCreatorLeagueMatches(db,db.users,user.id,new Date()).find(item=>item.id===match.id);
+          const broadcastId=String(input.broadcastId||'');
+          const session=broadcastId?(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live'):null;
+          const publicMatch=listCreatorLeagueMatches(db,db.users,user.id,new Date(),{
+            broadcastId,viewerHostId:session?.hostId||''
+          }).find(item=>item.id===match.id);
           return json(res,200,{match:publicMatch});
         }catch(error){
           return json(res,error.status||400,{error:error.message||'The League Match action could not be completed.'});
