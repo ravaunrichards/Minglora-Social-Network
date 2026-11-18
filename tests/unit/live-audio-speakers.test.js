@@ -115,7 +115,7 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 
 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
-  assert.ok(index.includes('/app.js?v=20261118-side-by-side-guest-seat-nine-1'));
+  assert.ok(index.includes('/app.js?v=20261118-audio-only-side-by-side-nine-seat-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
   assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
   assert.ok(serviceWorker.includes("'/app.js?v=20261118-side-by-side-guest-seat-nine-1'"));
@@ -174,21 +174,22 @@ test('Audio LIVE Full Screen keeps its single full-stage host tile above the mob
   assert.ok(serviceWorker.includes("'/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'"));
 });
 
-test('Side by Side alone exposes and enforces a ninth LIVE guest seat', () => {
+test('Audio Only LIVE Side by Side alone exposes and enforces a ninth guest seat', () => {
   const start=app.indexOf('function renderLiveGuestLayout(');
   const end=app.indexOf('\nfunction renderLiveViewerPanel(',start);
   const renderer=app.slice(start,end);
   assert.ok(start>=0&&end>start);
-  assert.match(renderer,/const guestSeatLimit=activeLiveScreenLayout==='side-by-side'\?9:8/);
+  assert.match(renderer,/const guestSeatLimit=audioOnly&&activeLiveScreenLayout==='side-by-side'\?9:8/);
   assert.match(renderer,/guests\.slice\(0,guestSeatLimit\)/);
   assert.match(renderer,/while\(specs\.length<guestSeatLimit\+1\)/);
+  assert.match(renderer,/if\(!audioOnly&&activeLiveScreenLayout==='side-by-side'\)specs\.push/);
   assert.match(renderer,/Guest seat "\+esc\(spec\.seatNumber\)/);
   assert.match(renderer,/guestSeatLimit\+1/);
-  assert.match(app,/Manage up to 8 guest seats in the other layouts, or 9 in Side by Side\./);
+  assert.match(app,/Manage up to 8 guest seats in Video \+ Audio and the other Audio Only layouts\. Audio Only Side by Side supports 9\./);
   assert.equal((server.match(/activeSpeakers >= guestSeatLimit/g)||[]).length,4,
     'requests, invitations, invitation acceptance, and host approvals use the active layout capacity');
-  assert.match(server,/session\.liveLayout === 'side-by-side' \? 9 : 8/);
-  assert.match(server,/guestSeatLimit: session\.liveLayout === 'side-by-side' \? 9 : 8/);
+  assert.match(server,/session\.broadcastType === 'audio_only' && session\.liveLayout === 'side-by-side' \? 9 : 8/);
+  assert.match(server,/guestSeatLimit: session\.broadcastType === 'audio_only' && session\.liveLayout === 'side-by-side' \? 9 : 8/);
   assert.match(server,/if \(layout !== 'side-by-side'\) \{[\s\S]*?if \(activeSpeakers > 8\)[\s\S]*?Remove one guest from the stage before switching/);
   assert.match(server,/if \(activeSpeakers > 8\)[\s\S]*?Remove one guest from the stage before switching/);
   assert.match(edge,/Number\(input\.guestSeatLimit\)===9\?9:8/);
