@@ -177,6 +177,8 @@ test('Side by Side alone exposes and enforces a ninth LIVE guest seat', () => {
     'requests, invitations, invitation acceptance, and host approvals use the active layout capacity');
   assert.match(server,/session\.liveLayout === 'side-by-side' \? 9 : 8/);
   assert.match(server,/guestSeatLimit: session\.liveLayout === 'side-by-side' \? 9 : 8/);
+  assert.match(server,/if \(layout !== 'side-by-side'\) \{[\s\S]*?if \(activeSpeakers > 8\)[\s\S]*?Remove one guest from the stage before switching/);
+  assert.match(server,/if \(activeSpeakers > 8\)[\s\S]*?Remove one guest from the stage before switching/);
   assert.match(edge,/Number\(input\.guestSeatLimit\)===9\?9:8/);
   assert.match(edge,/Number\(count\|\|0\)>=guestSeatLimit/);
 });
