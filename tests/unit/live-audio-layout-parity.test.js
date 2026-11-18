@@ -52,5 +52,5 @@ test('The new parity stylesheet loads after the legacy layout rules and is preca
   const parityLink = index.indexOf('/live-audio-layout-parity.css?v=20261118-audio-live-reference-grid-parity-1');
   assert.ok(compact >= 0 && parityLink > compact, 'audio parity CSS must load after compact layout CSS');
   assert.ok(serviceWorker.includes('/live-audio-layout-parity.css?v=20261118-audio-live-reference-grid-parity-1'));
-  assert.match(serviceWorker, /minglora-shell-v356-audio-grid-parity-1/);
+  assert.match(serviceWorker, /minglora-shell-v356-self-updating-1/);
 });
