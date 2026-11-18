@@ -33,6 +33,34 @@
       <feComponentTransfer><feFuncA type="linear" slope=".28"/></feComponentTransfer>
       <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+
+    <linearGradient id="powerup-card-front" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#aa69ff"/><stop offset=".28" stop-color="#7432e8"/><stop offset=".68" stop-color="#4915b8"/><stop offset="1" stop-color="#26085d"/>
+    </linearGradient>
+    <linearGradient id="powerup-card-edge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f1d9ff"/><stop offset=".35" stop-color="#b98bff"/><stop offset=".7" stop-color="#7238cf"/><stop offset="1" stop-color="#381075"/>
+    </linearGradient>
+    <linearGradient id="powerup-pink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff3fb"/><stop offset=".2" stop-color="#ffacd8"/><stop offset=".55" stop-color="#ff559e"/><stop offset=".82" stop-color="#d92d87"/><stop offset="1" stop-color="#8f1c73"/>
+    </linearGradient>
+    <linearGradient id="powerup-pink-dark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb8e3"/><stop offset=".55" stop-color="#dc3e9d"/><stop offset="1" stop-color="#7f1b67"/>
+    </linearGradient>
+    <linearGradient id="powerup-cloud" x1="0" y1="0" x2=".4" y2="1">
+      <stop offset="0" stop-color="#fff"/><stop offset=".42" stop-color="#f1f5ff"/><stop offset=".78" stop-color="#c3d5ff"/><stop offset="1" stop-color="#88a9e9"/>
+    </linearGradient>
+    <linearGradient id="powerup-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff8c9"/><stop offset=".3" stop-color="#ffd64d"/><stop offset=".68" stop-color="#f49a18"/><stop offset="1" stop-color="#9d4a12"/>
+    </linearGradient>
+    <linearGradient id="powerup-rocket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#d5ecff"/><stop offset=".58" stop-color="#72c5ff"/><stop offset=".86" stop-color="#6b63ec"/><stop offset="1" stop-color="#3521a0"/>
+    </linearGradient>
+    <linearGradient id="powerup-clock" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff5fb"/><stop offset=".32" stop-color="#ffb0dd"/><stop offset=".65" stop-color="#ed4d9b"/><stop offset="1" stop-color="#9f267c"/>
+    </linearGradient>
+    <radialGradient id="powerup-card-glow" cx=".25" cy=".12" r=".95">
+      <stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".42" stop-color="#e3c8ff" stop-opacity=".12"/><stop offset="1" stop-color="#6a23d4" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
   <symbol id="division-a" viewBox="0 0 128 128">
@@ -152,45 +180,106 @@
     <circle cx="64" cy="64" r="5" fill="#764322"/>
   </symbol>
 
-  <symbol id="powerup-glove" viewBox="0 0 128 128">
-    <rect x="10" y="10" width="108" height="108" rx="22" fill="#5720b7" stroke="#caa2ff" stroke-width="5"/>
-    <path d="M26 70 23 52c-1-9 10-13 15-5l6 10-2-26c-1-10 13-12 16-2l3 23 3-30c1-10 15-9 16 1l-1 32 7-19c4-10 18-5 15 5l-10 40c-4 18-17 29-34 28-17-1-28-13-31-39Z" fill="#ff4e91" stroke="#ffe2f0" stroke-width="5" stroke-linejoin="round"/>
-    <path d="m79 18-16 29h13l-7 21 28-35H81l8-15Z" fill="#ffe66f" stroke="#9e4e17" stroke-width="3" stroke-linejoin="round"/>
+    <symbol id="powerup-glove" viewBox="0 0 128 128">
+    <g transform="rotate(-8 64 64)" filter="url(#soft-shadow)">
+      <rect x="17" y="8" width="95" height="113" rx="13" fill="#250b65" opacity=".75"/>
+      <rect x="11" y="5" width="96" height="112" rx="13" fill="url(#powerup-card-edge)"/>
+      <rect x="16" y="10" width="86" height="102" rx="10" fill="url(#powerup-card-front)" stroke="#e2c4ff" stroke-width="2"/>
+      <path d="M19 22 89 11 97 18 27 34Z" fill="#fff" opacity=".13"/>
+      <path d="M23 45 94 28M20 66 98 47M24 89 96 70" stroke="#d6b9ff" stroke-opacity=".13" stroke-width="2"/>
+      <path d="M28 93 47 80 61 98 41 112Z" fill="#7d2cdb" stroke="#f5ddff" stroke-width="2"/>
+      <path d="M31 83 29 63c-1-9 8-13 14-6l6 7-1-29c0-9 13-12 16-2l3 24 2-31c1-10 15-9 16 2l-1 31 7-18c4-9 17-4 14 6l-10 37c-5 18-18 29-35 28-16-1-27-12-30-28Z" fill="url(#powerup-pink)" stroke="#fff0f9" stroke-width="4" stroke-linejoin="round"/>
+      <path d="m80 19-18 31h14l-9 23 31-39H82l8-15Z" fill="url(#powerup-gold)" stroke="#a54b18" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M40 85c2 10 9 16 19 17" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="5" stroke-linecap="round"/>
+      <path d="M24 14 38 12" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+    </g>
   </symbol>
-  <symbol id="powerup-mist" viewBox="0 0 128 128">
-    <rect x="10" y="10" width="108" height="108" rx="22" fill="#5220a3" stroke="#caa2ff" stroke-width="5"/>
-    <path d="M30 81c-12-2-17-11-13-21 3-8 11-12 19-11 3-17 18-27 33-23 10 2 17 10 19 20 13-2 24 7 24 19 0 10-8 17-20 17Z" fill="#fff" stroke="#d8caff" stroke-width="4"/>
-    <path d="M28 96h72M39 107h50" stroke="#b89bff" stroke-width="6" stroke-linecap="round"/>
-    <circle cx="92" cy="31" r="5" fill="#ffe36b"/>
+    <symbol id="powerup-mist" viewBox="0 0 128 128">
+    <g transform="rotate(-7 64 64)" filter="url(#soft-shadow)">
+      <rect x="17" y="8" width="95" height="113" rx="13" fill="#250b65" opacity=".7"/>
+      <rect x="11" y="5" width="96" height="112" rx="13" fill="url(#powerup-card-edge)"/>
+      <rect x="16" y="10" width="86" height="102" rx="10" fill="url(#powerup-card-front)" stroke="#e2c4ff" stroke-width="2"/>
+      <path d="M21 27 91 14" stroke="#fff" stroke-opacity=".3" stroke-width="4" stroke-linecap="round"/>
+      <g fill="#a3c9ff" opacity=".34">
+        <ellipse cx="65" cy="81" rx="38" ry="17"/><ellipse cx="52" cy="63" rx="24" ry="28"/><ellipse cx="78" cy="59" rx="27" ry="26"/>
+      </g>
+      <g fill="url(#powerup-cloud)" stroke="#f7fbff" stroke-width="3" stroke-linejoin="round">
+        <path d="M27 77c-9-1-15-8-13-17 2-8 9-12 17-11 3-15 16-24 30-20 9 2 15 9 17 18 11-2 22 5 23 16 1 9-6 16-17 17H27Z"/>
+        <path d="M57 91c-7 0-12-6-11-13 1-6 7-10 13-9 2-10 11-16 20-13 6 1 10 6 11 12 8-1 15 4 15 12 0 6-5 11-12 11H57Z" opacity=".94"/>
+      </g>
+      <path d="M30 83c19 13 40 9 58 1" fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="88" cy="26" r="3" fill="#ffe77f"/><circle cx="29" cy="31" r="2.5" fill="#c9ecff"/>
+    </g>
   </symbol>
-  <symbol id="powerup-hammer" viewBox="0 0 128 128">
-    <rect x="10" y="10" width="108" height="108" rx="22" fill="#5720b7" stroke="#caa2ff" stroke-width="5"/>
-    <path d="m31 34 15-13 35 35-15 14Z" fill="#ffd7ed" stroke="#a93b83" stroke-width="4" stroke-linejoin="round"/>
-    <path d="m56 55 17-17 26 26-17 17Z" fill="#ff71b2" stroke="#aa3576" stroke-width="4" stroke-linejoin="round"/>
-    <path d="m72 68 11 11-38 38-11-11Z" fill="#ff9a55" stroke="#873a24" stroke-width="4" stroke-linejoin="round"/>
-    <path d="m89 22 6-14 6 14 14 6-14 6-6 14-6-14-14-6Z" fill="#ffe66f" stroke="#a66a13" stroke-width="3"/>
+    <symbol id="powerup-hammer" viewBox="0 0 128 128">
+    <g transform="rotate(-8 64 64)" filter="url(#soft-shadow)">
+      <rect x="17" y="8" width="95" height="113" rx="13" fill="#250b65" opacity=".75"/>
+      <rect x="11" y="5" width="96" height="112" rx="13" fill="url(#powerup-card-edge)"/>
+      <rect x="16" y="10" width="86" height="102" rx="10" fill="url(#powerup-card-front)" stroke="#e2c4ff" stroke-width="2"/>
+      <path d="m67 23 7-14 7 14 14 7-14 7-7 14-7-14-14-7Z" fill="url(#powerup-gold)" stroke="#fff4b7" stroke-width="2"/>
+      <path d="m31 42 12-16 17 13 18-8 23 24-18 22-18-13-14 14Z" fill="url(#powerup-gold)" stroke="#fff0a6" stroke-width="3" stroke-linejoin="round"/>
+      <path d="m55 62 14 10-26 40-16-10Z" fill="url(#powerup-pink-dark)" stroke="#ffe5f6" stroke-width="3" stroke-linejoin="round"/>
+      <path d="m22 34 17-17 37 32-17 18Z" fill="url(#powerup-pink)" stroke="#fff0f8" stroke-width="4" stroke-linejoin="round"/>
+      <path d="m23 34 17-17 12 10-18 18Z" fill="#fff" opacity=".4"/>
+      <path d="m49 40 14 12-9 11-14-12Z" fill="#f7b3d9" stroke="#b34285" stroke-width="2"/>
+      <path d="m69 83 6 12M80 73l13 3M32 93l-7 7" stroke="#ffea8a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M24 14 39 12" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+    </g>
   </symbol>
-  <symbol id="powerup-time-maker" viewBox="0 0 128 128">
-    <rect x="10" y="10" width="108" height="108" rx="22" fill="#5520a9" stroke="#caa2ff" stroke-width="5"/>
-    <circle cx="62" cy="58" r="38" fill="#ff83c6" stroke="#ffd8ed" stroke-width="5"/>
-    <circle cx="62" cy="58" r="28" fill="#fff5fb" stroke="#c84494" stroke-width="4"/>
-    <path d="M62 36v23l17 10" fill="none" stroke="#7c2c73" stroke-width="6" stroke-linecap="round"/>
-    <path d="M54 15h16M62 11v-5" stroke="#ffe7f5" stroke-width="6" stroke-linecap="round"/>
-    <path d="M72 89h41v23H72Z" fill="#ffc928" stroke="#8e5112" stroke-width="3" rx="6"/>
-    <text x="92" y="107" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="900" fill="#7b3510">+10s</text>
+    <symbol id="powerup-time-maker" viewBox="0 0 128 128">
+    <g transform="rotate(-7 64 64)" filter="url(#soft-shadow)">
+      <rect x="17" y="8" width="95" height="113" rx="13" fill="#250b65" opacity=".75"/>
+      <rect x="11" y="5" width="96" height="112" rx="13" fill="url(#powerup-card-edge)"/>
+      <rect x="16" y="10" width="86" height="102" rx="10" fill="url(#powerup-card-front)" stroke="#e2c4ff" stroke-width="2"/>
+      <path d="M21 24 91 12" stroke="#fff" stroke-opacity=".3" stroke-width="4" stroke-linecap="round"/>
+      <path d="M58 16h18M67 9v12" stroke="#ffe0f3" stroke-width="6" stroke-linecap="round"/>
+      <path d="M57 20c-6-7 4-15 10-9" fill="none" stroke="#ffb5df" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="66" cy="58" r="39" fill="#b92f93" opacity=".7"/>
+      <circle cx="62" cy="54" r="36" fill="url(#powerup-clock)" stroke="#ffe5f5" stroke-width="4"/>
+      <circle cx="62" cy="54" r="27" fill="#fff9fc" stroke="#db69b3" stroke-width="4"/>
+      <circle cx="62" cy="54" r="21" fill="#fff" opacity=".75"/>
+      <path d="M62 34v21l15 9" fill="none" stroke="#8c397b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="62" cy="54" r="4" fill="#e3449b"/>
+      <path d="M44 20 49 26M80 20 75 26" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <rect x="34" y="91" width="62" height="20" rx="7" fill="url(#powerup-gold)" stroke="#fff2b1" stroke-width="2"/>
+      <text x="65" y="106" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="900" fill="#8d4314" stroke="#fff4bd" stroke-width=".8" paint-order="stroke">+10s</text>
+    </g>
   </symbol>
-  <symbol id="powerup-boosters" viewBox="0 0 128 128">
-    <path d="M20 18 58 18 75 51 57 84 20 84 3 51Z" transform="translate(8 7)" fill="url(#gold-metal)" stroke="#fff1b9" stroke-width="4"/>
-    <text x="47" y="62" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="900" fill="#75420b" stroke="#fff3be" stroke-width="1" paint-order="stroke">2×</text>
-    <path d="M61 45 101 45 119 79 101 113 61 113 43 79Z" fill="url(#gem-blue)" stroke="#d9f8ff" stroke-width="4"/>
-    <text x="81" y="90" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="900" fill="#183f83" stroke="#effcff" stroke-width="1" paint-order="stroke">3×</text>
+    <symbol id="powerup-boosters" viewBox="0 0 128 128">
+    <g filter="url(#soft-shadow)">
+      <g transform="rotate(-12 45 60)">
+        <rect x="11" y="17" width="73" height="94" rx="9" fill="#2b0a71" opacity=".75"/>
+        <rect x="7" y="12" width="73" height="94" rx="9" fill="url(#powerup-card-edge)"/>
+        <rect x="12" y="17" width="63" height="84" rx="6" fill="url(#powerup-card-front)" stroke="#e5cfff" stroke-width="2"/>
+        <path d="M18 25 65 20" stroke="#fff" stroke-opacity=".4" stroke-width="4" stroke-linecap="round"/>
+        <path d="M25 42 37 29 48 42 64 35 58 55 70 67 52 67 42 83 35 65 18 63 31 53Z" fill="url(#powerup-gold)" stroke="#fff0b1" stroke-width="2" stroke-linejoin="round"/>
+        <text x="43" y="91" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="900" fill="#fff6cd" stroke="#753c16" stroke-width="1.1" paint-order="stroke">2×</text>
+      </g>
+      <g transform="rotate(11 89 65)">
+        <rect x="52" y="29" width="69" height="83" rx="9" fill="#20075a" opacity=".65"/>
+        <rect x="49" y="24" width="69" height="83" rx="9" fill="url(#powerup-card-edge)"/>
+        <rect x="54" y="29" width="59" height="73" rx="6" fill="url(#gem-blue)" stroke="#e0f7ff" stroke-width="2"/>
+        <path d="M60 38 108 34" stroke="#fff" stroke-opacity=".48" stroke-width="4" stroke-linecap="round"/>
+        <path d="m82 40 6 12 13 2-10 9 2 13-11-6-12 6 3-13-9-9 13-2Z" fill="url(#powerup-gold)" stroke="#fff3ad" stroke-width="2"/>
+        <text x="83" y="91" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="900" fill="#fff" stroke="#204d91" stroke-width="1.1" paint-order="stroke">3×</text>
+      </g>
+    </g>
   </symbol>
-  <symbol id="powerup-speed" viewBox="0 0 128 128">
-    <rect x="10" y="10" width="108" height="108" rx="22" fill="#4920a2" stroke="#caa2ff" stroke-width="5"/>
-    <path d="M37 88c-9-22 7-52 56-63-1 42-22 73-45 74l-11-11Z" fill="#ef6db9" stroke="#ffe1f3" stroke-width="5" stroke-linejoin="round"/>
-    <path d="m57 57 14 12" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
-    <circle cx="70" cy="48" r="9" fill="#ffe66f" stroke="#9d5e1a" stroke-width="4"/>
-    <path d="m39 91-15 15M45 100l-4 16M29 82 13 86" stroke="#63d7ff" stroke-width="6" stroke-linecap="round"/>
-    <path d="m91 25 8-14 8 14 14 8-14 8-8 14-8-14-14-8Z" fill="#ffe66f" stroke="#9d5e1a" stroke-width="3"/>
+    <symbol id="powerup-speed" viewBox="0 0 128 128">
+    <g transform="rotate(-8 64 64)" filter="url(#soft-shadow)">
+      <rect x="17" y="8" width="95" height="113" rx="13" fill="#250b65" opacity=".75"/>
+      <rect x="11" y="5" width="96" height="112" rx="13" fill="url(#powerup-card-edge)"/>
+      <rect x="16" y="10" width="86" height="102" rx="10" fill="url(#powerup-card-front)" stroke="#e2c4ff" stroke-width="2"/>
+      <path d="M21 24 91 12" stroke="#fff" stroke-opacity=".3" stroke-width="4" stroke-linecap="round"/>
+      <path d="M31 83 19 98M39 92 33 108M29 67 12 71" stroke="#75e4ff" stroke-width="4" stroke-linecap="round"/>
+      <path d="M47 91c-16-25 1-62 53-73-1 44-24 76-47 78Z" fill="#ff62af" stroke="#ffe8f7" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M57 79c-5-22 12-46 38-54-4 27-20 48-38 54Z" fill="url(#powerup-rocket)" stroke="#fff" stroke-width="2"/>
+      <circle cx="79" cy="49" r="9" fill="#82e8ff" stroke="#fff" stroke-width="3"/>
+      <path d="m66 76-9 15 17-6Z" fill="#e9c5ff" stroke="#fff" stroke-width="2"/>
+      <path d="m38 61-13-1 8 10-11 7 20-1Z" fill="url(#powerup-gold)"/>
+      <path d="m91 23 6-13 6 13 13 6-13 6-6 13-6-13-13-6Z" fill="url(#powerup-gold)" stroke="#fff3b0" stroke-width="2"/>
+      <rect x="31" y="99" width="62" height="13" rx="6" fill="#32106f" stroke="#d9bbff" stroke-width="1.3"/>
+      <text x="62" y="109" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="900" fill="#fff">2× · 52s</text>
+    </g>
   </symbol>
 </svg>
