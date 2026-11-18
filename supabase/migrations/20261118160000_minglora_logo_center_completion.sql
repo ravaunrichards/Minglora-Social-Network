@@ -348,6 +348,64 @@ BEGIN
 
   FOR v_schedule IN
     SELECT s.* FROM public.minglora_brand_logo_schedules s
+    WHERE s.status='activated' AND s.expires_at IS NOT NULL AND s.expires_at<=now()
+    ORDER BY s.expires_at,s.created_at FOR UPDATE SKIP LOCKED LIMIT 50
+  LOOP
+    BEGIN
+      SELECT * INTO v_assignment FROM public.minglora_brand_logo_assignments
+        WHERE placement_key=v_schedule.placement_key FOR UPDATE;
+      SELECT * INTO v_history FROM public.minglora_brand_deployment_history h
+        WHERE h.placement_key=v_schedule.placement_key AND h.action='published'
+          AND h.details->>'scheduleId'=v_schedule.id::text
+        ORDER BY h.created_at DESC LIMIT 1;
+      IF FOUND AND v_assignment.id IS NOT NULL AND v_assignment.status='active'
+        AND v_assignment.asset_id=v_schedule.asset_id AND v_assignment.version_id=v_schedule.version_id
+        AND v_history.id=(
+          SELECT h2.id FROM public.minglora_brand_deployment_history h2
+          WHERE h2.placement_key=v_schedule.placement_key AND h2.action='published'
+          ORDER BY h2.created_at DESC LIMIT 1
+        ) THEN
+        IF v_history.previous_asset_id IS NULL THEN
+          UPDATE public.minglora_brand_logo_assignments SET asset_id=NULL,version_id=NULL,status='disabled',
+            updated_by=v_schedule.created_by,updated_at=now() WHERE id=v_assignment.id;
+        ELSE
+          UPDATE public.minglora_brand_logo_assignments SET asset_id=v_history.previous_asset_id,
+            version_id=v_history.previous_version_id,status='active',
+            updated_by=v_schedule.created_by,updated_at=now() WHERE id=v_assignment.id;
+          UPDATE public.minglora_brand_logo_assets SET status='active',
+            updated_by=v_schedule.created_by,updated_at=now() WHERE id=v_history.previous_asset_id;
+        END IF;
+        UPDATE public.minglora_brand_logo_assets a SET
+          status=CASE
+            WHEN EXISTS(SELECT 1 FROM public.minglora_brand_logo_assignments x
+              WHERE x.asset_id=a.id AND x.status='active') THEN 'active'
+            WHEN a.approved_version_id=a.current_version_id AND a.approved_version_id IS NOT NULL THEN 'approved'
+            ELSE 'draft'
+          END,updated_by=v_schedule.created_by,updated_at=now()
+        WHERE a.id=v_schedule.asset_id;
+        INSERT INTO public.minglora_brand_deployment_history(
+          assignment_id,placement_key,action,previous_asset_id,previous_version_id,
+          deployed_asset_id,deployed_version_id,actor_user_id,details
+        ) VALUES(v_assignment.id,v_schedule.placement_key,'rolled_back',v_schedule.asset_id,v_schedule.version_id,
+          v_history.previous_asset_id,v_history.previous_version_id,v_schedule.created_by,
+          jsonb_build_object('scheduleId',v_schedule.id,'rollbackSource','expiry'));
+      END IF;
+      UPDATE public.minglora_brand_logo_schedules SET status='expired' WHERE id=v_schedule.id;
+      INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id,details)
+      VALUES(v_schedule.created_by,'schedule.expired','schedule',v_schedule.id,
+        jsonb_build_object('placementKey',v_schedule.placement_key));
+      v_expired:=v_expired+1;
+    EXCEPTION WHEN OTHERS THEN
+      UPDATE public.minglora_brand_logo_schedules SET status='failed' WHERE id=v_schedule.id;
+      INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id,details)
+      VALUES(v_schedule.created_by,'schedule.failed','schedule',v_schedule.id,
+        jsonb_build_object('phase','expiry','error',left(SQLERRM,500)));
+      v_failed:=v_failed+1;
+    END;
+  END LOOP;
+
+  FOR v_schedule IN
+    SELECT s.* FROM public.minglora_brand_logo_schedules s
     WHERE s.status='scheduled' AND s.activates_at<=now()
     ORDER BY s.activates_at,s.created_at FOR UPDATE SKIP LOCKED LIMIT 50
   LOOP
@@ -413,64 +471,6 @@ BEGIN
       INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id,details)
       VALUES(v_schedule.created_by,'schedule.failed','schedule',v_schedule.id,
         jsonb_build_object('error',left(SQLERRM,500)));
-      v_failed:=v_failed+1;
-    END;
-  END LOOP;
-
-  FOR v_schedule IN
-    SELECT s.* FROM public.minglora_brand_logo_schedules s
-    WHERE s.status='activated' AND s.expires_at IS NOT NULL AND s.expires_at<=now()
-    ORDER BY s.expires_at,s.created_at FOR UPDATE SKIP LOCKED LIMIT 50
-  LOOP
-    BEGIN
-      SELECT * INTO v_assignment FROM public.minglora_brand_logo_assignments
-        WHERE placement_key=v_schedule.placement_key FOR UPDATE;
-      SELECT * INTO v_history FROM public.minglora_brand_deployment_history h
-        WHERE h.placement_key=v_schedule.placement_key AND h.action='published'
-          AND h.details->>'scheduleId'=v_schedule.id::text
-        ORDER BY h.created_at DESC LIMIT 1;
-      IF FOUND AND v_assignment.id IS NOT NULL AND v_assignment.status='active'
-        AND v_assignment.asset_id=v_schedule.asset_id AND v_assignment.version_id=v_schedule.version_id
-        AND v_history.id=(
-          SELECT h2.id FROM public.minglora_brand_deployment_history h2
-          WHERE h2.placement_key=v_schedule.placement_key AND h2.action='published'
-          ORDER BY h2.created_at DESC LIMIT 1
-        ) THEN
-        IF v_history.previous_asset_id IS NULL THEN
-          UPDATE public.minglora_brand_logo_assignments SET asset_id=NULL,version_id=NULL,status='disabled',
-            updated_by=v_schedule.created_by,updated_at=now() WHERE id=v_assignment.id;
-        ELSE
-          UPDATE public.minglora_brand_logo_assignments SET asset_id=v_history.previous_asset_id,
-            version_id=v_history.previous_version_id,status='active',
-            updated_by=v_schedule.created_by,updated_at=now() WHERE id=v_assignment.id;
-          UPDATE public.minglora_brand_logo_assets SET status='active',
-            updated_by=v_schedule.created_by,updated_at=now() WHERE id=v_history.previous_asset_id;
-        END IF;
-        UPDATE public.minglora_brand_logo_assets a SET
-          status=CASE
-            WHEN EXISTS(SELECT 1 FROM public.minglora_brand_logo_assignments x
-              WHERE x.asset_id=a.id AND x.status='active') THEN 'active'
-            WHEN a.approved_version_id=a.current_version_id AND a.approved_version_id IS NOT NULL THEN 'approved'
-            ELSE 'draft'
-          END,updated_by=v_schedule.created_by,updated_at=now()
-        WHERE a.id=v_schedule.asset_id;
-        INSERT INTO public.minglora_brand_deployment_history(
-          assignment_id,placement_key,action,previous_asset_id,previous_version_id,
-          deployed_asset_id,deployed_version_id,actor_user_id,details
-        ) VALUES(v_assignment.id,v_schedule.placement_key,'rolled_back',v_schedule.asset_id,v_schedule.version_id,
-          v_history.previous_asset_id,v_history.previous_version_id,v_schedule.created_by,
-          jsonb_build_object('scheduleId',v_schedule.id,'rollbackSource','expiry'));
-      END IF;
-      UPDATE public.minglora_brand_logo_schedules SET status='expired' WHERE id=v_schedule.id;
-      INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id,details)
-      VALUES(v_schedule.created_by,'schedule.expired','schedule',v_schedule.id,
-        jsonb_build_object('placementKey',v_schedule.placement_key));
-      v_expired:=v_expired+1;
-    EXCEPTION WHEN OTHERS THEN
-      UPDATE public.minglora_brand_logo_schedules SET status='failed' WHERE id=v_schedule.id;
-      INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id,details)
-      VALUES(v_schedule.created_by,'schedule.failed','schedule',v_schedule.id,
-        jsonb_build_object('phase','expiry','error',left(SQLERRM,500)));
       v_failed:=v_failed+1;
     END;
   END LOOP;
