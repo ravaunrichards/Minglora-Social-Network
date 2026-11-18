@@ -187,19 +187,54 @@ begin
       'profession', v_profile.profession,
       'skills', to_jsonb(v_profile.skills),
       'qualifications', to_jsonb(v_profile.qualifications),
-      'education', v_profile.education,
+      'education', coalesce((
+        select jsonb_agg(
+          case
+            when jsonb_typeof(item.value) = 'object' then jsonb_strip_nulls(jsonb_build_object(
+              'qualification', case when jsonb_typeof(item.value->'qualification') in ('string','number') then item.value->'qualification' end,
+              'degree', case when jsonb_typeof(item.value->'degree') in ('string','number') then item.value->'degree' end,
+              'title', case when jsonb_typeof(item.value->'title') in ('string','number') then item.value->'title' end,
+              'program', case when jsonb_typeof(item.value->'program') in ('string','number') then item.value->'program' end,
+              'institution', case when jsonb_typeof(item.value->'institution') = 'string' then item.value->'institution' end,
+              'school', case when jsonb_typeof(item.value->'school') = 'string' then item.value->'school' end,
+              'organization', case when jsonb_typeof(item.value->'organization') = 'string' then item.value->'organization' end,
+              'field_of_study', case when jsonb_typeof(item.value->'field_of_study') = 'string' then item.value->'field_of_study' end,
+              'subject', case when jsonb_typeof(item.value->'subject') = 'string' then item.value->'subject' end,
+              'specialization', case when jsonb_typeof(item.value->'specialization') = 'string' then item.value->'specialization' end,
+              'start_year', case when jsonb_typeof(item.value->'start_year') in ('string','number') then item.value->'start_year' end,
+              'start_date', case when jsonb_typeof(item.value->'start_date') = 'string' then item.value->'start_date' end,
+              'end_year', case when jsonb_typeof(item.value->'end_year') in ('string','number') then item.value->'end_year' end,
+              'end_date', case when jsonb_typeof(item.value->'end_date') = 'string' then item.value->'end_date' end,
+              'description', case when jsonb_typeof(item.value->'description') = 'string' then item.value->'description' end
+            ))
+            else jsonb_build_object('qualification', item.value)
+          end order by item.ordinality
+        )
+        from jsonb_array_elements(
+          case when jsonb_typeof(v_profile.education) = 'array' then v_profile.education else '[]'::jsonb end
+        ) with ordinality as item(value, ordinality)
+      ), '[]'::jsonb),
       'personality', jsonb_strip_nulls(jsonb_build_object(
-        'summary', v_profile.personality->'summary',
-        'traits', v_profile.personality->'traits',
-        'communication_style', v_profile.personality->'communication_style',
-        'tone', v_profile.personality->'tone'
+        'summary', case when jsonb_typeof(v_profile.personality->'summary') = 'string' then v_profile.personality->'summary' end,
+        'traits', case when jsonb_typeof(v_profile.personality->'traits') = 'array' then (
+          select coalesce(jsonb_agg(trait.safe_value order by trait.ordinality), '[]'::jsonb)
+          from (
+            select case when jsonb_typeof(item.value) = 'string' then item.value else item.value->'name' end as safe_value,
+                   item.ordinality
+            from jsonb_array_elements(v_profile.personality->'traits') with ordinality as item(value, ordinality)
+            where jsonb_typeof(item.value) = 'string'
+               or (jsonb_typeof(item.value) = 'object' and jsonb_typeof(item.value->'name') = 'string')
+          ) trait
+        ) else '[]'::jsonb end,
+        'communication_style', case when jsonb_typeof(v_profile.personality->'communication_style') = 'string' then v_profile.personality->'communication_style' end,
+        'tone', case when jsonb_typeof(v_profile.personality->'tone') = 'string' then v_profile.personality->'tone' end
       )),
       'voice_preferences', jsonb_strip_nulls(jsonb_build_object(
-        'display_name', v_profile.voice_preferences->'display_name',
-        'language', v_profile.voice_preferences->'language',
-        'dialect', v_profile.voice_preferences->'dialect',
-        'style', v_profile.voice_preferences->'style',
-        'voice_type', v_profile.voice_preferences->'voice_type'
+        'display_name', case when jsonb_typeof(v_profile.voice_preferences->'display_name') = 'string' then v_profile.voice_preferences->'display_name' end,
+        'language', case when jsonb_typeof(v_profile.voice_preferences->'language') = 'string' then v_profile.voice_preferences->'language' end,
+        'dialect', case when jsonb_typeof(v_profile.voice_preferences->'dialect') = 'string' then v_profile.voice_preferences->'dialect' end,
+        'style', case when jsonb_typeof(v_profile.voice_preferences->'style') = 'string' then v_profile.voice_preferences->'style' end,
+        'voice_type', case when jsonb_typeof(v_profile.voice_preferences->'voice_type') = 'string' then v_profile.voice_preferences->'voice_type' end
       )),
       'has_avatar', v_profile.avatar_storage_ref is not null,
       'has_cover', v_profile.cover_storage_ref is not null
