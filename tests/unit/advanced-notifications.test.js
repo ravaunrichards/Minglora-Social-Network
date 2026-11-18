@@ -104,3 +104,13 @@ test('Mandatory AI task approval notices appear in the account inbox with direct
   assert.match(app,/AI task approval recorded/);
   assert.match(app,/item\.type==='ai_task_approval'\?'Minglora AI approval required'/);
 });
+
+
+test('AI task approval push notifications offer a review action that opens the owner inbox',()=>{
+  assert.match(server,/ai_task_approval:'Minglora AI approval required'/);
+  assert.match(server,/aiTaskId:notification\.aiTaskId\|\|null/);
+  assert.match(worker,/type==='ai_task_approval'\?\[\{action:'review',title:'Review approval'\}\]/);
+  assert.match(worker,/event\.action==='review'&&data\.type==='ai_task_approval'/);
+  assert.match(worker,/aiTaskId/);
+  assert.match(app,/type==='ai_task_approval'\?'Minglora AI approval required'/);
+});
