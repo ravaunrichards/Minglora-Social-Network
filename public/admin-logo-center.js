@@ -9,9 +9,18 @@
     ["post_share_previews","Post sharing previews"],["application_icons","Application icons"],
     ["error_pages","Error pages"],["maintenance_pages","Maintenance pages"],["promotional_pages","Promotional pages"]
   ];
-  const TABS=[["dashboard","Overview"],["library","Logo Library"],["upload","Upload"],
-    ["collections","Collections & Categories"],["placements","Placements"],["identity","Brand Identity"],
-    ["scheduling","Scheduling"],["activity","Activity & History"]];
+  const TABS=[
+    ["dashboard","Logo Center Dashboard"],["library","Logo Library"],
+    ["collections","Logo Collections"],["categories","Logo Categories"],
+    ["upload","Logo Upload Manager"],["design","Logo Design Studio"],
+    ["editing","Logo Editing Studio"],["mockups","Logo Mockup Studio"],
+    ["placements","Logo Placement Manager"],["identity","Brand Identity Center"],
+    ["assets","Brand Asset Library"],["deployment","Brand Deployment Manager"],
+    ["scheduling","Logo Scheduling"],["versions","Logo Version History"],
+    ["recovery","Brand Backup & Recovery"],["security","Brand Security & Permissions"],
+    ["analytics","Brand Analytics"],["settings","Brand Settings"],
+    ["complete","Complete Logo Library"]
+  ];
   const ACCEPTED=["image/svg+xml","image/png","image/apng","image/jpeg","image/webp","image/gif",
     "image/vnd.microsoft.icon","image/x-icon","application/json","video/mp4","video/webm"].join(",");
   const make=(tag,cls,text)=>{
@@ -50,6 +59,22 @@
   };
   const placementName=key=>PLACEMENTS.find(item=>item[0]===key)?.[1]||String(key||"").replaceAll("_"," ");
   const statusLabel=value=>String(value||"draft").replaceAll("_"," ");
+  const zonedDateTimeToIso=(value,timeZone)=>{
+    const halves=String(value||"").split("T"),date=(halves[0]||"").split("-").map(Number),time=(halves[1]||"").split(":").map(Number);
+    if(date.length!==3||time.length<2||[...date,...time].some(n=>!Number.isFinite(n)))throw new Error("Enter a valid date and time.");
+    const target={year:date[0],month:date[1],day:date[2],hour:time[0],minute:time[1]};
+    const desiredUtc=Date.UTC(target.year,target.month-1,target.day,target.hour,target.minute);
+    const formatter=new Intl.DateTimeFormat("en-CA",{timeZone:timeZone||"America/Jamaica",hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    const partsFor=instant=>Object.fromEntries(formatter.formatToParts(instant).filter(part=>part.type!=="literal").map(part=>[part.type,Number(part.value)]));
+    const parts=partsFor(new Date(desiredUtc)),representedUtc=Date.UTC(parts.year,parts.month-1,parts.day,parts.hour,parts.minute,parts.second);
+    const candidate=new Date(desiredUtc-(representedUtc-desiredUtc)),check=partsFor(candidate);
+    if(check.year!==target.year||check.month!==target.month||check.day!==target.day||check.hour!==target.hour||check.minute!==target.minute)throw new Error("That local time is invalid in the selected timezone. Choose another time.");
+    return candidate.toISOString();
+  };
+  const downloadJson=(name,data)=>{
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=make("a");
+    link.href=url;link.download=name;document.body.append(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
 
   function mount(panel,api){
     if(!panel||panel.querySelector("#admin-logo-center"))return;
@@ -67,7 +92,7 @@
     const view=make("div","brand-view");
     root.append(top,status,tabs,view);panel.append(root);
 
-    const state={data:null,tab:"dashboard",query:"",uploadAssetId:"",studioSourceId:"",mockupAssetId:"",editorImage:null,editorBlob:null,busy:false};
+    const state={data:null,tab:"dashboard",query:"",uploadAssetId:"",duplicateAssetId:"",studioSourceId:"",mockupAssetId:"",editorImage:null,editorBlob:null,busy:false};
     const say=(text,error)=>{
       status.textContent=text||"";
       status.classList.toggle("is-error",!!error);
@@ -151,8 +176,8 @@
       view.append(make("p","brand-note","Original files and every version remain stored privately under unique paths. Nothing is published until an approved version is explicitly assigned and published."));
     }
 
-    function renderLibrary(){
-      view.append(title("Logo Library","Search, filter, preview, approve, archive and restore uploaded assets."));
+    function renderLibrary(heading="Logo Library"){
+      view.append(title(heading,"Search, filter, preview, approve, archive, restore and manage verified brand assets."));
       const tools=make("div","brand-library-tools");
       const search=field("search","Search by title or original name",state.query);search.setAttribute("aria-label","Search logo library");
       const category=select("All categories",cats());const collection=select("All collections",cols());
@@ -181,7 +206,8 @@
         const meta=make("div","brand-asset-meta");meta.append(make("span","brand-state",statusLabel(a.status)),make("span","",Number(a.version_count||0)+" version(s)"));detail.append(meta);
         const actions=make("div","brand-asset-actions");
         actions.append(button(a.is_favorite?"★ Saved":"☆ Favorite",()=>run("favorite_toggle",{assetId:a.id},"Favorite updated."),"quiet"));
-        actions.append(button("New version",()=>{state.uploadAssetId=a.id;setTab("upload");say("Choose a new source file. The existing logo version will remain preserved.");},"quiet"));
+        actions.append(button("New version",()=>{state.uploadAssetId=a.id;state.duplicateAssetId="";setTab("upload");say("Choose a new source file. The existing logo version will remain preserved.");},"quiet"));
+        actions.append(button("Duplicate",()=>{state.uploadAssetId="";state.duplicateAssetId=a.id;setTab("upload");say("Choose the original file to create a separate copy. The source asset remains unchanged.");},"quiet"));
         if(String(a.mime_type||"").startsWith("image/")){
           actions.append(button("Design",()=>{state.studioSourceId=a.id;state.editorImage=null;state.editorBlob=null;setTab("design");},"quiet"));
           actions.append(button("Mockup",()=>{state.mockupAssetId=a.id;setTab("mockups");},"quiet"));
@@ -189,11 +215,25 @@
         if(a.current_version_id&&a.approved_version_id!==a.current_version_id)actions.append(button("Approve current version",()=>run("asset_approve",{assetId:a.id},"Current logo version approved."),"primary"));
         if(a.status==="archived")actions.append(button("Restore",()=>run("asset_status",{assetId:a.id,status:"draft"},"Logo restored as a draft."),"quiet"));
         else if(a.status!=="deleted")actions.append(button("Archive",()=>run("asset_status",{assetId:a.id,status:"archived"},"Logo archived and retained."),"quiet"));
+        const edit=make("details","brand-panel brand-asset-edit");
+        edit.append(make("summary","","Edit title, description, category and collection"));
+        const editForm=make("form","brand-form-grid");
+        const editTitle=field("text","Logo title",a.title);editTitle.required=true;editTitle.maxLength=120;
+        const editDescription=make("textarea","brand-textarea");editDescription.value=a.description||"";editDescription.rows=3;editDescription.maxLength=2000;
+        const editCategory=select("Select a category",cats());editCategory.value=a.category_id||"";
+        const editCollection=select("Select a collection",cols());editCollection.value=a.collection_id||"";
+        const editSave=make("button","brand-button brand-button-primary","Save asset details");editSave.type="submit";
+        editForm.append(label("Title",editTitle),label("Description",editDescription),label("Category",editCategory),label("Collection",editCollection),editSave);
+        editForm.addEventListener("submit",async event=>{
+          event.preventDefault();
+          await run("asset_update",{assetId:a.id,title:editTitle.value.trim(),description:editDescription.value,categoryId:editCategory.value||null,collectionId:editCollection.value||null},"Logo details updated.");
+        });
+        edit.append(editForm);
         if(a.previewUrl){
           const open=make("a","brand-button brand-button-quiet","Open file");
           open.href=a.previewUrl;open.target="_blank";open.rel="noopener noreferrer";actions.append(open);
         }
-        card.append(preview,detail,actions);cards.append(card);
+        card.append(preview,detail,actions,edit);cards.append(card);
       });
       view.append(cards);
       const versions=make("div","brand-panel");versions.append(title("Version history","Recent immutable uploads. Older original versions are never overwritten."));
@@ -201,6 +241,7 @@
         const row=make("div","brand-list-row");
         row.append(make("strong","", "Version "+v.version_number+" · "+v.original_name),make("span","",when(v.created_at)),make("span","brand-state",v.is_approved?"Approved":"Unapproved"));
         if(v.previewUrl){const link=make("a","brand-inline-link","Preview");link.href=v.previewUrl;link.target="_blank";link.rel="noopener noreferrer";row.append(link);}
+        if(v.asset_id)row.append(button("Restore version",()=>run("version_restore",{assetId:v.asset_id,versionId:v.id},"Previous immutable version restored. Reapprove it before publishing when required."),"quiet"));
         versions.append(row);
       });
       view.append(versions);
@@ -210,12 +251,15 @@
       view.append(title("Upload manager","Create an original logo asset or append a new immutable version to an existing logo."));
       const form=make("form","brand-form-grid");
       const existing=(state.data?.assets||[]).find(a=>a.id===state.uploadAssetId);
-      const name=field("text","Logo title",existing?.title||"");name.required=true;name.maxLength=120;
+      const duplicate=(state.data?.assets||[]).find(a=>a.id===state.duplicateAssetId);
+      const name=field("text","Logo title",existing?.title||(duplicate?"Copy of "+duplicate.title:""));name.required=true;name.maxLength=120;
       const file=field("file");file.accept=ACCEPTED;file.required=!state.uploadAssetId;
       const category=select("Select a category",cats());const collection=select("Select a collection",cols());
-      const desc=make("textarea","brand-textarea");desc.placeholder="Description and usage notes";desc.rows=3;desc.maxLength=2000;
+      category.value=existing?.category_id||duplicate?.category_id||"";
+      collection.value=existing?.collection_id||duplicate?.collection_id||"";
+      const desc=make("textarea","brand-textarea");desc.placeholder="Description and usage notes";desc.rows=3;desc.maxLength=2000;desc.value=existing?.description||duplicate?.description||"";
       const note=make("textarea","brand-textarea");note.placeholder="Version notes (optional)";note.rows=2;note.maxLength=500;
-      const info=make("div","brand-upload-file-info",existing?"New upload for: "+existing.title:"New logo upload. The file remains private until approved.");
+      const info=make("div","brand-upload-file-info",existing?"New upload for: "+existing.title:duplicate?"Create a separate copy of "+duplicate.title+". Select the original file; the source remains unchanged.":"New logo upload. The file remains private until approved.");
       const submit=make("button","brand-button brand-button-primary","Upload and verify");submit.type="submit";
       form.append(label("Logo title",name),label("Category",category),label("Collection",collection),
         label("Logo file",file),label("Description",desc),label("Version notes",note),info,submit);
@@ -256,7 +300,7 @@
             body:JSON.stringify({assetId:prepared.assetId,versionId:prepared.versionId,width,height,durationMs})
           });
           const saved=await complete.json().catch(()=>({}));if(!complete.ok)throw new Error(saved.error||"File verification failed.");
-          state.uploadAssetId="";state.tab="library";await load();
+          state.uploadAssetId="";state.duplicateAssetId="";state.tab="library";await load();
           say("Logo upload verified and stored as version "+(saved.versionNumber||1)+". It is still a draft and is not published.");
         }catch(error){say(error.message||"Logo upload failed.",true);info.textContent="Upload incomplete. Existing versions were preserved.";}
         finally{submit.disabled=false;}
@@ -429,26 +473,41 @@
       view.append(grid);
     }
 
+    function renderCategories(){
+      view.append(title("Logo Categories","Browse the protected standard categories and add unlimited custom logo categories."));
+      const panelWrap=make("div","brand-panel"),form=make("form","brand-compact-form");
+      const name=field("text","New category name");name.required=true;name.maxLength=80;
+      const description=field("text","Description (optional)");description.maxLength=500;
+      const submit=make("button","brand-button brand-button-primary","Add category");submit.type="submit";
+      form.append(label("Category name",name),label("Description",description),submit);
+      form.addEventListener("submit",async event=>{
+        event.preventDefault();submit.disabled=true;await run("category_create",{name:name.value,description:description.value},"Category created.");
+        name.value="";description.value="";submit.disabled=false;
+      });
+      panelWrap.append(form);
+      (state.data?.categories||[]).forEach(category=>{
+        const row=make("div","brand-list-row");row.append(make("strong","",category.name),make("span","",category.is_system?"System category":"Custom category"));panelWrap.append(row);
+      });
+      view.append(panelWrap);
+    }
+
     function renderCollections(){
-      view.append(title("Collections & categories","All requested system logo categories are available. Add custom categories and unlimited collections as storage permits."));
-      const columns=make("div","brand-dashboard-columns");
-      const category=make("div","brand-panel");category.append(title("Logo categories","Built-in categories are protected. New custom categories can be added below."));
-      const catForm=make("form","brand-compact-form");const catName=field("text","New category name");catName.required=true;catName.maxLength=80;
-      const catDesc=field("text","Description (optional)");catDesc.maxLength=500;
-      const catSubmit=make("button","brand-button brand-button-primary","Add category");catSubmit.type="submit";
-      catForm.append(label("Category name",catName),label("Description",catDesc),catSubmit);
-      catForm.addEventListener("submit",async e=>{e.preventDefault();catSubmit.disabled=true;await run("category_create",{name:catName.value,description:catDesc.value},"Category created.");catName.value="";catDesc.value="";catSubmit.disabled=false;});
-      category.append(catForm);
-      (state.data?.categories||[]).forEach(c=>{const row=make("div","brand-list-row");row.append(make("strong","",c.name),make("span","",c.is_system?"System":"Custom"));category.append(row);});
-      const collection=make("div","brand-panel");collection.append(title("Logo collections","The Enigma Branding collection exists as an empty, real collection until verified artwork is added."));
-      const colForm=make("form","brand-compact-form");const colName=field("text","New collection name");colName.required=true;colName.maxLength=100;
-      const colDesc=field("text","Description (optional)");colDesc.maxLength=1000;
-      const colSubmit=make("button","brand-button brand-button-primary","Create collection");colSubmit.type="submit";
-      colForm.append(label("Collection name",colName),label("Description",colDesc),colSubmit);
-      colForm.addEventListener("submit",async e=>{e.preventDefault();colSubmit.disabled=true;await run("collection_create",{name:colName.value,description:colDesc.value},"Collection created.");colName.value="";colDesc.value="";colSubmit.disabled=false;});
-      collection.append(colForm);
-      (state.data?.collections||[]).forEach(c=>{const row=make("div","brand-list-row");row.append(make("strong","",c.name),make("span","",c.is_system?"System":"Custom"));collection.append(row);});
-      columns.append(category,collection);view.append(columns);
+      view.append(title("Logo Collections","Organize approved logos and wider visual identity assets into reusable collections."));
+      const panelWrap=make("div","brand-panel"),enigma=(state.data?.collections||[]).find(item=>item.slug==="enigma-branding");
+      panelWrap.append(make("p","brand-note",enigma?"Enigma Branding is a real collection. It stays empty until approved Enigma source artwork is added; no sample logos are inserted.":"No Enigma collection record is currently available."));
+      const form=make("form","brand-compact-form"),name=field("text","New collection name"),description=field("text","Description (optional)");
+      name.required=true;name.maxLength=100;description.maxLength=1000;
+      const submit=make("button","brand-button brand-button-primary","Create collection");submit.type="submit";
+      form.append(label("Collection name",name),label("Description",description),submit);
+      form.addEventListener("submit",async event=>{
+        event.preventDefault();submit.disabled=true;await run("collection_create",{name:name.value,description:description.value},"Collection created.");
+        name.value="";description.value="";submit.disabled=false;
+      });
+      panelWrap.append(form);
+      (state.data?.collections||[]).forEach(collection=>{
+        const row=make("div","brand-list-row");row.append(make("strong","",collection.name),make("span","",collection.is_system?"System collection":"Custom collection"));panelWrap.append(row);
+      });
+      view.append(panelWrap);
     }
 
     function renderPlacements(){
@@ -462,9 +521,12 @@
       const panelWrap=make("div","brand-panel");panelWrap.append(title("Pending and published placements","Only published assignments appear in the public brand manifest."));
       (state.data?.assignments||[]).forEach(item=>{
         const row=make("div","brand-list-row");const meta=make("div","brand-list-row-main");
-        meta.append(make("strong","",placementName(item.placement_key)),make("small","",statusLabel(item.status)));
+        const pendingAsset=(state.data?.assets||[]).find(asset=>asset.id===item.pending_asset_id);
+        meta.append(make("strong","",placementName(item.placement_key)),make("small","",statusLabel(item.status)+(pendingAsset?" · Pending change: "+pendingAsset.title:"")));
         row.append(meta);
-        if(item.status==="pending_approval")row.append(button("Publish",()=>run("assignment_publish",{placementKey:item.placement_key},"Placement published."),"primary"));
+        const previewAssetId=item.pending_asset_id||item.asset_id;
+        if(previewAssetId)row.append(button("Preview",()=>{state.mockupAssetId=previewAssetId;setTab("mockups");},"quiet"));
+        if(item.pending_asset_id)row.append(button("Publish",()=>run("assignment_publish",{placementKey:item.placement_key},"Approved logo placement published."),"primary"));
         if(item.status==="active")row.append(button("Rollback",()=>run("assignment_rollback",{placementKey:item.placement_key},"Placement rollback recorded."),"quiet"));
         panelWrap.append(row);
       });
@@ -499,18 +561,22 @@
     }
 
     function renderScheduling(){
-      view.append(title("Logo scheduling","Register future brand changes in an explicit IANA timezone. Activation remains pending until the scheduler worker is deployed and verified."));
+      view.append(title("Logo scheduling","Approved changes activate automatically at their scheduled time and restore the previous approved placement when an expiry is reached."));
       const form=make("form","brand-form-grid");
       const place=select("Application location",PLACEMENTS.map(x=>({value:x[0],label:x[1]})));
       const asset=select("Approved logo",approved());
       const start=field("datetime-local");const expiry=field("datetime-local");
-      const zone=field("text","IANA timezone",Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Jamaica");
+      const zone=field("text","IANA timezone","America/Jamaica");
       const submit=make("button","brand-button brand-button-primary","Save schedule");submit.type="submit";
       form.append(label("Location",place),label("Approved logo",asset),label("Activation time",start),label("Optional expiry",expiry),label("Timezone",zone),submit);
       form.addEventListener("submit",async e=>{e.preventDefault();if(!place.value||!asset.value||!start.value){say("Choose a placement, logo and future activation time.",true);return;}
-        await run("schedule_create",{placementKey:place.value,assetId:asset.value,activatesAt:new Date(start.value).toISOString(),
-          expiresAt:expiry.value?new Date(expiry.value).toISOString():null,timezone:zone.value.trim()||"America/Jamaica"},
-          "Schedule saved. Automated activation is not enabled yet.");});
+        try{
+          const timezone=zone.value.trim()||"America/Jamaica";
+          await run("schedule_create",{placementKey:place.value,assetId:asset.value,activatesAt:zonedDateTimeToIso(start.value,timezone),
+            expiresAt:expiry.value?zonedDateTimeToIso(expiry.value,timezone):null,timezone},
+            "Schedule saved. Minglora will process activation and expiry automatically.");
+        }catch(error){say(error.message||"The selected schedule time is invalid.",true);}
+      });
       const list=make("div","brand-panel");list.append(title("Scheduled changes","Future activation requests currently recorded."));
       (state.data?.schedules||[]).forEach(item=>{const row=make("div","brand-list-row");row.append(make("strong","",placementName(item.placement_key)),make("span","",when(item.activates_at)));
         row.append(button("Cancel",()=>run("schedule_cancel",{scheduleId:item.id},"Schedule cancelled."),"quiet"));list.append(row);});
@@ -518,6 +584,87 @@
       view.append(form,list);
     }
 
+    function renderVersionHistory(){
+      view.append(title("Logo Version History","Every upload is retained as an immutable version. Restore an earlier version without overwriting its original file."));
+      const panelWrap=make("div","brand-panel"),versions=state.data?.versions||[];
+      if(!versions.length)panelWrap.append(empty("No versions recorded","Verified logo uploads and revisions will appear here."));
+      versions.forEach(version=>{
+        const row=make("div","brand-list-row"),asset=(state.data?.assets||[]).find(item=>item.id===version.asset_id);
+        row.append(make("div","brand-list-row-main",(asset?.title||"Logo asset")+" · Version "+version.version_number),
+          make("small","",version.original_name+" · "+formatBytes(version.byte_size)),make("span","",when(version.created_at)),
+          make("span","brand-state",version.is_approved?"Approved":"Not approved"));
+        if(version.previewUrl){const preview=make("a","brand-inline-link","Preview");preview.href=version.previewUrl;preview.target="_blank";preview.rel="noopener noreferrer";row.append(preview);}
+        row.append(button("Restore version",()=>run("version_restore",{assetId:version.asset_id,versionId:version.id},
+          "The selected immutable version is now current. Reapprove it before publishing when required."),"quiet"));
+        panelWrap.append(row);
+      });view.append(panelWrap);
+    }
+    function renderRecovery(){
+      view.append(title("Brand Backup & Recovery","Archived assets and immutable originals remain in private Storage. Export a metadata snapshot or restore archived sources."));
+      const exportButton=button("Download metadata recovery snapshot",()=>{
+        const safe={format:"minglora-brand-metadata-backup-v1",exportedAt:new Date().toISOString(),
+          note:"Metadata only. Original media remains stored in the private minglora-brand-assets bucket.",
+          categories:state.data?.categories||[],collections:state.data?.collections||[],
+          assets:(state.data?.assets||[]).map(({previewUrl,...asset})=>asset),
+          versions:(state.data?.versions||[]).map(({previewUrl,...version})=>version),
+          assignments:state.data?.assignments||[],schedules:state.data?.schedules||[],
+          identitySettings:state.data?.identitySettings||null,activity:state.data?.activity||[]};
+        downloadJson("minglora-brand-metadata-"+new Date().toISOString().replace(/[:.]/g,"-")+".json",safe);
+        say("Metadata snapshot exported. Original media remains in private Storage.");
+      },"primary");
+      const panelWrap=make("div","brand-panel");
+      panelWrap.append(exportButton,title("Archived assets","Restoring an archived asset preserves its historical versions."));
+      const archived=(state.data?.assets||[]).filter(asset=>asset.status==="archived");
+      if(!archived.length)panelWrap.append(empty("No archived assets","Archived branding is retained and can be restored here."));
+      archived.forEach(asset=>{
+        const row=make("div","brand-list-row");row.append(make("strong","",asset.title),make("span","",Number(asset.version_count||0)+" retained version(s)"));
+        row.append(button("Restore as draft",()=>run("asset_status",{assetId:asset.id,status:"draft"},"Archived asset restored."),"quiet"));panelWrap.append(row);
+      });view.append(panelWrap);
+    }
+    function renderSecurity(){
+      view.append(title("Brand Security & Permissions","Official brand changes remain behind Minglora's designated-owner and active MFA verification gates."));
+      const panelWrap=make("div","brand-panel");
+      const rules=[
+        ["Owner control","Official brand management is restricted to the designated platform owner."],
+        ["MFA verification","Administrative writes and publishing require an active verified reviewer session."],
+        ["Server-side enforcement","The API and database independently validate the owner, staff record and service-role boundary."],
+        ["Member isolation","Ordinary member sessions cannot read private brand tables or write logo records."],
+        ["Private media","Logo originals use the private minglora-brand-assets bucket and short-lived signed previews."],
+        ["Audit protection","Brand activity logs are append-only; deployment history supports rollback."]
+      ];
+      rules.forEach(([name,description])=>{const row=make("div","brand-list-row");row.append(make("strong","",name),make("span","",description));panelWrap.append(row);});
+      view.append(panelWrap,button("View administrative audit activity",()=>setTab("activity"),"quiet"),
+        make("p","brand-note","This workspace uses owner-only official-brand permissions. It does not silently grant delegated administrator upload or publishing privileges."));
+    }
+    function renderAnalytics(){
+      const data=state.data||{},assets=data.assets||[],assignments=(data.assignments||[]).filter(item=>item.status==="active");
+      const assigned=new Set(assignments.map(item=>item.asset_id).filter(Boolean)),counts=new Map();
+      assignments.forEach(item=>counts.set(item.asset_id,(counts.get(item.asset_id)||0)+1));
+      const top=[...counts.entries()].sort((left,right)=>right[1]-left[1])[0],topAsset=assets.find(item=>item.id===top?.[0]);
+      view.append(title("Brand Analytics","Metrics calculated from stored records; no synthetic statistics are shown."));
+      const grid=make("div","brand-stats-grid");
+      grid.append(stat("Total logos",Number(data.stats?.total||0),"Stored assets"),
+        stat("Active placements",assignments.length,"Published locations"),stat("Archived logos",Number(data.stats?.archived||0),"Recoverable records"),
+        stat("Unused assets",assets.filter(asset=>!assigned.has(asset.id)).length,"Not on an active placement"),
+        stat("Logo categories",(data.categories||[]).length,"System and custom categories"),stat("Collections",(data.collections||[]).length,"Organized asset collections"));
+      view.append(grid);
+      const panelWrap=make("div","brand-panel");
+      if(topAsset)panelWrap.append(make("p","","Most-assigned current logo: "+topAsset.title+" · "+top[1]+" active placement(s)."));
+      else panelWrap.append(empty("No published logo usage yet","Published assignments will appear here after activation."));
+      view.append(panelWrap);
+    }
+    function renderSettings(){
+      view.append(title("Brand Settings","Review the connected Logo Center storage and compatibility settings."));
+      const panelWrap=make("div","brand-panel"),settings=[
+        ["Brand storage","minglora-brand-assets · private"],["Maximum file size","50 MB per original upload"],
+        ["Supported formats","SVG, PNG, APNG, JPG/JPEG, WebP, GIF, ICO, Lottie JSON, MP4 and WebM"],
+        ["Application timezone","America/Jamaica"],["Approval model","Only the current approved version can be assigned and published"],
+        ["Version retention","Original uploads are retained at unique immutable version paths"],
+        ["Public delivery","Only approved active image assignments appear in the signed public manifest"]
+      ];
+      settings.forEach(([name,value])=>{const row=make("div","brand-list-row");row.append(make("strong","",name),make("span","",value));panelWrap.append(row);});
+      view.append(panelWrap);
+    }
     function renderActivity(){
       view.append(title("Activity & history","Recent actions from the Logo Center, including upload preparation, versions, approvals and publication."));
       const panelWrap=make("div","brand-panel");
@@ -537,11 +684,19 @@
       else if(state.tab==="library")renderLibrary();
       else if(state.tab==="upload")renderUpload();
       else if(state.tab==="collections")renderCollections();
-      else if(state.tab==="placements")renderPlacements();
+      else if(state.tab==="categories")renderCategories();
+      else if(state.tab==="placements"||state.tab==="deployment")renderPlacements();
       else if(state.tab==="identity")renderIdentity();
-      else if(state.tab==="design")renderDesign();
+      else if(state.tab==="design"||state.tab==="editing")renderDesign();
       else if(state.tab==="mockups")renderMockups();
       else if(state.tab==="scheduling")renderScheduling();
+      else if(state.tab==="versions")renderVersionHistory();
+      else if(state.tab==="recovery")renderRecovery();
+      else if(state.tab==="security")renderSecurity();
+      else if(state.tab==="analytics")renderAnalytics();
+      else if(state.tab==="settings")renderSettings();
+      else if(state.tab==="assets")renderLibrary("Brand Asset Library");
+      else if(state.tab==="complete")renderLibrary("Complete Logo Library");
       else if(state.tab==="activity")renderActivity();
     }
     load();

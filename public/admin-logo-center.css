@@ -101,3 +101,11 @@
 .brand-device-dark img{max-height:120px}
 @media(max-width:1000px){.brand-editor-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.brand-mockup-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.brand-editor-controls{grid-template-columns:1fr}.brand-mockup-grid{grid-template-columns:1fr}.brand-editor-preview{min-height:210px;padding:10px}.brand-editor-preview canvas{max-height:360px}}
+
+.brand-asset-edit{display:grid;gap:12px;margin-top:10px}
+.brand-asset-edit>summary{cursor:pointer;color:#52647d;font-size:12px;font-weight:750;padding:3px 0}
+.brand-asset-edit[open]>summary{margin-bottom:4px;color:#1b3d6b}
+.brand-asset-edit .brand-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.brand-list-row-main{display:grid;gap:4px;flex:1;min-width:0}
+.brand-list-row-main small{color:#748297;font-size:11px;overflow-wrap:anywhere}
+@media(max-width:650px){.brand-asset-edit .brand-form-grid{grid-template-columns:1fr}}

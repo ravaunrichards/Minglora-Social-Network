@@ -17,7 +17,7 @@ const BRAND_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const BRAND_ACTIONS = new Set([
   "category_create","collection_create","asset_update","asset_status","favorite_toggle",
   "asset_approve","assignment_set","assignment_publish","assignment_rollback",
-  "schedule_create","schedule_cancel","identity_update"
+  "schedule_create","schedule_cancel","identity_update","version_restore"
 ]);
 
 export async function handleAdminLogoCenterApi(context) {

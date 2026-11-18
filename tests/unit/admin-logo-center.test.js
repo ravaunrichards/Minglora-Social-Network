@@ -4,6 +4,7 @@ import test from "node:test";
 
 const read = file => fs.readFileSync(new URL("../../" + file, import.meta.url), "utf8");
 const migration = read("supabase/migrations/20261118080000_minglora_admin_logo_center.sql");
+const completionMigration = read("supabase/migrations/20261118160000_minglora_logo_center_completion.sql");
 const edge = read("supabase/functions/minglora-runtime-state/brand-center.ts");
 const edgeEntry = read("supabase/functions/minglora-runtime-state/index.ts");
 const api = read("src/admin-logo-center-api.js");
@@ -118,9 +119,12 @@ test("Admin Centre links the Logo Center only after the existing owner access ga
 test("the working Logo Center UI supports library, uploads, classification, approval, placement and identity", () => {
   for (const value of [
     "Overview","Logo Library","Upload","Collections & Categories","Placements",
-    "Brand Identity","Design Studio","Mockup Studio","Scheduling","Activity & History",
+    "Brand Identity","Logo Design Studio","Logo Editing Studio","Logo Mockup Studio","Logo Scheduling",
+    "Logo Version History","Brand Backup & Recovery","Brand Security & Permissions","Brand Analytics",
+    "Brand Settings","Complete Logo Library","Duplicate","Edit title, description, category and collection",
+    "Download metadata recovery snapshot","Activity & History",
     "upload/prepare","upload/complete","asset_approve","assignment_set",
-    "assignment_publish","assignment_rollback","identity_update","schedule_create","schedule_cancel"
+    "assignment_publish","assignment_rollback","identity_update","schedule_create","schedule_cancel","version_restore"
   ]) assert.ok(ui.includes(value), "missing UI workflow " + value);
   assert.match(ui, /state\.data\?\.assets/);
   assert.match(ui, /No demo assets|No uploaded logos yet/);
@@ -148,4 +152,28 @@ test("Logo Center layout adapts to tablet and phone widths", () => {
   assert.match(css, /@media\(max-width:650px\)/);
   assert.match(css, /grid-template-columns:1fr/);
   assert.match(css, /overflow-x:auto/);
+});
+
+test("the completion migration preserves published placements while pending changes await approval",()=>{
+  assert.match(completionMigration,/pending_asset_id uuid/);
+  assert.match(completionMigration,/minglora_brand_assignment_command/);
+  assert.match(completionMigration,/pending_version_id=v_version/);
+  assert.match(edge,/minglora_brand_assignment_command/);
+  assert.match(ui,/item\.pending_asset_id/);
+});
+test("scheduled expiry runs before new activation and automatic restore is audited",()=>{
+  const dispatcher=completionMigration.slice(completionMigration.indexOf("CREATE OR REPLACE FUNCTION public.dispatch_due_minglora_brand_logo_schedules"));
+  assert.ok(dispatcher.indexOf("WHERE s.status='activated'")<dispatcher.indexOf("WHERE s.status='scheduled'"));
+  assert.match(completionMigration,/cron\.schedule/);
+  assert.match(completionMigration,/schedule\.activated/);
+  assert.match(completionMigration,/schedule\.expired/);
+  assert.match(completionMigration,/schedule_overlap_guard/);
+  assert.match(completionMigration,/FOR UPDATE SKIP LOCKED/);
+});
+test("historical immutable versions use an owner- and MFA-protected recovery RPC",()=>{
+  assert.match(completionMigration,/minglora_brand_logo_restore_version/);
+  assert.match(completionMigration,/minglora_assert_brand_owner/);
+  assert.match(edge,/brandAction==="version_restore"/);
+  assert.match(api,/"version_restore"/);
+  assert.match(ui,/Restore version/);
 });

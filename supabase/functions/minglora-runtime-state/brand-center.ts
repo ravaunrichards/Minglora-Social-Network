@@ -2,6 +2,7 @@ const BRAND_BUCKET = "minglora-brand-assets";
 const BRAND_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
 const BRAND_MIME_EXTENSIONS: Record<string,string> = {
   "image/svg+xml":"svg",
+  "image/apng":"png",
   "image/png":"png",
   "image/jpeg":"jpg",
   "image/webp":"webp",
@@ -193,11 +194,33 @@ export async function handleBrandRuntimeAction(action:string,input:Record<string
     const allowed=new Set([
       "list","category_create","collection_create","asset_update","asset_status","favorite_toggle",
       "asset_approve","assignment_set","assignment_publish","assignment_rollback",
-      "schedule_create","schedule_cancel","identity_update","asset_url"
+      "schedule_create","schedule_cancel","identity_update","asset_url","version_restore"
     ]);
     if(!allowed.has(brandAction))return brandJson(400,{error:"Choose a supported Logo Center action."});
     const payload=input.payload&&typeof input.payload==="object"&&!Array.isArray(input.payload)?input.payload:{};
     try {
+      if(["assignment_set","assignment_publish","assignment_rollback"].includes(brandAction)) {
+        const assignmentAction=brandAction==="assignment_set"?"prepare":brandAction==="assignment_publish"?"publish":"rollback";
+        const {data,error}=await admin.rpc("minglora_brand_assignment_command",{
+          p_actor_user_id:actorUserId,p_mfa_verified:true,p_action:assignmentAction,p_payload:payload
+        });
+        if(error)throw error;
+        return brandJson(200,data&&typeof data==="object"?data:{ok:true});
+      }
+      if(brandAction==="schedule_create") {
+        const {data,error}=await admin.rpc("minglora_brand_logo_schedule_create",{
+          p_actor_user_id:actorUserId,p_mfa_verified:true,p_payload:payload
+        });
+        if(error)throw error;
+        return brandJson(200,data&&typeof data==="object"?data:{ok:true});
+      }
+      if(brandAction==="version_restore") {
+        const {data,error}=await admin.rpc("minglora_brand_logo_restore_version",{
+          p_actor_user_id:actorUserId,p_mfa_verified:true,p_asset_id:String(payload.assetId||""),p_version_id:String(payload.versionId||"")
+        });
+        if(error)throw error;
+        return brandJson(200,data&&typeof data==="object"?data:{ok:true});
+      }
       const result=await brandRpc(admin,actorUserId,brandAction,payload);
       if(brandAction==="list") {
         const assets=Array.isArray(result?.assets)?result.assets:[];
