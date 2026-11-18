@@ -7587,3 +7587,9 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .live-room-permission-toggle input:checked+.live-preflight-switch::after{transform:translateX(12px)}
 .live-room-permission-toggle input:focus-visible+.live-preflight-switch{outline:2px solid var(--blue);outline-offset:3px}
 .live-room-permission-toggle input:disabled+.live-preflight-switch{opacity:.55;cursor:wait}
+
+
+/* Daily LIVE board uses the canonical 4–10 / 11–20 profile frames. */
+.live-ranking-avatar-frame{position:relative;display:inline-grid;place-items:center;flex:0 0 45px;width:45px;height:54px;isolation:isolate}
+.live-ranking-avatar-frame-art{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.live-ranking-avatar-image{position:absolute;z-index:1;left:50%;top:44%;width:56%;height:56%;transform:translate(-50%,-50%);border:1.5px solid #fff;border-radius:50%;object-fit:cover}
