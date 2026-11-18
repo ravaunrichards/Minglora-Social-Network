@@ -1,0 +1,770 @@
+{
+  "schemaVersion": 1,
+  "title": "Minglora Free Real Audio Resource Directory",
+  "sourceCount": 80,
+  "groups": [
+    {
+      "key": "general",
+      "label": "General sound effects and recordings",
+      "sources": [
+        {
+          "id": "SRC-001",
+          "name": "freesound.org",
+          "url": "https://freesound.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-002",
+          "name": "pixabay.com",
+          "url": "https://pixabay.com/sound-effects/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-003",
+          "name": "mixkit.co",
+          "url": "https://mixkit.co/free-sound-effects/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-004",
+          "name": "zapsplat.com",
+          "url": "https://www.zapsplat.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-005",
+          "name": "soundjay.com",
+          "url": "https://www.soundjay.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-006",
+          "name": "soundbible.com",
+          "url": "https://soundbible.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-007",
+          "name": "orangefreesounds.com",
+          "url": "https://orangefreesounds.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-008",
+          "name": "freesfx.co.uk",
+          "url": "https://freesfx.co.uk/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-009",
+          "name": "bigsoundbank.com",
+          "url": "https://www.bigsoundbank.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-010",
+          "name": "pacdv.com",
+          "url": "https://www.pacdv.com/sounds/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-011",
+          "name": "freesoundeffects.com",
+          "url": "https://freesoundeffects.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-012",
+          "name": "soundeffectsplus.com",
+          "url": "https://www.soundeffectsplus.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-013",
+          "name": "findsounds.com",
+          "url": "https://www.findsounds.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-014",
+          "name": "soundfishing.eu",
+          "url": "https://www.soundfishing.eu/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-015",
+          "name": "lasonotheque.org",
+          "url": "https://lasonotheque.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-016",
+          "name": "freetousesounds.com",
+          "url": "https://www.freetousesounds.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-017",
+          "name": "videvo.net",
+          "url": "https://www.videvo.net/sound-effects/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-018",
+          "name": "uppbeat.io",
+          "url": "https://uppbeat.io/sfx",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-019",
+          "name": "soundly.com",
+          "url": "https://www.soundly.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-020",
+          "name": "dailysounds.com",
+          "url": "https://www.dailysounds.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        }
+      ]
+    },
+    {
+      "key": "game_audio",
+      "label": "Professional and game audio collections",
+      "sources": [
+        {
+          "id": "SRC-021",
+          "name": "sonniss.com",
+          "url": "https://sonniss.com/gameaudiogdc",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-022",
+          "name": "99sounds.org",
+          "url": "https://99sounds.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-023",
+          "name": "kenney.nl",
+          "url": "https://kenney.nl/assets",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-024",
+          "name": "opengameart.org",
+          "url": "https://opengameart.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-025",
+          "name": "budgetpixel.com",
+          "url": "https://www.budgetpixel.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-026",
+          "name": "fesliyanstudios.com",
+          "url": "https://www.fesliyanstudios.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-027",
+          "name": "soundimage.org",
+          "url": "https://www.soundimage.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-028",
+          "name": "sfxmint.com",
+          "url": "https://www.sfxmint.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-029",
+          "name": "audiomicro.com",
+          "url": "https://www.audiomicro.com/free-sound-effects",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-030",
+          "name": "spotlightfx.com",
+          "url": "https://www.spotlightfx.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        }
+      ]
+    },
+    {
+      "key": "nature_wildlife",
+      "label": "Nature, animals and wildlife recordings",
+      "sources": [
+        {
+          "id": "SRC-031",
+          "name": "xeno-canto.org",
+          "url": "https://xeno-canto.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-032",
+          "name": "macaulaylibrary.org",
+          "url": "https://www.macaulaylibrary.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-033",
+          "name": "wildlife-sound.org",
+          "url": "https://www.wildlife-sound.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-034",
+          "name": "earth.fm",
+          "url": "https://earth.fm/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-035",
+          "name": "naturesoundmap.com",
+          "url": "https://www.naturesoundmap.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-036",
+          "name": "nps.gov",
+          "url": "https://www.nps.gov/media/multimedia-search.htm",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-037",
+          "name": "birds.cornell.edu",
+          "url": "https://www.birds.cornell.edu/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-038",
+          "name": "birdsounds.nl",
+          "url": "https://www.birdsounds.nl/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-039",
+          "name": "audubon.org",
+          "url": "https://www.audubon.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-040",
+          "name": "loc.gov",
+          "url": "https://www.loc.gov/audio/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        }
+      ]
+    },
+    {
+      "key": "historical_archives",
+      "label": "Historical and public audio archives",
+      "sources": [
+        {
+          "id": "SRC-041",
+          "name": "archive.org",
+          "url": "https://archive.org/details/audio",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-042",
+          "name": "commons.wikimedia.org",
+          "url": "https://commons.wikimedia.org/wiki/Category:Audio_files",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-043",
+          "name": "bbc.co.uk",
+          "url": "https://www.bbc.co.uk/sounds/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-044",
+          "name": "sound-effects.bbcrewind.co.uk",
+          "url": "https://sound-effects.bbcrewind.co.uk/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-045",
+          "name": "bl.uk",
+          "url": "https://www.bl.uk/collection-guides/sound",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-046",
+          "name": "loc.gov",
+          "url": "https://www.loc.gov/audio/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-047",
+          "name": "europeana.eu",
+          "url": "https://www.europeana.eu/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-048",
+          "name": "si.edu",
+          "url": "https://www.si.edu/collections",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-049",
+          "name": "nasa.gov",
+          "url": "https://www.nasa.gov/audio-and-ringtones/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-050",
+          "name": "citizendj.labs.loc.gov",
+          "url": "https://www.citizendj.labs.loc.gov/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        }
+      ]
+    },
+    {
+      "key": "music_instruments",
+      "label": "Music and instrumental recordings",
+      "sources": [
+        {
+          "id": "SRC-051",
+          "name": "freemusicarchive.org",
+          "url": "https://freemusicarchive.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-052",
+          "name": "musopen.org",
+          "url": "https://musopen.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-053",
+          "name": "ccmixter.org",
+          "url": "https://ccmixter.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-054",
+          "name": "jamendo.com",
+          "url": "https://www.jamendo.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-055",
+          "name": "audionautix.com",
+          "url": "https://audionautix.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-056",
+          "name": "incompetech.com",
+          "url": "https://incompetech.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-057",
+          "name": "bensound.com",
+          "url": "https://www.bensound.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-058",
+          "name": "fesliyanstudios.com",
+          "url": "https://www.fesliyanstudios.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-059",
+          "name": "soundimage.org",
+          "url": "https://soundimage.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-060",
+          "name": "looperman.com",
+          "url": "https://www.looperman.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-061",
+          "name": "bandlab.com",
+          "url": "https://www.bandlab.com/sounds",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-062",
+          "name": "youtube.com",
+          "url": "https://www.youtube.com/audiolibrary",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-063",
+          "name": "freetousemusic.com",
+          "url": "https://www.freetousemusic.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        }
+      ]
+    },
+    {
+      "key": "international",
+      "label": "Japanese and international sound libraries",
+      "sources": [
+        {
+          "id": "SRC-064",
+          "name": "soundeffect-lab.info",
+          "url": "https://soundeffect-lab.info/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-065",
+          "name": "otologic.jp",
+          "url": "https://otologic.jp/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-066",
+          "name": "taira-komori.jpn.org",
+          "url": "https://taira-komori.jpn.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-067",
+          "name": "sounddictionary.info",
+          "url": "https://sounddictionary.info/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-068",
+          "name": "springin.org",
+          "url": "https://springin.org/sound-stock/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-069",
+          "name": "sound-fishing.net",
+          "url": "https://sound-fishing.net/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-070",
+          "name": "lasonotheque.org",
+          "url": "https://lasonotheque.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-071",
+          "name": "soundeffects.in",
+          "url": "https://www.soundeffects.in/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-072",
+          "name": "audiostock.jp",
+          "url": "https://www.audiostock.jp/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        }
+      ]
+    },
+    {
+      "key": "discovery",
+      "label": "Additional audio discovery resources",
+      "sources": [
+        {
+          "id": "SRC-073",
+          "name": "soundcloud.com",
+          "url": "https://soundcloud.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-074",
+          "name": "commons.wikimedia.org",
+          "url": "https://commons.wikimedia.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-075",
+          "name": "europeana.eu",
+          "url": "https://www.europeana.eu/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-076",
+          "name": "openverse.org",
+          "url": "https://www.openverse.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-077",
+          "name": "search.creativecommons.org",
+          "url": "https://search.creativecommons.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-078",
+          "name": "freesound.org",
+          "url": "https://www.freesound.org/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-079",
+          "name": "soundoflife.com",
+          "url": "https://www.soundoflife.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        },
+        {
+          "id": "SRC-080",
+          "name": "sounddogs.com",
+          "url": "https://www.sounddogs.com/",
+          "reviewStatus": "candidate_source_only",
+          "assetCountApproved": 0,
+          "licensePolicy": "review_each_downloaded_file"
+        }
+      ]
+    }
+  ],
+  "requiredAudioTypes": [
+    {
+      "key": "phone_ringtones",
+      "label": "Real telephone ringtones"
+    },
+    {
+      "key": "video_call_ringtones",
+      "label": "Real incoming video-call ringtones"
+    },
+    {
+      "key": "notifications",
+      "label": "Real notification recordings"
+    },
+    {
+      "key": "message_alerts",
+      "label": "Real message and Messenger alerts"
+    },
+    {
+      "key": "human_voices",
+      "label": "Real human voices and reactions"
+    },
+    {
+      "key": "laughter_reactions",
+      "label": "Real laughter, cheering and applause"
+    },
+    {
+      "key": "animals_wildlife",
+      "label": "Real animal and wildlife sounds"
+    },
+    {
+      "key": "vehicles_engines",
+      "label": "Real vehicle and engine recordings"
+    },
+    {
+      "key": "musical_instruments",
+      "label": "Real musical instruments"
+    },
+    {
+      "key": "environment_weather",
+      "label": "Real environmental and weather recordings"
+    },
+    {
+      "key": "footsteps_movement",
+      "label": "Real footsteps and movement"
+    },
+    {
+      "key": "household_everyday",
+      "label": "Real household and everyday sounds"
+    },
+    {
+      "key": "gift_effects",
+      "label": "Real gift sound effects"
+    },
+    {
+      "key": "celebration_party",
+      "label": "Real celebration and party recordings"
+    },
+    {
+      "key": "traditional_instruments",
+      "label": "Real cultural and traditional instrument recordings"
+    },
+    {
+      "key": "jamaican_caribbean",
+      "label": "Real Jamaican and Caribbean cultural recordings"
+    },
+    {
+      "key": "interface_feedback",
+      "label": "Real interface feedback recordings"
+    }
+  ],
+  "policy": {
+    "sourceListingOnly": true,
+    "licenseApprovalIsPerAsset": true,
+    "freeDownloadDoesNotImplyCommercialPermission": true,
+    "standaloneRedistributionMustBeExplicitlyAllowed": true,
+    "aiGeneratedVoicesRejected": true,
+    "roboticVoicesRejected": true,
+    "synthesizedTonesRejected": true,
+    "proceduralEffectsRejected": true,
+    "authenticRecordingAndHumanPlaybackReviewRequired": true
+  }
+}
