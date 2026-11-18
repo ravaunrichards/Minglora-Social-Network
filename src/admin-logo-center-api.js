@@ -26,6 +26,7 @@ export async function handleAdminLogoCenterApi(context) {
     isDesignatedCreatorHubAdmin, isModerator, hasActiveReviewerSession,
     AUTH_PROVIDER, isSupabasePersistence, requestSupabaseState
   } = context;
+  const respond = (...args) => { json(...args); return true; };
 
   if (requestPath === "/api/brand/manifest" && method === "GET") {
     try {
@@ -58,7 +59,6 @@ export async function handleAdminLogoCenterApi(context) {
     return respond(res,403,{error:"This Logo Center change must be submitted from Minglora."});
   }
 
-  const respond = (...args) => { json(...args); return true; };
   const handleFailure = error => respond(res,Number(error?.status)||503,{
     error:String(error?.message||"The Logo Center request could not be completed.").slice(0,240)
   });
