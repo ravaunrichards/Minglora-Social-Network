@@ -82,7 +82,9 @@ Deno.serve(async (req: Request) => {
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
-    "live_cohost_invite", "live_cohost_invitation_accept",
+    "live_cohost_session_create", "live_cohost_session_get", "live_cohost_invitations_list",
+    "live_cohost_invite", "live_cohost_request", "live_cohost_review",
+    "live_cohost_mark_connected", "live_cohost_leave", "live_cohost_end",
     "economy_catalog", "economy_wallet", "economy_refunded_gift_ids", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
@@ -3321,55 +3323,214 @@ Deno.serve(async (req: Request) => {
     return json(201,{request:data});
   }
 
-  if (action === "live_cohost_invite") {
-    const broadcastId=String(input.broadcastId||""), hostId=String(input.hostId||""), userId=String(input.userId||"");
-    if(!validUuid(broadcastId)||!validUuid(hostId)||!validUuid(userId)||hostId===userId)
-      return json(400,{error:"Invalid LIVE co-host invitation."});
+  // Independent creator-to-creator Co-host lifecycle. This deliberately never writes
+  // to live_participants, which remains the separate Multi-guest/viewer speaker system.
+  if (action === "live_cohost_session_create") {
+    const sessionId=String(input.sessionId||""), broadcastId=String(input.broadcastId||"");
+    const hostId=String(input.hostId||""), roomRef=String(input.roomRef||"");
+    if(!validUuid(sessionId)||!validUuid(broadcastId)||!validUuid(hostId)||
+       !/^[a-zA-Z0-9_-]{1,128}$/.test(roomRef))
+      return json(400,{error:"Invalid Co-host session details."});
     const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
       .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
     if(broadcastError||!broadcast||broadcast.host_id!==hostId||broadcast.status!=="live")
-      return json(404,{error:"LIVE host access is required."});
-    const {data:existing,error:existingError}=await admin.from("live_participants")
-      .select("role,status").eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
-    if(existingError)return json(503,{error:"Minglora could not check the member's existing LIVE stage access."});
-    if(existing?.role==="guest"&&["requested","invited","accepted","connected"].includes(existing.status))
-      return json(409,{error:"This member already has an active guest request or invitation."});
-    const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
-      .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["invited","accepted","connected"]);
-    if(countError)return json(503,{error:"Minglora could not verify the available co-host seats."});
-    const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
-    if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
-    const {data,error}=await admin.from("live_participants").upsert({
-      broadcast_id:broadcastId,user_id:userId,role:"guest",status:"invited",joined_at:null,left_at:null
-    },{onConflict:"broadcast_id,user_id"}).select("broadcast_id,user_id,role,status,joined_at").single();
-    if(error)return fail(error,"Minglora could not save the Co-host invitation.");
-    return json(201,{invitation:data});
+      return json(404,{error:"Your own LIVE must be active before starting Co-host."});
+    const {data:existing,error:existingError}=await admin.from("live_cohost_participants")
+      .select("session_id,status").eq("user_id",hostId)
+      .in("status",["invited","requested","accepted","connected"]).maybeSingle();
+    if(existingError)return json(503,{error:"Minglora could not verify your Co-host status."});
+    if(existing)return json(409,{error:"You are already invited to or participating in an active Co-host session."});
+    const {data:session,error}=await admin.from("live_cohost_sessions").insert({
+      id:sessionId,host_user_id:hostId,host_broadcast_id:broadcastId,room_ref:roomRef,
+      status:"active",layout:"two",max_participants:4
+    }).select("id,host_user_id,host_broadcast_id,room_ref,status,layout,max_participants,started_at").single();
+    if(error)return fail(error,"Minglora could not create the Co-host session.");
+    const {data:participant,error:participantError}=await admin.from("live_cohost_participants").insert({
+      session_id:sessionId,user_id:hostId,broadcast_id:broadcastId,role:"host",status:"connected",
+      accepted_at:new Date().toISOString(),joined_at:new Date().toISOString()
+    }).select("session_id,user_id,broadcast_id,role,status,joined_at").single();
+    if(participantError){
+      await admin.from("live_cohost_sessions").update({status:"cancelled",ended_at:new Date().toISOString()}).eq("id",sessionId);
+      return fail(participantError,"Minglora could not register the Co-host owner.");
+    }
+    return json(201,{session,participant});
   }
 
-  if (action === "live_cohost_invitation_accept") {
-    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||"");
-    if(!validUuid(broadcastId)||!validUuid(userId))
-      return json(400,{error:"Invalid LIVE co-host invitation acceptance."});
+  if (action === "live_cohost_session_get") {
+    const sessionId=String(input.sessionId||""), broadcastId=String(input.broadcastId||"");
+    if(sessionId&&!validUuid(sessionId))return json(400,{error:"Invalid Co-host session."});
+    if(broadcastId&&!validUuid(broadcastId))return json(400,{error:"Invalid LIVE broadcast."});
+    if(!sessionId&&!broadcastId)return json(400,{error:"A Co-host session or LIVE broadcast is required."});
+    let resolvedSessionId=sessionId;
+    if(!resolvedSessionId){
+      const {data:membership,error:membershipError}=await admin.from("live_cohost_participants")
+        .select("session_id").eq("broadcast_id",broadcastId)
+        .in("status",["accepted","connected"]).maybeSingle();
+      if(membershipError)return json(503,{error:"Co-host stage lookup failed."});
+      if(!membership)return json(200,{session:null,participants:[]});
+      resolvedSessionId=membership.session_id;
+    }
+    const {data:session,error:sessionError}=await admin.from("live_cohost_sessions")
+      .select("id,host_user_id,host_broadcast_id,room_ref,status,layout,max_participants,started_at,ended_at")
+      .eq("id",resolvedSessionId).maybeSingle();
+    if(sessionError)return json(503,{error:"Co-host session could not be loaded."});
+    if(!session)return json(200,{session:null,participants:[]});
+    const {data:rows,error:rowsError}=await admin.from("live_cohost_participants")
+      .select("session_id,user_id,broadcast_id,role,status,invited_by,invited_at,accepted_at,joined_at,left_at")
+      .eq("session_id",resolvedSessionId).in("status",["invited","requested","accepted","connected"])
+      .order("created_at",{ascending:true});
+    if(rowsError)return json(503,{error:"Co-host participants could not be loaded."});
+    const ids=[...new Set((rows||[]).map(row=>row.user_id))];
+    const {data:profiles}=ids.length
+      ?await admin.from("profiles").select("id,display_name,username,avatar_url").in("id",ids)
+      :{data:[]};
+    const {data:broadcasts}=rows?.length
+      ?await admin.from("live_broadcasts").select("id,title,status,host_id").in("id",rows.map(row=>row.broadcast_id))
+      :{data:[]};
+    const profileMap=new Map((profiles||[]).map(profile=>[profile.id,profile]));
+    const broadcastMap=new Map((broadcasts||[]).map(item=>[item.id,item]));
+    return json(200,{session,participants:(rows||[]).map(row=>({
+      ...row,user:profileMap.get(row.user_id)||null,broadcast:broadcastMap.get(row.broadcast_id)||null
+    }))});
+  }
+
+  if (action === "live_cohost_invitations_list") {
+    const userId=String(input.userId||"");
+    if(!validUuid(userId))return json(400,{error:"Invalid Co-host invitation lookup."});
+    const {data:rows,error}=await admin.from("live_cohost_participants")
+      .select("session_id,user_id,broadcast_id,role,status,invited_by,invited_at")
+      .eq("user_id",userId).in("status",["invited","requested"])
+      .order("created_at",{ascending:false}).limit(20);
+    if(error)return json(503,{error:"Your Co-host invitations could not be loaded."});
+    const sessionIds=[...new Set((rows||[]).map(row=>row.session_id))];
+    const hostIds=[...new Set((rows||[]).map(row=>row.invited_by).filter(Boolean))];
+    const {data:sessions}=sessionIds.length
+      ?await admin.from("live_cohost_sessions").select("id,host_user_id,host_broadcast_id,status,layout,room_ref")
+        .in("id",sessionIds).eq("status","active")
+      :{data:[]};
+    const {data:profiles}=hostIds.length
+      ?await admin.from("profiles").select("id,display_name,username,avatar_url").in("id",hostIds)
+      :{data:[]};
+    const sessionMap=new Map((sessions||[]).map(item=>[item.id,item]));
+    const profileMap=new Map((profiles||[]).map(item=>[item.id,item]));
+    return json(200,{invitations:(rows||[]).filter(row=>sessionMap.has(row.session_id)).map(row=>({
+      ...row,session:sessionMap.get(row.session_id),inviter:profileMap.get(row.invited_by)||null
+    }))});
+  }
+
+  if (action === "live_cohost_invite" || action === "live_cohost_request") {
+    const sessionId=String(input.sessionId||""), userId=String(input.userId||"");
+    const broadcastId=String(input.broadcastId||"");
+    const actorId=String(input.actorId||"");
+    if(!validUuid(sessionId)||!validUuid(userId)||!validUuid(broadcastId)||!validUuid(actorId)||userId===actorId)
+      return json(400,{error:"Invalid Co-host participant details."});
+    const {data:session,error:sessionError}=await admin.from("live_cohost_sessions")
+      .select("id,host_user_id,status,max_participants").eq("id",sessionId).maybeSingle();
+    if(sessionError||!session||session.status!=="active")return json(404,{error:"Co-host session is not active."});
+    const isInvite=action==="live_cohost_invite";
+    if(isInvite&&session.host_user_id!==actorId)return json(403,{error:"Only the Co-host host can send invitations."});
     const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
       .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
-    if(broadcastError||!broadcast||broadcast.status!=="live"||broadcast.host_id===userId)
-      return json(404,{error:"LIVE invitation is not available."});
-    const {data:invitation,error:invitationError}=await admin.from("live_participants")
-      .select("broadcast_id,user_id,role,status").eq("broadcast_id",broadcastId).eq("user_id",userId)
-      .eq("role","guest").eq("status","invited").maybeSingle();
-    if(invitationError)return json(503,{error:"Minglora could not verify this co-host invitation."});
-    if(!invitation)return json(409,{error:"There is no pending Co-host invitation for this member."});
-    const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
-      .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["accepted","connected"]);
-    if(countError)return json(503,{error:"Minglora could not verify the available co-host seats."});
-    const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
-    if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
-    const {data,error}=await admin.from("live_participants").update({status:"accepted"})
-      .eq("broadcast_id",broadcastId).eq("user_id",userId).eq("role","guest").eq("status","invited")
-      .select("broadcast_id,user_id,role,status").maybeSingle();
-    if(error)return fail(error,"Minglora could not accept this Co-host invitation.");
-    if(!data)return json(409,{error:"This Co-host invitation is no longer pending."});
-    return json(200,{request:data});
+    if(broadcastError||!broadcast||broadcast.host_id!==userId||broadcast.status!=="live")
+      return json(409,{error:"Both creators must have their own active LIVE broadcast."});
+    const {data:existing,error:existingError}=await admin.from("live_cohost_participants")
+      .select("status").eq("user_id",userId).in("status",["invited","requested","accepted","connected"]).maybeSingle();
+    if(existingError)return json(503,{error:"Minglora could not check the creator's Co-host availability."});
+    if(existing)return json(409,{error:"This creator is already invited to or participating in a Co-host session."});
+    const {count,error:countError}=await admin.from("live_cohost_participants")
+      .select("user_id",{count:"exact",head:true}).eq("session_id",sessionId)
+      .in("status",["invited","requested","accepted","connected"]);
+    if(countError)return json(503,{error:"Co-host capacity could not be verified."});
+    if(Number(count||0)>=4)return json(409,{error:"This Co-host stage already has four creators."});
+    const status=isInvite?"invited":"requested";
+    const {data:participant,error}=await admin.from("live_cohost_participants").insert({
+      session_id:sessionId,user_id:userId,broadcast_id:broadcastId,role:"cohost",status,
+      invited_by:isInvite?actorId:null,invited_at:isInvite?new Date().toISOString():null
+    }).select("session_id,user_id,broadcast_id,role,status,invited_by,invited_at").single();
+    if(error)return fail(error,"Minglora could not save the Co-host invitation or request.");
+    return json(201,{participant});
+  }
+
+  if (action === "live_cohost_review") {
+    const sessionId=String(input.sessionId||""), userId=String(input.userId||"");
+    const actorId=String(input.actorId||""), decision=String(input.decision||"");
+    if(!validUuid(sessionId)||!validUuid(userId)||!validUuid(actorId)||
+       !["accept","reject","remove"].includes(decision))
+      return json(400,{error:"Choose a valid Co-host decision."});
+    const {data:session,error:sessionError}=await admin.from("live_cohost_sessions")
+      .select("id,host_user_id,status").eq("id",sessionId).maybeSingle();
+    if(sessionError||!session||session.status!=="active")return json(404,{error:"Co-host session is not active."});
+    const {data:participant,error:participantError}=await admin.from("live_cohost_participants")
+      .select("session_id,user_id,role,status").eq("session_id",sessionId).eq("user_id",userId).maybeSingle();
+    if(participantError||!participant)return json(404,{error:"Co-host participant was not found."});
+    const actorIsHost=session.host_user_id===actorId;
+    if(decision==="remove"&&!actorIsHost)return json(403,{error:"Only the Co-host host can remove a creator."});
+    if(decision==="accept"&&!(actorId===userId&&participant.status==="invited"||actorIsHost&&participant.status==="requested"))
+      return json(403,{error:"Only the invited creator or Co-host host can accept this participant."});
+    if(decision==="reject"&&!(actorId===userId&&participant.status==="invited"||actorIsHost&&participant.status==="requested"))
+      return json(403,{error:"This Co-host request cannot be declined by this account."});
+    if(decision==="remove"&&!["accepted","connected"].includes(participant.status))
+      return json(409,{error:"This creator is not connected to the Co-host stage."});
+    if(decision==="accept"){
+      const {count,error:countError}=await admin.from("live_cohost_participants")
+        .select("user_id",{count:"exact",head:true}).eq("session_id",sessionId)
+        .in("status",["accepted","connected"]);
+      if(countError)return json(503,{error:"Co-host capacity could not be verified."});
+      if(Number(count||0)>=4)return json(409,{error:"This Co-host stage already has four creators."});
+    }
+    const status=decision==="accept"?"accepted":decision==="reject"?"rejected":"removed";
+    const patch:Record<string,unknown>={status};
+    if(decision==="accept")patch.accepted_at=new Date().toISOString();
+    if(decision==="remove")patch.left_at=new Date().toISOString();
+    const {data,error}=await admin.from("live_cohost_participants").update(patch)
+      .eq("session_id",sessionId).eq("user_id",userId).eq("status",participant.status)
+      .select("session_id,user_id,broadcast_id,role,status,accepted_at,left_at").maybeSingle();
+    if(error)return fail(error,"Minglora could not update the Co-host participant.");
+    if(!data)return json(409,{error:"This Co-host participant changed before the action completed."});
+    return json(200,{participant:data});
+  }
+
+  if (action === "live_cohost_mark_connected") {
+    const sessionId=String(input.sessionId||""), userId=String(input.userId||"");
+    if(!validUuid(sessionId)||!validUuid(userId))return json(400,{error:"Invalid Co-host connection."});
+    const {data,error}=await admin.from("live_cohost_participants").update({
+      status:"connected",joined_at:new Date().toISOString(),left_at:null
+    }).eq("session_id",sessionId).eq("user_id",userId).eq("status","accepted")
+      .select("session_id,user_id,broadcast_id,role,status,joined_at").maybeSingle();
+    if(error)return json(503,{error:"Minglora could not confirm the Co-host connection."});
+    if(!data)return json(409,{error:"Accept the Co-host invitation before connecting."});
+    return json(200,{participant:data});
+  }
+
+  if (action === "live_cohost_leave") {
+    const sessionId=String(input.sessionId||""), userId=String(input.userId||"");
+    if(!validUuid(sessionId)||!validUuid(userId))return json(400,{error:"Invalid Co-host departure."});
+    const {data,error}=await admin.from("live_cohost_participants").update({
+      status:"left",left_at:new Date().toISOString()
+    }).eq("session_id",sessionId).eq("user_id",userId)
+      .in("status",["invited","requested","accepted","connected"])
+      .select("session_id,user_id,status,left_at").maybeSingle();
+    if(error)return json(503,{error:"Minglora could not update Co-host presence."});
+    return json(200,{participant:data||null});
+  }
+
+  if (action === "live_cohost_end") {
+    const sessionId=String(input.sessionId||""), hostId=String(input.hostId||"");
+    if(!validUuid(sessionId)||!validUuid(hostId))return json(400,{error:"Invalid Co-host session end."});
+    const {data:session,error:sessionError}=await admin.from("live_cohost_sessions")
+      .select("id,host_user_id,status").eq("id",sessionId).maybeSingle();
+    if(sessionError||!session||session.host_user_id!==hostId)
+      return json(403,{error:"Only the Co-host host can end this collaboration."});
+    if(session.status==="ended")return json(200,{ok:true,session});
+    const endedAt=new Date().toISOString();
+    const {data,error}=await admin.from("live_cohost_sessions").update({status:"ended",ended_at:endedAt})
+      .eq("id",sessionId).eq("status","active").select("id,status,ended_at").maybeSingle();
+    if(error)return json(503,{error:"Minglora could not end the Co-host session."});
+    const {error:participantsError}=await admin.from("live_cohost_participants").update({
+      status:"left",left_at:endedAt
+    }).eq("session_id",sessionId).in("status",["invited","requested","accepted","connected"]);
+    if(participantsError)return json(503,{error:"Co-host ended, but participant presence could not be finalized."});
+    return json(200,{ok:true,session:data||{id:sessionId,status:"ended",ended_at:endedAt}});
   }
 
   if (action === "live_speaker_requests_list") {
