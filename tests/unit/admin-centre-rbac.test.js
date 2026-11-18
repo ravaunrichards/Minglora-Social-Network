@@ -59,8 +59,9 @@ testRunner('Admin Centre loads the owner-only delegated roles workspace', () => 
 
 testRunner('RBAC append-only trigger function uses valid dollar-quoted SQL delimiters', () => {
   const triggerFunction = migration.split('CREATE OR REPLACE FUNCTION public.prevent_minglora_admin_rbac_audit_mutation()')[1] || '';
-  assert.match(triggerFunction, /SET search_path TO ''\\s+AS \\$\\$[\\s\\S]*?\\$\\$;/);
-  assert.doesNotMatch(triggerFunction, /SET search_path TO ''\\s+AS \\$/);
+  assert.ok(triggerFunction.includes("SET search_path TO ''\\nAS $$"));
+  assert.ok(triggerFunction.includes("END;\\n$$;"));
+  assert.doesNotMatch(triggerFunction, /AS \\$(?:\\r?\\n)/);
 });
 
 testRunner('delegated grants cannot demote any existing owner staff assignment', () => {
