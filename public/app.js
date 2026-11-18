@@ -2059,6 +2059,35 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
     throw error;
   }
 }
+function renderLiveCohostMatch(match,participants,role){
+  const status=$("#live-cohost-match-status"),roster=$("#live-cohost-match-roster"),actions=$("#live-cohost-match-actions");
+  const startButtons=$("#live-cohost-match-panel")?.querySelectorAll("[data-cohost-match-start]");
+  const active=match?.status==="active";
+  if(status)status.textContent=active
+    ?(match.mode==="team"?"TEAM MATCH ACTIVE":"SOLO MATCH ACTIVE")+" · started "+(match.started_at?new Date(match.started_at).toLocaleTimeString():"")
+    :match?.status==="ended"?"Last Co-host match ended. Start another match when ready.":"No Co-host match is active.";
+  if(startButtons)startButtons.forEach(button=>{button.hidden=Boolean(active)||role!=="host";button.disabled=Boolean(active);});
+  if(roster){
+    const rows=Array.isArray(participants)?participants:[];
+    roster.innerHTML=rows.map(item=>{
+      const name=item.user?.display_name||item.user?.username||"Creator";
+      const team=match?.mode==="team"?(item.team==="a"?"Team A":item.team==="b"?"Team B":""):"";
+      return "<div class='live-cohost-match-row'><span>"+esc(name)+"</span><span>"+esc(team)+"</span><strong>"+Number(item.points||0).toLocaleString()+" pts</strong></div>";
+    }).join("");
+  }
+  if(actions){
+    actions.innerHTML=active&&role==="host"&&match.created_by===state.user?.id
+      ?"<button type='button' id='live-cohost-match-end' class='danger'>End Match</button>":"";
+    $("#live-cohost-match-end")?.addEventListener("click",async()=>{
+      const button=$("#live-cohost-match-end");if(button)button.disabled=true;
+      try{
+        await api("/live/cohost/matches/"+encodeURIComponent(match.id)+"/end",{method:"POST",body:"{}"});
+        toast("Co-host match ended. Every creator's LIVE remains active.");
+        await refreshLiveCohostPanel(activeLiveSession,activeLiveRole,activeLiveRoom,window.LivekitClient);
+      }catch(error){toast(error.message||"Match could not be ended.");if(button)button.disabled=false;}
+    });
+  }
+}
 function renderLiveCohostRoster(participants){
   const root=$("#live-cohost-roster");if(!root)return;
   const rows=Array.isArray(participants)?participants.filter(item=>["invited","requested","accepted","connected"].includes(item.status)):[];
@@ -2099,10 +2128,21 @@ async function refreshLiveCohostPanel(session,role,mainRoom,client){
     const me=participants.find(item=>String(item.user_id)===String(state.user?.id));
     if(startForm)startForm.hidden=Boolean(cohostSession);
     if(inviteForm)inviteForm.hidden=!(cohostSession&&isOwner);
+    const requestButton=$("#live-cohost-request-button");
+    if(requestButton){
+      requestButton.hidden=!(cohostSession&&role==="viewer");
+      requestButton.disabled=Boolean(me&&["requested","accepted","connected"].includes(me.status));
+      requestButton.textContent=me?.status==="requested"?"Request pending":["accepted","connected"].includes(me?.status)?"Accepted · joining":"Request to join Co-host";
+    }
     if(status)status.textContent=cohostSession
       ?"Co-host stage active · "+Math.min(4,participants.length)+" of 4 creator places"
       :"No Co-host stage is active for this LIVE.";
     activeLiveCohostSession=cohostSession?{...cohostSession,participants}:null;
+    let matchData={match:null,participants:[]};
+    if(cohostSession&&cohostSession.status==="active"){
+      matchData=await api("/live/cohost/sessions/"+encodeURIComponent(cohostSession.id)+"/match");
+    }
+    renderLiveCohostMatch(matchData.match,matchData.participants,role);
     if(cohostSession&&cohostSession.status==="active"){
       renderLiveCohostRoster(participants);
       if(!activeLiveCohostRoom||activeLiveCohostSession?.id!==cohostSession.id)
@@ -2174,6 +2214,31 @@ function setupLiveCohostPanel(session,role,mainRoom,client){
     }catch(error){toast(error.message||"Co-host stage could not be started.");}
     finally{button.disabled=false;}
   });
+  const requestButton=$("#live-cohost-request-button");
+  requestButton?.addEventListener("click",async()=>{
+    if(!activeLiveCohostSession?.id){toast("There is no active Co-host stage to request.");return;}
+    requestButton.disabled=true;
+    try{
+      const result=await api("/live/cohost/sessions/"+encodeURIComponent(activeLiveCohostSession.id)+"/requests",{
+        method:"POST",body:"{}"
+      });
+      requestButton.textContent="Request sent";
+      toast("Your creator Co-host request was sent.");
+      await refreshLiveCohostPanel(session,role,mainRoom,client);
+    }catch(error){toast(error.message||"Co-host request could not be sent.");requestButton.disabled=false;}
+  });
+  $("#live-cohost-match-panel")?.querySelectorAll("[data-cohost-match-start]").forEach(button=>button.addEventListener("click",async()=>{
+    const mode=button.dataset.cohostMatchStart;
+    if(!activeLiveCohostSession?.id){toast("Start Co-host before starting a match.");return;}
+    button.disabled=true;
+    try{
+      await api("/live/cohost/sessions/"+encodeURIComponent(activeLiveCohostSession.id)+"/matches",{
+        method:"POST",body:JSON.stringify({mode})
+      });
+      toast(mode==="team"?"Team Match started.":"Solo Match started.");
+      await refreshLiveCohostPanel(session,role,mainRoom,client);
+    }catch(error){toast(error.message||"Co-host Match could not be started.");button.disabled=false;}
+  }));
   const inviteForm=$("#live-cohost-invite-form");
   inviteForm?.addEventListener("submit",async event=>{
     event.preventDefault();const username=String(inviteForm.elements.username?.value||"").trim();if(!username)return;
@@ -3068,8 +3133,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
       ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Multi-guest requests are unavailable</strong><p class='muted'>The host is not accepting audience guest requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Join as a guest</strong><small>Ask this creator to bring you onto their LIVE stage.</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to join</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on the Multi-guest stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
   const cohostTools="<section id='live-cohost-panel' class='live-tools-card live-cohost-panel' data-live-tools-panel='cohost'><div class='live-cohost-heading'><div><strong>Creator Co-host LIVE</strong><small>Bring 2, 3 or 4 creators together while every creator keeps their own LIVE running.</small></div><span class='live-cohost-live-badge'>CREATOR STAGE</span></div>"+
-    (role==="host"?"<form id='live-cohost-start-form' class='live-cohost-form'><button type='submit' class='primary'>Start Co-host stage</button><small>Creates a separate collaboration room. Your current LIVE stays connected.</small></form><form id='live-cohost-invite-form' class='live-cohost-form' hidden><label for='live-cohost-invite-username'>Invite a creator who is already LIVE</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Creator username' required><button type='submit'>Invite creator</button></div><small id='live-cohost-invite-status' role='status'>Invited creators accept from their own active LIVE.</small></form>":"<p class='live-cohost-note'>Co-host creators appear here together. Your own LIVE session remains independent.</p>")+
-    "<div id='live-cohost-status' class='live-cohost-status' role='status'>Checking for an active Co-host stage…</div><div id='live-cohost-roster' class='live-cohost-roster' aria-live='polite'></div><div id='live-cohost-invitations' class='live-cohost-invitations'></div><div id='live-cohost-actions' class='live-cohost-actions' hidden></div></section>";
+    (role==="host"?"<form id='live-cohost-start-form' class='live-cohost-form'><button type='submit' class='primary'>Start Co-host stage</button><small>Creates a separate collaboration room. Your current LIVE stays connected.</small></form><form id='live-cohost-invite-form' class='live-cohost-form' hidden><label for='live-cohost-invite-username'>Invite a creator who is already LIVE</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Creator username' required><button type='submit'>Invite creator</button></div><small id='live-cohost-invite-status' role='status'>Invited creators accept from their own active LIVE.</small></form>":"<p class='live-cohost-note'>Keep your own LIVE running while you request to join this creator's Co-host stage.</p><button type='button' id='live-cohost-request-button' class='secondary'>Request to join Co-host</button>")+
+    "<div id='live-cohost-status' class='live-cohost-status' role='status'>Checking for an active Co-host stage…</div><div id='live-cohost-roster' class='live-cohost-roster' aria-live='polite'></div><div id='live-cohost-invitations' class='live-cohost-invitations'></div><div id='live-cohost-actions' class='live-cohost-actions' hidden></div>"+
+    "<section id='live-cohost-match-panel' class='live-cohost-match-panel'><div class='live-cohost-match-heading'><strong>Co-host Match</strong><small>Start a Solo or Team match without ending any creator's LIVE.</small></div>"+(role==="host"?"<div class='live-cohost-match-start'><button type='button' data-cohost-match-start='solo'>Start Solo Match</button><button type='button' data-cohost-match-start='team'>Start Team Match</button></div>":"")+"<div id='live-cohost-match-status' class='live-cohost-match-status'>No Co-host match is active.</div><div id='live-cohost-match-roster' class='live-cohost-match-roster'></div><div id='live-cohost-match-actions' class='live-cohost-match-actions'></div></section></section>";
   const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel' data-live-tools-panel='rewards'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
     (role==="host"
