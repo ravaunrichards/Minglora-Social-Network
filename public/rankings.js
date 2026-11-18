@@ -46,9 +46,14 @@
       : "<span class='ranking-position' aria-label='Rank " + place + "'>#" + place + "</span>";
     const band = isTopTen ? "<span class='ranking-band ranking-band--top-ten'>TOP 10</span>"
       : isTopTwenty ? "<span class='ranking-band ranking-band--top-twenty'>TOP 20</span>" : "";
+    const avatar = award
+      ? "<span class='ranking-row-avatar-frame ranking-row-avatar-frame--" + award + "'>" +
+        "<img class='ranking-row-avatar-frame-art' src='/assets/daily-ranking-badges/" + (isTopTen ? "place-4-10" : "place-11-20") + ".png' alt='' loading='lazy' decoding='async'>" +
+        avatarMarkup(user,"ranking-row-avatar ranking-row-avatar--framed") + "</span>"
+      : avatarMarkup(user,"ranking-row-avatar");
     return "<button type='button' class='ranking-row" + (award ? " ranking-row--" + award : "") +
       "' data-ranking-profile='" + userId + "' aria-label='Open " + name + " profile, rank " + place + "'>" +
-      rank + avatarMarkup(user,"ranking-row-avatar") +
+      rank + avatar +
       "<span class='ranking-row-person'><strong>" + name + "</strong><small>@" + username + "</small>" + band + "</span>" +
       "<span class='ranking-row-score'><strong>" + number(item.points ?? item.coinsSent) +
       "</strong><small>Coins sent</small></span></button>";

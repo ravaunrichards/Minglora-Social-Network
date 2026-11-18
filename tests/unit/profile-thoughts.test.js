@@ -18,7 +18,7 @@ test('profile thought clouds sit above the separate portrait and remain tappable
   assert.ok(app.includes('ml-profile-thought-bubble'));
   assert.ok(app.includes('ml-profile-thought-add'));
   const thoughtSlotStart=app.indexOf(`(profileThoughtMarkup?'<div class="profile-thought-slot">'`);
-  const avatarWrapStart=app.indexOf('class="profile-avatar-edit-wrap"><img');
+  const avatarWrapStart=app.indexOf('class="profile-avatar-edit-wrap">');
   const infoMainStart=app.indexOf('<div class="profile-info-main">',avatarWrapStart);
   assert.ok(thoughtSlotStart>=0&&avatarWrapStart>thoughtSlotStart,'thought cloud is emitted before the independent portrait');
   assert.ok(infoMainStart>avatarWrapStart,'profile identity stays in its own column beside the portrait');

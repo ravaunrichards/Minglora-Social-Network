@@ -13,6 +13,7 @@ const addon = read("public/top-gifters.js");
 const html = read("public/index.html");
 const sw = read("public/sw.js");
 const css = read("public/styles.css");
+const rankingCss = read("public/rankings.css");
 
 test("LIVE room Top Gifters ranks broadcast-scoped confirmed LIVE gifts and refreshes in the existing gift poll", () => {
   assert.match(service, /export function getLiveGifterLeaderboard/);
@@ -38,18 +39,22 @@ test("platform Top Gifters offers period filters, earned rank titles and working
   }
   assert.match(addon, /\/api\/live\/rankings\/top-gifters/);
   assert.match(addon, /TOP 10 GIFTER/);
+  assert.match(addon, /position >= 4 && position <= 20/);
+  assert.match(addon, /place-4-10/);
+  assert.match(addon, /place-11-20/);
+  assert.match(rankingCss, /\.minglora-gifter-row \.minglora-gifter-ranked-frame-art/);
   assert.match(addon, /data-top-gifter-profile/);
   assert.match(addon, /window\.openProfile\(userId\)/);
 });
 
 test("Top Gifters assets are versioned and included in the PWA shell", () => {
-  assert.match(html, /top-gifters\.js\?v=20261117-avatar-rankings-sync-1/);
+  assert.match(html, /top-gifters\.js\?v=20261118-tiktok-ranking-frames-1/);
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||"";
   const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||"";
   assert.ok(appAsset&&sw.includes("/"+appAsset),"service worker caches the current HTML app script");
   assert.ok(styleAsset&&sw.includes("/"+styleAsset),"service worker caches the current HTML stylesheet");
   assert.match(sw, /minglora-shell-v\d+-[^']+/);
-  assert.match(sw, /top-gifters\.js\?v=20261117-avatar-rankings-sync-1/);
+  assert.match(sw, /top-gifters\.js\?v=20261118-tiktok-ranking-frames-1/);
   assert.match(css, /\.live-top-gifters-list/);
   assert.match(css, /\.minglora-gifter-profile/);
   assert.match(css, /\.live-weekly-title-gifters/);
@@ -104,6 +109,6 @@ test("Daily and embedded Top Gifters podium avatars stay compact and preserve ba
   assert.ok(css.includes("object-fit:contain;object-position:center"));
   assert.ok(css.includes("width:36%;height:36%;max-width:none;box-sizing:border-box"));
   assert.ok(html.includes("leagues.js?v=20261117-avatar-rankings-sync-1"));
-  assert.ok(html.includes("rankings.js?v=20261117-avatar-rankings-sync-1"));
-  assert.ok(sw.includes("minglora-shell-v358-self-updating-1"));
+  assert.ok(html.includes("rankings.js?v=20261118-tiktok-ranking-frames-1"));
+  assert.ok(sw.includes("minglora-shell-v359-self-updating-1"));
 });

@@ -56,6 +56,8 @@
     const avatar = safeAvatarUrl(user);
     const initial = escapeHtml((user.name || item.name || user.username || item.username || "M").slice(0, 1).toUpperCase());
     const podium = activePeriod === "daily" && position <= 3;
+    const flameFrame = activePeriod === "daily" && position >= 4 && position <= 20
+      ? (position <= 10 ? "place-4-10" : "place-11-20") : "";
     const image = podium
       ? "<span class='minglora-gifter-podium' role='img' aria-label='Daily ranking position " + position + "'>" +
         "<img class='minglora-gifter-rank-frame' src='/assets/daily-ranking-badges/top-gifters-place-" + position + ".png' alt='' loading='lazy' decoding='async'>" +
@@ -63,6 +65,13 @@
           ? "<img class='minglora-gifter-rank-avatar' src='" + escapeHtml(avatar) + "' alt='' loading='lazy' referrerpolicy='no-referrer'>"
           : "<span class='minglora-gifter-rank-fallback' aria-hidden='true'>" + initial + "</span>") +
         "</span>"
+      : flameFrame
+        ? "<span class='minglora-gifter-ranked-frame' role='img' aria-label='Daily ranking position " + position + "'>" +
+          "<img class='minglora-gifter-ranked-frame-art' src='/assets/daily-ranking-badges/" + flameFrame + ".png' alt='' loading='lazy' decoding='async'>" +
+          (avatar
+            ? "<img class='minglora-gifter-ranked-avatar' src='" + escapeHtml(avatar) + "' alt='' loading='lazy' referrerpolicy='no-referrer'>"
+            : "<span class='minglora-gifter-rank-fallback' aria-hidden='true'>" + initial + "</span>") +
+          "</span>"
       : avatar
         ? "<img src='" + escapeHtml(avatar) + "' alt='' loading='lazy' referrerpolicy='no-referrer'>"
         : "<span class='minglora-gifter-avatar' aria-hidden='true'>" + initial + "</span>";

@@ -8,7 +8,7 @@ const read=file=>fs.readFileSync(path.join(root,file),"utf8");
 const html=read("public/index.html"),app=read("public/app.js");
 const page=read("public/rankings.js"),css=read("public/rankings.css");
 const gifter=read("public/top-gifters.js"),leagueJs=read("public/leagues.js");
-const styles=read("public/styles.css"),leagueCss=read("public/leagues.css");
+const styles=read("public/styles.css"),leagueCss=read("public/leagues.css"),profileCss=read("public/profile-badges.css");
 const server=read("src/server.js"),service=read("backend/modules/gifter-progression/service.js");
 const worker=read("public/sw.js");
 test("Rankings is a dedicated secondary destination separate from Leagues and the LIVE shortcut",()=>{
@@ -16,8 +16,8 @@ test("Rankings is a dedicated secondary destination separate from Leagues and th
  const end=html.indexOf('id="left-rail-see-toggle"',start),sidebar=html.slice(start,end);
  assert.ok(sidebar.includes('data-view="rankings"'));
  assert.ok(sidebar.includes(">Rankings</span>"));
- assert.ok(html.includes("/rankings.css?v=20261117-avatar-rankings-sync-1"));
- assert.ok(html.includes("/rankings.js?v=20261117-avatar-rankings-sync-1"));
+ assert.ok(html.includes("/rankings.css?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(html.includes("/rankings.js?v=20261118-tiktok-ranking-frames-1"));
  assert.ok(app.includes("view:'rankings'")&&app.includes("state.view==='rankings'"));
  assert.ok(app.includes("window.MingloraRankings?.render()"));
  assert.ok(app.includes("window.MingloraRankings?.onNavigateAway?.()"));
@@ -41,6 +41,10 @@ test("Rankings uses supplied top-three frames and separate Top 10 and Top 20 ran
  assert.ok(page.includes("\"top-ten\"")&&page.includes("\"top-twenty\""));
  assert.ok(css.includes(".ranking-position--top-ten")&&css.includes(".ranking-position--top-twenty"));
  assert.ok(page.includes("TOP 10")&&page.includes("TOP 20"));
+ assert.ok(page.includes('"place-4-10"')&&page.includes('"place-11-20"'));
+ assert.ok(css.includes(".ranking-row-avatar-frame-art"));
+ assert.ok(css.includes("object-fit:contain;object-position:center"));
+ assert.ok(page.includes("items.filter(item => item.position > 3).map(rankedRow)"),"podium positions must not be repeated in the ranked list");
  assert.ok(page.includes("data-ranking-profile")&&page.includes("window.openProfile"));
  assert.ok(css.includes(".ranking-podium-card--1"));
  assert.ok(css.includes(".ranking-position--top-ten")&&css.includes(".ranking-position--top-twenty"));
@@ -52,9 +56,12 @@ test("Rankings handles empty, failure, period-switch and route-cancellation stat
  assert.ok(page.includes("data-ranking-retry")&&page.includes("AbortController"));
  assert.ok(page.includes("data-ranking-period")&&page.includes('cache:"no-store"'));
  assert.ok(page.includes("function onNavigateAway()"));
- assert.ok(worker.includes("minglora-shell-v358-self-updating-1"));
- assert.ok(worker.includes("/rankings.css?v=20261117-avatar-rankings-sync-1"));
- assert.ok(worker.includes("/rankings.js?v=20261117-avatar-rankings-sync-1"));
+ assert.ok(worker.includes("minglora-shell-v359-self-updating-1"));
+ assert.ok(worker.includes("/rankings.css?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(worker.includes("/rankings.js?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(worker.includes("/assets/daily-ranking-badges/place-4-10.png?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(worker.includes("/assets/daily-ranking-badges/place-11-20.png?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(worker.includes("/rankings.js?v=20261118-tiktok-ranking-frames-1"));
 });
 
 
@@ -76,6 +83,23 @@ test("Ranking badge art remains visible around a compact centered member photo o
  assert.ok(styles.includes("width:36%;height:36%;max-width:none;box-sizing:border-box"));
  assert.ok(leagueCss.includes("object-fit:contain;object-position:center"));
  assert.ok(leagueCss.includes("width:36%;height:36%;box-sizing:border-box"));
- assert.ok(html.includes("styles.css?v=20261117-avatar-rankings-sync-1"));
- assert.ok(html.includes("app.js?v=20261118-audio-only-side-by-side-nine-seat-1"));
+ assert.ok(html.includes("styles.css?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(html.includes("app.js?v=20261118-tiktok-ranking-frames-1"));
+});
+
+
+test("all Daily Top 20 references are reused on LIVE rankings, Top Gifters and member profiles",()=>{
+ assert.match(app,/async function applyProfileDailyRankingBadge/);
+ assert.match(app,/data-profile-ranking-user/);
+ assert.match(app,/void applyProfileDailyRankingBadge\(u\.id\)/);
+ assert.match(app,/live-ranking-avatar-frame-art/);
+ assert.match(app,/place-4-10/);
+ assert.match(app,/place-11-20/);
+ assert.match(profileCss,/\.profile-ranking-frame-host/);
+ assert.match(profileCss,/\.profile-ranking-rank-label/);
+ assert.match(gifter,/position >= 4 && position <= 20/);
+ assert.match(gifter,/place-4-10/);
+ assert.match(gifter,/place-11-20/);
+ assert.match(css,/\.minglora-gifter-row \.minglora-gifter-ranked-frame-art/);
+ assert.match(css,/\.minglora-gifter-ranked-frame \.minglora-gifter-rank-fallback/);
 });
