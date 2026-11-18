@@ -24,6 +24,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check visual test syntax
         run: node --check tests/e2e/layout-separation-visual.mjs
+      - name: Run guest-layout unit regressions
+        run: node --test tests/unit/live-audio-speakers.test.js tests/unit/live-tiktok-compact-layout.test.js tests/unit/live-guest-layout.test.js tests/unit/live-layout-panels.test.js
       - name: Compare all nine crop layouts on Audio LIVE, LIVE and MeetWave across mobile, tablet and desktop
         run: node tests/e2e/layout-separation-visual.mjs
       - name: Upload original-crop comparison screenshots and geometry report
