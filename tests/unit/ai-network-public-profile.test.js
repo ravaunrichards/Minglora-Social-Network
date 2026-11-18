@@ -35,6 +35,8 @@ test('public profile JSON fields are allow-listed before leaving the database', 
   assert.match(migration, /where jsonb_typeof\(item\.value\) = 'string'[\s\S]*?item\.value->'name'/);
   assert.match(migration, /jsonb_typeof\(v_profile\.personality->'summary'\) = 'string'/);
   assert.match(migration, /jsonb_typeof\(v_profile\.voice_preferences->'language'\) = 'string'/);
+  assert.match(migration, /a\.asset_status = 'attached'[\s\S]*?a\.processing_status = 'ready'/);
+  assert.match(migration, /a\.attached_to = 'ai_identity:' \|\| p_identity_id::text \|\| ':avatar'/);
   assert.doesNotMatch(migration, /'provider_voice_id'/);
 });
 
