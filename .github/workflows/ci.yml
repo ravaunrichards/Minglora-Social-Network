@@ -95,7 +95,11 @@ jobs:
           node --check scripts/generate-minglora-live-asset-manifest.mjs
           node --check scripts/audit-minglora-live-image-metadata.mjs
           node --check public/sound-studio-settings.js
+          node --check public/audio-resources.js
           node --check backend/modules/sounds/notification-studio.js
+          node --check backend/modules/sounds/authentic-audio.js
+          node --check scripts/validate-authentic-audio-library.mjs
+          node --check tests/unit/minglora-authentic-audio.test.js
           node --check public/auth-login.js
           node --check public/sw.js
           node --check public/settings.js
@@ -145,8 +149,10 @@ jobs:
         run: npm run build:gifts
       - name: Generate LIVE gift motion index
         run: npm run build:live-gift-motion
-      - name: Generate Minglora Sound Studio audio pack
-        run: npm run build:sounds
+      - name: Retire generated tones and validate authentic Minglora recordings
+        run: |
+          npm run build:sounds
+          npm run check:audio-library
       - name: Generate Minglora LIVE asset manifest
         run: npm run build:live-asset-manifest
       - name: Upload Minglora LIVE asset manifest
