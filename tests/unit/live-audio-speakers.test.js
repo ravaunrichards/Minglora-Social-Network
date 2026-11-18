@@ -210,8 +210,10 @@ test('Audio LIVE clears both top overlays from the guest seats and keeps Fluid P
     'the first Fluid Panel guest tile stays near the lower-right edge');
   assert.ok(finalSafety.includes('clamp(8px,1vw,12px) + clamp(44px,15vw,120px) + 8px'),
     'the second Fluid Panel guest tile has a measured fixed stack gap');
-  assert.ok(finalSafety.includes('#live-video-stage.live-audio-stage #live-guest-layout'),
-    'the final safety rules are scoped to audio-only LIVE');
+  assert.ok(finalSafety.includes('#live-player-shell #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout.live-guest-layout'),
+    'the final spacing override outranks legacy audio fit rules');
+  assert.ok(finalSafety.includes('left:auto!important;right:8px!important;')&&finalSafety.includes('justify-content:flex-end!important;text-align:right!important;'),
+    'the seat-count label is right-anchored away from the LIVE AUDIO pill');
   assert.ok(index.includes('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1'));
   assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1')"));
 });
