@@ -1561,7 +1561,23 @@ async function route(req, res) {
       }
       ensureAICollections(db);
       const providerStatus = getAIProviderStatus();
-      const providerReady = providerStatus.configured && providerStatus.executionEnabled;
+      const providerReady = providerStatus.manualDraftsAvailable === true;
+      const verifyManualProviderAccess = async () => {
+        if (!providerStatus.manualDraftsAvailable) {
+          throw Object.assign(
+            new Error('OpenAI owner-initiated AI features need OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'),
+            { status: 503 }
+          );
+        }
+        const health = await probeOpenAIProvider();
+        if (!health.connected) {
+          throw Object.assign(
+            new Error('OpenAI provider check failed (' + health.status + '): ' + health.note),
+            { status: 503 }
+          );
+        }
+        return health;
+      };
       const settingsExisted = (db.aiBotSettings || []).some(item => item.ownerId === user.id);
       const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
@@ -3304,18 +3320,27 @@ async function route(req, res) {
         return json(res, 201, { schedule });
       }
       if (method === 'PATCH' && sub === 'settings') {
-        const settings = updateAISettings(db, user.id, await body(req, 12000), { providerConfigured: providerReady });
+        const input = await body(req, 12000);
+        if (input.globalPaused === false) await verifyManualProviderAccess();
+        const settings = updateAISettings(db, user.id, input, { providerConfigured: providerReady });
         await saveStore();
         return json(res, 200, { settings });
       }
       if (method === 'PATCH' && parts[0] === 'bots' && parts[2] === 'status' && parts.length === 3) {
         const input = await body(req, 4000);
+        if (input.status === 'active') await verifyManualProviderAccess();
         const bot = updateAIBotStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
         await saveStore();
         return json(res, 200, { bot });
       }
       if (method === 'PATCH' && parts[0] === 'schedules' && parts[2] === 'status' && parts.length === 3) {
         const input = await body(req, 4000);
+        if (String(input.status || '').toLowerCase() === 'active') {
+          throw Object.assign(
+            new Error('Autonomous schedules cannot be activated yet. The durable AI worker runtime is not deployed and remains disabled; this schedule has not been started.'),
+            { status: 503 }
+          );
+        }
         const legacy = (db.aiBotSchedules || []).some(item => item.id === parts[1] && item.ownerId === user.id);
         if (!legacy && isSupabasePersistence()) {
           const result = await runAIScheduleCommand('set_schedule_status', {
@@ -3485,9 +3510,17 @@ async function route(req, res) {
         return json(res, 200, result);
       }
       if (method === 'POST' && sub === 'emergency-resume') {
+        const providerHealth = await verifyManualProviderAccess();
         const settings = updateAISettings(db, user.id, { globalPaused: false }, { providerConfigured: providerReady });
         await saveStore();
-        return json(res, 200, { resumed: true, settings, botsRemainPaused: true, schedulesRemainPaused: true });
+        return json(res, 200, {
+          resumed: true,
+          settings,
+          providerHealth: { status: providerHealth.status, model: providerHealth.model, checkedAt: providerHealth.checkedAt },
+          botsRemainPaused: true,
+          schedulesRemainPaused: true,
+          autonomousWorkersEnabled: false
+        });
       }
       return json(res, 404, { error: 'Minglora AI Network route not found.' });
     } catch (error) {
