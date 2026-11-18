@@ -46,7 +46,7 @@ import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-b
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
-import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, getCreatorLeagueLeaderboard, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
+import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, getCreatorLeagueLeaderboard, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, useCreatorLeaguePowerupCard, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
@@ -6573,7 +6573,7 @@ async function route(req, res) {
           }
           try {
             recordLiveGiftForLeagues(db, {
-              giftId: transactionId, recipientId: session.hostId, broadcastId: session.id,
+              giftId: transactionId, senderId: user.id, recipientId: session.hostId, broadcastId: session.id,
               giftCode: LIVE_FAN_CLUB_JOIN_GIFT_CODE, coinAmount,
               region: host?.country || 'GLOBAL'
             });
@@ -6735,7 +6735,7 @@ async function route(req, res) {
           }catch(error){console.error('[Minglora Gifter Progression] Confirmed LIVE gift could not be recorded.',{giftId:String(confirmedGiftId),message:String(error?.message||'progression update failed').slice(0,160)});}
           try{
             recordLiveGiftForLeagues(db,{
-              giftId:confirmedGiftId,recipientId:session.hostId,broadcastId:session.id,
+              giftId:confirmedGiftId,senderId:user.id,recipientId:session.hostId,broadcastId:session.id,
               giftCode:String(input.giftCode||''),coinAmount:confirmedCoinAmount,
               region:db.users.find(member=>member.id===session.hostId)?.country||'GLOBAL'
             });
@@ -7006,7 +7006,32 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/leagues/matches'){
         await syncRefundedGiftActivity();
-        const matches=listCreatorLeagueMatches(db,db.users,user.id);
+        const broadcastId=String(url.searchParams.get('broadcastId')||'');
+        const session=broadcastId?(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live'):null;
+        if(broadcastId){
+          if(!session||blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
+          const friendAccess=session.visibility==='friends'&&isFriend(user.id,session.hostId);
+          let subscriberAccess=false;
+          if(session.visibility==='subscribers'&&session.hostId!==user.id){
+            try{
+              if(isSupabasePersistence()){
+                const access=await requestSupabaseState('subscription_access_check',{userId:user.id,creatorIds:[session.hostId]});
+                subscriberAccess=(access.authorizedCreatorIds||[]).includes(session.hostId);
+              }else{
+                subscriberAccess=listActiveCreatorSubscriptions(db.creatorSubscriptions,session.hostId).some(item=>item.subscriberId===user.id);
+              }
+            }catch{subscriberAccess=false;}
+          }
+          const canView=session.hostId===user.id||session.visibility==='public'||friendAccess||subscriberAccess;
+          if(!canView)return json(res,404,{error:'LIVE session not found.'});
+          try{
+            const participants=await listLiveKitParticipants(session.roomName);
+            if(!participants.some(item=>item.identity===user.id))return json(res,403,{error:'Join this LIVE room to view its Match Power-Ups.'});
+          }catch{return json(res,503,{error:'Minglora could not verify your LIVE room connection.'});}
+        }
+        const matches=listCreatorLeagueMatches(db,db.users,user.id,new Date(),{
+          broadcastId,viewerHostId:session?.hostId||''
+        });
         await saveStore();
         return json(res,200,{matches});
       }
@@ -7060,11 +7085,44 @@ async function route(req, res) {
           }else if(action==='support'){
             supportCreatorLeagueMatch(db,match,user.id,String(input.side||''));
           }else{
-            useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''));
+            const broadcastId=String(input.broadcastId||'');
+            const session=(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live');
+            if(!session||![match.challengerSessionId,match.opponentSessionId].includes(session.id)){
+              return json(res,403,{error:'Use a Backpack card while watching the linked creator\'s active LIVE match.'});
+            }
+            if(blockedBetween(user.id,session.hostId))return json(res,404,{error:'LIVE session not found.'});
+            const side=session.id===match.challengerSessionId?'challenger':'opponent';
+            if(session.hostId===user.id)return json(res,403,{error:'Creators cannot use their own viewer Backpack cards.'});
+            const canView=session.visibility==='public'||(session.visibility==='friends'&&isFriend(user.id,session.hostId));
+            if(!canView&&session.visibility!=='subscribers')return json(res,404,{error:'LIVE session not found.'});
+            if(session.visibility==='subscribers'){
+              let subscriberAccess=false;
+              try{
+                if(isSupabasePersistence()){
+                  const access=await requestSupabaseState('subscription_access_check',{userId:user.id,creatorIds:[session.hostId]});
+                  subscriberAccess=(access.authorizedCreatorIds||[]).includes(session.hostId);
+                }else{
+                  subscriberAccess=listActiveCreatorSubscriptions(db.creatorSubscriptions,session.hostId).some(item=>item.subscriberId===user.id);
+                }
+              }catch{subscriberAccess=false;}
+              if(!subscriberAccess)return json(res,404,{error:'LIVE session not found.'});
+            }
+            let participants=[];
+            try{participants=await listLiveKitParticipants(session.roomName);}
+            catch{return json(res,503,{error:'Minglora could not verify your LIVE room connection. Try again shortly.'});}
+            if(!participants.some(item=>item.identity===user.id)){
+              return json(res,403,{error:'Connect to the creator\'s LIVE room before using a Power-Up card.'});
+            }
+            useCreatorLeaguePowerupCard(db,match,user.id,String(input.inventoryCardId||''),side,new Date());
           }
           match=(db.creatorLeagueMatches||[]).find(item=>item.id===match.id)||match;
           await saveStore();
-          return json(res,200,{match});
+          const broadcastId=String(input.broadcastId||'');
+          const session=broadcastId?(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live'):null;
+          const publicMatch=listCreatorLeagueMatches(db,db.users,user.id,new Date(),{
+            broadcastId,viewerHostId:session?.hostId||''
+          }).find(item=>item.id===match.id);
+          return json(res,200,{match:publicMatch||match});
         }catch(error){
           return json(res,error.status||400,{error:error.message||'The League Match action could not be completed.'});
         }
