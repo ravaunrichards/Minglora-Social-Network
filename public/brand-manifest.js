@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const placements = Object.freeze({
-    website_header: [".mtop .logo img", ".hc-brand img"],
+    website_header: [".brand-logo-img", ".mtop .logo img", ".hc-brand img"],
     login_page: [".auth-brand-logo"],
     admin_dashboard: [".admin-centre-brand-mark"],
     browser_favicon: ["link[rel~='icon']"],
