@@ -189,6 +189,7 @@
     const pageDefinitions = [
       {key:'overview',title:'Overview',group:'Dashboard',description:'A clear starting point with shortcuts to every available administration workspace.'},
       {key:'ai-bot-centre',title:'AI Bot Centre',group:'AI Operations',description:'Open the protected Minglora AI Bot Network workspace for bot identities, teams, provider status, memory, task controls and safeguards.',selector:'#admin-ai-bot-centre'},
+      {key:'approvals',title:'Approval Center',group:'Administration',description:'Review verified administrator approval requests with audited approve and reject actions.',selector:'#admin-approval-center'},
       {key:'company-finance',title:'Company finance & service management',group:'Finance & Operations',description:'Manage operating providers, subscriptions, budgets, invoices and expenses without mixing creator or seller balances.',selector:'#admin-finance-control'},
       {key:'internal-operations',title:'Platform operations',group:'Dashboard',description:'Review metadata-only activity across accounts, social features, calls, meetings, LIVE and finance.',selector:'#admin-internal-operations'},
       {key:'platform-overview',title:'Platform inventory',group:'Dashboard',description:'Review live inventory counts for active Minglora runtime collections.',selector:'#admin-platform-overview'},
@@ -496,6 +497,194 @@
     renderPage(initialKey,{remember:true});
   }
 
+
+  function initializeAdminApprovalCenter(panel) {
+    if (!panel || panel.querySelector('#admin-approval-center')) return;
+    const section = document.createElement('section');
+    section.id = 'admin-approval-center';
+    section.className = 'admin-control-centre-section admin-approval-center';
+    section.setAttribute('aria-labelledby', 'admin-approval-center-title');
+    section.innerHTML =
+      '<div class="admin-approval-center-heading"><div>' +
+      '<span class="admin-centre-dashboard-eyebrow">ADMINISTRATOR INBOX</span>' +
+      '<h3 id="admin-approval-center-title">Approval Center</h3>' +
+      '<p>Review actual requests from Minglora supervised AI approval and task workflows.</p></div>' +
+      '<button type="button" class="secondary" id="admin-approval-refresh">Refresh requests</button></div>' +
+      '<div class="admin-approval-center-summary">' +
+      '<div><strong id="admin-approval-total">—</strong><span>Pending decisions</span></div>' +
+      '<div><strong id="admin-approval-ai-count">—</strong><span>AI action reviews</span></div>' +
+      '<div><strong id="admin-approval-task-count">—</strong><span>AI task reviews</span></div></div>' +
+      '<p id="admin-approval-status" class="admin-approval-status" role="status" aria-live="polite">Connecting to the protected approval queue…</p>' +
+      '<div id="admin-approval-runtime-note" class="admin-approval-runtime-note">Approval decisions do not bypass separate execution and security controls.</div>' +
+      '<div id="admin-approval-request-list" class="admin-approval-request-list"><div class="admin-approval-empty">Loading verified requests…</div></div>' +
+      '<p class="admin-approval-footnote">Only existing backend requests appear here. Human approval is an audited decision; it does not execute a high-impact action or enable autonomous workers. Other departments will be connected when they expose real protected approval workflows.</p>';
+    panel.append(section);
+
+    const notification = panel.querySelector('#admin-approval-notification');
+    const notificationCount = panel.querySelector('#admin-approval-notification-count');
+    const toast = panel.querySelector('#admin-approval-toast');
+    const toastMessage = panel.querySelector('#admin-approval-toast-message');
+    const list = section.querySelector('#admin-approval-request-list');
+    const status = section.querySelector('#admin-approval-status');
+    const total = section.querySelector('#admin-approval-total');
+    const aiCount = section.querySelector('#admin-approval-ai-count');
+    const taskCount = section.querySelector('#admin-approval-task-count');
+    const runtimeNote = section.querySelector('#admin-approval-runtime-note');
+    const refreshButton = section.querySelector('#admin-approval-refresh');
+    let loading = false;
+    let deciding = false;
+    let firstSync = true;
+    let lastIds = new Set();
+    let toastTimer = null;
+
+    const dateLabel = value => {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? 'Time unavailable' : parsed.toLocaleString();
+    };
+    const shortId = value => String(value || '').slice(0, 8);
+    const readPending = (snapshot, queue) => ({
+      approvals: (Array.isArray(snapshot?.approvals) ? snapshot.approvals : [])
+        .filter(item => item && item.id && item.status === 'pending_human_review'),
+      tasks: (Array.isArray(queue?.tasks) ? queue.tasks : [])
+        .filter(item => item && item.task_id && item.status === 'pending_approval')
+    });
+    const approvalCard = item => {
+      const bot = (Array.isArray(window.__mingloraAdminApprovalBots) ? window.__mingloraAdminApprovalBots : [])
+        .find(row => String(row.id || '') === String(item.botId || ''));
+      const botName = bot?.name || bot?.displayName || ('AI bot ' + shortId(item.botId));
+      return '<article class="admin-approval-request-card">' +
+        '<div class="admin-approval-card-top"><span class="admin-approval-kind">AI HIGH-IMPACT ACTION</span><span class="admin-approval-pending">Pending review</span></div>' +
+        '<h4>' + escapeText(item.actionType || 'AI action request') + '</h4>' +
+        '<p>' + escapeText(item.summary || 'No review summary was provided.') + '</p>' +
+        '<dl><div><dt>Requested by</dt><dd>' + escapeText(botName) + '</dd></div>' +
+        '<div><dt>Requested</dt><dd>' + escapeText(dateLabel(item.requestedAt)) + '</dd></div>' +
+        '<div><dt>Expires</dt><dd>' + escapeText(dateLabel(item.expiresAt)) + '</dd></div></dl>' +
+        '<div class="admin-approval-card-actions">' +
+        '<button type="button" class="primary" data-admin-approval-decision="approve" data-request-type="ai-action" data-request-id="' + escapeText(item.id) + '">Approve</button>' +
+        '<button type="button" class="secondary" data-admin-approval-decision="reject" data-request-type="ai-action" data-request-id="' + escapeText(item.id) + '">Reject</button></div></article>';
+    };
+    const taskCard = item => {
+      const tokenBudget = item.token_budget === null || item.token_budget === undefined
+        ? 'Not supplied' : Number(item.token_budget).toLocaleString() + ' tokens';
+      const costLimit = item.cost_limit_usd === null || item.cost_limit_usd === undefined
+        ? 'Not supplied' : 'US$' + Number(item.cost_limit_usd).toFixed(2);
+      return '<article class="admin-approval-request-card">' +
+        '<div class="admin-approval-card-top"><span class="admin-approval-kind">AI TASK AUTHORIZATION</span><span class="admin-approval-pending">Pending review</span></div>' +
+        '<h4>' + escapeText(item.task_title || 'AI task request') + '</h4>' +
+        '<p>Action class: ' + escapeText(item.action_class || 'Not classified') + ' · Task type: ' + escapeText(item.task_type || 'Not supplied') + '</p>' +
+        '<dl><div><dt>AI identity</dt><dd>' + escapeText(shortId(item.identity_id) || 'Not supplied') + '</dd></div>' +
+        '<div><dt>Scheduled</dt><dd>' + escapeText(dateLabel(item.scheduled_for)) + '</dd></div>' +
+        '<div><dt>Token budget</dt><dd>' + escapeText(tokenBudget) + '</dd></div>' +
+        '<div><dt>Cost limit</dt><dd>' + escapeText(costLimit) + '</dd></div></dl>' +
+        '<label class="admin-approval-review-reason"><span>Review reason (required)</span><textarea data-admin-approval-reason minlength="3" maxlength="1000" rows="2" placeholder="Explain your decision"></textarea></label>' +
+        '<div class="admin-approval-card-actions">' +
+        '<button type="button" class="primary" data-admin-approval-decision="approve" data-request-type="ai-task" data-request-id="' + escapeText(item.task_id) + '">Approve</button>' +
+        '<button type="button" class="secondary" data-admin-approval-decision="reject" data-request-type="ai-task" data-request-id="' + escapeText(item.task_id) + '">Reject</button></div></article>';
+    };
+    const showToast = count => {
+      if (!toast || !toastMessage) return;
+      toastMessage.textContent = count + ' new request' + (count === 1 ? '' : 's') + ' need your decision.';
+      toast.hidden = false;
+      if (toastTimer) window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => { toast.hidden = true; }, 12000);
+    };
+    const render = (snapshot, queue) => {
+      const pending = readPending(snapshot, queue);
+      const ids = new Set([
+        ...pending.approvals.map(item => 'ai-action:' + item.id),
+        ...pending.tasks.map(item => 'ai-task:' + item.task_id)
+      ]);
+      const newlyPending = [...ids].filter(id => !lastIds.has(id));
+      const count = ids.size;
+      total.textContent = String(count);
+      aiCount.textContent = String(pending.approvals.length);
+      taskCount.textContent = String(pending.tasks.length);
+      notificationCount.textContent = String(count);
+      notification.hidden = count === 0;
+      window.__mingloraAdminApprovalBots = Array.isArray(snapshot?.bots) ? snapshot.bots : [];
+      list.innerHTML = count
+        ? pending.approvals.map(approvalCard).join('') + pending.tasks.map(taskCard).join('')
+        : '<div class="admin-approval-empty"><strong>No pending approvals</strong><span>New administrator requests will appear here automatically.</span></div>';
+      const runtime = queue?.runtime || {};
+      if (runtime.global_paused === true || runtime.execution_enabled === false || Number(runtime.max_concurrent_workers) === 0) {
+        runtimeNote.textContent = 'AI worker execution is paused or disabled. Approving a task records your decision but does not start workers or execute the task.';
+      } else if (runtime.global_paused === false && runtime.execution_enabled === true && Number(runtime.max_concurrent_workers) > 0) {
+        runtimeNote.textContent = 'The task runtime reports enabled workers. Approval still does not guarantee execution; separate worker and provider gates remain.';
+      } else {
+        runtimeNote.textContent = 'Task execution status could not be verified. Approval records a decision only; execution is not claimed.';
+      }
+      if (!firstSync && newlyPending.length) showToast(newlyPending.length);
+      lastIds = ids;
+      firstSync = false;
+      status.textContent = 'Synced ' + dateLabel(new Date()) + ' · ' + count + ' pending decision(s).';
+    };
+    const refresh = async () => {
+      if (loading || document.visibilityState === 'hidden') return;
+      loading = true;
+      if (refreshButton) refreshButton.disabled = true;
+      try {
+        const result = await Promise.all([
+          adminCentreApi('/ai-network'),
+          adminCentreApi('/ai-network/tasks')
+        ]);
+        render(result[0], result[1]);
+      } catch (error) {
+        status.textContent = error.message || 'The protected approval queue could not be loaded.';
+        if (firstSync) list.innerHTML = '<div class="admin-approval-empty admin-approval-empty--error">Approval requests could not be verified. Sign in with the designated administrator account and a current MFA session, then refresh.</div>';
+      } finally {
+        loading = false;
+        if (refreshButton) refreshButton.disabled = false;
+      }
+    };
+    const decide = async button => {
+      const requestType = button.dataset.requestType;
+      const requestId = button.dataset.requestId;
+      const decision = button.dataset.adminApprovalDecision;
+      if (!requestId || !['approve', 'reject'].includes(decision) || deciding) return;
+      let path = '';
+      let payload = {};
+      if (requestType === 'ai-action') {
+        if (!window.confirm((decision === 'approve' ? 'Approve' : 'Reject') + ' this AI high-impact action request? The decision is audited and will not execute the action.')) return;
+        path = '/ai-network/approvals/' + encodeURIComponent(requestId);
+        payload = { decision };
+      } else if (requestType === 'ai-task') {
+        const card = button.closest('.admin-approval-request-card');
+        const reason = String(card?.querySelector('[data-admin-approval-reason]')?.value || '').trim();
+        if (reason.length < 3) {
+          status.textContent = 'Enter a review reason of at least three characters before deciding this task.';
+          card?.querySelector('[data-admin-approval-reason]')?.focus();
+          return;
+        }
+        if (!window.confirm((decision === 'approve' ? 'Approve' : 'Reject') + ' this AI task? The decision is recorded; worker execution remains subject to separate runtime controls.')) return;
+        path = '/ai-network/tasks/' + encodeURIComponent(requestId) + '/approval';
+        payload = { status: decision === 'approve' ? 'approved' : 'rejected', reason };
+      } else return;
+      deciding = true;
+      list.querySelectorAll('[data-admin-approval-decision]').forEach(item => { item.disabled = true; });
+      status.textContent = 'Recording your decision…';
+      try {
+        await adminCentreApi(path, { method: 'PATCH', body: JSON.stringify(payload) });
+        status.textContent = 'Decision recorded and audited. Refreshing the pending queue…';
+        await refresh();
+      } catch (error) {
+        status.textContent = error.message || 'The approval decision could not be saved.';
+      } finally {
+        deciding = false;
+        list.querySelectorAll('[data-admin-approval-decision]').forEach(item => { item.disabled = false; });
+      }
+    };
+    list.addEventListener('click', event => {
+      const button = event.target.closest('[data-admin-approval-decision]');
+      if (button && list.contains(button) && !loading && !deciding) decide(button);
+    });
+    refreshButton?.addEventListener('click', refresh);
+    panel.querySelector('#admin-approval-toast-dismiss')?.addEventListener('click', () => { toast.hidden = true; });
+    refresh();
+    window.setInterval(() => { if (document.visibilityState !== 'hidden') refresh(); }, 30000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
+  }
+
   function addControlCentrePanel(rootOverride = null) {
     const root = rootOverride || document.querySelector('#admin-centre-root');
     if (!root || root.querySelector('#admin-control-centre')) return;
@@ -515,6 +704,15 @@
       </div>
       <div class="admin-control-centre-note">
         This is the private Minglora platform workspace inside the administrator profile. Protected actions require the designated Creator Hub account and an authenticator-verified session.
+      </div>
+      <div id="admin-approval-notification" class="admin-approval-notification" hidden role="status" aria-live="polite">
+        <div class="admin-approval-notification-copy"><span>ADMIN ACTION REQUIRED</span><strong><span id="admin-approval-notification-count">0</span> request(s) waiting for your decision</strong></div>
+        <a href="?page=approvals" data-admin-route="approvals">Review approvals</a>
+      </div>
+      <div id="admin-approval-toast" class="admin-approval-toast" hidden role="alert" aria-live="assertive">
+        <div><strong>New admin approval notification</strong><span id="admin-approval-toast-message"></span></div>
+        <a href="?page=approvals" data-admin-route="approvals">Open Approval Center</a>
+        <button type="button" id="admin-approval-toast-dismiss" aria-label="Dismiss notification">×</button>
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <div class="admin-centre-nav-group">
@@ -1625,6 +1823,7 @@
       initializeAdminAuditLog(panel);
       loadAdminModerationQueue(panel);
       loadAdminSupportInbox(panel);
+      initializeAdminApprovalCenter(panel);
     }
     // Build the dedicated page workspace only after all existing feature sections and controls exist.
     initializeAdminPageNavigation(panel, unlocked);
