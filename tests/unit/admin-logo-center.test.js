@@ -65,7 +65,7 @@ test("original files use immutable version paths and pending uploads are owner-b
 });
 
 test("the SQL command requires the designated MFA-verified owner and service role", () => {
-  assert.match(migration, /coalesce\\(auth\\.role\\(\\),''\\) <> 'service_role'/);
+  assert.match(migration, /coalesce\(auth\.role\(\),''\) <> 'service_role'/);
   assert.match(migration, /5b998c21-86b5-4621-ab37-e0808a2657b1/);
   assert.match(migration, /p_mfa_verified IS DISTINCT FROM true/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.minglora_admin_brand_command/);
