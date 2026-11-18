@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'supabase/migrations/20261118063000_minglora_ai_durable_identity_batches.sql'
+      - 'supabase/migrations/20261118075901_minglora_ai_durable_identity_batches.sql'
       - 'supabase/functions/minglora-runtime-state/index.ts'
       - 'src/server.js'
       - 'public/ai-network.js'
