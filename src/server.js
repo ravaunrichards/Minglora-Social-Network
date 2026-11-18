@@ -53,6 +53,7 @@ import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISett
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1479,7 +1480,76 @@ async function route(req, res) {
   if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !p.startsWith('/api/internal/video-transcode/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
-    if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
+  if (p === '/api/ai-network/email/webhook') {
+    if (method !== 'POST') return json(res, 405, { error: 'Method not allowed.' });
+    if (!isSupabasePersistence()) return json(res, 503, { error: 'Minglora email persistence is unavailable.' });
+    try {
+      const rawChunks = [];
+      let rawBytes = 0;
+      for await (const chunk of req) {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        rawBytes += buffer.byteLength;
+        if (rawBytes > 256000) return json(res, 413, { error: 'Email webhook payload is too large.' });
+        rawChunks.push(buffer);
+      }
+      const rawBody = Buffer.concat(rawChunks).toString('utf8');
+      if (!verifyResendWebhook({
+        rawBody,
+        headers: req.headers,
+        secret: process.env.RESEND_WEBHOOK_SECRET
+      })) return json(res, 401, { error: 'Invalid email provider webhook signature.' });
+
+      let event;
+      try { event = JSON.parse(rawBody); }
+      catch { return json(res, 400, { error: 'Invalid email provider webhook payload.' }); }
+      if (event?.type !== 'email.received') return json(res, 200, { received: true, ignored: true });
+
+      const providerEmailId = String(event?.data?.email_id || '').trim();
+      if (!providerEmailId) return json(res, 400, { error: 'The inbound event has no provider email ID.' });
+      const domainStatus = await inspectResendDomain();
+      if (!domainStatus.receivingEnabled || !domainStatus.webhookActive) {
+        return json(res, 503, { error: 'The Minglora inbound email domain is not verified and receiving-enabled.' });
+      }
+      const inbound = await retrieveResendInboundEmail(providerEmailId);
+      const extractAddress = value => {
+        const input = String(value || '').trim();
+        const match = input.match(/<([^<>]+)>/);
+        return (match ? match[1] : input).trim().toLowerCase();
+      };
+      const toAddresses = inbound.to.map(extractAddress).filter(Boolean);
+      if (!toAddresses.length) return json(res, 202, { received: true, stored: 0 });
+      const response = await requestSupabaseState('ai_email_command', {
+        aiAction: 'ingest',
+        verifiedWebhook: true,
+        payload: {
+          verified_webhook: true,
+          provider: 'resend',
+          provider_email_id: inbound.providerEmailId,
+          provider_event_id: String(req.headers['svix-id'] || '').slice(0, 180),
+          provider_message_id: inbound.messageId,
+          from_address: inbound.from,
+          to_addresses: toAddresses,
+          cc_addresses: inbound.cc.map(extractAddress).filter(Boolean),
+          bcc_addresses: inbound.bcc.map(extractAddress).filter(Boolean),
+          subject: inbound.subject,
+          text_body: inbound.text,
+          html_body: inbound.html,
+          attachments: inbound.attachments,
+          received_at: inbound.receivedAt
+        }
+      });
+      if (response?.skipped) return json(res, 503, { error: 'Minglora email persistence is unavailable.' });
+      return json(res, 200, { received: true, stored: Number(response?.result?.stored_count || 0) });
+    } catch (error) {
+      const status = Number(error?.status) || 503;
+      console.error('[Minglora AI email webhook] Processing failed.', {
+        status, message: String(error?.message || 'Provider webhook processing failed.').slice(0, 180)
+      });
+      return json(res, status, { error: String(error?.message || 'Email webhook processing failed.').slice(0, 220) });
+    }
+  }
+
+      if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
     const user = sessionUser(req);
     try {
       requireAuth(user);
@@ -1495,6 +1565,131 @@ async function route(req, res) {
       const settingsExisted = (db.aiBotSettings || []).some(item => item.ownerId === user.id);
       const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
+      const aiEmailIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const aiEmailIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+      if (method === 'GET' && sub === 'email/status') {
+        const status = await inspectResendDomain();
+        const emailConfig = getAIEmailConfig();
+        return json(res, 200, {
+          provider: status.provider,
+          configured: Boolean(status.configured),
+          credentialsPresent: Boolean(emailConfig.hasApiKey),
+          domain: status.domain,
+          verified: Boolean(status.verified),
+          sendingEnabled: Boolean(status.sendingEnabled),
+          receivingEnabled: Boolean(status.receivingEnabled),
+          webhookConfigured: Boolean(status.webhookConfigured),
+          webhookSecretPresent: Boolean(emailConfig.hasWebhookSecret),
+          webhookActive: Boolean(status.webhookActive),
+          ready: Boolean(status.ready),
+          note: status.note
+        });
+      }
+      if (parts[0] === 'identities' && parts.length === 3 && parts[2] === 'email' && method === 'GET') {
+        if (!aiEmailIdentityIdPattern.test(parts[1])) throw Object.assign(new Error('A valid AI identity ID is required.'), { status:400 });
+        const result = await requestSupabaseState('ai_email_command', {
+          actorUserId: user.id, aiAction: 'list', payload: { identity_id: parts[1] }
+        });
+        if (result?.skipped) throw Object.assign(new Error('AI email records require Minglora Supabase persistence.'), { status:503 });
+        return json(res, 200, result?.result || { mailboxes: [] });
+      }
+      if (parts[0] === 'identities' && parts.length === 4 && parts[2] === 'email' && parts[3] === 'provision' && method === 'POST') {
+        const identityId = parts[1];
+        if (!aiEmailIdentityIdPattern.test(identityId)) throw Object.assign(new Error('A valid AI identity ID is required.'), { status:400 });
+        if (!isSupabasePersistence()) throw Object.assign(new Error('AI mailbox provisioning requires Minglora Supabase persistence.'), { status:503 });
+        const domainStatus = await inspectResendDomain();
+        if (!domainStatus.ready) throw Object.assign(new Error(domainStatus.note || 'The Resend email domain is not ready.'), { status:503 });
+        const result = await requestSupabaseState('ai_email_command', {
+          actorUserId: user.id, aiAction: 'provision',
+          payload: { identity_id: identityId, domain: domainStatus.domain, domain_verified: true }
+        });
+        if (result?.skipped) throw Object.assign(new Error('AI mailbox provisioning is unavailable in local-only persistence mode.'), { status:503 });
+        return json(res, result?.result?.reused ? 200 : 201, { mailbox: result?.result || null });
+      }
+      if (parts[0] === 'identities' && parts.length === 4 && parts[2] === 'email' && parts[3] === 'inbox' && method === 'GET') {
+        const identityId = parts[1];
+        if (!aiEmailIdentityIdPattern.test(identityId)) throw Object.assign(new Error('A valid AI identity ID is required.'), { status:400 });
+        const emailUrl = new URL(req.url || '/', 'http://localhost');
+        const emailId = String(emailUrl.searchParams.get('email_id') || '');
+        const response = await requestSupabaseState('ai_email_command', {
+          actorUserId: user.id, aiAction: 'inbox',
+          payload: {
+            identity_id: identityId, email_id: emailId,
+            limit: Math.min(Math.max(Number.parseInt(emailUrl.searchParams.get('limit') || '30',10) || 30,1),50),
+            offset: Math.max(Number.parseInt(emailUrl.searchParams.get('offset') || '0',10) || 0,0)
+          }
+        });
+        if (response?.skipped) throw Object.assign(new Error('AI inbox is unavailable in local-only persistence mode.'), { status:503 });
+        return json(res, 200, response?.result || { messages: [], unread_count: 0 });
+      }
+      if (parts[0] === 'identities' && parts.length === 4 && parts[2] === 'email' && parts[3] === 'send' && method === 'POST') {
+        const identityId = parts[1];
+        if (!aiEmailIdentityIdPattern.test(identityId)) throw Object.assign(new Error('A valid AI identity ID is required.'), { status:400 });
+        if (!isSupabasePersistence()) throw Object.assign(new Error('AI email sending requires Minglora Supabase persistence.'), { status:503 });
+        const input = await body(req, 32000);
+        const to = (Array.isArray(input.to) ? input.to : String(input.to || '').split(','))
+          .map(value => normalizeAIEmailAddress(value)).filter(Boolean);
+        if (!to.length || to.length > 10) throw Object.assign(new Error('Enter between one and ten valid email recipients.'), { status:400 });
+        const subject = String(input.subject || '').trim().slice(0,200);
+        const textBody = String(input.text || '');
+        if (!subject || !textBody.trim() || textBody.length > 24000) {
+          throw Object.assign(new Error('Enter a subject and a message of up to 24,000 characters.'), { status:400 });
+        }
+        const idempotencyKey = String(input.requestId || '').trim();
+        if (idempotencyKey.length < 16 || idempotencyKey.length > 180) {
+          throw Object.assign(new Error('A stable request ID is required for safe email retries.'), { status:400 });
+        }
+        const domainStatus = await inspectResendDomain();
+        if (!domainStatus.sendingEnabled) throw Object.assign(new Error(domainStatus.note || 'The Resend sending domain is not ready.'), { status:503 });
+        const prepared = await requestSupabaseState('ai_email_command', {
+          actorUserId: user.id, aiAction: 'send_prepare',
+          payload: {
+            identity_id: identityId, email_id: String(input.emailId || ''),
+            to_addresses: to, subject, text_body: textBody, idempotency_key: idempotencyKey
+          }
+        });
+        if (prepared?.skipped) throw Object.assign(new Error('AI email persistence is unavailable.'), { status:503 });
+        const message = prepared?.result;
+        if (!message?.message_id) throw Object.assign(new Error('The outgoing email could not be prepared.'), { status:503 });
+        if (message.status === 'sent') return json(res, 200, { message, reused: true });
+
+        try {
+          const providerResult = await sendResendEmail({
+            from: message.from_address, to: message.to_addresses,
+            subject: message.subject, text: message.text_body,
+            idempotencyKey: message.message_id
+          });
+          const completed = await requestSupabaseState('ai_email_command', {
+            actorUserId: user.id, aiAction: 'send_complete',
+            payload: { identity_id: identityId, message_id: message.message_id, provider_email_id: providerResult.providerEmailId }
+          });
+          if (completed?.skipped) throw Object.assign(new Error('The provider accepted the email but Minglora could not confirm its delivery record. Retry the same request ID.'), { status:503 });
+          return json(res, 200, { message: completed?.result || { message_id: message.message_id, status: 'sent' } });
+        } catch (error) {
+          try {
+            await requestSupabaseState('ai_email_command', {
+              actorUserId: user.id, aiAction: 'send_fail',
+              payload: { identity_id: identityId, message_id: message.message_id, error: String(error?.message || 'Email provider request failed.').slice(0,220) }
+            });
+          } catch { /* The original provider error remains the useful result. */ }
+          throw error;
+        }
+      }
+      if (parts[0] === 'identities' && parts.length === 5 && parts[2] === 'email' && parts[3] === 'messages' && parts[4] && method === 'POST') {
+        const identityId = parts[1];
+        const messageId = parts[4];
+        if (!aiEmailIdentityIdPattern.test(identityId) || !aiEmailIdentityIdPattern.test(messageId)) {
+          throw Object.assign(new Error('A valid AI identity and email message ID are required.'), { status:400 });
+        }
+        const response = await requestSupabaseState('ai_email_command', {
+          actorUserId: user.id, aiAction: 'mark_read',
+          payload: { identity_id: identityId, message_id: messageId }
+        });
+        if (response?.skipped) throw Object.assign(new Error('AI inbox actions are unavailable.'), { status:503 });
+        return json(res, 200, { message: response?.result || null });
+      }
+
 
       const runAIDiscoveryCommand = async (aiAction, payload = {}) => {
         if (!isSupabasePersistence()) {
