@@ -224,7 +224,7 @@ function aiApiResponse(req, url, body) {
     identityBatches.unshift(batch);
     return structuredClone(batch);
   }
-  const batchRetryPath = pathname.match(/^\\/identities\\/batches\\/([0-9a-f-]+)\\/retry$/i);
+  const batchRetryPath = pathname.match(/^\/identities\/batches\/([0-9a-f-]+)\/retry$/i);
   if (method === 'POST' && batchRetryPath) {
     identityBatchRetryRequests.push({ batch_id:batchRetryPath[1], body:structuredClone(body) });
     const batch = identityBatches.find(item => item.batch_id === batchRetryPath[1]);
