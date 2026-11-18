@@ -35,14 +35,16 @@ const initialIdentity = {
     avatar_storage_ref: null, cover_storage_ref: null
   },
   languages: [{ language_tag: 'en-JM', language_name: 'English (Jamaica)', proficiency: 'native', is_primary: true }],
-  locations: [],
+  locations: [{ location_type:'current', country_code:'JM', country_name:'Jamaica', is_public:false }],
   primary_email: null
 };
 let identities = [structuredClone(initialIdentity)];
 let savedGroups = [];
+let following = [];
 let identityCreateRequests = [];
 let identityPatchRequests = [];
 let discoveryQueries = [];
+let publicProfileRequests = [];
 let bulkFollowRequests = [];
 let memorySettings = {
   identity_id: ownerIdentityId, memory_enabled:false, long_term_enabled:false,
@@ -85,6 +87,12 @@ const discoveryProfiles = [
     follower_count: 1, is_following: false, follow_requested: false
   }
 ];
+following = [{
+  identity_id:discoveryProfiles[1].identity_id,
+  follow_status:'active',
+  name:{ display_name:discoveryProfiles[1].name.display_name, username:discoveryProfiles[1].name.username },
+  category_key:discoveryProfiles[1].category_key
+}];
 
 const snapshot = {
   settings: {
@@ -213,7 +221,41 @@ function aiApiResponse(req, url, body) {
     discoveryQueries.push(Object.fromEntries(url.searchParams.entries()));
     return { identities: discoveryProfiles, total: discoveryProfiles.length, nextOffset: null, hasMore: false };
   }
-  if (method === 'GET' && pathname === '/following') return { following: [] };
+  if (method === 'GET' && /^\/public-profile\/[0-9a-f-]+$/i.test(pathname)) {
+    const identityId = pathname.split('/')[2];
+    publicProfileRequests.push(identityId);
+    const fixture = discoveryProfiles.find(item => item.identity_id === identityId);
+    if (!fixture) return { error:'AI profile not found.' };
+    return {
+      identity: { identity_id:identityId, population:'independent', category_key:fixture.category_key, subcategory:'Learning support', created_at:'2026-11-17T12:00:00Z', updated_at:'2026-11-17T12:30:00Z' },
+      name: {
+        first_name:fixture.name.first_name,
+        middle_name:identityId === discoveryProfiles[0].identity_id ? 'Grace' : '',
+        last_name:fixture.name.last_name,
+        full_name:[fixture.name.first_name,identityId === discoveryProfiles[0].identity_id ? 'Grace' : '',fixture.name.last_name].filter(Boolean).join(' '),
+        display_name:fixture.name.display_name,
+        username:fixture.name.username,
+        profile_identifier:fixture.name.username
+      },
+      profile: {
+        bio:'AI-labelled learning and study support.', introduction:'Hello, I am Nia, an AI educator.',
+        gender:'female', gender_presentation:'feminine', nationality:'Jamaican',
+        country_of_origin:'JM', current_country:'JM', state_province:'Saint Catherine',
+        parish_county:'Saint Catherine', district:'Bog Walk', city:'Bog Walk', town:'Bog Walk',
+        profession:'Educator', interests:['education','science'], hobbies:['reading'],
+        skills:['teaching','research'], qualifications:['AI Education Certificate'],
+        education:[{ degree:'M.Ed.', institution:'Minglora Learning Lab', field_of_study:'Education', start_year:2022, end_year:2024 }],
+        personality:{ summary:'Warm, curious and encouraging', traits:['patient','curious'], private_prompt:'must not be returned' },
+        voice_preferences:{ display_name:'Nia English', language:'en-JM', dialect:'Jamaican English', style:'warm', voice_type:'feminine', provider_voice_id:'private-voice-id' },
+        has_avatar:false, has_cover:false
+      },
+      languages:[{ language_tag:'en-JM', language_name:'English (Jamaica)', dialect:'Jamaican English', proficiency:'native', is_primary:true }],
+      public_locations:[{ location_type:'current', country_code:'JM', country_name:'Jamaica', parish_county:'Saint Catherine', city:'Bog Walk', time_zone:'America/Jamaica' }],
+      capabilities:['text','voice'],
+      follower_count:3, is_following:false, follow_requested:false, viewer_is_owner:false
+    };
+  }
+  if (method === 'GET' && pathname === '/following') return { following: structuredClone(following) };
   if (method === 'GET' && pathname === '/follow-requests') return { requests: [] };
   if (method === 'GET' && pathname === '/saved-groups') return { groups: savedGroups };
   if (method === 'GET' && pathname === '/provider-accounts') return { provider_accounts: [] };
@@ -472,6 +514,14 @@ try {
   await createForm.locator('[name="currentCountry"]').fill('JM');
   await createForm.locator('[name="timeZone"]').fill('America/Jamaica');
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
+  await createForm.locator('[name="languageDetails"]').fill('[{"language_tag":"en-JM","language_name":"English (Jamaica)","dialect":"Jamaican English","proficiency":"native","is_primary":true}]');
+  await createForm.locator('[name="qualifications"]').fill('AI Education Certificate');
+  await createForm.locator('[name="education"]').fill('[{"degree":"B.Ed.","institution":"Minglora Learning Lab","field_of_study":"Education"}]');
+  await createForm.locator('[name="personality"]').fill('{"communication_style":"warm","traits":["patient","curious"]}');
+  await createForm.locator('[name="voicePreferences"]').fill('{"language":"en-JM","style":"warm"}');
+  await createForm.locator('[name="profileVisibility"]').selectOption('public');
+  assert.equal(await createForm.locator('[name="sharePublicLocations"]').isChecked(), false, 'Public location sharing must be opt-in by default.');
+  await createForm.locator('[name="sharePublicLocations"]').check();
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
   assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
   assert.equal(await createForm.locator('[name="lastName"]').inputValue(), 'Campbell', 'Identity surname input must remain filled after category refresh.');
@@ -500,6 +550,14 @@ try {
   assert.equal(identityCreateRequests[0].profile.current_country, 'JM');
   assert.equal(identityCreateRequests[0].profile.time_zone, 'America/Jamaica');
   assert.equal(identityCreateRequests[0].languages.length, 2);
+  assert.equal(identityCreateRequests[0].languages[0].dialect, 'Jamaican English');
+  assert.equal(identityCreateRequests[0].profile.qualifications[0], 'AI Education Certificate');
+  assert.equal(identityCreateRequests[0].profile.education[0].degree, 'B.Ed.');
+  assert.equal(identityCreateRequests[0].profile.personality.communication_style, 'warm');
+  assert.equal(identityCreateRequests[0].profile.voice_preferences.language, 'en-JM');
+  assert.equal(identityCreateRequests[0].profile.profile_visibility, 'public');
+  assert.equal(identityCreateRequests[0].locations.find(item => item.location_type === 'origin').is_public, true);
+  assert.equal(identityCreateRequests[0].locations.find(item => item.location_type === 'current').is_public, true);
   assert.equal(identityCreateRequests[0].email.email_address, 'nia@example.test');
   assert.equal(identities.length, 2, 'The in-memory registry should refresh after creation.');
   await page.getByText('Email record: not_requested · unverified').waitFor({ state: 'visible' });
@@ -514,6 +572,8 @@ try {
   await profileEditor.locator('[name="gender"]').selectOption('non_binary');
   await profileEditor.locator('[name="countryOfOrigin"]').fill('JM');
   await profileEditor.locator('[name="currentCountry"]').fill('US');
+  assert.equal(await profileEditor.locator('[name="sharePublicLocations"]').isChecked(), false, 'Private location records must remain unchecked when editing.');
+  await profileEditor.locator('[name="sharePublicLocations"]').check();
   await profileEditor.locator('[name="timeZone"]').fill('America/Jamaica');
   await profileEditor.locator('[name="languages"]').fill('[{"language_tag":"en-JM","language_name":"English (Jamaica)","proficiency":"native","is_primary":true}]');
   await profileEditor.locator('[name="education"]').fill('[]');
@@ -531,6 +591,8 @@ try {
   assert.equal(patch.profile.country_of_origin, 'JM');
   assert.equal(patch.profile.current_country, 'US');
   assert.equal(patch.profile.time_zone, 'America/Jamaica');
+  assert.equal(patch.locations.find(item => item.location_type === 'origin').is_public, true);
+  assert.equal(patch.locations.find(item => item.location_type === 'current').is_public, true);
   assert.equal(patch.languages[0].language_tag, 'en-JM');
   assert.ok(!Object.hasOwn(patch, 'email'), 'Profile editing must not silently mutate email identities.');
   assert.ok(!Object.hasOwn(patch, 'provider_assignments'), 'Profile editing must not mutate provider assignments.');
@@ -601,6 +663,30 @@ try {
   assert.equal(lastQuery.languages, 'en-JM');
   assert.equal(lastQuery.profession, 'Educator');
 
+  await page.locator('[data-ai-action="view-ai-profile"]').first().click();
+  const publicProfile = page.locator('[aria-label="Individual AI identity profile"]');
+  await publicProfile.waitFor({ state:'visible' });
+  await publicProfile.getByText('Nia Grace Campbell').waitFor({ state:'visible' });
+  await publicProfile.getByText('M.Ed.').waitFor({ state:'visible' });
+  await publicProfile.getByText('Jamaican English').waitFor({ state:'visible' });
+  await publicProfile.getByText('AI Education Certificate').waitFor({ state:'visible' });
+  await publicProfile.getByText('Warm, curious and encouraging').waitFor({ state:'visible' });
+  assert.equal(publicProfileRequests.length, 1, 'Opening an individual profile must make one same-origin detail request.');
+  const publicProfileText = await publicProfile.innerText();
+  assert.ok(!publicProfileText.includes('private-voice-id'), 'Private voice provider references must not be rendered.');
+  assert.ok(!publicProfileText.includes('must not be returned'), 'Private personality prompt content must not be rendered.');
+  await publicProfile.locator('[data-ai-action="close-ai-profile"]').click();
+  await publicProfile.waitFor({ state:'detached' });
+
+  const followedProfileButton = page.locator('.ai-network-discovery-following [data-ai-action="view-ai-profile"]');
+  await followedProfileButton.waitFor({ state:'visible' });
+  await followedProfileButton.click();
+  await publicProfile.waitFor({ state:'visible' });
+  await publicProfile.getByText('Jay Reid').waitFor({ state:'visible' });
+  assert.equal(publicProfileRequests.length, 2, 'Approved followers must have a profile-detail entry point from their following list.');
+  await publicProfile.locator('[data-ai-action="close-ai-profile"]').click();
+  await publicProfile.waitFor({ state:'detached' });
+
   const bulkForm = page.locator('form[data-ai-form="bulk-follow"]');
   await bulkForm.locator('input[name="identity_ids"]').first().check();
   await bulkForm.locator('button[type="submit"]').click();
@@ -660,6 +746,8 @@ try {
     genderOptions: initialCounts.genders,
     identityCreates: identityCreateRequests.length,
     identityProfileUpdates: identityPatchRequests.length,
+    publicProfileReads: publicProfileRequests.length,
+    followedProfilesListed: following.length,
     combinedDiscoveryQueries: discoveryQueries.length,
     bulkFollowRequests: bulkFollowRequests.length,
     memorySettingsUpdates: memoryRequests.settings.length,

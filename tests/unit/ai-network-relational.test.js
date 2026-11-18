@@ -9,6 +9,7 @@ const read = path => readFileSync(resolve(root, path), 'utf8');
 
 const migration = read('supabase/migrations/20261114022043_minglora_ai_identity_runtime_api.sql');
 const memoryMigration = read('supabase/migrations/20261114120000_minglora_ai_identity_memory.sql');
+const privateVisibilityMigration = read('supabase/migrations/20261117123000_minglora_ai_identity_private_visibility_defaults.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -113,7 +114,7 @@ test('AI workspace uses real relational identity results and separate name input
   assert.match(ui, /current_country: currentCountry/);
   assert.match(ui, /Select a valid country of origin/);
   assert.match(ui, /Select a valid current country/);
-  assert.match(ui, /is_primary: index === 0/);
+  assert.match(ui, /if \(structuredLanguages\.length && primaryLanguageCount === 0\) structuredLanguages\[0\]\.is_primary = true/);
   assert.match(ui, /data-ai-form="identity-bulk"/);
   assert.match(ui, /JSON\.parse\(value\('items'\)\)/);
   assert.match(ui, /between 1 and 100 JSON objects/);
@@ -167,4 +168,47 @@ test('AI memory API and UI remain owner-authenticated and explain that model rec
   assert.match(ui, /loadAIMemory/);
   assert.match(ui, /long_term_enabled/);
   assert.match(ui, /does not yet connect to live model recall or automatic conversation capture/i);
+});
+
+
+test('individual AI registration captures full profile metadata and structured language details', () => {
+  for (const token of [
+    'name="qualifications"',
+    'name="education"',
+    'name="personality"',
+    'name="voicePreferences"',
+    'name="languageDetails"',
+    'name="profileVisibility"',
+    "qualifications: value('qualifications')",
+    'education,',
+    'personality,',
+    'voice_preferences: voicePreferences',
+    "profile_visibility: value('profileVisibility') || 'private'",
+    'payload.languages = structuredLanguages',
+    'Choose only one primary AI language'
+  ]) assert.ok(ui.includes(token), 'Missing registration profile field/behavior: ' + token);
+  assert.match(ui, /An AI profile may have at most 30 education records/);
+  assert.match(ui, /An AI profile may have at most 50 language records/);
+});
+
+test('AI identity gateway bounds payload size and rejects secret-shaped fields', () => {
+  const identityCommandStart = runtime.indexOf('if (action === "ai_identity_command")');
+  const statusCommandStart = runtime.indexOf('if (action === "ai_identity_status_command")', identityCommandStart);
+  assert.ok(identityCommandStart >= 0 && statusCommandStart > identityCommandStart);
+  const handler = runtime.slice(identityCommandStart, statusCommandStart);
+  assert.match(handler, /serializedPayload/);
+  assert.match(handler, /encode\(serializedPayload\)\.byteLength\s*>\s*200000/);
+  assert.match(handler, /access\[_-\]\?token\|password\|secret\|authorization\|cookie\|credential/);
+  assert.match(handler, /cannot contain credentials or secrets/);
+});
+
+
+test('new AI identities default to private at database and RPC layers', () => {
+  assert.match(privateVisibilityMigration, /alter table ai_network\.ai_profiles[\s\S]*alter column profile_visibility set default 'private'/i);
+  assert.match(privateVisibilityMigration, /pg_get_functiondef\([\s\S]*minglora_ai_identity_command/);
+  assert.match(privateVisibilityMigration, /v_old_default[\s\S]*else ''public'' end/);
+  assert.match(privateVisibilityMigration, /v_new_default[\s\S]*then v_profile->>''profile_visibility'' else ''private'' end/);
+  assert.match(privateVisibilityMigration, /if v_old_count = 1 then[\s\S]*execute replace\(v_function_definition, v_old_default, v_new_default\)/);
+  assert.match(privateVisibilityMigration, /elsif v_old_count = 0 and strpos\(v_function_definition, v_new_default\) > 0/);
+  assert.match(privateVisibilityMigration, /refusing to rewrite it/);
 });
