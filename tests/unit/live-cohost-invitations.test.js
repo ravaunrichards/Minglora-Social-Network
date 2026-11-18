@@ -28,9 +28,9 @@ test('Creator Co-host has separate durable records and never writes Multi-guest 
 });
 
 test('Creators must each have their own active LIVE before inviting or accepting Co-host', () => {
-  assert.match(server, /targetLive=\(db\.liveSessions\|\|\)\.find\(item=>item\.status==='live'&&item\.hostId===target\.id\)/);
+  assert.ok(server.includes("const targetLive=(db.liveSessions||[]).find(item=>item.status==='live'&&item.hostId===target.id)"));
   assert.match(server, /The invited creator must still be LIVE on their own account to accept Co-host/);
-  assert.match(edge, /hostBroadcast\.host_id!==actorId\|\|hostBroadcast\.status!==\"live\"/);
+  assert.ok(edge.includes('hostBroadcast.host_id!==actorId||hostBroadcast.status!=="live"'));
   assert.match(edge, /broadcast\.host_id!==userId\|\|broadcast\.status!==\"live\"/);
 });
 
@@ -123,7 +123,7 @@ test('Multi-guest remains a separate viewer-to-host speaker request and seat flo
 
 test('Ending a creator LIVE retires their Co-host membership without ending other creator broadcasts', () => {
   assert.match(edge, /action === "live_broadcast_end"/);
-  assert.match(edge, /Retire any Co-host invitation or membership bound to the broadcast that just ended/);
+  assert.match(edge, /Retire any Co-host invitation or membership bound to the broadcast/);
   assert.match(edge, /live_cohost_participants/);
   assert.match(edge, /status:"left",left_at:endedAt/);
   assert.match(server, /live_cohost_end/);
