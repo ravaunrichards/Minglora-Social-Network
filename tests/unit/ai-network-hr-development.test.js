@@ -88,16 +88,16 @@ test('disciplinary case records are private, organization-scoped and append-only
     assert.ok(disciplinaryMigration.includes('create table if not exists ai_network.' + table));
     assert.ok(disciplinaryMigration.includes('alter table ai_network.' + table + ' enable row level security'));
   }
-  assert.match(disciplinaryMigration,/revoke all on table[\\s\\S]*from public,anon,authenticated/);
-  assert.match(disciplinaryMigration,/grant select,insert,update on ai_network\\.ai_employee_disciplinary_cases to service_role/);
-  assert.match(disciplinaryMigration,/grant select,insert on ai_network\\.ai_employee_disciplinary_case_history to service_role/);
-  assert.match(disciplinaryMigration,/revoke all on table[\\s\\S]*from public,anon,authenticated,service_role/);
-  assert.match(disciplinaryMigration,/organization_id uuid not null references ai_network\\.ai_organizations\\(organization_id\\) on delete restrict/);
+  assert.match(disciplinaryMigration,/revoke all on table[\s\S]*from public,anon,authenticated/);
+  assert.match(disciplinaryMigration,/grant select,insert,update on ai_network\.ai_employee_disciplinary_cases to service_role/);
+  assert.match(disciplinaryMigration,/grant select,insert on ai_network\.ai_employee_disciplinary_case_history to service_role/);
+  assert.match(disciplinaryMigration,/revoke all on table[\s\S]*from public,anon,authenticated,service_role/);
+  assert.match(disciplinaryMigration,/organization_id uuid not null references ai_network\.ai_organizations\(organization_id\) on delete restrict/);
   assert.match(disciplinaryMigration,/security invoker/i);
   assert.match(disciplinaryMigration,/current_user<>'service_role'/);
   assert.match(disciplinaryMigration,/set search_path=''/);
-  assert.match(disciplinaryMigration,/x\\.owner_user_id=p_actor_user_id/);
-  assert.match(disciplinaryMigration,/unique\\(organization_id,idempotency_key\\)/);
+  assert.match(disciplinaryMigration,/x\.owner_user_id=p_actor_user_id/);
+  assert.match(disciplinaryMigration,/unique\(organization_id,idempotency_key\)/);
 });
 
 test('disciplinary case lifecycle validates employee scope, idempotency and status transitions', () => {
