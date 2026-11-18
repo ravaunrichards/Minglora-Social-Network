@@ -88,13 +88,13 @@ test('LIVE multi-guest stage reserves its heading row instead of covering the ho
 
 test('LIVE Fluid Panel guest seats are inset and size-clamped inside the video-stage border', () => {
   const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  const safeZone=compact.slice(compact.lastIndexOf('/* FINAL Fluid Panel safe-zone'));
   assert.match(correction, /data-live-layout="fluid-panel"\][\s\S]*?right:clamp\(8px,1vw,12px\)!important/);
   assert.match(correction, /width:clamp\(48px,15vw,120px\)!important;height:clamp\(44px,15vw,120px\)!important/);
   assert.match(correction, /max-width:none!important;max-height:none!important/);
   assert.match(correction, /nth-child\(3\)\{\s*bottom:clamp\(4px,1vw,8px\)!important/);
   assert.match(correction, /nth-child\(4\)\{\s*bottom:calc\(clamp\(4px,1vw,8px\)/);
-  assert.match(correction, /@media\(min-width:901px\)\{[\s\S]*?\}\s*$/);
-  assert.match(correction, /\{right:2px!important\}/);
-  assert.match(correction, /nth-child\(3\)\{bottom:2px!important\}/);
-  assert.match(correction, /nth-child\(4\)\{bottom:calc\(2px \+ clamp\(44px,15vw,120px\)/);
+  assert.match(safeZone, /right:clamp\(18px,2\.4vw,32px\)!important/);
+  assert.match(safeZone, /nth-child\(3\)[\s\S]*?bottom:clamp\(88px,8vw,104px\)!important/);
+  assert.match(safeZone, /nth-child\(4\)[\s\S]*?bottom:calc\(clamp\(88px,8vw,104px\) \+ clamp\(44px,15vw,120px\) \+ 8px\)!important/);
 });
