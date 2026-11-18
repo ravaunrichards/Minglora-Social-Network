@@ -210,17 +210,12 @@ function verify(result,definition,viewport,state){
   }
   if(definition.id==='side-by-side'){
     const top=[get(0),get(1)],small=visible.filter(seat=>seat.index>=2);
-    if(result.product==='AUDIO LIVE'){
-      assert.equal(result.columns,2,label+' uses two columns for the Audio LIVE Side by Side preset');
-      assert.ok(result.rows>=5,label+' provides five seat rows beneath its heading track');
-      assert.equal(small.length,8,label+' includes all eight remaining guest positions beneath the first pair');
-    }else{
-      assert.ok(top.every(Boolean)&&Math.abs(top[0].y-top[1].y)<3,label+' places two large panels on the top row');
-      assert.ok(top.every(item=>item.h>small[0].h*1.3),label+' keeps top panels larger than compact panels');
-      assert.ok(small.every(item=>item.y>top[0].y+top[0].h*.7),label+' places compact panels underneath');
-      assert.equal(result.columns,4,label+' uses four columns');
-      assert.equal(result.rows,3,label+' uses three rows');
-    }
+    assert.ok(top.every(Boolean)&&Math.abs(top[0].y-top[1].y)<3,label+' places two large panels on the top row');
+    assert.ok(top.every(item=>item.h>small[0].h*1.3),label+' keeps top panels larger than compact panels');
+    assert.ok(small.every(item=>item.y>top[0].y+top[0].h*.7),label+' places compact panels underneath');
+    assert.equal(small.length,8,label+' includes all eight compact guest positions beneath the first pair');
+    assert.equal(result.columns,4,label+' uses four columns');
+    assert.equal(result.rows,3,label+' uses three rows');
   }
   if(definition.id==='spotlight'){
     const main=visible.find(seat=>seat.w>result.stage.width*.9);
