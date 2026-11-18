@@ -2825,23 +2825,6 @@
     }
   };
 
-  const onMemoryIdentityChange = async event => {
-    const select = event.target instanceof Element
-      ? event.target.closest('select[data-ai-memory-identity]')
-      : null;
-    if (!select || state.busy) return;
-    state.busy = true;
-    try {
-      await loadAIMemory(select.value);
-      paintSnapshot();
-    } catch (error) {
-      state.memoryError = error.message || 'AI memory could not be loaded.';
-      paintSnapshot();
-    } finally {
-      state.busy = false;
-    }
-  };
-
   if (!window.__mingloraAINetworkBound) {
     window.__mingloraAINetworkBound = true;
     document.addEventListener('submit', onSubmit);
