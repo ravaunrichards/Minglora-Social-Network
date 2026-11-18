@@ -7,6 +7,10 @@
 - Next gates: run all new-branch CI; run the SQL contract inside BEGIN/ROLLBACK on the existing project and independently verify rollback; obtain signed-in owner API/browser acceptance; complete desktop/mobile acceptance; review production migration/function deploy, then verify the existing Render service. Do not release with any failed or missing check.
 - Corporate Governance and HR task remains **PARTIAL** until all those gates and the full HR lifecycle acceptance pass.
 
+- Draft PR #515 now contains this current-main integration: https://github.com/ravaunrichards/Minglora-Social-Network/pull/515. It remains draft/open.
+- **Current existing-Supabase rollback-only contract result:** PASS. The updated migration was run in BEGIN/ROLLBACK; both tables had RLS; anon/authenticated could not SELECT or execute the RPC; service_role case SELECT/INSERT/UPDATE and history SELECT/INSERT passed; history UPDATE/DELETE were false; RPC was SECURITY INVOKER with locked empty search_path. An independent post-rollback query found no disciplinary tables, RPC or migration-ledger row.
+- This DDL/security contract does not replace a full retained-record owner workflow or device acceptance. New PR #515 CI/browser checks must finish on this exact current-main head before this implementation can progress.
+
 ---
 
 ## Verified execution checkpoint — 2026-11-15 (provider registry, OpenAI Creator Studio generation)
