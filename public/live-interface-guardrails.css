@@ -660,7 +660,43 @@ body:has(#live-player-shell) .live-video-column>.live-stage-topbar .live-host-me
 }
 
 
-/* Audio LIVE seat visibility: preserve reference geometry without covering panels. */
+/* Audio LIVE keeps its host identity in a dedicated row above the reference grid.
+   Neither the HUD nor decorative metadata may cover any participant seat. */
+body:has(#live-player-shell) #live-player-shell.live-player-audio-only .live-video-column{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:48px minmax(0,1fr) 54px!important;
+  align-items:stretch!important;gap:5px!important;
+  min-width:0!important;min-height:0!important;height:100%!important;
+  padding:8px!important;overflow:hidden!important;
+}
+body:has(#live-player-shell) #live-player-shell.live-player-audio-only .live-video-column>.live-stage-topbar{
+  position:relative!important;inset:auto!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
+  grid-column:1!important;grid-row:1!important;
+  display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;
+  flex:none!important;width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important;max-height:48px!important;
+  margin:0!important;padding:2px 4px!important;overflow:visible!important;z-index:5!important;
+  transform:none!important;pointer-events:auto!important;
+}
+body:has(#live-player-shell) #live-player-shell.live-player-audio-only .live-video-column>.live-stage-topbar .live-stage-top-left{
+  position:relative!important;inset:auto!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
+  display:flex!important;flex:1 1 auto!important;align-items:center!important;gap:7px!important;
+  width:auto!important;min-width:0!important;max-width:calc(100% - 52px)!important;overflow:visible!important;
+}
+body:has(#live-player-shell) #live-player-shell.live-player-audio-only .live-video-column #live-video-stage.live-audio-stage{
+  position:relative!important;inset:auto!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
+  grid-column:1!important;grid-row:2!important;
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+  max-width:100%!important;max-height:none!important;margin:0!important;
+}
+body:has(#live-player-shell) #live-player-shell.live-player-audio-only .live-video-column #live-audio-root{
+  display:none!important;width:0!important;height:0!important;min-height:0!important;
+}
+body:has(#live-player-shell) #live-player-shell.live-player-audio-only .live-video-column>.live-player-controls.live-icon-controls{
+  grid-column:1!important;grid-row:3!important;
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  height:54px!important;min-height:54px!important;max-height:54px!important;
+}
 body:has(#live-player-shell) .live-video-column #live-video-stage.live-audio-stage .live-audio-scene{
   display:none!important;
 }
