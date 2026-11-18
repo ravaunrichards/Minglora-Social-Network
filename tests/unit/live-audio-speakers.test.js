@@ -162,6 +162,18 @@ test('Audio LIVE uses all nine reference grids without covering seat panels', ()
   assert.match(app, /function renderLiveSpeakerRoster\(/);
 });
 
+test('Audio LIVE Full Screen keeps its single full-stage host tile above the mobile header row', () => {
+  const start=guestLayouts.indexOf('/* 1. FULL SCREEN — exactly one full-height participant panel. */');
+  const end=guestLayouts.indexOf('/* 2. FLUID PANEL',start);
+  const rule=guestLayouts.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(rule,/#live-guest-layout\\.audio-guest-layout\\[data-live-layout="full-screen"\\]\\{grid-template-columns:minmax\\(0,1fr\\)!important;grid-template-rows:minmax\\(0,1fr\\)!important\\}/);
+  assert.match(rule,/#live-guest-layout\\.audio-guest-layout\\[data-live-layout="full-screen"\\]>\\.live-guest-seat\\.is-host\\{grid-column:1!important;grid-row:1!important\\}/);
+  assert.match(rule,/live-guest-seat\\.empty[^}]*display:none!important/);
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2'));
+  assert.ok(serviceWorker.includes("'/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2'"));
+});
+
 test('Side by Side alone exposes and enforces a ninth LIVE guest seat', () => {
   const start=app.indexOf('function renderLiveGuestLayout(');
   const end=app.indexOf('\nfunction renderLiveViewerPanel(',start);
