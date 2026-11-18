@@ -2396,6 +2396,7 @@
       }
     }
     form.reset();
+    if (kind === 'identity-bulk') delete form.dataset.batchIdempotencyKey;
     if (kind === 'bot-chat') delete form.dataset.requestId;
     if (kind === 'category') {
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
