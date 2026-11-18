@@ -42,6 +42,7 @@ let identities = [structuredClone(initialIdentity)];
 let savedGroups = [];
 let identityCreateRequests = [];
 let identityPatchRequests = [];
+let identitySearchRequests = [];
 let discoveryQueries = [];
 let bulkFollowRequests = [];
 let memorySettings = {
@@ -185,7 +186,23 @@ function aiApiResponse(req, url, body) {
     }
   }
 
-  if (method === 'GET' && pathname === '/identities') return identityRegistry();
+  if (method === 'GET' && pathname === '/identities') {
+    const search = String(url.searchParams.get('search') || '').trim().toLowerCase();
+    const requestedLimit = Number.parseInt(url.searchParams.get('limit') || '100', 10);
+    const requestedOffset = Number.parseInt(url.searchParams.get('offset') || '0', 10);
+    const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 100, 1), 100);
+    const offset = Math.max(Number.isFinite(requestedOffset) ? requestedOffset : 0, 0);
+    identitySearchRequests.push({ search, limit, offset });
+    const filtered = identities.filter(record => {
+      const name = record.name || {};
+      const haystack = [name.username, name.display_name, name.full_name, name.first_name, name.last_name]
+        .filter(Boolean).join(' ').toLowerCase();
+      return !search || haystack.includes(search);
+    });
+    return { identities:filtered.slice(offset, offset + limit).map(item => structuredClone(item)),
+      total:filtered.length, limit, offset, nextOffset:offset + limit < filtered.length ? offset + limit : null,
+      hasMore:offset + limit < filtered.length };
+  }
   if (method === 'GET' && pathname === '/categories') return { categories: categories.filter(item => item.is_active) };
   if (method === 'GET' && pathname === '/categories/admin') return {
     categories: categories.map(item => structuredClone(item)).sort((a, b) => a.sort_order - b.sort_order)
@@ -473,6 +490,11 @@ try {
   await createForm.locator('[name="timeZone"]').fill('America/Jamaica');
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
+  await createForm.locator('[name="qualifications"]').fill('Certificate in Digital Media, First Aid');
+  await createForm.locator('[name="education"]').fill('[{"institution":"Minglora Learning Institute","qualification":"Digital Media Certificate","year":2024}]');
+  await createForm.locator('[name="personality"]').fill('{"traits":["curious","warm"],"communication_style":"supportive"}');
+  await createForm.locator('[name="voicePreferences"]').fill('{"voice_style":"natural","pace":"measured"}');
+  await createForm.locator('[name="profileVisibility"]').selectOption('private');
   assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
   assert.equal(await createForm.locator('[name="lastName"]').inputValue(), 'Campbell', 'Identity surname input must remain filled after category refresh.');
   assert.equal(await createForm.locator('[name="username"]').inputValue(), 'nia_campbell', 'Identity username must remain filled after category refresh.');
@@ -501,8 +523,26 @@ try {
   assert.equal(identityCreateRequests[0].profile.time_zone, 'America/Jamaica');
   assert.equal(identityCreateRequests[0].languages.length, 2);
   assert.equal(identityCreateRequests[0].email.email_address, 'nia@example.test');
+  assert.deepEqual(identityCreateRequests[0].profile.qualifications, ['Certificate in Digital Media','First Aid']);
+  assert.deepEqual(identityCreateRequests[0].profile.education, [{institution:'Minglora Learning Institute',qualification:'Digital Media Certificate',year:2024}]);
+  assert.deepEqual(identityCreateRequests[0].profile.personality, {traits:['curious','warm'],communication_style:'supportive'});
+  assert.deepEqual(identityCreateRequests[0].profile.voice_preferences, {voice_style:'natural',pace:'measured'});
+  assert.equal(identityCreateRequests[0].profile.profile_visibility, 'private');
   assert.equal(identities.length, 2, 'The in-memory registry should refresh after creation.');
   await page.getByText('Email record: not_requested · unverified').waitFor({ state: 'visible' });
+
+  const identitySearchForm = page.locator('form[data-ai-form="identity-search"]');
+  await identitySearchForm.locator('[name="search"]').fill('Ari');
+  await identitySearchForm.locator('button[type="submit"]').click();
+  await page.getByText('AI identity registry search applied.').waitFor({ state:'visible' });
+  const latestIdentitySearch = identitySearchRequests[identitySearchRequests.length - 1];
+  assert.equal(latestIdentitySearch.search, 'ari', 'The owner registry must forward the search term to the database query.');
+  assert.equal(latestIdentitySearch.limit, 100, 'The owner registry must request a bounded page size.');
+  assert.equal(latestIdentitySearch.offset, 0, 'A new registry search must reset to the first page.');
+  await page.getByText('Showing 1–1 of 1 AI identities').first().waitFor({ state:'visible' });
+  await page.locator('[data-ai-action="identity-search-clear"]').click();
+  await page.getByText('AI identity registry search cleared.').waitFor({ state:'visible' });
+  assert.equal(identitySearchRequests[identitySearchRequests.length - 1].search, '', 'Clearing search must restore the complete owner-scoped page.');
 
   const profileEditor = page.locator('form[data-ai-form="identity-edit"]').first();
   await page.locator('.ai-network-profile-editor summary').first().click();
@@ -660,6 +700,7 @@ try {
     genderOptions: initialCounts.genders,
     identityCreates: identityCreateRequests.length,
     identityProfileUpdates: identityPatchRequests.length,
+    identityRegistrySearchRequests: identitySearchRequests.length,
     combinedDiscoveryQueries: discoveryQueries.length,
     bulkFollowRequests: bulkFollowRequests.length,
     memorySettingsUpdates: memoryRequests.settings.length,

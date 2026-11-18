@@ -95,7 +95,9 @@ test('Minglora routes identity APIs through the authenticated Supabase runtime g
 });
 
 test('AI workspace uses real relational identity results and separate name inputs', () => {
-  assert.match(ui, /request\('\/identities\?limit=100'\)/);
+  assert.match(ui, /request\('\/identities\?' \+ identityQuery\.toString\(\)\)/);
+  assert.match(ui, /limit: '100'/);
+  assert.match(ui, /offset: String\(/);
   assert.match(ui, /request\('\/categories'\)/);
   assert.match(ui, /name="firstName"/);
   assert.match(ui, /name="lastName"/);
@@ -167,4 +169,44 @@ test('AI memory API and UI remain owner-authenticated and explain that model rec
   assert.match(ui, /loadAIMemory/);
   assert.match(ui, /long_term_enabled/);
   assert.match(ui, /does not yet connect to live model recall or automatic conversation capture/i);
+});
+
+test('AI identity owner registry supports paginated and searchable retrieval', () => {
+  assert.match(server, /identityUrl\.searchParams\.get\('limit'\)/);
+  assert.match(server, /identityUrl\.searchParams\.get\('offset'\)/);
+  assert.match(server, /identityUrl\.searchParams\.get\('search'\)/);
+  assert.match(ui, /data-ai-form="identity-search"/);
+  assert.match(ui, /data-ai-action="identity-page"/);
+  assert.match(ui, /data-ai-action="identity-search-clear"/);
+  assert.match(ui, /new URLSearchParams\(/);
+  assert.match(ui, /identityRegistryOffset/);
+  assert.match(ui, /identityRegistrySearch/);
+  assert.match(ui, /No AI identity records match this search/);
+});
+
+test('AI identity creation collects and validates complete individual profile fields', () => {
+  assert.match(ui, /name="profileVisibility"/);
+  assert.match(ui, /name="qualifications"/);
+  assert.match(ui, /name="education"/);
+  assert.match(ui, /name="personality"/);
+  assert.match(ui, /name="voicePreferences"/);
+  assert.match(ui, /profile_visibility: value\('profileVisibility'\) \|\| 'private'/);
+  assert.match(ui, /qualifications: value\('qualifications'\)\.split\(','\)/);
+  assert.match(ui, /education,/);
+  assert.match(ui, /personality,/);
+  assert.match(ui, /voice_preferences: voicePreferences/);
+  assert.match(ui, /parseProfileJson\('education', '\[\]', 'array'\)/);
+  assert.match(ui, /parseProfileJson\('personality', '\{\}', 'object'\)/);
+  assert.match(ui, /parseProfileJson\('voicePreferences', '\{\}', 'object'\)/);
+});
+
+test('new AI identity profiles default to private at database and RPC layers', () => {
+  const migration = read('supabase/migrations/20261118120000_minglora_ai_identity_private_visibility_defaults.sql');
+  assert.match(migration, /alter table ai_network\.ai_profiles[\s\S]*alter column profile_visibility set default 'private'/i);
+  assert.match(migration, /pg_get_functiondef\([\s\S]*minglora_ai_identity_command/);
+  assert.match(migration, /v_old_default[\s\S]*else ''public'' end/);
+  assert.match(migration, /v_new_default[\s\S]*then v_profile->>''profile_visibility'' else ''private'' end/);
+  assert.match(migration, /if v_old_count = 1 then[\s\S]*execute replace\(v_function_definition, v_old_default, v_new_default\)/);
+  assert.match(migration, /elsif v_old_count = 0 and strpos\(v_function_definition, v_new_default\) > 0/);
+  assert.match(migration, /refusing to rewrite it/);
 });
