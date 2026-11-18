@@ -66,10 +66,15 @@ test('Compact tools remain usable as a bottom sheet on touch devices and respect
   assert.match(compact, /@media\(prefers-reduced-motion:reduce\)/);
 });
 
-test('Audio-only LIVE keeps its original speaker grid instead of becoming a flattened video block', () => {
-  assert.match(compact, /#live-video-stage\.live-audio-stage\{[\s\S]*?display:grid!important/);
-  assert.match(compact, /grid-template-rows:minmax\(36px,auto\) minmax\(0,1fr\) minmax\(32px,auto\)/);
-  assert.match(compact, /#live-video-stage\.live-audio-stage #live-speaker-list/);
+test('Audio-only LIVE gives the reference guest grid the full stage and overlays room metadata', () => {
+  const audio=compact.slice(compact.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY'));
+  assert.match(audio, /#live-video-stage\.live-audio-stage\{[\s\S]*?display:grid!important/);
+  assert.match(audio, /grid-template-rows:minmax\(0,1fr\)!important/);
+  assert.match(audio, /\.live-audio-scene\{[\s\S]*?position:absolute!important/);
+  assert.match(audio, /#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
+  for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']){
+    assert.ok(audio.includes('#live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="'+layout+'"]'),layout+' audio reference geometry missing');
+  }
 });
 
 test('Mobile audio-only LIVE reserves space above the bottom control dock', () => {
