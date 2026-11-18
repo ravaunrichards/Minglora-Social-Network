@@ -1,5 +1,4 @@
 const BRAND_BUCKET = "minglora-brand-assets";
-const BRAND_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
 const BRAND_MIME_EXTENSIONS: Record<string,string> = {
   "image/svg+xml":"svg",
   "image/apng":"png",
@@ -84,8 +83,8 @@ export async function handleBrandRuntimeAction(action:string,input:Record<string
   }
 
   const actorUserId=String(input.actorUserId||"");
-  if(actorUserId!==BRAND_OWNER_ID||input.mfaVerified!==true) {
-    return brandJson(403,{error:"Only the MFA-verified designated Minglora owner can manage official branding."});
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actorUserId)||input.mfaVerified!==true) {
+    return brandJson(403,{error:"A signed-in, MFA-verified Minglora administrator session is required."});
   }
   if(!admin)return brandJson(503,{error:"Minglora brand storage is not configured."});
 
