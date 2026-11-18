@@ -2,7 +2,7 @@
 -- Records investigations and history; it never automates employment sanctions.
 create table if not exists ai_network.ai_employee_disciplinary_cases (
  case_id uuid primary key default gen_random_uuid(),
- organization_id uuid not null references ai_network.ai_organizations(organization_id) on delete cascade,
+ organization_id uuid not null references ai_network.ai_organizations(organization_id) on delete restrict,
  employment_id uuid not null,
  case_category text not null check(case_category in('conduct','policy','performance','attendance','safety','security','other')),
  severity text not null default 'medium' check(severity in('low','medium','high','critical')),
@@ -33,7 +33,7 @@ create index if not exists ai_employee_disciplinary_case_history_case_idx on ai_
 create index if not exists ai_employee_disciplinary_case_history_actor_idx on ai_network.ai_employee_disciplinary_case_history(actor_user_id);
 alter table ai_network.ai_employee_disciplinary_cases enable row level security;
 alter table ai_network.ai_employee_disciplinary_case_history enable row level security;
-revoke all on table ai_network.ai_employee_disciplinary_cases,ai_network.ai_employee_disciplinary_case_history from public,anon,authenticated;
+revoke all on table ai_network.ai_employee_disciplinary_cases,ai_network.ai_employee_disciplinary_case_history from public,anon,authenticated,service_role;
 grant select,insert,update on ai_network.ai_employee_disciplinary_cases to service_role;
 grant select,insert on ai_network.ai_employee_disciplinary_case_history to service_role;
 
