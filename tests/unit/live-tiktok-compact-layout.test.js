@@ -73,7 +73,7 @@ test('Audio-only LIVE gives the reference guest grid the full stage and overlays
   assert.match(audio, /\.live-audio-scene\{[\s\S]*?position:absolute!important/);
   assert.match(audio, /#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
   for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']){
-    assert.ok(audio.includes('#live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="'+layout+'"]'),layout+' audio reference geometry missing');
+    assert.ok(audio.includes('#live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="'+layout+'"]'),layout+' audio reference geometry missing');
   }
 });
 
