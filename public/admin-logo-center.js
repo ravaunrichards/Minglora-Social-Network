@@ -91,7 +91,7 @@
     };
     const cats=()=> (state.data?.categories||[]).map(x=>({value:x.id,label:x.name}));
     const cols=()=> (state.data?.collections||[]).map(x=>({value:x.id,label:x.name}));
-    const approved=()=> (state.data?.assets||[]).filter(x=>["approved","active"].includes(x.status)).map(x=>({value:x.id,label:x.title}));
+    const approved=()=> (state.data?.assets||[]).filter(x=>["approved","active"].includes(x.status)&&x.approved_version_id&&x.approved_version_id===x.current_version_id).map(x=>({value:x.id,label:x.title}));
     const title=(heading,sub)=>{
       const h=make("div","brand-section-heading");h.append(make("h3","",heading),make("p","",sub));return h;
     };
@@ -178,7 +178,7 @@
         const actions=make("div","brand-asset-actions");
         actions.append(button(a.is_favorite?"★ Saved":"☆ Favorite",()=>run("favorite_toggle",{assetId:a.id},"Favorite updated."),"quiet"));
         actions.append(button("New version",()=>{state.uploadAssetId=a.id;setTab("upload");say("Choose a new source file. The existing logo version will remain preserved.");},"quiet"));
-        if(a.status==="draft")actions.append(button("Approve",()=>run("asset_approve",{assetId:a.id},"Logo version approved."),"primary"));
+        if(a.current_version_id&&a.approved_version_id!==a.current_version_id)actions.append(button("Approve current version",()=>run("asset_approve",{assetId:a.id},"Current logo version approved."),"primary"));
         if(a.status==="archived")actions.append(button("Restore",()=>run("asset_status",{assetId:a.id,status:"draft"},"Logo restored as a draft."),"quiet"));
         else if(a.status!=="deleted")actions.append(button("Archive",()=>run("asset_status",{assetId:a.id,status:"archived"},"Logo archived and retained."),"quiet"));
         if(a.previewUrl){
@@ -191,7 +191,7 @@
       const versions=make("div","brand-panel");versions.append(title("Version history","Recent immutable uploads. Older original versions are never overwritten."));
       (state.data?.versions||[]).slice(0,30).forEach(v=>{
         const row=make("div","brand-list-row");
-        row.append(make("strong","", "Version "+v.version_number+" · "+v.original_name),make("span","",when(v.created_at)));
+        row.append(make("strong","", "Version "+v.version_number+" · "+v.original_name),make("span","",when(v.created_at)),make("span","brand-state",v.is_approved?"Approved":"Unapproved"));
         if(v.previewUrl){const link=make("a","brand-inline-link","Preview");link.href=v.previewUrl;link.target="_blank";link.rel="noopener noreferrer";row.append(link);}
         versions.append(row);
       });
