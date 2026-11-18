@@ -17,6 +17,12 @@ const layouts=[
   {id:'roundtable-1',label:'Roundtable 1',file:'Roundtable 1.png',visible:9},
   {id:'roundtable-2',label:'Roundtable 2',file:'Roundtable 2.png',visible:9}
 ];
+const availableProducts=['LIVE','AUDIO LIVE','MeetWave'];
+const selectedProducts=process.env.MINGLORA_VISUAL_PRODUCTS
+  ?process.env.MINGLORA_VISUAL_PRODUCTS.split(',').map(value=>value.trim()).filter(Boolean)
+  :availableProducts;
+if(!selectedProducts.length||selectedProducts.some(product=>!availableProducts.includes(product)))
+  throw new Error('MINGLORA_VISUAL_PRODUCTS must contain one or more supported products.');
 const viewports=[
   {name:'mobile',width:390,height:844},
   {name:'tablet',width:820,height:1180},
@@ -31,7 +37,7 @@ const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;c
 const report={
   result:'pending',
   originalCropDirectory:'assets/Crop References/Guests Layout/',
-  products:['LIVE','AUDIO LIVE','MeetWave'],
+  products:selectedProducts,
   layouts:layouts.map(item=>item.id),
   viewports:[],
   screenshots:[],
@@ -85,11 +91,17 @@ async function applyLayout(page,product,layout){
       grid.dataset.liveLayout=args.layout;
       delete grid.dataset.liveGuestLayout;
       if(args.layout==='side-by-side'&&!grid.querySelector('[data-seat-index="9"]')){
-        const ninth=document.createElement('div');
-        ninth.className='live-guest-seat is-guest';
+        const audioOnly=args.product==='AUDIO LIVE';
+        const ninth=document.createElement(audioOnly?'div':'button');
+        ninth.className=audioOnly?'live-guest-seat is-guest':'live-guest-seat empty';
         ninth.dataset.seatIndex='9';
-        ninth.dataset.identity='qa-guest-9';
-        ninth.innerHTML='<div class="mw-video-placeholder">Guest 9</div><span class="live-guest-seat-tag">GUEST 9</span><span class="live-guest-seat-meta"><strong>Guest participant 9</strong><small>Visual QA</small></span>';
+        if(audioOnly){
+          ninth.dataset.identity='qa-guest-9';
+          ninth.innerHTML='<div class="mw-video-placeholder">Guest 9</div><span class="live-guest-seat-tag">GUEST 9</span><span class="live-guest-seat-meta"><strong>Guest participant 9</strong><small>Visual QA</small></span>';
+        }else{
+          ninth.setAttribute('aria-label','Additional video layout position');
+          ninth.innerHTML='<span class="live-guest-seat-plus" aria-hidden="true">+</span><strong>Layout position</strong><small>Visual spacing only</small>';
+        }
         grid.append(ninth);
       }else if(args.layout!=='side-by-side'){
         grid.querySelector('[data-seat-index="9"]')?.remove();
@@ -165,12 +177,13 @@ function verify(result,definition,viewport,state){
     const host=result.seats.find(seat=>seat.index===0&&seat.visible);
     if(host)assert.ok(host.y>=result.headingRowHeight-1,label+' keeps the host panel below the heading row');
   }
-  const hasNinthGuest=result.layout==='side-by-side'&&result.product!=='MeetWave';
-  assert.equal(result.seats.length,hasNinthGuest?10:9,label+' retains the expected seat records');
+  const hasSideBySideExtraPosition=result.layout==='side-by-side'&&result.product!=='MeetWave';
+  const hasNinthGuest=result.layout==='side-by-side'&&result.product==='AUDIO LIVE';
+  assert.equal(result.seats.length,hasSideBySideExtraPosition?10:9,label+' retains the expected seat records');
   const visible=result.seats.filter(seat=>seat.visible);
-  const expectedVisible=hasNinthGuest?10:definition.visible;
+  const expectedVisible=hasSideBySideExtraPosition?10:definition.visible;
   assert.equal(visible.length,expectedVisible,label+' stage panel count matches its source-crop arrangement');
-  if(hasNinthGuest)assert.ok(visible.some(seat=>seat.index===9),label+' displays Guest seat 9');
+  if(hasNinthGuest)assert.ok(visible.some(seat=>seat.index===9),label+' displays Audio Only LIVE Guest seat 9');
   visible.forEach(seat=>assertInside(result,seat,label));
   const get=index=>visible.find(seat=>seat.index===index);
   if(definition.id==='full-screen'){
@@ -263,7 +276,7 @@ async function compareCrop(browser,product,definition,viewport,png){
 const browser=await chromium.launch({headless:true});
 try{
   for(const viewport of viewports){
-    for(const product of ['LIVE','AUDIO LIVE','MeetWave']){
+    for(const product of selectedProducts){
       const page=await buildPage(browser,product,viewport,'occupied');
       const signatures=new Set();
       const productResults=[];

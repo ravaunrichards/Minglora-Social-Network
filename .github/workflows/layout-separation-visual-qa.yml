@@ -1,4 +1,4 @@
-name: Minglora nine-layout crop-reference visual QA
+name: Minglora Audio Only LIVE nine-layout visual QA
 on:
   pull_request:
     branches: [main]
@@ -9,7 +9,7 @@ permissions:
   contents: read
 jobs:
   layout-matrix:
-    name: LIVE and MeetWave original-crop visual matrix
+    name: Audio Only LIVE original-crop visual matrix
     runs-on: ubuntu-24.04
     steps:
       - name: Check out Minglora Social Network
@@ -24,13 +24,13 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check visual test syntax
         run: node --check tests/e2e/layout-separation-visual.mjs
-      - name: Compare all nine crop layouts on mobile, tablet and desktop
-        run: node tests/e2e/layout-separation-visual.mjs
-      - name: Upload original-crop comparison screenshots and geometry report
+      - name: Compare all nine Audio Only LIVE layouts on mobile, tablet and desktop
+        run: MINGLORA_VISUAL_PRODUCTS='AUDIO LIVE' node tests/e2e/layout-separation-visual.mjs
+      - name: Upload Audio Only LIVE layout screenshots and geometry report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: minglora-nine-layout-crop-visual-evidence
+          name: minglora-audio-only-live-layout-visual-evidence
           path: artifacts/layout-separation-visual/
           if-no-files-found: warn
           retention-days: 7

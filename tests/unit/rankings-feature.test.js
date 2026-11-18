@@ -77,5 +77,5 @@ test("Ranking badge art remains visible around a compact centered member photo o
  assert.ok(leagueCss.includes("object-fit:contain;object-position:center"));
  assert.ok(leagueCss.includes("width:36%;height:36%;box-sizing:border-box"));
  assert.ok(html.includes("styles.css?v=20261117-avatar-rankings-sync-1"));
- assert.ok(html.includes("app.js?v=20261118-side-by-side-guest-seat-nine-1"));
+ assert.ok(html.includes("app.js?v=20261118-audio-only-side-by-side-nine-seat-1"));
 });

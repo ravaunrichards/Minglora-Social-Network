@@ -5395,7 +5395,7 @@ async function route(req, res) {
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
         const previous = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id);
         if (previous && ['requested', 'accepted'].includes(previous.status)) return json(res, 200, { request: previous });
-        const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
+        const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const autoAccepted = session.liveSettings?.autoAcceptRequests === true;
         if (autoAccepted) {
           const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)).length;
@@ -5427,7 +5427,7 @@ async function route(req, res) {
         if (existing && ['requested', 'accepted', 'connected', 'invited'].includes(existing.status)) {
           return json(res, 409, { error: 'This member already has an active guest request or invitation.' });
         }
-        const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
+        const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
           item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
         ).length;
@@ -5462,7 +5462,7 @@ async function route(req, res) {
         if (!participants.some(participant => participant.identity === user.id)) {
           return json(res, 409, { error: 'Join this LIVE room first, then accept the Co-host invitation.' });
         }
-        const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
+        const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
           item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
         ).length;
@@ -5511,13 +5511,13 @@ async function route(req, res) {
         }
         if (decision === 'accept') {
           if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
-          const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
+          const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
           const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
             item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
           ).length;
           if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         }
-        await requestSupabaseState('live_speaker_request_review', { broadcastId: session.id, hostId: user.id, speakerId, decision, guestSeatLimit: session.liveLayout === 'side-by-side' ? 9 : 8 });
+        await requestSupabaseState('live_speaker_request_review', { broadcastId: session.id, hostId: user.id, speakerId, decision, guestSeatLimit: session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8 });
         request.status = decision === 'accept' ? 'accepted' : 'rejected';
         request.acceptedAt = decision === 'accept' ? now() : null;
         request.reviewedAt = now();
