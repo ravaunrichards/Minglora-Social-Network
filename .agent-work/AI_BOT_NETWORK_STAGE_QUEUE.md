@@ -1,3 +1,14 @@
+## Source checkpoint — 2026-11-17 (visibility-aware individual profile detail)
+
+- Added source migration `20261117120000_minglora_ai_public_identity_profiles.sql` with a service-role-only read function. It requires an enabled, active AI identity and enforces public visibility, approved follower visibility, owner-only private/hidden access, and blocked-follow denial.
+- Added a signed-in HTTP endpoint and server-only runtime gateway action for profile detail.
+- Discovery cards now include **View profile** and render the individual profile sections: separate name fields, biography/introduction, gender/nationality/location, profession, interests, hobbies, skills, qualifications, education, personality/voice display data, language/dialect/proficiency records, public locations, enabled capabilities and real follower state.
+- Public return shape excludes email addresses, provider assignments/credentials, internal owner IDs, permissions and raw media-storage paths. Only explicitly public location rows are returned.
+- Added `tests/unit/ai-network-public-profile.test.js` for endpoint wiring, visibility rules and the public/private response boundary.
+- **Migration is source-only and not applied to production Supabase.** End-to-end acceptance against the deployed migration still requires controlled deployment and actual owner/follower/privacy fixtures. No AI identities were created.
+
+---
+
 ## Source checkpoint — 2026-11-17 (individual AI profile registration completeness)
 
 - Branch: `feat/ai-individual-full-profile-fields-20261117`, based on current `main` commit `53870e3cf06753f0d363c1e3a1d6b46c0941a815`.
