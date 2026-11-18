@@ -70,13 +70,14 @@ test("original files use immutable version paths and pending uploads are owner-b
   assert.match(migration, /status=CASE WHEN status IN \('approved','active'\) THEN status ELSE 'draft' END/);
 });
 
-test("the SQL command requires the designated MFA-verified owner and service role", () => {
+test("brand RPC writes require MFA and delegate authorization to scoped database permissions", () => {
   assert.match(migration, /coalesce\(auth\.role\(\),''\) <> 'service_role'/);
   assert.match(migration, /5b998c21-86b5-4621-ab37-e0808a2657b1/);
   assert.match(migration, /p_mfa_verified IS DISTINCT FROM true/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.minglora_admin_brand_command/);
-  assert.match(api, /isDesignatedCreatorHubAdmin\(user\)/);
-  assert.match(api, /hasActiveReviewerSession\(user\)/);
+  assert.match(completionMigration, /CREATE OR REPLACE FUNCTION public\.minglora_assert_brand_permission/);
+  assert.match(completionMigration, /brand:manage/);
+  assert.match(api, /hasActiveBrandMfaSession\(user,req\)/);
   assert.match(api, /isSameOriginApiWrite\(req\)/);
   assert.ok(api.startsWith('import crypto from "node:crypto";'));
 });
@@ -170,10 +171,34 @@ test("scheduled expiry runs before new activation and automatic restore is audit
   assert.match(completionMigration,/schedule_overlap_guard/);
   assert.match(completionMigration,/FOR UPDATE SKIP LOCKED/);
 });
-test("historical immutable versions use an owner- and MFA-protected recovery RPC",()=>{
+test("historical immutable versions use an MFA- and edit-permission-protected recovery RPC",()=>{
   assert.match(completionMigration,/minglora_brand_logo_restore_version/);
-  assert.match(completionMigration,/minglora_assert_brand_owner/);
+  assert.match(completionMigration,/minglora_assert_brand_permission\(p_actor_user_id,p_mfa_verified,'brand:edit'\)/);
   assert.match(edge,/brandAction==="version_restore"/);
   assert.match(api,/"version_restore"/);
   assert.match(ui,/Restore version/);
+});
+
+test("Logo Center roles are added to the existing owner-controlled RBAC catalogue without granting anyone",()=>{
+  for(const role of ["brand_administrator","brand_asset_uploader","brand_asset_editor","brand_approval_manager","brand_publisher","brand_read_only"])
+    assert.ok(completionMigration.includes("'"+role+"'"),"missing delegated brand role "+role);
+  for(const permission of ["brand:read","brand:upload","brand:edit","brand:approve","brand:publish","brand:manage"])
+    assert.ok(completionMigration.includes("'"+permission+"'"),"missing scoped permission "+permission);
+  assert.match(completionMigration,/ON CONFLICT \(role_key\) DO NOTHING/);
+  assert.match(completionMigration,/p_permission=ANY\(s\.permissions\) OR 'brand:manage'=ANY\(s\.permissions\)/);
+  assert.match(completionMigration,/s\.mfa_required=true/);
+  assert.match(completionMigration,/u\.email_confirmed_at IS NOT NULL/);
+  assert.match(completionMigration,/GRANT EXECUTE ON FUNCTION public\.minglora_assert_brand_permission/);
+  assert.doesNotMatch(completionMigration,/UPDATE public\.minglora_platform_staff/);
+});
+test("delegated brand operators receive a Logo Center-only workspace and never the full Admin Centre",()=>{
+  assert.match(server,/brandOnly:true/);
+  assert.match(server,/hasActiveBrandMfaSession\(user,req\)/);
+  assert.match(adminPage,/access\.brandOnly===true/);
+  assert.match(adminPage,/does not grant access to member management, finance, moderation, AI operations/);
+  assert.match(api,/hasActiveBrandMfaSession/);
+  assert.match(edge,/MFA-verified Minglora administrator session is required/);
+  assert.match(ui,/required=\{upload:"brand:upload",design:"brand:edit"/);
+  assert.match(ui,/can\("brand:approve"\)/);
+  assert.match(ui,/can\("brand:publish"\)/);
 });
