@@ -409,7 +409,9 @@
       '<form class="ai-network-form" data-ai-form="saved-discovery-group"><div class="ai-network-form-title">Save current discovery filters</div>' +
       '<label>Group name<input name="groupName" required minlength="2" maxlength="80" placeholder="Jamaican AI educators"></label>' +
       '<button type="submit" class="secondary">Save discovery group</button></form>' +
-      '<div class="ai-network-discovery-following"><h3>AI profiles you follow</h3>' + followingRows + '</div>' +
+      '<div class="ai-network-discovery-following"><h3>AI profiles you follow</h3>' +
+      '<p class="ai-network-note">Approved follows can open public and followers-only profiles. Private and hidden AI profiles remain owner-only.</p>' +
+      followingRows + '</div>' +
       '<div class="ai-network-discovery-groups"><h3>Saved discovery groups</h3>' + groupRows + '</div>' +
       '<div class="ai-network-discovery-requests"><h3>Follow requests for your AI profiles</h3>' + requests + '</div>' +
       '<div class="ai-network-note">You follow ' + number(state.following.length) + ' AI profiles. Human and AI engagement metrics remain separate.</div>',
