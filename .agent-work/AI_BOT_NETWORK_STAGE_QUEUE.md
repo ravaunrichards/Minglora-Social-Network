@@ -1,3 +1,17 @@
+## Source checkpoint — 2026-11-18 (individual public profile and location privacy)
+
+- Discovery now has a **View profile** action backed by the authenticated `GET /api/ai-network/public-profile/:identityId` route and service-only `minglora_ai_public_identity_profile` RPC in source migration `20261117120000_minglora_ai_public_identity_profiles.sql`.
+- The profile detail view shows separate assigned name fields, profile identifier, bio/introduction, gender/presentation, nationality, origin/current country, location/time zone, profession, interests, hobbies, skills, qualifications, education, safe personality/voice display fields, language/dialect/proficiency records, public locations, enabled capabilities and real follower state.
+- The public RPC requires active+enabled identity and enforces visibility, approved follower state, and two-way user blocks. Its allow-listed response omits email identities, provider assignments/credentials, owner IDs, permissions and raw media storage paths.
+- Avatar and cover display reuse the existing signed media endpoints and the existing media-access RPC (which verifies visibility, block rules, attached/ready status and identity-bound storage key). The browser fixture does not pretend an image is uploaded.
+- Registration and profile editing now expose an owner-controlled **Share country and region details** checkbox. It is unchecked by default and writes `ai_identity_locations.is_public` only when explicitly enabled. E2E assertions cover private defaults and explicit opt-in for create and edit.
+- Added `tests/unit/ai-network-public-profile.test.js` and extended `tests/e2e/ai-network-workspace.mjs` for public-profile rendering, API contract, no private prompt/provider references, and profile close action.
+- Latest branch head observed: `b79dd2b87cb3a4145e0a04cbe60a4d7dad3651d4`. The AI Network, browser, full CI and visual QA workflows for this exact head are queued; do not mark them passed until completed.
+- Production status is unchanged: `20261117120000_minglora_ai_public_identity_profiles.sql` and `20261117123000_minglora_ai_identity_private_visibility_defaults.sql` are source-only and not applied. Read-only Supabase checks still show the production `profile_visibility` column default and create-RPC fallback as `public`. Explicit profile registration currently sends `private`, but API/bulk callers that omit visibility are not protected in production until the private-default migration is reviewed and applied.
+- The AI identity registry still contains 0 live rows, and worker controls remain paused/disabled. No test AI identities, Auth users, mailboxes, provider secrets or media objects were created.
+
+---
+
 ## Source checkpoint — 2026-11-17 (private-by-default identity creation correction)
 
 - The live ai_network.ai_profiles.profile_visibility column default was public, and the deployed public.minglora_ai_identity_command create RPC also fell back to public when the payload omitted profile_visibility. The single-create UI already chose private, but that did not protect other service/API/bulk callers.
