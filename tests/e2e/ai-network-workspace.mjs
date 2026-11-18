@@ -221,7 +221,7 @@ function aiApiResponse(req, url, body) {
   if (method === 'GET' && pathname === '/provider-assignments') return { assignments: [] };
   if (method === 'GET' && pathname === '/tasks') return { tasks: [], runtime: taskRuntime };
   if (method === 'GET' && pathname === '/organizations') return { organizations: [structuredClone(organizationFixture)] };
-  const organizationRoute = pathname.match(/^\\/organizations\\/([0-9a-f-]+)(?:\\/(.*))?$/i);
+  const organizationRoute = pathname.match(/^\/organizations\/([0-9a-f-]+)(?:\/(.*))?$/i);
   if (organizationRoute && organizationRoute[1] === fixtureOrganizationId) {
     const resource = organizationRoute[2] || '';
     if (method === 'GET') {
@@ -260,7 +260,7 @@ function aiApiResponse(req, url, body) {
       disciplinaryCases.push(wrapper);
       return { case: structuredClone(record), reused: false };
     }
-    const caseRoute = resource.match(/^disciplinary-cases\\/([0-9a-f-]+)\\/(notes|status)$/i);
+    const caseRoute = resource.match(/^disciplinary-cases\/([0-9a-f-]+)\/(notes|status)$/i);
     if (caseRoute) {
       const wrapper = disciplinaryCases.find(item => item.case.case_id === caseRoute[1]);
       if (!wrapper) return { error: 'Fixture disciplinary case not found.' };
