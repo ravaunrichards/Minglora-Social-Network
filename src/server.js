@@ -1566,7 +1566,6 @@ async function route(req, res) {
       const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
       const aiEmailIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const aiEmailIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
       if (method === 'GET' && sub === 'email/status') {
         const status = await inspectResendDomain();
