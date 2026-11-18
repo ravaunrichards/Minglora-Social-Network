@@ -26,3 +26,7 @@ This first release connects the approval sources that already have real, callabl
 ## Operational verification
 
 Automated source tests validate the protected page entry, source endpoints, decision endpoints, no-demo-data rule, refresh behavior and responsive notification style. Production acceptance still requires a signed-in designated-owner session with current MFA and an end-to-end browser review of an actual request. The current production database was read-only checked during implementation and contained zero pending AI action approvals and zero pending AI task approvals, so no real decision was made.
+
+## Mainline integration
+
+The Approval Center consumes the existing owner-protected AI Network snapshot and task-approval endpoints. It does not add or alter AI identity tables, profile-visibility rules, provider credentials, worker controls or production request records, and it requires no database migration. The current mainline identity-registry and private-profile improvements remain independent and must be preserved when integrating this UI.
