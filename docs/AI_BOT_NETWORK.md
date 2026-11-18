@@ -2,6 +2,20 @@
 
 The design baseline, routing model, shard/data-plane plan, region consistency rules, migration gates and measurable capacity acceptance criteria are documented in [AI Bot Network Scale Architecture](AI_BOT_NETWORK_SCALE_ARCHITECTURE.md). This is a design document only: it does not assert deployed shards, 10-billion capacity, regional failover, or worker concurrency.
 
+## Latest verified checkpoint — 2026-11-18 (worker-principal source integration)
+
+- Current repository base: `main` at `a480ae2725337541293bd1900fc34e5bd5ab13ac`. The existing AI Network PR #489 branch now reconciles directly on that main commit and is 53 commits ahead / 0 behind. Current source commit for the worker-principal integration: `9f01aa11c2b236479ea324415dbc5e582019f409`.
+- Added a source-only worker-principal slice: private worker credentials stored as SHA-256 digests, explicit identity grants, owner/MFA-gated create/list/rotate/revoke endpoints, a separate bearer-authenticated worker runtime API, private Edge RPC actions and worker controls in the existing AI Network command center.
+- CI on source commit `9f01aa11c2b236479ea324415dbc5e582019f409`: full repository CI **success**; AI Network syntax/regression **success**; AI Network browser acceptance with disposable fixtures **success**; worker-principal PostgreSQL 17 credential/lease/concurrency integration **success**; identity-batch PostgreSQL 17 migration/retry acceptance **success**. The separate nine-layout visual QA was still running at this checkpoint. Disposable CI evidence is not live signed-in owner acceptance.
+- Read-only production Supabase baseline (existing project `gzycobgbasnqqhnympkr`, PostgreSQL 17.11): `ai_network` contains **66 base tables, all 66 RLS-enabled**. Current row counts: 1 identity, 1 separate first/last-name record, 1 profile, 1 email record, 1 provider account, 1 provider model, 1 provider assignment, 1 organization, 20 departments and 15 categories; employment and task queues remain at zero.
+- The single production AI identity is the existing Avery Morgan identity. It remains private, status `created`, `enabled=false` and `fully_supervised`. Its email is a reserved `.invalid` placeholder (not a provisioned inbox); its provider account is unconfigured, assignment pending and health unknown (no live inference is claimed).
+- The new worker principal, identity-grant and worker-event tables are **not present in production**. The worker migration has **not** been applied. The production task runtime remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No worker credential or live task was created.
+- Existing production Render target remains `minglora-social-network-temp`; current Render deployment `dep-dbv09bqjnfac739ej7u0` is LIVE on main commit `a480ae2725337541293bd1900fc34e5bd5ab13ac`; auto-deploy is enabled on main. The worker source changes have **not** been deployed to Render or the existing Edge Function.
+- Still open: signed-in owner/MFA acceptance of worker controls, review and coordinated migration approval, Edge/Node coordinated deployment, private provider credentials and verified provider health/inference, a hosted worker poller/executor, real task execution/recovery/multi-session tests, owner-authenticated end-to-end acceptance, and measured scale benchmarks. The 10-billion figure remains a design target and is not demonstrated storage or execution capacity.
+- This checkpoint records a code/CI milestone only. It does not declare the Master AI Bot Network complete or authorize production worker execution.
+
+---
+
 ## Latest verified checkpoint — 2026-11-15 (AI HR training and attendance release)
 
 - PR #351 merged to `main` as `0fbcdc6a92bf94ac980c2015833f8ea11caaf7a1`; merge request: https://github.com/ravaunrichards/Minglora-Social-Network/pull/351.
