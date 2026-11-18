@@ -266,11 +266,11 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO ''
-AS $
+AS $$
 BEGIN
   RAISE EXCEPTION 'Administrator permission audit records are append-only.' USING ERRCODE='42501';
 END;
-$;
+$$;
 REVOKE ALL ON FUNCTION public.prevent_minglora_admin_rbac_audit_mutation() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS minglora_admin_rbac_audit_append_only ON public.minglora_admin_rbac_audit;
 CREATE TRIGGER minglora_admin_rbac_audit_append_only
