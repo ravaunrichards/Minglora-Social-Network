@@ -143,11 +143,12 @@ self.addEventListener('push',event=>{
   const data=payload.data||{};
   const type=String(data.type||'notification');
   const params=new URLSearchParams({'minglora-push':type});
-  for(const key of ['callId','liveSessionId','actorId','notificationId','roomId','invitationId','matchId','sellerId'])if(data[key])params.set(key,String(data[key]));
+  for(const key of ['callId','liveSessionId','actorId','notificationId','aiTaskId','roomId','invitationId','matchId','sellerId'])if(data[key])params.set(key,String(data[key]));
   const url='/?'+params.toString();
   const actions=type==='call'?[{action:'answer',title:'Answer'},{action:'decline',title:'Decline'}]:
     type==='live'?[{action:'watch',title:'Watch LIVE'}]:
-    type==='message'?[{action:'open',title:'Open message'}]:[];
+    type==='message'?[{action:'open',title:'Open message'}]:
+    type==='ai_task_approval'?[{action:'review',title:'Review approval'}]:[];
   const isCall=type==='call';
   event.waitUntil(self.registration.showNotification(payload.title||'Minglora', {
     body:payload.body||'You have a new notification.',
@@ -166,8 +167,9 @@ self.addEventListener('notificationclick',event=>{
   event.notification.close();
   const data=event.notification.data||{};
   const params=new URLSearchParams({'minglora-push':String(data.type||'notification')});
-  for(const key of ['callId','liveSessionId','actorId','notificationId'])if(data[key])params.set(key,String(data[key]));
-  if(event.action==='decline'&&data.callId)params.set('minglora-push','decline-call');
+  for(const key of ['callId','liveSessionId','actorId','notificationId','aiTaskId'])if(data[key])params.set(key,String(data[key]));
+  if(event.action==='review'&&data.type==='ai_task_approval')params.set('minglora-push','ai_task_approval');
+  else if(event.action==='decline'&&data.callId)params.set('minglora-push','decline-call');
   else if(event.action==='answer'&&data.callId)params.set('minglora-push','answer-call');
   const target=new URL('/?'+params.toString(),self.location.origin).href;
   event.waitUntil((async()=>{
