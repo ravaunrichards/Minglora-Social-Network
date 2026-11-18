@@ -28,7 +28,7 @@ test('Approval decisions use existing audited AI endpoints and retain execution 
   assert.match(adminCentre, /method:'PATCH'/);
   assert.match(adminCentre, /status: decision === 'approve' \? 'approved' : 'rejected'/);
   assert.match(adminCentre, /does not start workers or execute the task/);
-  assert.match(adminCentre, /this will not execute the action/);
+  assert.match(adminCentre, /will not execute the action/);
 });
 
 test('Approval notifications are refreshed in-app and remain accessible on mobile', () => {
