@@ -130,7 +130,16 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   const videoReference=guestLayouts.slice(referenceStart,referenceEnd)
     .replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage');
   const audioContract=guestLayouts.slice(audioStart);
-  assert.ok(audioContract.includes(videoReference),'Audio LIVE must use the exact same reference geometry as Video LIVE');
+  const layoutRules=(source,layout)=>[...source.matchAll(/([^{}]+)\\{([^{}]*)\\}/g)]
+    .map(match=>({
+      selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage'),
+      body:match[2].trim().replace(/\\s+/g,' ')
+    }))
+    .filter(rule=>rule.selector.includes('data-live-layout="'+layout+'"'));
+  for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']){
+    assert.deepEqual(layoutRules(audioContract,layout),layoutRules(videoReference,layout),
+      layout+' Audio LIVE guest geometry must match its reference layout');
+  }
   assert.match(audioContract,/#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
   assert.ok(audioContract.includes('#live-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
     'Audio LIVE guest panels must occupy the single full-stage row, not the retired row 2');
