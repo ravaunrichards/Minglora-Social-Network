@@ -227,7 +227,7 @@ function aiApiResponse(req, url, body) {
     const fixture = discoveryProfiles.find(item => item.identity_id === identityId);
     if (!fixture) return { error:'AI profile not found.' };
     return {
-      identity: { identity_id:identityId, population:'independent', category_key:fixture.category_key, subcategory:'Learning support', created_at:'2026-11-17T12:00:00Z' },
+      identity: { identity_id:identityId, population:'independent', category_key:fixture.category_key, subcategory:'Learning support', created_at:'2026-11-17T12:00:00Z', updated_at:'2026-11-17T12:30:00Z' },
       name: {
         first_name:fixture.name.first_name,
         middle_name:identityId === discoveryProfiles[0].identity_id ? 'Grace' : '',
