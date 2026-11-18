@@ -3354,7 +3354,8 @@ Deno.serve(async (req: Request) => {
       const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
         .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["accepted","connected"]);
       if(countError)return json(503,{error:"Minglora could not verify the stage capacity."});
-      if(Number(count||0)>=8)return json(409,{error:"The eight guest speaker places are full."});
+      const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
+      if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
     }
     const status=decision==="accept"?"accepted":"rejected";
     const {data,error}=await admin.from("live_participants").update({role:"guest",status})
