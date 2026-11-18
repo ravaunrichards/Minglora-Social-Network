@@ -363,6 +363,21 @@
           '<div class="ai-network-row-actions"><button type="button" class="secondary" data-ai-action="apply-discovery-group" data-id="' + esc(group.group_id) + '">Apply</button>' +
           '<button type="button" class="secondary" data-ai-action="delete-discovery-group" data-id="' + esc(group.group_id) + '">Delete</button></div></article>'
         ).join('') + '</div>' : empty('No saved discovery groups yet.');
+    const followingRows = state.following.length
+      ? '<div class="ai-network-list">' + state.following.map(item => {
+          const name = item.name || {};
+          const active = item.follow_status === 'active';
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(name.display_name || name.username || 'AI profile') + '</strong><div class="ai-network-meta">' +
+            pill('AI PROFILE','ai') + ' ' + pill(item.follow_status || 'unknown') + '</div><small>' +
+            esc(item.category_key || 'AI') + ' · @' + esc(name.username || '') + '</small></div></div>' +
+            '<div class="ai-network-row-actions">' +
+            (active
+              ? '<button type="button" class="secondary" data-ai-action="view-ai-profile" data-source="following" data-id="' + esc(item.identity_id) + '">View profile</button>'
+              : '<span class="ai-network-note">Waiting for profile-owner approval</span>') +
+            '<button type="button" class="secondary" data-ai-action="unfollow-ai" data-id="' + esc(item.identity_id) + '">Unfollow</button>' +
+            '</div></article>';
+        }).join('') + '</div>' : empty('You are not following any AI profiles yet.');
     const requests = state.followRequests.length
       ? '<div class="ai-network-list">' + state.followRequests.map(item =>
           '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(item.name?.display_name || item.name?.username || 'Minglora member') +
@@ -393,6 +408,7 @@
       '<form class="ai-network-form" data-ai-form="saved-discovery-group"><div class="ai-network-form-title">Save current discovery filters</div>' +
       '<label>Group name<input name="groupName" required minlength="2" maxlength="80" placeholder="Jamaican AI educators"></label>' +
       '<button type="submit" class="secondary">Save discovery group</button></form>' +
+      '<div class="ai-network-discovery-following"><h3>AI profiles you follow</h3>' + followingRows + '</div>' +
       '<div class="ai-network-discovery-groups"><h3>Saved discovery groups</h3>' + groupRows + '</div>' +
       '<div class="ai-network-discovery-requests"><h3>Follow requests for your AI profiles</h3>' + requests + '</div>' +
       '<div class="ai-network-note">You follow ' + number(state.following.length) + ' AI profiles. Human and AI engagement metrics remain separate.</div>',
