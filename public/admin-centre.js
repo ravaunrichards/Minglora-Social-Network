@@ -540,6 +540,7 @@
     const runtimeNote = section.querySelector('#admin-approval-runtime-note');
     const refreshButton = section.querySelector('#admin-approval-refresh');
     let busy = false;
+    let deciding = false;
     let initialized = false;
     let previousPending = new Set();
     let toastTimer = null;
@@ -2489,7 +2490,7 @@
       const requestType = button.dataset.requestType;
       const requestId = button.dataset.requestId;
       const decision = button.dataset.adminApprovalDecision;
-      if (!requestId || !['approve','reject'].includes(decision)) return;
+      if (!requestId || !['approve','reject'].includes(decision) || deciding) return;
       let path, body;
       if (requestType === 'ai-action') {
         if (!window.confirm((decision === 'approve' ? 'Approve' : 'Reject') + ' this AI high-impact action request? The decision is audited; this will not execute the action.')) return;
@@ -2507,7 +2508,8 @@
         path = '/ai-network/tasks/' + encodeURIComponent(requestId) + '/approval';
         body = { status: decision === 'approve' ? 'approved' : 'rejected', reason };
       } else return;
-      button.disabled = true;
+      deciding = true;
+      list.querySelectorAll('[data-admin-approval-decision]').forEach(item => { item.disabled = true; });
       status.textContent = 'Recording your decision…';
       try {
         await adminCentreApi(path, { method:'PATCH', body:JSON.stringify(body) });
@@ -2515,7 +2517,9 @@
         await refresh();
       } catch (error) {
         status.textContent = error.message || 'The approval decision could not be saved.';
-        button.disabled = false;
+      } finally {
+        deciding = false;
+        list.querySelectorAll('[data-admin-approval-decision]').forEach(item => { item.disabled = false; });
       }
     };
     list.addEventListener('click',event => {
