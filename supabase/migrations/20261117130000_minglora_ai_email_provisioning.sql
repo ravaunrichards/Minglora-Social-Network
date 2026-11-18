@@ -329,13 +329,38 @@ begin
     end if;
 
     v_requested_to := array(select lower(trim(value)) from jsonb_array_elements_text(v_payload->'to_addresses') as item(value));
-    v_message_id := null;
-    select m.* into v_message
-    from ai_network.ai_email_messages m
-    where m.email_id=v_email_id
-      and m.client_idempotency_key=left(coalesce(v_payload->>'idempotency_key',''),180)
-    limit 1;
-    if found then
+    if length(trim(coalesce(v_payload->>'idempotency_key',''))) < 16 then
+      raise exception using errcode = '22023', message = 'A stable email idempotency key is required.';
+    end if;
+
+    -- Insert-first idempotency avoids a SELECT-then-INSERT race when the same
+    -- request ID reaches two Minglora web workers at the same time.
+    insert into ai_network.ai_email_messages (
+      identity_id,email_id,direction,status,provider,client_idempotency_key,
+      from_address,to_addresses,subject,text_body
+    )
+    values (
+      v_identity_id,v_email_id,'outbound','queued','resend',
+      left(trim(v_payload->>'idempotency_key'),180),v_email.email_address,
+      v_requested_to,
+      v_subject,v_text_body
+    )
+    on conflict (email_id, client_idempotency_key)
+      where client_idempotency_key is not null
+    do nothing
+    returning * into v_message;
+
+    if not found then
+      -- A concurrent request won the unique-key insert. Re-read its committed
+      -- row and verify that the caller did not reuse the key for different mail.
+      select m.* into v_message
+      from ai_network.ai_email_messages m
+      where m.email_id=v_email_id
+        and m.client_idempotency_key=left(trim(v_payload->>'idempotency_key'),180)
+      limit 1;
+      if not found then
+        raise exception using errcode = '40001', message = 'The email request is being committed; retry with the same request ID.';
+      end if;
       if v_message.to_addresses is distinct from v_requested_to
          or v_message.subject is distinct from v_subject
          or v_message.text_body is distinct from v_text_body then
@@ -354,20 +379,6 @@ begin
       );
     end if;
 
-    if length(trim(coalesce(v_payload->>'idempotency_key',''))) < 16 then
-      raise exception using errcode = '22023', message = 'A stable email idempotency key is required.';
-    end if;
-    insert into ai_network.ai_email_messages (
-      identity_id,email_id,direction,status,provider,client_idempotency_key,
-      from_address,to_addresses,subject,text_body
-    )
-    values (
-      v_identity_id,v_email_id,'outbound','queued','resend',
-      left(trim(v_payload->>'idempotency_key'),180),v_email.email_address,
-      v_requested_to,
-      v_subject,v_text_body
-    )
-    returning * into v_message;
     return jsonb_build_object(
       'message_id',v_message.message_id,'email_id',v_message.email_id,
       'from_address',v_message.from_address,'to_addresses',to_jsonb(v_message.to_addresses),
