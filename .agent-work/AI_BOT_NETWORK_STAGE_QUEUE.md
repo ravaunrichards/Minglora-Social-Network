@@ -1,7 +1,7 @@
 ## Current-main AI Corporate Governance and HR integration checkpoint — 2026-11-17 Jamaica local / 2026-11-18 UTC
 
 - Rebased the disciplinary-case implementation by reapplying its reviewed source changes on fresh branch `feat/ai-hr-disciplinary-cases-main-sync-20261117` from `main` SHA `808dcb21ddac47ad7c0125f14138bedf0a4b8c75`; the stale draft PR #353 branch remains untouched.
-- New source migration: `20261118034600_minglora_ai_hr_disciplinary_cases`. Case records are organization-scoped and human-managed; case history is append-only by grants; no automated disciplinary decisions or sanctions are allowed.
+- New source migration: `20261118044600_minglora_ai_hr_disciplinary_cases`. Case records are organization-scoped and human-managed; case history is append-only by grants; no automated disciplinary decisions or sanctions are allowed.
 - Current-main branch checks are **PENDING**; earlier PR #353 tests are historical evidence only.
 - No production migration, Edge Function deployment, Render deployment, or persistent production row mutation has occurred. AI runtime controls remain paused/disabled.
 - Next gates: run all new-branch CI; run the SQL contract inside BEGIN/ROLLBACK on the existing project and independently verify rollback; obtain signed-in owner API/browser acceptance; complete desktop/mobile acceptance; review production migration/function deploy, then verify the existing Render service. Do not release with any failed or missing check.
