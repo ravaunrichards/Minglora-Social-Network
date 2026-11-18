@@ -1365,8 +1365,12 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layo
 
 /* AUDIO LIVE reference clearance: keep both labels above the seat grid.
    Video-only host-ribbon offsets below must never move the audio thumbnails. */
-body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout{
+body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout.live-guest-layout{
   padding:40px clamp(5px,.65vw,9px) clamp(5px,.65vw,9px)!important;
+}
+body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout.live-guest-layout>.live-guest-layout-heading{
+  position:absolute!important;top:7px!important;left:auto!important;right:8px!important;
+  width:max-content!important;max-width:48%!important;justify-content:flex-end!important;text-align:right!important;
 }
 body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(3),
 body:has(#live-player-shell) #live-player-shell #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat):nth-child(4){
