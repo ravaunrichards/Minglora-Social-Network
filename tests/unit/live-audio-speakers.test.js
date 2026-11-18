@@ -162,6 +162,25 @@ test('Audio LIVE uses all nine reference grids without covering seat panels', ()
   assert.match(app, /function renderLiveSpeakerRoster\(/);
 });
 
+test('Side by Side alone exposes and enforces a ninth LIVE guest seat', () => {
+  const start=app.indexOf('function renderLiveGuestLayout(');
+  const end=app.indexOf('\\nfunction renderLiveViewerPanel(',start);
+  const renderer=app.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(renderer,/const guestSeatLimit=activeLiveScreenLayout==='side-by-side'\\?9:8/);
+  assert.match(renderer,/guests\\.slice\\(0,guestSeatLimit\\)/);
+  assert.match(renderer,/while\\(specs\\.length<guestSeatLimit\\+1\\)/);
+  assert.match(renderer,/Guest seat \\"\\+esc\\(spec\\.seatNumber\\)/);
+  assert.match(renderer,/guestSeatLimit\\+1/);
+  assert.match(app,/Manage up to 8 guest seats in the other layouts, or 9 in Side by Side\\./);
+  assert.equal((server.match(/activeSpeakers >= guestSeatLimit/g)||[]).length,4,
+    'requests, invitations, invitation acceptance, and host approvals use the active layout capacity');
+  assert.match(server,/session\\.liveLayout === 'side-by-side' \\? 9 : 8/);
+  assert.match(server,/guestSeatLimit: session\\.liveLayout === 'side-by-side' \\? 9 : 8/);
+  assert.match(edge,/Number\\(input\\.guestSeatLimit\\)===9\\?9:8/);
+  assert.match(edge,/Number\\(count\\|\\|0\\)>=guestSeatLimit/);
+});
+
 test('Audio-only guest seats use microphone publishers while video LIVE keeps its media-track check', () => {
   const guestStart=app.indexOf('function renderLiveGuestLayout(');
   const guestEnd=app.indexOf('\nfunction renderLiveViewerPanel(',guestStart);
