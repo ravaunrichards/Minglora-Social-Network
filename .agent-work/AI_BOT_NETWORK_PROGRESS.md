@@ -1,3 +1,18 @@
+## Production acceptance checkpoint — 2026-11-18 (owner RBAC repair)
+
+- Owner-controlled administrator RBAC repair PR #516 is merged to `main` as `70519e0d0333dc5fcf23e838aa8680e1bdf77fcb`. The original source migration had an invalid dollar-quote delimiter on the append-only audit trigger; the merged fix corrects it and adds a regression test.
+- CI run #15489: **1,338 passed / 0 failed**. Supabase Auth/OAuth acceptance and For You navigation passed. Visual QA run #1092 passed all **9 layouts across 3 viewports**, with 27 occupied-seat checks.
+- Applied the corrected migration to the existing Minglora Supabase project. Recorded migration version `20261118042949` / `minglora_owner_admin_rbac`.
+- Live database checks passed: the RBAC RPC exists as SECURITY DEFINER; only `service_role` can execute it; `anon` and `authenticated` cannot execute it or read the audit table; all four RBAC tables have RLS enabled; the append-only audit trigger is enabled. Catalog seeded with 8 roles, 21 permissions and 46 role-permission links.
+- Read-only `service_role` RPC acceptance returned 2 existing staff assignments, 8 roles and 0 audit rows. Existing staff rows were not changed. No new admin, human Auth user, AI identity or audit event was created.
+- Existing Render service `minglora-social-network-temp` auto-deployed commit `70519e0d0333dc5fcf23e838aa8680e1bdf77fcb`; deployment `dep-dbuijc6i0phs73b34m00` is **LIVE**. Automatic deploy-on-commit remains enabled.
+- Live startup readiness: Supabase Auth configured; Supabase persistence durable/ready; LiveKit configured and connected. AI provider is **not configured**; no AI credentials are present; AI adapter, bot chat, manual drafts and execution are unavailable/disabled. Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- Live AI data counts remain zero for identities, profiles, email metadata, provider assignments, organizations, departments, employment records, task queue, bot conversations and messages. The catalogue has 15 active AI categories, 20 active department templates and 20 active position templates. No fictitious population or capacity records were created.
+- **Not accepted yet:** signed-in designated-owner/MFA HTTP and desktop/mobile RBAC acceptance; real provider credentials, health and inference; email mailbox provisioning; actual identity/profile creation and media upload through the owner session; activated worker/scheduler execution; end-to-end HR and social/creator operation; operational analytics; backup/recovery and load testing; distributed regions/shards; 10-billion identity capacity. Do not enable workers or claim the full AI network is complete.
+- Existing checklist acceptance remains **2/19 tasks**; this RBAC repair does not close the next owner-session acceptance task or increase the overall AI Network completion count.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
 
 - Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.
