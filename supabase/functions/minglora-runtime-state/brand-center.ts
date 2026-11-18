@@ -65,7 +65,26 @@ function fileExtension(name: string) {
   return result?.[1] || "";
 }
 function readAscii(bytes: Uint8Array, start: number, length: number) {
-  return String.fromCharCode(...bytes.slice(start,start+length));
+  return String.fromCharCode(...bytes.slice(start,Math.min(bytes.length,start+length)));
+}
+function containsAscii(bytes: Uint8Array, text: string) {
+  const wanted = new TextEncoder().encode(text);
+  for (let index=0; index<=bytes.length-wanted.length; index++) {
+    let match=true;
+    for (let offset=0; offset<wanted.length; offset++) {
+      if (bytes[index+offset]!==wanted[offset]) { match=false; break; }
+    }
+    if (match) return true;
+  }
+  return false;
+}
+function extensionMatches(name: string, mime: string) {
+  const ext=fileExtension(name);
+  const accepted:Record<string,string[]> = {
+    "image/jpeg":["jpg","jpeg"],"image/apng":["png","apng"],
+    "image/x-icon":["ico"],"image/vnd.microsoft.icon":["ico"]
+  };
+  return (accepted[mime]||[MIME_EXTENSIONS[mime]]).includes(ext);
 }
 function parsePngSize(bytes: Uint8Array) {
   if (bytes.length < 24) return { width:null,height:null };
@@ -96,8 +115,7 @@ async function validateFile(blob: Blob, mimeType: string) {
     valid = bytes.length >= 24 && bytes[0]===0x89 && readAscii(bytes,1,3)==="PNG" &&
       readAscii(bytes,12,4)==="IHDR";
     if (valid && mimeType === "image/apng") {
-      const header = readAscii(bytes,0,Math.min(bytes.length,2*1024*1024));
-      valid = header.includes("acTL");
+      valid = containsAscii(bytes,"acTL");
     }
     if (valid) ({width,height}=parsePngSize(bytes));
   } else if (mimeType === "image/jpeg") {
@@ -141,8 +159,7 @@ async function validateFile(blob: Blob, mimeType: string) {
   return { bytes:bytes.byteLength,width,height,sha256 };
 }
 async function ensurePrivateBucket(admin: any) {
-  const {data:found,error:lookupError} = await admin.storage.getBucket(BUCKET);
-  if (lookupError && !found) throw new Error("Minglora could not verify the private brand asset bucket.");
+  const {data:found} = await admin.storage.getBucket(BUCKET);
   if (!found) {
     const {error:createError} = await admin.storage.createBucket(BUCKET,{
       public:false,fileSizeLimit:MAX_VIDEO_BYTES,allowedMimeTypes:Object.keys(MIME_EXTENSIONS)
@@ -218,9 +235,7 @@ async function uploadPrepare(admin: any,input: Record<string,unknown>) {
   const size = Number(input.byteSize||0);
   const kind = String(input.assetKind||"logo");
   if (!MIME_EXTENSIONS[mime] || !Number.isSafeInteger(size) || size < 1 || size > sizeLimit(mime) ||
-      !name || !["logo","asset"].includes(kind) ||
-      fileExtension(name)!==MIME_EXTENSIONS[mime] && !(mime==="image/x-icon" && fileExtension(name)==="ico") &&
-      !(mime==="image/vnd.microsoft.icon" && fileExtension(name)==="ico")) {
+      !name || !["logo","asset"].includes(kind) || !extensionMatches(name,mime)) {
     return {error:{message:"Choose a supported file with a matching extension and a valid size for its format."}};
   }
   if (mime==="application/json" && kind!=="asset") return {error:{message:"Lottie JSON files are supported as brand assets, not static logos."}};
@@ -239,7 +254,7 @@ async function uploadComplete(admin: any,input: Record<string,unknown>) {
   const fileName = cleanText(input.fileName,200);
   const extension = MIME_EXTENSIONS[mime];
   if (!["logo","asset"].includes(kind) || !extension || !path.startsWith(actor+"/"+(kind==="logo"?"logos/":"assets/")) ||
-      !path.endsWith("."+extension) || !fileName || fileExtension(fileName)!==extension) {
+      !path.endsWith("."+extension) || !fileName || !extensionMatches(fileName,mime)) {
     return {error:{message:"The upload reference is not valid for this administrator and file type."}};
   }
   const {data:bucket,error:bucketError} = await admin.storage.getBucket(BUCKET);
@@ -409,6 +424,10 @@ async function brandCommand(admin: any, input: Record<string,unknown>) {
 
   if (action==="archive_logo" || action==="restore_logo") {
     if (!isUuid(id)) return {error:{message:"Choose a valid logo."}};
+    if (action==="archive_logo") {
+      const active=await admin.from("brand_logo_assignments").select("id").eq("logo_id",id).eq("is_active",true).limit(1);
+      if (active.error || active.data?.length) return {error:{message:"Remove this logo from its active application placements before archiving it."}};
+    }
     const status=action==="archive_logo"?"archived":"draft";
     const result=await admin.from("brand_logos").update({status,updated_by:actor,updated_at:new Date().toISOString()}).eq("id",id).select("*").single();
     if (result.error || !result.data) return {error:{message:"The logo could not be archived or restored."}};
@@ -429,6 +448,10 @@ async function brandCommand(admin: any, input: Record<string,unknown>) {
 
   if (action==="archive_asset" || action==="restore_asset") {
     if (!isUuid(id)) return {error:{message:"Choose a valid brand asset."}};
+    if (action==="archive_asset") {
+      const active=await admin.from("brand_logo_assignments").select("id").eq("asset_id",id).eq("is_active",true).limit(1);
+      if (active.error || active.data?.length) return {error:{message:"Remove this brand asset from its active application placements before archiving it."}};
+    }
     const status=action==="archive_asset"?"archived":"draft";
     const result=await admin.from("brand_asset_library").update({status,updated_by:actor,updated_at:new Date().toISOString()}).eq("id",id).select("*").single();
     if (result.error||!result.data) return {error:{message:"The brand asset could not be archived or restored."}};
@@ -586,7 +609,7 @@ async function brandCommand(admin: any, input: Record<string,unknown>) {
     const end=payload.expiresAt?String(payload.expiresAt):null;
     const timezone=cleanText(payload.timezone,80,"UTC");
     if (!isUuid(approvalId)||!LOCATIONS.has(location)||!Number.isFinite(Date.parse(start))||
-        (end && (!Number.isFinite(Date.parse(end)||0) || Date.parse(end)<=Date.parse(start)))) {
+        (end && (!Number.isFinite(Date.parse(end)) || Date.parse(end)<=Date.parse(start)))) {
       return {error:{message:"Provide a valid approved request, location and start/expiration dates."}};
     }
     const approval=await admin.from("brand_approval_records").select("*").eq("id",approvalId).eq("status","approved").maybeSingle();
