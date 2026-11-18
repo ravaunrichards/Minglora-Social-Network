@@ -32,14 +32,14 @@ test('individual AI profile RPC enforces active state and visibility rules', () 
 });
 
 test('AI profile media access keeps private profiles owner-only', () => {
-  assert.match(mediaMigration, /v_visibility not in \\(''public'', ''followers''\\)/);
-  assert.match(mediaMigration, /v_visibility = ''followers'' and not exists/);
-  assert.doesNotMatch(mediaMigration, /v_visibility not in \\(''public'', ''followers'', ''private''\\)/);
-  assert.doesNotMatch(mediaMigration, /v_visibility in \\(''followers'', ''private''\\)/);
-  assert.match(mediaMigration, /pg_get_functiondef/);
-  assert.match(mediaMigration, /refusing an unverified media privacy state/);
-  assert.match(baseMediaMigration, /v_visibility not in \\('public', 'followers'\\)/);
-  assert.match(baseMediaMigration, /if v_visibility = 'followers' and not exists \\(/);
+  assert.ok(mediaMigration.includes("v_allowed_visibility text := 'v_visibility not in (''public'', ''followers'')'"));
+  assert.ok(mediaMigration.includes("v_followers_gate text := 'if v_visibility = ''followers'' and not exists ('"));
+  assert.ok(mediaMigration.includes("v_unsafe_visibility text := 'v_visibility not in (''public'', ''followers'', ''private'')'"));
+  assert.ok(mediaMigration.includes("v_unsafe_followers_gate text := 'if v_visibility in (''followers'', ''private'') and not exists ('"));
+  assert.ok(mediaMigration.includes("strpos(v_function_definition, v_unsafe_visibility) > 0"));
+  assert.ok(mediaMigration.includes("refusing an unverified media privacy state"));
+  assert.ok(baseMediaMigration.includes("v_visibility not in ('public', 'followers')"));
+  assert.ok(baseMediaMigration.includes("if v_visibility = 'followers' and not exists ("));
 });
 
 test('public profile JSON fields are allow-listed before leaving the database', () => {
