@@ -232,7 +232,7 @@ function aiApiResponse(req, url, body) {
         education:[{ degree:'M.Ed.', institution:'Minglora Learning Lab', field_of_study:'Education', start_year:2022, end_year:2024 }],
         personality:{ summary:'Warm, curious and encouraging', traits:['patient','curious'], private_prompt:'must not be returned' },
         voice_preferences:{ display_name:'Nia English', language:'en-JM', dialect:'Jamaican English', style:'warm', voice_type:'feminine', provider_voice_id:'private-voice-id' },
-        has_avatar:true, has_cover:false
+        has_avatar:false, has_cover:false
       },
       languages:[{ language_tag:'en-JM', language_name:'English (Jamaica)', dialect:'Jamaican English', proficiency:'native', is_primary:true }],
       public_locations:[{ location_type:'current', country_code:'JM', country_name:'Jamaica', parish_county:'Saint Catherine', city:'Bog Walk', time_zone:'America/Jamaica' }],
