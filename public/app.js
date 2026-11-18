@@ -1953,6 +1953,7 @@ function attachLiveCohostTrack(track,participant,local=false,publication=null){
     const video=document.createElement("video");video.autoplay=true;video.playsInline=true;video.muted=true;
     video.className="live-cohost-video";video.dataset.cohostIdentity=identity;
     track.attach(video);
+    tile.classList.add("has-video");
     media.replaceChildren(video);
   }
   updateLiveCohostStageCount();
@@ -2029,7 +2030,11 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
   activeLiveCohostSession={...cohostSession,participants};
   renderLiveCohostRoster(participants);
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attachLiveCohostTrack(track,participant,false,publication));
-  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>{element.closest?.(".live-cohost-tile")?.remove();element.remove();}));
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>{
+    const tile=element.closest?.(".live-cohost-tile");
+    if(String(element.tagName||"").toLowerCase()==="video")tile?.classList.remove("has-video");
+    element.remove();
+  }));
   room.on(client.RoomEvent.ParticipantConnected,participant=>{ensureLiveCohostTile(participant.identity,participant);updateLiveCohostStageCount();});
   room.on(client.RoomEvent.ParticipantDisconnected,participant=>{
     root.querySelectorAll(".live-cohost-tile").forEach(tile=>{if(tile.dataset.cohostIdentity===String(participant.identity))tile.remove();});
