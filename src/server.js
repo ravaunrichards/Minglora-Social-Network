@@ -4401,7 +4401,7 @@ async function route(req, res) {
               const brandAction=String(input?.brandAction||'').trim().toLowerCase();
               const allowed=new Set([
                 'create_category','update_category','create_collection','update_collection',
-                'update_logo','archive_logo','restore_logo','restore_logo_version','favorite_toggle',
+                'update_logo','archive_logo','restore_logo','restore_logo_version','duplicate_logo','duplicate_asset','favorite_toggle',
                 'request_publish','decide_approval','publish','rollback','schedule_logo','cancel_schedule',
                 'update_identity','archive_asset','restore_asset','request_asset_publish','publish_asset'
               ]);
