@@ -86,7 +86,12 @@ test('The host has a persistent master Guest stage ON/OFF control', () => {
   assert.match(app, /setting:key,enabled:input\.checked/);
   assert.match(app, /packet\.setting==='guestStageEnabled'/);
   assert.match(app, /Turn OFF to block requests and remove current speakers/);
-  assert.match(app, /Turn ON permits requests when Allow guest requests and Allow co-host are also enabled/);
+  assert.match(app, /Allow viewers to request a guest place in this LIVE/);
+  const guestRequestStart = server.indexOf("const liveSpeakerRequestMatch");
+  const guestRequestEnd = server.indexOf("const cohostByBroadcastMatch", guestRequestStart);
+  const guestRequestRoute = server.slice(guestRequestStart, guestRequestEnd);
+  assert.doesNotMatch(guestRequestRoute, /allowCoHost/,
+    'Multi-guest viewer requests are not disabled by the independent Co-host permission setting');
 });
 
 test('Disabling Guest stage blocks requests, approvals, joins and connected guest sessions', () => {
