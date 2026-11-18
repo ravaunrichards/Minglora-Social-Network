@@ -658,3 +658,47 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layo
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:2!important}
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:span 2!important;grid-row:span 2!important}
 /* END FINAL LIVE LAYOUT INDEPENDENCE CONTRACT. */
+
+
+/* Audio-only LIVE Roundtable presets use the unified data-live-layout
+   attribute. Row 1 is the stage label; rows 2–5 hold host and guest seats. */
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]{
+  grid-template-columns:minmax(0,.82fr) minmax(0,1.45fr) minmax(0,.82fr)!important;
+  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
+  grid-auto-flow:row dense!important;grid-auto-rows:minmax(0,1fr)!important;
+}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:2/6!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(3){grid-column:1!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(4){grid-column:3!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(5){grid-column:1!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(6){grid-column:3!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(7){grid-column:1!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(8){grid-column:3!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(9){grid-column:1!important;grid-row:5!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(10){grid-column:3!important;grid-row:5!important}
+
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]{
+  grid-template-columns:minmax(0,.72fr) minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,.72fr)!important;
+  grid-template-rows:22px repeat(4,minmax(0,1fr))!important;
+  grid-auto-flow:row dense!important;grid-auto-rows:minmax(0,1fr)!important;
+}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4!important;grid-row:2/6!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(3){grid-column:1!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(4){grid-column:4!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(5){grid-column:1!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(6){grid-column:4!important;grid-row:3!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(7){grid-column:1!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(8){grid-column:4!important;grid-row:4!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(9){grid-column:1!important;grid-row:5!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty):nth-child(10){grid-column:4!important;grid-row:5!important}
+
+@media(max-width:760px){
+  body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-1"]{
+    grid-template-columns:minmax(0,.68fr) minmax(0,1.35fr) minmax(0,.68fr)!important;
+    grid-template-rows:20px repeat(4,minmax(0,1fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="roundtable-2"]{
+    grid-template-columns:minmax(0,.62fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,.62fr)!important;
+    grid-template-rows:20px repeat(4,minmax(0,1fr))!important;
+  }
+}
