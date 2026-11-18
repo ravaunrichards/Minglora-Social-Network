@@ -204,3 +204,36 @@ test('provider workspace uses real rows and does not offer credential or activat
   assert.ok(!ui.includes('name="secret"'));
   assert.ok(!ui.includes('Activate provider'));
 });
+
+test('owner-control resume and bot enable use a live provider probe, not the permanently disabled worker flag', () => {
+  const start = server.indexOf("if (p === '/api/ai-network'");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  assert.ok(route.includes('const providerReady = providerStatus.manualDraftsAvailable === true;'));
+  assert.ok(route.includes('const verifyManualProviderAccess = async () =>'));
+  assert.ok(route.includes("if (input.globalPaused === false) await verifyManualProviderAccess();"));
+  assert.ok(route.includes("if (input.status === 'active') await verifyManualProviderAccess();"));
+  assert.ok(route.includes("if (method === 'POST' && sub === 'emergency-resume')"));
+  assert.ok(route.includes('const providerHealth = await verifyManualProviderAccess();'));
+  assert.ok(route.includes('autonomousWorkersEnabled: false'));
+});
+
+test('autonomous schedule activation remains unavailable until its worker runtime exists', () => {
+  const start = server.indexOf("if (p === '/api/ai-network'");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  assert.ok(route.includes('Autonomous schedules cannot be activated yet.'));
+  assert.ok(route.includes('durable AI worker runtime is not deployed and remains disabled'));
+});
+
+test('pause, resume and owner-use bot buttons are connected to server actions and not hard-disabled decorations', () => {
+  assert.ok(ui.includes('data-ai-action="emergency-pause"'));
+  assert.ok(ui.includes('data-ai-action="emergency-resume"'));
+  assert.ok(ui.includes("request('/emergency-pause'"));
+  assert.ok(ui.includes("request('/emergency-resume'"));
+  assert.ok(ui.includes('data-ai-action="bot-status"'));
+  assert.ok(ui.includes("request('/bots/' + encodeURIComponent(id) + '/status'"));
+  assert.ok(ui.includes('Enable for owner use'));
+  assert.ok(!ui.includes('data-ai-action="emergency-resume" disabled'));
+  assert.ok(!ui.includes('data-status="active" disabled title="Autonomous execution remains disabled"'));
+});

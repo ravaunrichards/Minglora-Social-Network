@@ -82,9 +82,10 @@ test('AI Network workspace exposes all ten recommendations and true measured/emp
   ]) assert.ok(ui.includes(label), label);
   assert.ok(ui.includes('No AI bots created yet'));
   assert.ok(ui.includes('recorded runs only'));
-  assert.ok(ui.includes('Disabled until provider adapter is verified'));
+  assert.ok(ui.includes('Autonomous workers'));
+  assert.ok(ui.includes('separate runtime required'));
   assert.ok(ui.includes('AI BOT'));
-  assert.ok(ui.includes('Emergency pause all AI work'));
+  assert.ok(ui.includes('Emergency pause bot and schedule controls'));
   assert.ok(css.includes('.ai-network-page'));
   assert.ok(css.includes('@media(max-width:560px)'));
   assert.ok(css.includes('prefers-reduced-motion:reduce'));
@@ -95,7 +96,7 @@ test('AI Network page calls only same-origin authenticated API routes and never 
   assert.ok(ui.includes("credentials: 'same-origin'"));
   assert.ok(!/name=['"](?:apiKey|providerApiKey|MINGLORA_AI_API_KEY)['"]/.test(ui));
   assert.ok(!ui.includes('localStorage'));
-  assert.ok(ui.includes('provider adapter is verified'));
+  assert.ok(ui.includes('fresh OpenAI model-access check'));
 });
 
 test('AI Network APIs are behind the signed-in session and the feature-owned collections persist separately', () => {
