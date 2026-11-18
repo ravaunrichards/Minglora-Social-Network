@@ -16,9 +16,9 @@ const layouts = [
 ];
 
 test('Audio LIVE gives the reference guest grid the complete stage', () => {
-  assert.match(parity, /#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
+  assert.match(parity, /#live-video-stage\.live-audio-stage\{[\s\S]*?display:block!important[\s\S]*?min-height:clamp\(320px,58vh,620px\)!important/);
   assert.match(parity, /#live-video-stage\.live-audio-stage>\.live-audio-scene,[\s\S]*?#live-video-stage\.live-audio-stage>#live-speaker-list\{\s*display:none!important/);
-  assert.match(parity, /#live-guest-layout\.audio-guest-layout\{[\s\S]*?grid-template-rows:22px minmax\(0,1fr\)!important/);
+  assert.match(parity, /#live-guest-layout\.audio-guest-layout\{[\s\S]*?position:absolute!important;inset:0!important;z-index:2!important;display:grid!important;[\s\S]*?grid-template-rows:22px minmax\(0,1fr\)!important/);
 });
 
 test('All nine audio presets use dedicated reference panel geometries', () => {
@@ -49,8 +49,9 @@ test('Audio LIVE controls adapt to short landscape and narrow screens', () => {
 
 test('The new parity stylesheet loads after the legacy layout rules and is precached', () => {
   const compact = index.indexOf('/live-tiktok-compact.css');
+  const guards = index.indexOf('/live-interface-guardrails.css');
   const parityLink = index.indexOf('/live-audio-layout-parity.css?v=20261118-audio-live-reference-grid-parity-1');
-  assert.ok(compact >= 0 && parityLink > compact, 'audio parity CSS must load after compact layout CSS');
+  assert.ok(compact >= 0 && guards > compact && parityLink > guards, 'audio parity CSS must load after all legacy LIVE layout and guardrail CSS');
   assert.ok(serviceWorker.includes('/live-audio-layout-parity.css?v=20261118-audio-live-reference-grid-parity-1'));
   assert.match(serviceWorker, /minglora-shell-v356-self-updating-1/);
 });
