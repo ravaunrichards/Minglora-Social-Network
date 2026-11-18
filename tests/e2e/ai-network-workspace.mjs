@@ -735,7 +735,9 @@ try {
           chain.push({
             tag: current.tagName, className: String(current.className || ''),
             hidden: current.hidden, ariaHidden: current.getAttribute('aria-hidden'),
-            display: style.display, visibility: style.visibility, opacity: style.opacity,
+            display: style.display, flexDirection: style.flexDirection,
+            flexBasis: style.flexBasis, flexWrap: style.flexWrap,
+            visibility: style.visibility, opacity: style.opacity,
             width: rect.width, height: rect.height
           });
         }
