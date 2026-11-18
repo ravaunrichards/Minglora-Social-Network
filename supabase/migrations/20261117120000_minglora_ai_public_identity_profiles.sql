@@ -63,6 +63,14 @@ begin
 
   v_is_owner := v_identity.owner_user_id = p_actor_user_id;
 
+  if not v_is_owner and exists (
+    select 1 from public.user_blocks b
+    where (b.blocker_id = p_actor_user_id and b.blocked_id = v_identity.owner_user_id)
+       or (b.blocker_id = v_identity.owner_user_id and b.blocked_id = p_actor_user_id)
+  ) then
+    raise exception using errcode = 'P0002', message = 'AI profile is unavailable.';
+  end if;
+
   select exists (
     select 1 from ai_network.ai_identity_follows f
     where f.identity_id = p_identity_id
