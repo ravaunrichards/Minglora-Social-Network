@@ -2135,7 +2135,7 @@ function liveMatchStatusLabel(match){
   if(match.status==='pending')return 'Invitation pending';
   return String(match.status||'Match').replace(/_/g,' ');
 }
-function renderLiveMatches(matches){
+function renderLiveMatches(matches,session){
   const root=$('#live-match-list');if(!root)return;
   const items=Array.isArray(matches)?matches:[];
   if(!items.length){root.innerHTML="<div class='live-match-empty'><strong>No League Matches yet</strong><small>Challenge another creator who is currently broadcasting.</small></div>";return;}
@@ -2143,24 +2143,57 @@ function renderLiveMatches(matches){
     const challenger=match.challenger?.name||'Challenger',opponent=match.opponent?.name||'Opponent';
     const active=match.status==='live',pending=match.status==='pending';
     const score=match.scores||{challenger:0,opponent:0};
+    const challengerHidden=match.scoreVisibility?.challenger===false;
+    const opponentHidden=match.scoreVisibility?.opponent===false;
     const challengerPoints=Number(score.challenger||0),opponentPoints=Number(score.opponent||0);
     const total=Math.max(1,challengerPoints+opponentPoints);
     const mine=[match.challengerId,match.opponentId].includes(state.user?.id);
+    const mySide=match.challengerId===state.user?.id?'challenger':match.opponentId===state.user?.id?'opponent':'';
+    const viewerSide=match.challengerSessionId===session?.id?'challenger':match.opponentSessionId===session?.id?'opponent':'';
+    const panelSide=mine?mySide:viewerSide;
     const acceptedByMe=match.opponentId===state.user?.id&&pending;
     const alreadySupported=(match.supporters||[]).some(item=>item.userId===state.user?.id);
-    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+challengerPoints.toLocaleString()+"</b><small>Challenger</small></div>";
-    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+opponentPoints.toLocaleString()+"</b><small>Opponent</small></div>";
-    const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
+    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+(challengerHidden?"Hidden by Magic Mist":challengerPoints.toLocaleString())+"</b><small>Challenger</small></div>";
+    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+(opponentHidden?"Hidden by Magic Mist":opponentPoints.toLocaleString())+"</b><small>Opponent</small></div>";
+    const barWidth=challengerHidden||opponentHidden?50:Math.round(challengerPoints/total*100);
+    const bar="<div class='live-match-scorebar"+(challengerHidden||opponentHidden?" is-mist-hidden":"")+"'><i style='width:"+barWidth+"%'></i></div>";
     const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
     const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
-    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
-    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
+    const cards=Array.isArray(match.availablePowerups)?match.availablePowerups:[];
+    const powerups=active&&!mine&&viewerSide?(cards.length
+      ? "<section class='live-match-powerups' aria-label='Your creator-linked Match Power-Up Backpack'><div class='live-match-powerups-heading'><strong>YOUR POWER-UP BACKPACK</strong><small>Cards for "+esc(session?.host?.name||session?.title||"this creator")+"</small></div>"+cards.map(card=>{
+          const timeLimit=card.powerupId==='time_maker'&&Number(match.timeMakerUses||0)>=3;
+          const speedLimit=card.powerupId==='speed_challenge'&&Boolean(match.speedChallenge);
+          const disabled=timeLimit||speedLimit;
+          const status= timeLimit?'3 shared uses reached':speedLimit?'Already used in this match':'Ready to use';
+          const icon={
+            boosting_glove:'powerup-glove',magic_mist:'powerup-mist',stun_hammer:'powerup-hammer',
+            time_maker:'powerup-time-maker',boosters:'powerup-boosters',speed_challenge:'powerup-speed'
+          }[card.powerupId];
+          const art=icon?"<svg class='league-powerup-svg-icon' viewBox='0 0 128 128' aria-hidden='true' focusable='false'><use href='/assets/league/league-emblems.svg?v=20261118-match-powerups-reference-2#"+icon+"'></use></svg>":"";
+          const expiry=card.expiresAt?'Expires '+new Date(card.expiresAt).toLocaleDateString():'';
+          return "<button type='button' class='live-match-powerup-card' data-live-match-action='powerup' data-inventory-card-id='"+esc(card.inventoryCardId)+"' data-match-id='"+esc(match.id)+"' data-broadcast-id='"+esc(session.id)+"'"+(disabled?' disabled':'')+" aria-label='"+esc(card.name+' — '+status+' — '+expiry)+"'><span class='live-match-powerup-icon'>"+art+"</span><strong>"+esc(card.name)+"</strong><small>"+esc(card.description||'Use this card to support the creator')+"</small><span class='live-match-powerup-state'>"+status+"</span><small class='live-match-powerup-expiry'>"+esc(expiry)+"</small></button>";
+        }).join("")+"</section>"
+      : "<div class='live-match-backpack-empty'><strong>YOUR POWER-UP BACKPACK</strong><span>No cards for this creator yet. The winning side's top three Gift contributors can earn a random Power-Up card.</span></div>"):"";
+    const effects=(match.matchEffects||[]).map(effect=>{
+      if(effect.type==='stun_hammer'&&effect.targetSide===panelSide){
+        const impacts=Math.max(0,Number(effect.impactCount||0));
+        return "<span class='live-match-effect live-match-effect--hammer'>🔨 STUN HAMMER · "+impacts+" GIFT IMPACT"+(impacts===1?'':'S')+"</span>";
+      }
+      if(effect.type==='magic_mist'&&effect.side===panelSide)return "<span class='live-match-effect live-match-effect--mist'>☁ MAGIC MIST ACTIVE · OPPONENT SCORE HIDDEN</span>";
+      if(effect.type==='boosting_glove'&&effect.side===panelSide)return "<span class='live-match-effect live-match-effect--glove'>🥊 BOOSTING GLOVE · 30% CHANCE · 5×</span>";
+      if(effect.type==='boosters'&&effect.side===panelSide)return "<span class='live-match-effect live-match-effect--boosters'>2× BOOSTERS · NO. 2 &amp; NO. 3 GIFTERS</span>";
+      return "";
+    }).join("")+(challengerHidden||opponentHidden?"<span class='live-match-effect live-match-effect--mist'>☁ MAGIC MIST · SCORE HIDDEN</span>":"")+(Number(match.timeMakerUses||0)>0?"<span class='live-match-effect'>⏱ TIME MAKER · +"+(Number(match.timeMakerUses||0)*10)+" SEC</span>":"")+(match.speedChallenge&&new Date(match.speedChallenge.expiresAt).getTime()>Date.now()?"<span class='live-match-effect live-match-effect--speed'>🚀 SPEED CHALLENGE · 2× · 52 SEC</span>":"");
+    const stunEffect=(match.matchEffects||[]).find(effect=>effect.type==='stun_hammer'&&effect.targetSide===panelSide);
+    const impactLevel=stunEffect?Math.min(3,Math.max(1,Number(stunEffect.impactCount||0)+1)):0;
+    return "<article class='live-match-card"+(impactLevel?" live-match-card--stunned":"")+"'"+(impactLevel?" data-hammer-impact='"+impactLevel+"'":"")+" data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-effects'>"+effects+"</div><div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
   }).join('');
 }
 async function refreshLiveMatchPanel(session,role){
   if(liveMatchRefreshBusy||!session?.id||!$('#live-match-list'))return;
   liveMatchRefreshBusy=true;
-  try{const data=await api('/leagues/matches');if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[]);}
+  try{const data=await api('/leagues/matches?broadcastId='+encodeURIComponent(session.id));if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[],session);}
   catch(error){const root=$('#live-match-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Creator League could not be loaded: "+esc(error.message)+"</p>";}
   finally{liveMatchRefreshBusy=false;}
 }
@@ -2194,9 +2227,9 @@ async function setupLiveMatchPanel(session,role){
     const button=event.target?.closest?.('[data-live-match-action]');if(!button)return;
     const action=button.dataset.liveMatchAction,matchId=String(button.dataset.matchId||'');
     const routeAction=action==='accept'?'accept':action==='support-challenger'||action==='support-opponent'?'support':'powerups';
-    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{powerupId:button.dataset.powerupId}:{};
+    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{inventoryCardId:button.dataset.inventoryCardId,broadcastId:session.id}:{};
     button.disabled=true;
-    try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'League Match power-up activated.');await refreshLiveMatchPanel(session,role);}
+    try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'Power-Up card activated for this creator.');await refreshLiveMatchPanel(session,role);}
     catch(error){toast(error.message||'The League Match action could not be completed.');}
     finally{button.disabled=false;}
   });
