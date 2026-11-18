@@ -1,7 +1,7 @@
 const BRAND_BUCKET = "minglora-brand-assets";
-const BRAND_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
 const BRAND_MIME_EXTENSIONS: Record<string,string> = {
   "image/svg+xml":"svg",
+  "image/apng":"png",
   "image/png":"png",
   "image/jpeg":"jpg",
   "image/webp":"webp",
@@ -83,8 +83,8 @@ export async function handleBrandRuntimeAction(action:string,input:Record<string
   }
 
   const actorUserId=String(input.actorUserId||"");
-  if(actorUserId!==BRAND_OWNER_ID||input.mfaVerified!==true) {
-    return brandJson(403,{error:"Only the MFA-verified designated Minglora owner can manage official branding."});
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actorUserId)||input.mfaVerified!==true) {
+    return brandJson(403,{error:"A signed-in, MFA-verified Minglora administrator session is required."});
   }
   if(!admin)return brandJson(503,{error:"Minglora brand storage is not configured."});
 
@@ -193,11 +193,33 @@ export async function handleBrandRuntimeAction(action:string,input:Record<string
     const allowed=new Set([
       "list","category_create","collection_create","asset_update","asset_status","favorite_toggle",
       "asset_approve","assignment_set","assignment_publish","assignment_rollback",
-      "schedule_create","schedule_cancel","identity_update","asset_url"
+      "schedule_create","schedule_cancel","identity_update","asset_url","version_restore"
     ]);
     if(!allowed.has(brandAction))return brandJson(400,{error:"Choose a supported Logo Center action."});
     const payload=input.payload&&typeof input.payload==="object"&&!Array.isArray(input.payload)?input.payload:{};
     try {
+      if(["assignment_set","assignment_publish","assignment_rollback"].includes(brandAction)) {
+        const assignmentAction=brandAction==="assignment_set"?"prepare":brandAction==="assignment_publish"?"publish":"rollback";
+        const {data,error}=await admin.rpc("minglora_brand_assignment_command",{
+          p_actor_user_id:actorUserId,p_mfa_verified:true,p_action:assignmentAction,p_payload:payload
+        });
+        if(error)throw error;
+        return brandJson(200,data&&typeof data==="object"?data:{ok:true});
+      }
+      if(brandAction==="schedule_create") {
+        const {data,error}=await admin.rpc("minglora_brand_logo_schedule_create",{
+          p_actor_user_id:actorUserId,p_mfa_verified:true,p_payload:payload
+        });
+        if(error)throw error;
+        return brandJson(200,data&&typeof data==="object"?data:{ok:true});
+      }
+      if(brandAction==="version_restore") {
+        const {data,error}=await admin.rpc("minglora_brand_logo_restore_version",{
+          p_actor_user_id:actorUserId,p_mfa_verified:true,p_asset_id:String(payload.assetId||""),p_version_id:String(payload.versionId||"")
+        });
+        if(error)throw error;
+        return brandJson(200,data&&typeof data==="object"?data:{ok:true});
+      }
       const result=await brandRpc(admin,actorUserId,brandAction,payload);
       if(brandAction==="list") {
         const assets=Array.isArray(result?.assets)?result.assets:[];

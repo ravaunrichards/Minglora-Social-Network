@@ -439,6 +439,11 @@ function hasActiveReviewerSession(user){
   if(!PLATFORM_OWNER_USER_IDS.has(user.id))return true;
   return (db.sessions||[]).some(session=>session.userId===user.id&&session.mfaVerified&&new Date(session.expiresAt)>new Date());
 }
+function hasActiveBrandMfaSession(user,req){
+  if(!user||!user.id)return false;
+  const session=req?sessionFromRequest(req):null;
+  return Boolean(session&&session.userId===user.id&&session.mfaVerified===true);
+}
 const loginFailures=new Map();
 function loginRateLimitKey(req,email){const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();return crypto.createHash('sha256').update(ip+'|'+email).digest('hex');}
 function checkLoginRateLimit(req,email){const key=loginRateLimitKey(req,email),entry=loginFailures.get(key);if(!entry)return {allowed:true,key};if(entry.resetAt<Date.now()){loginFailures.delete(key);return {allowed:true,key};}return {allowed:entry.count<5,key,retryAfterMs:Math.max(0,entry.resetAt-Date.now())};}
@@ -3964,8 +3969,7 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       if (await handleAdminLogoCenterApi({
         method,path:p,url,input,user,req,res,json,isSameOriginApiWrite,
-        isDesignatedCreatorHubAdmin,isModerator,hasActiveReviewerSession,
-        AUTH_PROVIDER,isSupabasePersistence,requestSupabaseState
+        hasActiveBrandMfaSession,AUTH_PROVIDER,isSupabasePersistence,requestSupabaseState
       })) return;
       requireAuth(user);
       if(p==='/api/menstrual-health'||p.startsWith('/api/menstrual-health/')){
@@ -4367,10 +4371,27 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/admin/access'){
         const designatedCreatorHubAdmin = isDesignatedCreatorHubAdmin(user);
         const canAccess = designatedCreatorHubAdmin && isModerator(user,req) && hasActiveReviewerSession(user);
+        const ownerCanAccess = canAccess;
+        if(ownerCanAccess){
+          return json(res,200,{canAccess:true,brandOnly:false,setupRequired:false,mfaVerified:true});
+        }
+        if(hasActiveBrandMfaSession(user,req)&&AUTH_PROVIDER==='supabase'&&isSupabasePersistence()){
+          try{
+            const brandAccess=await requestSupabaseState('admin_brand_command',{
+              actorUserId:user.id,mfaVerified:true,brandAction:'list',payload:{}
+            });
+            const permissions=Array.isArray(brandAccess?.permissions)?brandAccess.permissions:[];
+            if(!brandAccess?.skipped&&(permissions.includes('brand:read')||permissions.includes('brand:manage'))){
+              return json(res,200,{canAccess:true,brandOnly:true,setupRequired:false,mfaVerified:true});
+            }
+          }catch{
+            // A missing or revoked brand assignment never unlocks the private Admin Centre.
+          }
+        }
         return json(res,200,{
-          canAccess,
+          canAccess:false,brandOnly:false,
           setupRequired: designatedCreatorHubAdmin && !canAccess,
-          mfaVerified: canAccess
+          mfaVerified:false
         });
       }
 

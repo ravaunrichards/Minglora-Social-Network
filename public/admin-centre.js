@@ -674,6 +674,27 @@
     const panel = document.createElement('div');
     panel.className = 'admin-control-centre admin-control-centre-page';
     panel.id = 'admin-control-centre';
+    if(access.brandOnly===true){
+      panel.innerHTML = `
+        <div class="admin-control-centre-head">
+          <div><h3>Minglora Logo Center</h3>
+            <p>Manage only the brand capabilities granted to this administrator account.</p></div>
+          <span class="admin-control-centre-status">MFA-verified brand access</span>
+        </div>
+        <div class="admin-control-centre-note">
+          This restricted workspace does not grant access to member management, finance, moderation, AI operations or other Admin Centre controls.
+        </div>`;
+      root.append(panel);
+      if(typeof window.MingloraAdminLogoCenter?.mount==='function'){
+        window.MingloraAdminLogoCenter.mount(panel,adminCentreApi);
+      }else{
+        panel.appendChild(Object.assign(document.createElement('p'),{
+          className:'admin-centre-access-denied',
+          textContent:'The Logo Center workspace could not be loaded. Refresh Minglora and try again.'
+        }));
+      }
+      return;
+    }
     panel.innerHTML = `
       <div class="admin-control-centre-head">
         <div>

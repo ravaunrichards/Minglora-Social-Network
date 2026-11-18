@@ -4,6 +4,7 @@ import test from "node:test";
 
 const read = file => fs.readFileSync(new URL("../../" + file, import.meta.url), "utf8");
 const migration = read("supabase/migrations/20261118080000_minglora_admin_logo_center.sql");
+const completionMigration = read("supabase/migrations/20261118160000_minglora_logo_center_completion.sql");
 const edge = read("supabase/functions/minglora-runtime-state/brand-center.ts");
 const edgeEntry = read("supabase/functions/minglora-runtime-state/index.ts");
 const api = read("src/admin-logo-center-api.js");
@@ -69,13 +70,14 @@ test("original files use immutable version paths and pending uploads are owner-b
   assert.match(migration, /status=CASE WHEN status IN \('approved','active'\) THEN status ELSE 'draft' END/);
 });
 
-test("the SQL command requires the designated MFA-verified owner and service role", () => {
+test("brand RPC writes require MFA and delegate authorization to scoped database permissions", () => {
   assert.match(migration, /coalesce\(auth\.role\(\),''\) <> 'service_role'/);
   assert.match(migration, /5b998c21-86b5-4621-ab37-e0808a2657b1/);
   assert.match(migration, /p_mfa_verified IS DISTINCT FROM true/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.minglora_admin_brand_command/);
-  assert.match(api, /isDesignatedCreatorHubAdmin\(user\)/);
-  assert.match(api, /hasActiveReviewerSession\(user\)/);
+  assert.match(completionMigration, /CREATE OR REPLACE FUNCTION public\.minglora_assert_brand_permission/);
+  assert.match(completionMigration, /brand:manage/);
+  assert.match(api, /hasActiveBrandMfaSession\(user,req\)/);
   assert.match(api, /isSameOriginApiWrite\(req\)/);
   assert.ok(api.startsWith('import crypto from "node:crypto";'));
 });
@@ -117,10 +119,13 @@ test("Admin Centre links the Logo Center only after the existing owner access ga
 
 test("the working Logo Center UI supports library, uploads, classification, approval, placement and identity", () => {
   for (const value of [
-    "Overview","Logo Library","Upload","Collections & Categories","Placements",
-    "Brand Identity","Design Studio","Mockup Studio","Scheduling","Activity & History",
+    "Overview","Logo Center Dashboard","Logo Library","Logo Upload Manager","Logo Collections","Logo Categories",
+    "Logo Placement Manager","Brand Identity Center","Logo Design Studio","Logo Editing Studio","Logo Mockup Studio","Logo Scheduling",
+    "Logo Version History","Brand Backup & Recovery","Brand Security & Permissions","Brand Analytics",
+    "Brand Settings","Complete Logo Library","Duplicate","Edit title, description, category and collection",
+    "Download metadata recovery snapshot","Activity & History",
     "upload/prepare","upload/complete","asset_approve","assignment_set",
-    "assignment_publish","assignment_rollback","identity_update","schedule_create","schedule_cancel"
+    "assignment_publish","assignment_rollback","identity_update","schedule_create","schedule_cancel","version_restore"
   ]) assert.ok(ui.includes(value), "missing UI workflow " + value);
   assert.match(ui, /state\.data\?\.assets/);
   assert.match(ui, /No demo assets|No uploaded logos yet/);
@@ -148,4 +153,52 @@ test("Logo Center layout adapts to tablet and phone widths", () => {
   assert.match(css, /@media\(max-width:650px\)/);
   assert.match(css, /grid-template-columns:1fr/);
   assert.match(css, /overflow-x:auto/);
+});
+
+test("the completion migration preserves published placements while pending changes await approval",()=>{
+  assert.match(completionMigration,/pending_asset_id uuid/);
+  assert.match(completionMigration,/minglora_brand_assignment_command/);
+  assert.match(completionMigration,/pending_version_id=v_version/);
+  assert.match(edge,/minglora_brand_assignment_command/);
+  assert.match(ui,/item\.pending_asset_id/);
+});
+test("scheduled expiry runs before new activation and automatic restore is audited",()=>{
+  const dispatcher=completionMigration.slice(completionMigration.indexOf("CREATE OR REPLACE FUNCTION public.dispatch_due_minglora_brand_logo_schedules"));
+  assert.ok(dispatcher.indexOf("WHERE s.status='activated'")<dispatcher.indexOf("WHERE s.status='scheduled'"));
+  assert.match(completionMigration,/cron\.schedule/);
+  assert.match(completionMigration,/schedule\.activated/);
+  assert.match(completionMigration,/schedule\.expired/);
+  assert.match(completionMigration,/schedule_overlap_guard/);
+  assert.match(completionMigration,/FOR UPDATE SKIP LOCKED/);
+});
+test("historical immutable versions use an MFA- and edit-permission-protected recovery RPC",()=>{
+  assert.match(completionMigration,/minglora_brand_logo_restore_version/);
+  assert.match(completionMigration,/minglora_assert_brand_permission\(p_actor_user_id,p_mfa_verified,'brand:edit'\)/);
+  assert.match(edge,/brandAction==="version_restore"/);
+  assert.match(api,/"version_restore"/);
+  assert.match(ui,/Restore version/);
+});
+
+test("Logo Center roles are added to the existing owner-controlled RBAC catalogue without granting anyone",()=>{
+  for(const role of ["brand_administrator","brand_asset_uploader","brand_asset_editor","brand_approval_manager","brand_publisher","brand_read_only"])
+    assert.ok(completionMigration.includes("'"+role+"'"),"missing delegated brand role "+role);
+  for(const permission of ["brand:read","brand:upload","brand:edit","brand:approve","brand:publish","brand:manage"])
+    assert.ok(completionMigration.includes("'"+permission+"'"),"missing scoped permission "+permission);
+  assert.match(completionMigration,/ON CONFLICT \(role_key\) DO NOTHING/);
+  assert.match(completionMigration,/p_permission=ANY\(s\.permissions\) OR 'brand:manage'=ANY\(s\.permissions\)/);
+  assert.match(completionMigration,/s\.mfa_required=true/);
+  assert.match(completionMigration,/u\.email_confirmed_at IS NOT NULL/);
+  assert.match(completionMigration,/GRANT EXECUTE ON FUNCTION public\.minglora_assert_brand_permission/);
+  assert.doesNotMatch(completionMigration,/UPDATE public\.minglora_platform_staff/);
+});
+test("delegated brand operators receive a Logo Center-only workspace and never the full Admin Centre",()=>{
+  assert.match(server,/brandOnly:true/);
+  assert.match(server,/hasActiveBrandMfaSession\(user,req\)/);
+  assert.match(adminPage,/access\.brandOnly===true/);
+  assert.match(adminPage,/does not grant access to member management, finance, moderation, AI operations/);
+  assert.match(api,/hasActiveBrandMfaSession/);
+  assert.match(edge,/MFA-verified Minglora administrator session is required/);
+  assert.match(ui,/upload:"brand:upload",design:"brand:edit"/);
+  assert.match(ui,/can\("brand:approve"\)/);
+  assert.match(ui,/can\("brand:publish"\)/);
 });
