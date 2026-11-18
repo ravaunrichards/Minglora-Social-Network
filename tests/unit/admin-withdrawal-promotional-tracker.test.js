@@ -28,7 +28,7 @@ test("admin withdrawal tracker renders status totals, filtering and automatic up
   assert.match(admin, /\}, 30000\)/);
   assert.doesNotMatch(admin, /id="admin-gift-earnings-refresh"/);
   assert.match(adminCss, /admin-withdrawal-tracker-row/);
-  assert.match(adminHtml, /admin-centre\.js\?v=20261117-admin-approval-center-1/);
+  assert.match(adminHtml, /admin-centre\.js\?v=20261118-admin-global-approval-alerts-1/);
 });
 test("promotional wallet, cash reserve and cash-backed gift activity stay separately visible", () => {
   for (const marker of [
