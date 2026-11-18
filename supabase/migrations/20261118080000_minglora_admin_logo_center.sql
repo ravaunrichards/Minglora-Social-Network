@@ -317,6 +317,8 @@ GRANT ALL ON public.minglora_brand_logo_categories,
   public.minglora_brand_deployment_history,
   public.minglora_brand_logo_activity_logs
 TO service_role;
+REVOKE ALL ON SEQUENCE public.minglora_brand_logo_activity_logs_id_seq FROM PUBLIC, anon, authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.minglora_brand_logo_activity_logs_id_seq TO service_role;
 
 CREATE OR REPLACE FUNCTION public.prevent_minglora_brand_audit_mutation()
 RETURNS trigger
