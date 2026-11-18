@@ -32,14 +32,14 @@ test("Enigma replaces the old M artwork across all active Minglora brand surface
 
   assert.ok(index.includes("minglora-branding.css?v=20261116-enigma-logo-1"));
   assert.ok(help.includes("help-center.css?v=20261116-enigma-logo-1"));
-  assert.ok(adminHtml.includes("admin-centre.css?v=20261116-enigma-logo-1"));
+  assert.ok(adminHtml.includes("admin-centre.css?v=20261117-approval-center-1"));
   assert.ok(brandCss.includes("object-fit:cover!important;object-position:center 12%!important"));
   assert.ok(helpCss.includes(".hc-brand img{border-radius:13px;object-fit:cover;object-position:center 12%}"));
   assert.ok(adminHtml.includes('<img class="admin-centre-brand-mark"'));
   assert.ok(adminCss.includes("object-fit:cover;"));
   assert.ok(adminCss.includes("object-position:center 12%;"));
   assert.ok(manifest.includes('"type": "image/png"'));
-  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v355-self-updating-1'"));
+  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v356-admin-approval-center-1'"));
   assert.ok(serviceWorker.includes("icon:'" + brandUrl + "'"));
   assert.ok(serviceWorker.includes("badge:'" + brandUrl + "'"));
 });
