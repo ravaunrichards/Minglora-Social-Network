@@ -125,6 +125,7 @@ test("the working Logo Center UI supports library, uploads, classification, appr
 
 test("brand manifest only applies published secure image URLs and leaves existing branding intact on errors", () => {
   assert.match(manifest, /fetch\("\/api\/brand\/manifest"/);
+  assert.match(manifest, /\.brand-logo-img/);
   assert.match(manifest, /https:\\\/\\\//);
   assert.match(manifest, /if \(!response\.ok\) return/);
   assert.match(manifest, /existing, verified source branding unchanged/);
