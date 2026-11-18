@@ -216,8 +216,12 @@ test('LIVE layout selector shows the real supplied crop previews at readable siz
   assert.match(app,/loading='eager'/);
 });
 
-test('Side by Side preserves all ten supplied positions while Spotlight starts with the host in the wide tile',()=>{
-  assert.match(app,/activeLiveScreenLayout==='side-by-side'\)specs\.push\(\{key:'empty:side-by-side-extra',empty:true,seatNumber:10\}\)/);
+test('Side by Side alone exposes Guest seat 9 while Spotlight starts with the host in the wide tile',()=>{
+  assert.match(app,/const guestSeatLimit=activeLiveScreenLayout==='side-by-side'\?9:8/);
+  assert.match(app,/guests\.slice\(0,guestSeatLimit\)/);
+  assert.match(app,/while\(specs\.length<guestSeatLimit\+1\)/);
+  assert.match(app,/Guest seat "\+esc\(spec\.seatNumber\)/);
+  assert.match(app,/activeLiveScreenLayout==='spotlight'&&spec\.isHost\?" is-spotlight":""/);
   assert.match(app,/activeLiveScreenLayout==='spotlight'&&spec\.isHost\?" is-spotlight":""/);
   const contract=tiktok.slice(tiktok.indexOf('/* FINAL NINE GUEST LAYOUTS'));
   assert.match(contract,/SIDE BY SIDE[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
