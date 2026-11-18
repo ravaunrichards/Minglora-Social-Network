@@ -110,5 +110,5 @@ test("Daily and embedded Top Gifters podium avatars stay compact and preserve ba
   assert.ok(css.includes("width:36%;height:36%;max-width:none;box-sizing:border-box"));
   assert.ok(html.includes("leagues.js?v=20261117-avatar-rankings-sync-1"));
   assert.ok(html.includes("rankings.js?v=20261118-tiktok-ranking-frames-1"));
-  assert.ok(sw.includes("minglora-shell-v360-self-updating-1"));
+  assert.ok(sw.includes("minglora-shell-v361-self-updating-1"));
 });
