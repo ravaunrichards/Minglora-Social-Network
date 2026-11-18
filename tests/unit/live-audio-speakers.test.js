@@ -147,7 +147,7 @@ test('Audio LIVE uses all nine reference grids without covering seat panels', ()
   assert.match(audioContract,/#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
   assert.ok(audioContract.includes('#live-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
     'Audio LIVE guest panels must occupy the single full-stage row, not the retired row 2');
-  const safeAudioScene=audioGuardrails.slice(audioGuardrails.lastIndexOf('/* Audio LIVE seat visibility:'));
+  const safeAudioScene=audioGuardrails.slice(audioGuardrails.lastIndexOf('/* Audio LIVE keeps its host identity'));
   assert.match(safeAudioScene,/\.live-video-column\{[\s\S]*?grid-template-rows:48px minmax\(0,1fr\) 54px!important/);
   assert.match(safeAudioScene,/\.live-video-column>\.live-stage-topbar\{[\s\S]*?position:relative!important/);
   assert.match(safeAudioScene,/\.live-video-column #live-video-stage\.live-audio-stage\{[\s\S]*?grid-row:2!important/);
