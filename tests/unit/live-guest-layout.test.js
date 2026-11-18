@@ -10,7 +10,9 @@ const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 
 test('Minglora LIVE Full Screen starts host-only and adds seats only for active guest speakers', () => {
   assert.match(app, /let activeLiveScreenLayout='full-screen'/);
-  assert.match(app, /const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!root\.closest\("\.live-audio-stage"\)/);
+  assert.match(app, /const audioOnly=Boolean\(root\.closest\("\.live-audio-stage"\)\);/);
+  assert.match(app, /const hasGuestStageMedia=audioOnly\?participantHasLiveAudio:participantHasLiveStageMedia;/);
+  assert.match(app, /const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!audioOnly;/);
   assert.match(app, /function participantHasLiveStageMedia\(participant\)/);
   assert.match(app, /isLiveMedia&&\(publication\?\.track\|\|publication\?\.isSubscribed===true\)/);
   assert.match(app, /if\(role==="guest"&&local&&participantHasLiveStageMedia\(local\)\)guests\.push\(local\)/);
