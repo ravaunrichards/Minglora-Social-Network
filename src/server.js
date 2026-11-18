@@ -4390,7 +4390,7 @@ async function route(req, res) {
         }
         return json(res,200,{
           canAccess:false,brandOnly:false,
-          setupRequired:designatedCreatorHubAdmin&&!canAccess,
+          setupRequired: designatedCreatorHubAdmin && !canAccess,
           mfaVerified:false
         });
       }
