@@ -29,6 +29,15 @@ test('individual AI profile RPC enforces active state and visibility rules', () 
   ]) assert.ok(migration.includes(token), 'Missing profile visibility/security control: ' + token);
 });
 
+test('public profile JSON fields are allow-listed before leaving the database', () => {
+  assert.match(migration, /jsonb_array_elements\([\s\S]*?v_profile\.education[\s\S]*?with ordinality/);
+  assert.match(migration, /'institution', case when jsonb_typeof\(item\.value->'institution'\) = 'string'/);
+  assert.match(migration, /where jsonb_typeof\(item\.value\) = 'string'[\s\S]*?item\.value->'name'/);
+  assert.match(migration, /jsonb_typeof\(v_profile\.personality->'summary'\) = 'string'/);
+  assert.match(migration, /jsonb_typeof\(v_profile\.voice_preferences->'language'\) = 'string'/);
+  assert.doesNotMatch(migration, /'provider_voice_id'/);
+});
+
 test('public profile payload contains profile data but excludes private account and provider fields', () => {
   for (const field of [
     "'first_name'", "'middle_name'", "'last_name'", "'display_name'", "'username'",
