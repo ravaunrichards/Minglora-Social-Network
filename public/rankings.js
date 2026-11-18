@@ -105,7 +105,7 @@
         .filter(item => item.position <= 100).sort((a,b) => a.position - b.position);
       const byPosition = new Map(items.map(item => [item.position,item]));
       const podium = [2,1,3].map(place => podiumCard(byPosition.get(place),place)).join("");
-      const rows = items.filter(item => item.position > 3).map(rankedRow).join("");
+      const rows = items.map(rankedRow).join("");
       if (status) status.textContent = "Top " + items.length + " · Confirmed LIVE Coins sent · " +
         labelForPeriod(activePeriod) + (data.timeZone ? " · " + data.timeZone : "");
       board.innerHTML = items.length
