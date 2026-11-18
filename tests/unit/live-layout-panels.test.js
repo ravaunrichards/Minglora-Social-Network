@@ -234,7 +234,7 @@ test('Fluid Panel guest overlays stay clear of the host stage right and bottom b
   assert.ok(safeZoneStart>=0,'the final Fluid Panel safe-zone rules exist');
   assert.match(safeZone,/right:clamp\(18px,2\.4vw,32px\)!important/);
   assert.match(safeZone,/bottom:clamp\(88px,8vw,104px\)!important/);
-  assert.match(safeZone,/nth-child\(4\)\{[\s\S]*?bottom:calc\(clamp\(88px,8vw,104px\)/);
+  assert.match(safeZone,/bottom:calc\(clamp\(88px,8vw,104px\) \+ clamp\(44px,15vw,120px\) \+ 8px\)!important/);
   assert.match(safeZone,/@media\(max-width:420px\)[\s\S]*?clamp\(44px,15vw,58px\)/);
   assert.doesNotMatch(safeZone,/right:2px!important|bottom:2px!important/);
 });
