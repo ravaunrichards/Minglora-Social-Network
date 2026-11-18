@@ -1379,7 +1379,7 @@ async function loadAIWorkerRegistry() {
       '<div><span>Shown pending approval</span><strong>' + number(pending) + '</strong></div>' +
       '<div><span>Shown queued</span><strong>' + number(queued) + '</strong></div>' +
       '<div><span>Shown running leases</span><strong>' + number(running) + '</strong></div></div>' +
-      createForm + '<div><h4>Task history</h4>' + taskRows + '</div>' +
+      createForm + workerCenter + '<div><h4>Task history</h4>' + taskRows + '</div>' +
       '<p class="ai-network-note">Safety state is read from the persisted runtime-control row. Worker execution stays paused and disabled by default. Tasks are stored and approvals are audited, but no task executes until a separate verified worker, provider adapter and secrets integration are deployed.</p>',
       'ai-network-span-2');
   }
