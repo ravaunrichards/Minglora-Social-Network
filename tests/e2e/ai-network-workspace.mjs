@@ -35,7 +35,7 @@ const initialIdentity = {
     avatar_storage_ref: null, cover_storage_ref: null
   },
   languages: [{ language_tag: 'en-JM', language_name: 'English (Jamaica)', proficiency: 'native', is_primary: true }],
-  locations: [],
+  locations: [{ location_type:'current', country_code:'JM', country_name:'Jamaica', is_public:false }],
   primary_email: null
 };
 let identities = [structuredClone(initialIdentity)];
@@ -505,6 +505,7 @@ try {
   await createForm.locator('[name="personality"]').fill('{"communication_style":"warm","traits":["patient","curious"]}');
   await createForm.locator('[name="voicePreferences"]').fill('{"language":"en-JM","style":"warm"}');
   await createForm.locator('[name="profileVisibility"]').selectOption('public');
+  assert.equal(await createForm.locator('[name="sharePublicLocations"]').isChecked(), false, 'Public location sharing must be opt-in by default.');
   await createForm.locator('[name="sharePublicLocations"]').check();
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
   assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
@@ -556,6 +557,7 @@ try {
   await profileEditor.locator('[name="gender"]').selectOption('non_binary');
   await profileEditor.locator('[name="countryOfOrigin"]').fill('JM');
   await profileEditor.locator('[name="currentCountry"]').fill('US');
+  assert.equal(await profileEditor.locator('[name="sharePublicLocations"]').isChecked(), false, 'Private location records must remain unchecked when editing.');
   await profileEditor.locator('[name="sharePublicLocations"]').check();
   await profileEditor.locator('[name="timeZone"]').fill('America/Jamaica');
   await profileEditor.locator('[name="languages"]').fill('[{"language_tag":"en-JM","language_name":"English (Jamaica)","proficiency":"native","is_primary":true}]');
