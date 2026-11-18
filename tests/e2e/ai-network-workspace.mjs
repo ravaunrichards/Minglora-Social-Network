@@ -634,7 +634,7 @@ try {
   }];
   await bulkIdentityForm.locator('[name="items"]').fill(JSON.stringify(secondBatchRows));
   await bulkIdentityForm.locator('button[type="submit"]').click();
-  await page.getByText(/Bulk identity batch .*1 created; 0 reused; 0 failed\\./).waitFor({ state:'visible' });
+  await page.getByText(/Bulk identity batch .*1 created; 0 reused; 0 failed\./).waitFor({ state:'visible' });
   assert.equal(identityBatchRequests.length, 2, 'The same import form must support a second distinct batch.');
   assert.notEqual(identityBatchRequests[1].batch_idempotency_key, firstBatchKey, 'Every new batch must use a fresh batch idempotency key.');
   assert.equal(identityBatchRequests[1].items[0].idempotency_key, 'browser-batch-row-0003');
