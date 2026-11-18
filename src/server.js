@@ -5266,6 +5266,14 @@ async function route(req, res) {
         if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change the screen layout.' });
         const layout = String(input.layout || '');
         if (!LIVE_SCREEN_LAYOUTS.includes(layout)) return json(res, 400, { error: 'Choose a supported LIVE screen layout.' });
+        if (layout !== 'side-by-side') {
+          const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
+            item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+          ).length;
+          if (activeSpeakers > 8) {
+            return json(res, 409, { error: 'Remove one guest from the stage before switching to a layout that supports eight guest seats.' });
+          }
+        }
         session.liveLayout = layout;
         await saveStore();
         return json(res, 200, { ok: true, liveLayout: session.liveLayout });
@@ -5278,6 +5286,12 @@ async function route(req, res) {
         if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change the guest-box layout.' });
         const layout = String(input.layout || '');
         if (!LIVE_GUEST_LAYOUTS.includes(layout)) return json(res, 400, { error: 'Choose Roundtable 1 or Roundtable 2 for the LIVE guest-box layout.' });
+        const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
+          item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+        ).length;
+        if (activeSpeakers > 8) {
+          return json(res, 409, { error: 'Remove one guest from the stage before switching to a layout that supports eight guest seats.' });
+        }
         session.liveGuestLayout = layout;
         session.liveLayout = layout; // Compatibility: older guest-box clients update the unified guest-stage layout.
         await saveStore();
