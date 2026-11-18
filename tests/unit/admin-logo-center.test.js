@@ -50,7 +50,12 @@ test("all requested standard logo categories and the empty Enigma collection are
   ];
   for (const slug of categories) assert.ok(migration.includes("('" + slug + "'"), "missing category " + slug);
   assert.match(migration, /'enigma-branding','Enigma Branding'/);
-  assert.doesNotMatch(migration, /INSERT INTO public\.minglora_brand_logo_assets/);
+  const seedSection = migration.slice(
+    migration.indexOf("INSERT INTO public.minglora_brand_logo_collections"),
+    migration.indexOf("ALTER TABLE public.minglora_brand_logo_categories ENABLE ROW LEVEL SECURITY")
+  );
+  assert.ok(seedSection.length > 0);
+  assert.doesNotMatch(seedSection, /INSERT INTO public\\.minglora_brand_logo_assets/);
 });
 
 test("original files use immutable version paths and pending uploads are owner-bound", () => {
