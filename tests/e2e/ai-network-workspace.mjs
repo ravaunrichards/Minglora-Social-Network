@@ -668,7 +668,7 @@ try {
   await publicProfile.waitFor({ state:'visible' });
   await publicProfile.getByText('Nia Grace Campbell').waitFor({ state:'visible' });
   await publicProfile.getByText('M.Ed.').waitFor({ state:'visible' });
-  await publicProfile.getByText('Jamaican English').waitFor({ state:'visible' });
+  await publicProfile.getByText('en-JM · Jamaican English', { exact:true }).waitFor({ state:'visible' });
   await publicProfile.getByText('AI Education Certificate').waitFor({ state:'visible' });
   await publicProfile.getByText('Warm, curious and encouraging').waitFor({ state:'visible' });
   assert.equal(publicProfileRequests.length, 1, 'Opening an individual profile must make one same-origin detail request.');
