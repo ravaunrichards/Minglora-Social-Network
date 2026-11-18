@@ -505,6 +505,7 @@ try {
   await createForm.locator('[name="personality"]').fill('{"communication_style":"warm","traits":["patient","curious"]}');
   await createForm.locator('[name="voicePreferences"]').fill('{"language":"en-JM","style":"warm"}');
   await createForm.locator('[name="profileVisibility"]').selectOption('public');
+  await createForm.locator('[name="sharePublicLocations"]').check();
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
   assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
   assert.equal(await createForm.locator('[name="lastName"]').inputValue(), 'Campbell', 'Identity surname input must remain filled after category refresh.');
@@ -539,6 +540,8 @@ try {
   assert.equal(identityCreateRequests[0].profile.personality.communication_style, 'warm');
   assert.equal(identityCreateRequests[0].profile.voice_preferences.language, 'en-JM');
   assert.equal(identityCreateRequests[0].profile.profile_visibility, 'public');
+  assert.equal(identityCreateRequests[0].locations.find(item => item.location_type === 'origin').is_public, true);
+  assert.equal(identityCreateRequests[0].locations.find(item => item.location_type === 'current').is_public, true);
   assert.equal(identityCreateRequests[0].email.email_address, 'nia@example.test');
   assert.equal(identities.length, 2, 'The in-memory registry should refresh after creation.');
   await page.getByText('Email record: not_requested · unverified').waitFor({ state: 'visible' });
@@ -553,6 +556,7 @@ try {
   await profileEditor.locator('[name="gender"]').selectOption('non_binary');
   await profileEditor.locator('[name="countryOfOrigin"]').fill('JM');
   await profileEditor.locator('[name="currentCountry"]').fill('US');
+  await profileEditor.locator('[name="sharePublicLocations"]').check();
   await profileEditor.locator('[name="timeZone"]').fill('America/Jamaica');
   await profileEditor.locator('[name="languages"]').fill('[{"language_tag":"en-JM","language_name":"English (Jamaica)","proficiency":"native","is_primary":true}]');
   await profileEditor.locator('[name="education"]').fill('[]');
@@ -570,6 +574,8 @@ try {
   assert.equal(patch.profile.country_of_origin, 'JM');
   assert.equal(patch.profile.current_country, 'US');
   assert.equal(patch.profile.time_zone, 'America/Jamaica');
+  assert.equal(patch.locations.find(item => item.location_type === 'origin').is_public, true);
+  assert.equal(patch.locations.find(item => item.location_type === 'current').is_public, true);
   assert.equal(patch.languages[0].language_tag, 'en-JM');
   assert.ok(!Object.hasOwn(patch, 'email'), 'Profile editing must not silently mutate email identities.');
   assert.ok(!Object.hasOwn(patch, 'provider_assignments'), 'Profile editing must not mutate provider assignments.');
