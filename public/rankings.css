@@ -64,3 +64,23 @@
  .ranking-row-score strong{font-size:11px}.ranking-row-score small{font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.ranking-podium-card,.ranking-row{transition:none!important}.ranking-podium-card:hover,.ranking-podium-card--1:hover{transform:none}}
+
+
+/* Reference-matched avatar frames for ranked positions 4–10 and 11–20. */
+.ranking-row-avatar-frame{position:relative;display:block;flex:0 0 50px;width:50px;height:58px;isolation:isolate;overflow:visible}
+.ranking-row-avatar-frame-art{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.ranking-row-avatar-frame .ranking-row-avatar--framed{position:absolute;z-index:1;left:50%;top:44%;width:56%;height:56%;transform:translate(-50%,-50%);border:1.5px solid #fff}
+.ranking-position--place-1,.ranking-position--place-2,.ranking-position--place-3{background:#ffe5ec;color:#cc315c;border:1px solid #ffc2d2}
+.ranking-position--place-2{background:#e5edf9;color:#526f9f;border-color:#c9d8f0}
+.ranking-position--place-3{background:#f8e5d9;color:#a8643c;border-color:#eccab6}
+.ranking-row--top-three{border-color:#f1d8e1}
+.ranking-member-rank-pill{display:inline-flex;align-items:center;align-self:flex-start;width:max-content;margin-top:3px;padding:3px 7px;border-radius:6px;background:#ffe5ec;color:#cc315c;font-size:8px;font-weight:950;line-height:1.2}
+.ranking-member-rank-pill--place-2{background:#e5edf9;color:#526f9f}
+.ranking-member-rank-pill--place-3{background:#f8e5d9;color:#a8643c}
+.minglora-gifter-ranked-frame{position:relative;display:block;flex:0 0 48px;width:48px;height:56px;isolation:isolate}
+.minglora-gifter-ranked-frame-art{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.minglora-gifter-ranked-avatar{position:absolute;z-index:1;left:50%;top:44%;width:56%;height:56%;transform:translate(-50%,-50%);border:1.5px solid #fff;border-radius:50%;object-fit:cover}
+@media(max-width:520px){
+ .ranking-row-avatar-frame{width:43px;height:51px;flex-basis:43px}
+ .minglora-gifter-ranked-frame{width:43px;height:51px;flex-basis:43px}
+}
