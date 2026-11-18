@@ -92,9 +92,9 @@ begin
       raise exception using errcode = 'P0002', message = 'AI profile is unavailable.';
     end if;
 
-    if v_profile.profile_visibility = 'followers' and not v_is_following then
+    if v_profile.profile_visibility in ('followers', 'private') and not v_is_following then
       raise exception using errcode = 'P0002', message = 'AI profile is available to approved followers only.';
-    elsif coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers') then
+    elsif coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers', 'private') then
       raise exception using errcode = 'P0002', message = 'AI profile is unavailable.';
     end if;
   end if;
