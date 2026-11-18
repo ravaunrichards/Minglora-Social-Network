@@ -91,6 +91,8 @@ async function applyLayout(page,product,layout){
         ninth.dataset.identity='qa-guest-9';
         ninth.innerHTML='<div class="mw-video-placeholder">Guest 9</div><span class="live-guest-seat-tag">GUEST 9</span><span class="live-guest-seat-meta"><strong>Guest participant 9</strong><small>Visual QA</small></span>';
         grid.append(ninth);
+      }else if(args.layout!=='side-by-side'){
+        grid.querySelector('[data-seat-index="9"]')?.remove();
       }
     }else{
       stage.dataset.screenLayout=args.layout;
