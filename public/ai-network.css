@@ -221,3 +221,26 @@
     grid-template-columns:minmax(0,1fr);
   }
 }
+
+/* The HR workspace must stack below the organization summary on narrow screens. */
+@media(max-width:560px){
+  .ai-network-page .ai-network-organization-row{
+    display:flex;
+    flex-direction:column!important;
+    flex-wrap:nowrap!important;
+    align-items:stretch;
+  }
+  .ai-network-page .ai-network-organization-row>.ai-network-list-main,
+  .ai-network-page .ai-network-organization-row>.ai-network-organization-actions,
+  .ai-network-page .ai-network-organization-row>.ai-network-hr-workspace{
+    flex:0 0 auto!important;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-page .ai-network-organization-row>.ai-network-hr-workspace{
+    flex-basis:auto!important;
+    margin-left:0;
+    margin-right:0;
+  }
+}
