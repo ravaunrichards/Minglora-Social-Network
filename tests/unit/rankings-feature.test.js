@@ -41,7 +41,7 @@ test("Rankings uses supplied top-three frames and separate Top 10 and Top 20 ran
  assert.ok(page.includes("\"top-ten\"")&&page.includes("\"top-twenty\""));
  assert.ok(css.includes(".ranking-position--top-ten")&&css.includes(".ranking-position--top-twenty"));
  assert.ok(page.includes("TOP 10")&&page.includes("TOP 20"));
- assert.ok(page.includes("place-4-10.png")&&page.includes("place-11-20.png"));
+ assert.ok(page.includes('"place-4-10"')&&page.includes('"place-11-20"'));
  assert.ok(css.includes(".ranking-row-avatar-frame-art"));
  assert.ok(css.includes("object-fit:contain;object-position:center"));
  assert.ok(page.includes("items.filter(item => item.position > 3).map(rankedRow)"),"podium positions must not be repeated in the ranked list");
