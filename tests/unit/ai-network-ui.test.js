@@ -68,6 +68,8 @@ test('AI Network workspace exposes a live setup checklist and separates provider
   assert.ok(ui.includes('AI Centre Readiness'));
   assert.ok(ui.includes('without configuring a model provider.'));
   assert.ok(ui.includes('No provider account row or browser key entry is required'));
+  assert.ok(ui.includes('https://dashboard.render.com/web/srv-dbphq63rjlhs73fviegg'));
+  assert.ok(ui.includes('Save the values in the private Environment settings'));
   assert.ok(ui.includes('Global pause: '));
   assert.ok(ui.includes('This does not block identity, profile or organization setup.'));
 });
