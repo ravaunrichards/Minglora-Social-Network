@@ -73,5 +73,5 @@
 @media(max-width:520px){.ranking-row-avatar-frame{width:37px;height:45px}}
 .minglora-gifter-ranked-frame{position:relative;display:block;flex:0 0 48px;width:48px;height:56px;isolation:isolate;overflow:visible}
 .minglora-gifter-ranked-frame-art{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:contain;object-position:center;pointer-events:none}
-.minglora-gifter-ranked-avatar{position:absolute;z-index:1;left:50%;top:44%;width:56%;height:56%;transform:translate(-50%,-50%);border:1.5px solid #fff;border-radius:50%;object-fit:cover}
+.minglora-gifter-row .minglora-gifter-ranked-avatar{position:absolute;z-index:1;left:50%;top:44%;width:56%;height:56%;transform:translate(-50%,-50%);border:1.5px solid #fff;border-radius:50%;object-fit:cover}
 @media(max-width:520px){.minglora-gifter-ranked-frame{width:43px;height:51px;flex-basis:43px}}
