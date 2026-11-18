@@ -96,7 +96,7 @@ test('the HTML and service worker request the same versioned Match Power-Up asse
   const leagueCss = html.match(/href="(\/leagues\.css\?v=[^"]+)"/)?.[1] || '';
   assert.ok(appAsset && leagueAsset && leagueCss, 'HTML references app, League JS and League CSS');
   for (const asset of [appAsset, leagueAsset, leagueCss]) assert.ok(sw.includes("'" + asset + "'"), asset + ' is cached');
-  assert.ok(sw.includes('/assets/league/league-emblems.svg?v=20261118-match-powerups-reference-1'));
+  assert.ok(sw.includes('/assets/league/league-emblems.svg?v=20261116-league-original-reference-assets-1'));
   assert.match(sw, /CACHE_NAME='minglora-shell-v360-self-updating-1'/);
 });
 
