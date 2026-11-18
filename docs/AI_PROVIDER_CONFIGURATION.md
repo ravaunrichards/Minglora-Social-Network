@@ -3,7 +3,7 @@
 **Scope:** Minglora Social Network AI Bot Network only.  
 **Configuration template:** .env.example  
 **Credential storage:** private server environment / approved secrets manager only.  
-**Current runtime status:** provider catalogue and credential inventory only; no AI inference adapter is certified or enabled.
+**Current runtime status:** a moderated OpenAI adapter for owner-initiated AI bot conversations and Creator Studio drafts is implemented and deployed. It remains unavailable in production until a real private API key/model passes the live provider probe and inference acceptance.
 
 ## ChatGPT guest versus OpenAI API
 
@@ -40,11 +40,13 @@ Minglora deliberately separates these states:
 5. **Inference enabled:** an approved adapter, request validation, safety filtering, timeouts, retries, rate limits, usage metering, owner budget and operational controls have passed acceptance.
 6. **Identity assigned:** a database assignment references a model/provider account; new assignments still start pending with unknown health.
 
-The OpenAI catalogue entry now also includes a server-side text-generation adapter for **human-triggered Creator Studio drafts only**. It requires `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL` (or the explicitly selected legacy `MINGLORA_AI_PROVIDER=openai`, `MINGLORA_AI_API_KEY`, and `MINGLORA_AI_MODEL` combination). The designated-admin-only `POST /api/ai-network/creator-jobs/{jobId}/generate` route first performs a fresh model-access probe, moderates the submitted brief, calls the Responses API with `store:false` and no tools, then moderates the generated output. If provider health, generation, or either moderation step fails, no draft output is saved. Token usage and provider/model references are recorded with the draft and included in AI performance totals. Before generation, Minglora reserves an estimated prompt allowance plus the bounded output tokens against the owner's daily AI token budget and refuses requests without enough remaining allowance. This is token-budget enforcement, not a dollar-cost estimate; exact spend reconciliation requires a verified model-price schedule and is not yet implemented. The returned text stays in the existing Creator Studio draft record with AI disclosure and human-review requirements; no publishing, scheduling, public posting, messaging or background worker is invoked. Stale in-progress jobs become retryable after the five-minute generation lease expires.
+The OpenAI catalogue entry includes server-side adapters for **human-initiated, owner-scoped AI bot conversations and Creator Studio drafts**. It requires `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL` (or the explicitly selected legacy `MINGLORA_AI_PROVIDER=openai`, `MINGLORA_AI_API_KEY`, and `MINGLORA_AI_MODEL` combination). The designated-admin-only `POST /api/ai-network/creator-jobs/{jobId}/generate` route first performs a fresh model-access probe, moderates the submitted brief, calls the Responses API with `store:false` and no tools, then moderates the generated output. If provider health, generation, or either moderation step fails, no draft output is saved. Token usage and provider/model references are recorded with the draft and included in AI performance totals. Before generation, Minglora reserves an estimated prompt allowance plus the bounded output tokens against the owner's daily AI token budget and refuses requests without enough remaining allowance. This is token-budget enforcement, not a dollar-cost estimate; exact spend reconciliation requires a verified model-price schedule and is not yet implemented. The returned text stays in the existing Creator Studio draft record with AI disclosure and human-review requirements; no publishing, scheduling, public posting, messaging or background worker is invoked. Stale in-progress jobs become retryable after the five-minute generation lease expires.
+
+The Bot Personality Lab conversation route is also implemented: `GET /api/ai-network/bots/:botId/conversation` and `POST /api/ai-network/bots/:botId/chat`. It uses the private `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL`, performs a fresh model-access probe, moderates the user input and generated output, calls Responses with `store:false` and no tools, and records the exchange and measured token usage in the owner-scoped relational conversation store. It is an explicit human request, not an autonomous worker. For this first chat path, provider-account metadata rows and model-assignment rows are not prerequisites; the private key/model and successful probe are.
 
 The OpenAI entry also advertises a **read-only model-access health probe**. The designated-admin-only `POST /api/ai-network/provider-health` endpoint reads the key and model from the private server environment and calls OpenAI's model retrieval endpoint. It accepts only the provider identifier in the request body; it rejects browser-supplied credential fields. A successful probe confirms that the configured API key can retrieve the selected model, but it does **not** verify text generation, moderation, cost metering, routing, or worker execution. The result is not persisted as a connected state; a fresh probe is required to confirm current provider health.
 
-The provider helper may report only credential-variable presence. It never returns secret values. It always reports adapterAvailable=false, connected=false and executionEnabled=false until a real adapter and health verifier are implemented and independently accepted.
+The provider helper reports only credential-variable presence and adapter/probe availability; it never returns secret values. OpenAI's adapter is implemented, but provider connection remains false and inference stays unavailable until private credentials and model access pass a live probe. Worker execution remains disabled independently.
 
 The existing generic MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL, and MINGLORA_AI_API_KEY triplet is retained for backwards compatibility. The generic triplet is not proof of a working adapter. Provider-specific variables are prepared for future adapters and do not independently unpause workers.
 
@@ -93,10 +95,16 @@ SMTP, Resend, SendGrid, Postmark, Mailgun and Amazon SES are represented in the 
 2. Keep every key out of browser bundles, public Git files, database profile/provider columns, logs, screenshots and chat messages.
 3. Use separate keys for development, staging and production. Apply least-privilege scopes, quotas, spend limits and rotation.
 4. Do not paste credentials into the provider-account API. It accepts provider metadata only; it must not receive raw keys or secret references.
-5. Use an approved secret manager for production. Store only opaque secret references in database metadata.
+5. Store the first OpenAI key and model in the existing Render service's private environment (or an approved secret manager). The Node API reads them server-side; never store raw credentials in provider metadata or browser forms.
 6. After an adapter exists, verify its authentication, model access, capability claims, region, quotas, cost meter, moderation, timeout and fallback behavior before changing any connection or execution status.
 7. Keep the AI worker control row paused and execution disabled until every operational gate has passed.
 
+### Current deployment boundary
+
+The existing Render service `minglora-social-network-temp` is the user-confirmed production target and is attached to `main` with automatic deploy-on-commit enabled. Its private environment currently has no OpenAI credential/model, as confirmed by the live readiness log. Provider values must be entered privately in Render; no API key is required in this repository or browser.
+
+A ChatGPT app subscription or this chat session cannot be used as Minglora's model API key. Never invent a key, infer one from another integration or weaken the server-side credential boundary.
+
 ### Existing credentials are preserved
 
-This change adds blank template fields only. It does not edit any local .env, Render service environment, Supabase Edge Function secret, provider account, user credential, live API key, mailbox or running service. Do not paste existing credentials into the repository to populate the template.
+This documentation update does not edit any Render service environment, Supabase Edge Function secret, provider account, user credential, live API key, mailbox or running service. Do not paste credentials into the repository or chat to populate the template.

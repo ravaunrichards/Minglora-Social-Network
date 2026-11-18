@@ -59,7 +59,7 @@ test('ChatGPT guest is explicitly non-routable and cannot be marked connected', 
   assert.match(guest.note, /not a server API endpoint/i);
 });
 
-test('provider-specific credential presence reports the Creator Studio adapter but never enables execution', () => {
+test('provider-specific credential presence reports the bot chat and Creator Studio adapters but never enables execution', () => {
   const status = getAIProviderCredentialStatus('openai', { OPENAI_API_KEY: 'test-secret-do-not-return' });
   assert.equal(status.credentialsPresent, true);
   assert.equal(status.adapterAvailable, true);

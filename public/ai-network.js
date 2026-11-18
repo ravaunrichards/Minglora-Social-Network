@@ -1467,6 +1467,82 @@
       '<p class="ai-network-note">Human approval and AI identity disclosure are mandatory and cannot be disabled. Emergency pause preserves history.</p>';
   }
 
+  function renderAICentreReadiness(snapshot) {
+    const provider = snapshot.providerStatus || {};
+    const catalogue = list(provider.providerCatalogue);
+    const openAI = catalogue.find(item => item.providerId === 'openai') || {};
+    const categories = list(state.identityCategories);
+    const departments = list(state.departmentTemplates);
+    const positions = list(state.positionTemplates);
+    const identities = list(state.identityRegistry?.identities);
+    const identityReady = categories.some(item => item.is_active !== false);
+    const organizationReady = departments.length > 0 && positions.length > 0;
+    const adapterReady = openAI.adapterAvailable === true && openAI.healthProbeAvailable === true;
+    const inferenceReady = provider.botChatAvailable === true && provider.manualDraftsAvailable === true;
+    const globalPaused = snapshot.safeguards?.globalPaused !== false;
+    const rows = [
+      {
+        title: 'AI identity and profile setup',
+        state: identityReady ? 'Available now' : 'Waiting for category data',
+        kind: identityReady ? 'success' : 'warning',
+        detail: identityReady
+          ? categories.length + ' category records are loaded. You can create and manage real identities and profiles without configuring a model provider.'
+          : 'The category catalogue must load before a new Bot Lab identity can be created.'
+      },
+      {
+        title: 'Corporate and department setup',
+        state: organizationReady ? 'Available now' : 'Templates need attention',
+        kind: organizationReady ? 'success' : 'warning',
+        detail: organizationReady
+          ? departments.length + ' department templates and ' + positions.length + ' position templates are loaded. Continue configuring the existing organization.'
+          : 'Load the department and position templates before provisioning workforce structure.'
+      },
+      {
+        title: 'Human-initiated AI responses',
+        state: inferenceReady ? 'Provider ready' : (adapterReady ? 'Private provider setup required' : 'Provider adapter needs review'),
+        kind: inferenceReady ? 'success' : 'warning',
+        detail: inferenceReady
+          ? 'OpenAI credentials and model are configured. The chat and draft routes still perform a fresh provider check and moderation.'
+          : adapterReady
+            ? 'The moderated OpenAI bot-chat and Creator Studio adapters are already in the deployed code. Add OPENAI_API_KEY and OPENAI_DEFAULT_MODEL to the private Render environment, then run the read-only connection probe. No provider account row or browser key entry is required for this first human-initiated path.'
+            : 'The first supported live path is OpenAI. Its adapter and read-only health probe must be present before provider setup can be accepted.'
+      },
+      {
+        title: 'Autonomous workers and schedules',
+        state: 'Safely paused',
+        kind: 'warning',
+        detail: 'Global pause: ' + (globalPaused ? 'ON' : 'OFF') + '. Autonomous execution remains disabled until independent worker authentication, task claims, heartbeat, completion, failure recovery and operational checks are accepted. This does not block identity, profile or organization setup.'
+      },
+      {
+        title: 'Private AI profile images',
+        state: 'Owner upload acceptance pending',
+        kind: 'neutral',
+        detail: 'The dedicated private bucket is provisioned on the first real owner-authorized avatar or cover upload. Missing media storage does not block identity creation or text profiles.'
+      },
+      {
+        title: '10-billion identity target',
+        state: 'Architecture target, not benchmarked',
+        kind: 'neutral',
+        detail: 'Partitioning, distributed regions, backup recovery and representative capacity tests are future scale gates. The existing Supabase project remains the current control plane.'
+      }
+    ];
+    const rowHtml = rows.map(row =>
+      '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(row.title) +
+      '</strong><div class="ai-network-meta">' + pill(row.state, row.kind) + '</div><p>' + esc(row.detail) +
+      '</p></div></div></article>'
+    ).join('');
+    return card('AI Centre Readiness', '00 · LIVE SETUP CHECKLIST',
+      '<p class="ai-network-note">This checklist separates work that can continue now from features that genuinely need provider access, owner acceptance or separate worker infrastructure. It uses live workspace data and never treats a placeholder or a draft as an active AI.</p>' +
+      '<div class="ai-network-command-grid"><div><span>AI identities loaded</span><strong>' + number(identities.length) +
+      '</strong></div><div><span>Active categories</span><strong>' + number(categories.filter(item => item.is_active !== false).length) +
+      '</strong></div><div><span>Provider adapters in catalogue</span><strong>' + (adapterReady ? 'OpenAI ready in code' : 'Review required') +
+      '</strong></div><div><span>Bot chat / draft inference</span><strong>' + (inferenceReady ? 'Provider configured' : 'Awaiting private key + model') +
+      '</strong></div></div>' + rowHtml +
+      '<p class="ai-network-note">Continue identity registration, profile editing, categories, organization setup, HR records and governance now. Provider credentials are needed only for actual model responses; autonomous execution and scale expansion have separate acceptance gates.</p>' +
+      (!inferenceReady && adapterReady ? '<p class="ai-network-note"><a href="https://dashboard.render.com/web/srv-dbphq63rjlhs73fviegg" target="_blank" rel="noopener noreferrer">Open the existing Minglora Render service to configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL</a>. Save the values in the private Environment settings, redeploy, then return here and run Check OpenAI API connection.</p>' : ''),
+      'ai-network-span-2');
+  }
+
   function renderSnapshot(snapshot) {
     const settings = snapshot.settings, performance = snapshot.performance, provider = snapshot.providerStatus;
     const bots = list(snapshot.bots), teams = list(snapshot.teams), schedules = list(snapshot.schedules);
@@ -1487,6 +1563,7 @@
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div>' +
       (state.adminAccess ? '<div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div>' : '') +
       '<div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
+      (state.adminAccess ? renderAICentreReadiness(snapshot) : '') +
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
       renderAIMemoryCenter() +

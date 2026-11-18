@@ -237,3 +237,8 @@ Read-only measurements from the existing production Minglora Supabase project:
 - The public Render `/api/ready` URL was not accessible to the available external verifier. Render startup logs do confirm the process listening on port 10000, Supabase Auth configured, durable Supabase persistence ready, and LiveKit connected. These are separate signals; public HTTP readiness is not claimed.
 
 **Interpretation:** the current project has a secure, empty relational AI schema and a functioning control-plane runtime, but no measured identity data volume, registration rate, query throughput under load, concurrent execution capacity, physical shard, or regional failover evidence. The 10-billion target remains a design objective pending implementation and representative benchmarks.
+
+
+## Current live baseline — 2026-11-18
+
+The previous 54-table snapshots in this document are historical. Current production inspection finds **62 `ai_network` base tables, all 62 RLS-enabled**. The private schema has no browser-role USAGE; application operations go through the trusted service-role gateway. Current production has 15 active categories, 1 organization and 20 departments, with zero identities, provider accounts/assignments, employees, chat messages or task queue records. The live worker control remains globally paused, execution disabled and max workers zero. The 10-billion registered-identity objective, multi-region failover and simultaneous execution capacity remain design/benchmark targets, not accepted production capabilities.
