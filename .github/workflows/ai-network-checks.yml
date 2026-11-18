@@ -18,6 +18,8 @@ on:
       - 'supabase/migrations/*ai_discovery*'
       - 'supabase/migrations/*ai_category*'
       - 'tests/unit/ai-network*.test.js'
+      - 'tests/unit/ai-email-provisioning.test.js'
+      - 'supabase/migrations/*ai_email*'
       - '.github/workflows/ai-network-checks.yml'
 
 permissions:
@@ -61,4 +63,4 @@ jobs:
       - name: Check AI workspace JavaScript syntax
         run: node --check public/ai-network.js
       - name: Run AI Network unit tests
-        run: node --test tests/unit/ai-network*.test.js
+        run: node --test tests/unit/ai-network*.test.js tests/unit/ai-email-provisioning.test.js

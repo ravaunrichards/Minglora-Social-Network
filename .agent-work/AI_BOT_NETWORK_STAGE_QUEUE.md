@@ -1,3 +1,26 @@
+## Email retry / CI update — 2026-11-18
+
+- Conflict-safe outbound email request preparation is implemented in the existing email feature branch; concurrent requests using one idempotency key now serialize through the unique database index and re-read the stored message.
+- Dedicated AI Network CI now runs `tests/unit/ai-email-provisioning.test.js` and is triggered by the AI email migration path.
+- Source changes passed full repository tests, AI Network regression/syntax, PostgreSQL 17 worker auth/lease, Supabase Auth and For You navigation on `375cb6aecc0e9689551e96f94500b532831db0e3`; the later tracker-only head `b243f1f31d31c271fd630bf7c59ff77bb396c5b9` also has all checks **PASS**.
+- Production activation is still **BLOCKED / NOT VERIFIED**: no migration/RPC/table, function deployment, service deployment, provider secrets/domain/DNS/webhook, real mailbox or live send/receive. The live AI task runtime remains globally paused with zero workers.
+- PR #495 remains an open draft stacked on the existing identity and worker branches; it is not merged to main. Preserve the staged dependency and do not enable email or workers before the signed provider and owner acceptance gates.
+
+---
+
+## Email provisioning checkpoint — 2026-11-17 (implementation branch, not production acceptance)
+
+- Branch: \`feat/minglora-ai-email-provisioning-20261117\`, stacked on the in-progress AI identity feature branch.
+- The provider adapter, additive mailbox/message migration, service-role runtime RPC, existing-server API routes, signed Resend inbound webhook, admin mailbox/inbox/send controls, focused unit tests and setup documentation have been added to the branch.
+- Architecture: one Minglora-managed virtual inbox per AI identity on a verified Minglora subdomain. It is not a standalone Workspace/IMAP seat, and it does not create a Supabase Auth user.
+- The migration reuses \`ai_network.ai_emails\` and creates private \`ai_network.ai_email_messages\`; no parallel identity registry was added. The live schema was inspected for actual identity status/name/audit column names. Direct client-role access remains revoked; RPC execution is service-role only.
+- Resend activation is gated on a private server-side API key, a verified domain with sending and receiving enabled, and a configured Svix webhook signing secret. The readiness endpoint reveals only booleans and safe domain status; secrets are never returned.
+- **No production migration, Edge Function deployment, web-service deployment, Render env change, provider secret, domain DNS change, mailbox, message, AI identity or human Auth user was created by this change.** No live send/receive has been attempted.
+- Latest-head CI and Minglora-specific syntax/regression plus worker principal security/lease checks **PASS**. Migration syntax was validated in a rollback-only Supabase transaction, then table/RPC readback confirmed no production artifacts remained. Task 4 status is **PARTIAL — CODE IN DRAFT PR; PROVIDER ACTIVATION AND LIVE ACCEPTANCE NOT VERIFIED**. Do not increase the master completed-task count until production migration/deployment, domain readiness and signed-in send/receive/retry/security acceptance are evidenced.
+- Setup and verification gates: [docs/AI_EMAIL_PROVISIONING.md](../docs/AI_EMAIL_PROVISIONING.md).
+
+---
+
 ## Verified execution checkpoint — 2026-11-15 (provider registry, OpenAI Creator Studio generation)
 
 - Repository: `ravaunrichards/Minglora-Social-Network`. Provider configuration PRs #358–#361 are merged as previously recorded. **PR #362** (10 files) is now merged to `main`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/362. Squash commit: `1694eab2ff601cee511b70e84b9821c94b5cc679`. PR head tested: `8a78004592a1abc1b7549f6992e9dcb8b3bd53cc`. All 10 changed files were read back from `main` after merge.

@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', aiWorkers: [], workerError: '', revealedWorkerCredential: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', pendingIdentityBulkRetryItems: [] };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', aiWorkers: [], workerError: '', revealedWorkerCredential: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', pendingIdentityBulkRetryItems: [], emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -395,7 +395,113 @@
       '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
       warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
       (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
-      '</strong></div></div>' + renderAIIdentityRows(registry) + form + bulkForm + bulkProfileForm, 'ai-network-span-2');
+      '</strong></div></div>' + renderAIEmailCenter() + renderAIIdentityRows(registry) + form + bulkForm + bulkProfileForm, 'ai-network-span-2');
+  }
+
+
+  async function loadAIEmailCenter(identityId = state.emailIdentityId) {
+    state.emailError = '';
+    try {
+      state.emailStatus = await request('/email/status');
+    } catch (error) {
+      state.emailStatus = null;
+      state.emailError = error.message || 'AI email provider status could not be loaded.';
+    }
+    const available = list(state.identityRegistry?.identities)
+      .map(record => record.identity?.identity_id).filter(Boolean);
+    const selected = available.includes(identityId) ? identityId : (available[0] || '');
+    state.emailIdentityId = selected;
+    state.emailMailboxes = [];
+    state.emailMessages = [];
+    state.emailUnreadCount = 0;
+    state.emailMailboxId = '';
+    if (!selected) return;
+    try {
+      const registry = await request('/identities/' + encodeURIComponent(selected) + '/email');
+      state.emailMailboxes = list(registry.mailboxes);
+      const mailbox = state.emailMailboxes.find(item =>
+        item.mailbox_enabled && item.provisioning_status === 'provisioned' && item.email_status === 'active'
+      );
+      if (!mailbox) return;
+      state.emailMailboxId = mailbox.email_id;
+      const inbox = await request('/identities/' + encodeURIComponent(selected) +
+        '/email/inbox?email_id=' + encodeURIComponent(mailbox.email_id) + '&limit=30');
+      state.emailMessages = list(inbox.messages);
+      state.emailUnreadCount = Number(inbox.unread_count || 0);
+    } catch (error) {
+      state.emailError = error.message || 'AI mailbox or inbox could not be loaded.';
+    }
+  }
+
+  function renderAIEmailCenter() {
+    const records = list(state.identityRegistry?.identities);
+    const identities = records.map(record => ({
+      value:record.identity?.identity_id || '',
+      label:(record.name?.display_name || record.name?.full_name ||
+        [record.name?.first_name,record.name?.last_name].filter(Boolean).join(' ') || 'AI identity') +
+        ' · @' + (record.name?.username || 'username')
+    })).filter(item => item.value);
+    if (!identities.length) {
+      return '<section class="ai-network-card"><div class="ai-network-card-heading"><div><span class="ai-network-eyebrow">EMAIL PROVISIONING</span><h2>AI Mailboxes</h2></div></div>' +
+        empty('Create an AI identity before provisioning its Minglora email address.') + '</section>';
+    }
+    const identityId = state.emailIdentityId || identities[0].value;
+    const mailbox = state.emailMailboxes.find(item => item.email_id === state.emailMailboxId) ||
+      state.emailMailboxes.find(item => item.mailbox_enabled && item.provisioning_status === 'provisioned');
+    const status = state.emailStatus || {};
+    const ready = Boolean(status.ready);
+    const providerSummary = status.ready
+      ? pill('Resend domain ready','success')
+      : pill('Provisioning blocked','warning');
+    const mailboxSummary = mailbox
+      ? '<div class="ai-network-note"><strong>' + esc(mailbox.email_address) + '</strong> · ' +
+        esc(mailbox.provisioning_status) + ' · ' + esc(mailbox.email_status) +
+        ' · verification: ' + esc(mailbox.verification_status) +
+        '<br><small>App-managed Minglora inbox; this is not a separate external human email account.</small></div>'
+      : '<p class="ai-network-note">No Minglora AI mailbox has been provisioned for this identity yet.</p>';
+    const messages = state.emailMessages.length
+      ? '<div class="ai-network-list">' + state.emailMessages.map(message =>
+        '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar ai-network-avatar--team" aria-hidden="true">' +
+        (message.direction === 'inbound' ? 'IN' : 'OUT') + '</div><div><strong>' + esc(message.subject || '(no subject)') + '</strong>' +
+        '<div class="ai-network-meta">' + pill(message.direction === 'inbound' ? 'Received' : 'Sent', message.direction === 'inbound' ? 'ai' : 'neutral') +
+        ' ' + pill(message.status || 'unknown') + '</div><small>' +
+        esc(message.direction === 'inbound' ? 'From: ' + (message.from_address || 'Unknown sender') : 'To: ' + list(message.to_addresses).join(', ')) +
+        ' · ' + esc(date(message.created_at)) + '</small>' +
+        '<details class="ai-network-profile-editor"><summary>View message</summary><p>' +
+        esc(message.text_body || '[No plain-text body]').replace(/\n/g,'<br>') +
+        '</p>' + (list(message.attachments).length ? '<small>Attachments: ' + esc(list(message.attachments).map(item => item.filename || 'file').join(', ')) + '</small>' : '') +
+        '</details></div></div>' +
+        (message.direction === 'inbound' && !message.read_at
+          ? '<button type="button" class="secondary" data-ai-action="email-mark-read" data-id="' + esc(message.message_id) + '" data-identity-id="' + esc(identityId) + '">Mark read</button>'
+          : '') +
+        '</article>'
+      ).join('') + '</div>'
+      : empty(mailbox ? 'This AI inbox has no messages yet.' : 'Provision an AI mailbox to start receiving mail.');
+    const canSend = Boolean(mailbox && status.sendingEnabled);
+    const form = canSend
+      ? '<form class="ai-network-form" data-ai-form="email-send" data-identity-id="' + esc(identityId) +
+        '" data-email-id="' + esc(mailbox.email_id) + '">' +
+        '<div class="ai-network-form-title">Compose email from this AI identity</div>' +
+        '<label>Recipient email addresses<input name="to" type="text" required maxlength="3200" placeholder="person@example.com, another@example.com"></label>' +
+        '<label>Subject<input name="subject" required maxlength="200"></label>' +
+        '<label>Message<textarea name="text" required maxlength="24000" rows="5" placeholder="Write the email message…"></textarea></label>' +
+        '<p class="ai-network-note">Sending uses Resend with an idempotency key. AI email is sent only after this administrator action; the mailbox does not independently contact people.</p>' +
+        '<button class="primary" type="submit">Send email</button></form>'
+      : '<p class="ai-network-note">Sending becomes available after a verified Resend domain is configured and this identity has an active mailbox.</p>';
+    const error = state.emailError
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.emailError) + '</div>'
+      : '';
+    return '<section class="ai-network-card ai-network-span-2"><div class="ai-network-card-heading"><div><span class="ai-network-eyebrow">EMAIL PROVISIONING</span><h2>AI Mailboxes</h2></div></div>' +
+      '<div class="ai-network-meta">' + providerSummary + ' ' + pill(status.provider || 'No provider') + '</div>' +
+      '<p class="ai-network-note">' + esc(status.note || 'Email provider configuration has not been checked.') +
+      (status.domain ? '<br>Domain: ' + esc(status.domain) : '') +
+      '<br>Readiness requires a verified domain with both sending and receiving enabled, plus a webhook signing secret.</p>' + error +
+      '<label>AI identity<select data-ai-email-identity>' + options(identities,identityId) + '</select></label>' +
+      mailboxSummary +
+      '<div class="ai-network-row-actions">' +
+      (mailbox ? '<button type="button" class="secondary" data-ai-action="email-refresh" data-id="' + esc(identityId) + '">Refresh inbox · ' + number(state.emailUnreadCount) + ' unread</button>'
+        : '<button type="button" class="primary" data-ai-action="email-provision" data-id="' + esc(identityId) + '"' + (!ready ? ' disabled title="Configure and verify the Resend domain first."' : '') + '>Provision AI email address</button>') +
+      '</div>' + (mailbox ? '<h3>Inbox and sent mail</h3>' + messages + form : '') + '</section>';
   }
 
   async function loadAIIdentityRegistry() {
@@ -1641,6 +1747,7 @@
       await requireDesignatedAdminAccess();
       state.snapshot = await request();
       await loadAIIdentityRegistry();
+      await loadAIEmailCenter();
       await loadAIMemory();
       await loadAIDiscovery();
       await loadAIProviderRegistry();
@@ -1677,7 +1784,21 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'bot-chat') {
+    if (kind === 'email-send') {
+      const identityId = form.dataset.identityId || '';
+      const emailId = form.dataset.emailId || '';
+      if (!identityId || !emailId) throw new Error('Select an AI identity with an active mailbox before sending email.');
+      const recipients = value('to').split(',').map(item => item.trim()).filter(Boolean);
+      if (!recipients.length || recipients.length > 10) throw new Error('Enter between one and ten recipient email addresses.');
+      if (!value('subject') || !value('text')) throw new Error('Enter an email subject and message.');
+      form.dataset.requestId = form.dataset.requestId || window.crypto.randomUUID();
+      path = '/identities/' + encodeURIComponent(identityId) + '/email/send';
+      payload.emailId = emailId;
+      payload.to = recipients;
+      payload.subject = value('subject');
+      payload.text = value('text');
+      payload.requestId = form.dataset.requestId;
+    } else if (kind === 'bot-chat') {
       const botId = form.dataset.botId || '';
       if (!botId) throw new Error('Choose a valid linked AI bot before sending a message.');
       const message = value('message');
@@ -2366,7 +2487,7 @@
       }
     }
     form.reset();
-    if (kind === 'bot-chat') delete form.dataset.requestId;
+    if (kind === 'bot-chat' || kind === 'email-send') delete form.dataset.requestId;
     if (kind === 'category') {
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
@@ -2443,6 +2564,7 @@
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
                                       : 'Saved successfully.';
+    if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
     const batchFailures = ['identity-bulk','identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
     const batchRetryItems = kind === 'identity-bulk'
       ? batchFailures.map(item => {
@@ -2498,6 +2620,26 @@
     state.busy = true;
     try {
       if (action === 'reload') return await load();
+      if (action === 'email-provision') {
+        if (!id) throw new Error('Choose an AI identity before provisioning email.');
+        const result = await request('/identities/' + encodeURIComponent(id) + '/email/provision', { method:'POST', body:{} });
+        await refresh('AI mailbox provisioned: ' + String(result.mailbox?.email_address || 'address ready') + '.');
+        return;
+      }
+      if (action === 'email-refresh') {
+        if (!id) throw new Error('Choose an AI identity before refreshing its inbox.');
+        await loadAIEmailCenter(id);
+        paintSnapshot();
+        return;
+      }
+      if (action === 'email-mark-read') {
+        const identityId = button.dataset.identityId || state.emailIdentityId;
+        if (!identityId || !id) throw new Error('A valid identity and message are required.');
+        await request('/identities/' + encodeURIComponent(identityId) + '/email/messages/' + encodeURIComponent(id), { method:'POST', body:{} });
+        await loadAIEmailCenter(identityId);
+        paintSnapshot();
+        return;
+      }
       if (action === 'worker-credential-dismiss') {
         state.revealedWorkerCredential = '';
         paintSnapshot();
@@ -2622,6 +2764,23 @@
     }
   };
 
+  const onEmailIdentityChange = async event => {
+    const select = event.target instanceof Element
+      ? event.target.closest('select[data-ai-email-identity]')
+      : null;
+    if (!select || state.busy) return;
+    state.busy = true;
+    try {
+      await loadAIEmailCenter(select.value);
+      paintSnapshot();
+    } catch (error) {
+      state.emailError = error.message || 'AI mailbox could not be loaded.';
+      paintSnapshot();
+    } finally {
+      state.busy = false;
+    }
+  };
+
   const onMemoryIdentityChange = async event => {
     const select = event.target instanceof Element
       ? event.target.closest('select[data-ai-memory-identity]')
@@ -2644,6 +2803,7 @@
     document.addEventListener('submit', onSubmit);
     document.addEventListener('click', onClick);
     document.addEventListener('change', onMemoryIdentityChange);
+    document.addEventListener('change', onEmailIdentityChange);
   }
   window.MingloraAINetwork = { render: load, refresh: () => refresh(), request };
 })();

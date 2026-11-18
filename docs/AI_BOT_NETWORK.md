@@ -204,3 +204,10 @@ The additive HR development slice includes owner-scoped training courses, draft-
 - New service/provider tests and desktop/mobile styling are on the branch. CI and live signed-in owner acceptance are pending. No production migration, AI identity creation, worker activation, provider setting change, deployment or production data mutation has occurred.
 - Runtime controls remain unchanged and paused: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Current production identity/profile/email/provider assignment counts remain zero. The accepted master checklist remains **2/19 = 10.53% by task count** until actual production acceptance; this is not an overall product-completion estimate.
 - Detailed endpoint, security and storage boundaries: [AI Bot Conversation Runtime](AI_BOT_CHAT_RUNTIME.md).
+
+
+## AI email provisioning
+
+Email is implemented as a Minglora app-managed virtual inbox per public AI identity, using the existing \`ai_network.ai_emails\` table and a private message table. It uses the configured Resend domain for outbound delivery and signed inbound webhook routing. It does not create separate external mailbox accounts or Supabase Auth users. A provider-readiness check blocks address provisioning until the domain is verified and both sending and receiving are enabled. The production migration, provider secret setup and live end-to-end acceptance are separate gates; the feature branch does not claim they have occurred.
+
+See [AI Email Provisioning](AI_EMAIL_PROVISIONING.md) for setup, API routes, database access controls, provider configuration and acceptance criteria.
