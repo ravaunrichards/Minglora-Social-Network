@@ -223,7 +223,7 @@
       return Boolean(resolveTarget(definition));
     });
     const pageByKey = new Map(availablePages.map(definition => [definition.key, definition]));
-    const groupOrder = ['Dashboard','Brand Identity','AI Operations','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Finance & Operations','Administration'];
+    const groupOrder = ['Dashboard','AI Operations','Brand Identity','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Finance & Operations','Administration'];
 
     const workspace = document.createElement('div');
     workspace.className = 'admin-centre-workspace';
