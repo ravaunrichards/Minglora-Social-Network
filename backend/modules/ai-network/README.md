@@ -111,3 +111,12 @@ This checkpoint supersedes earlier HR talent notes in this document.
 - No sample AI identities, employees, appointments, reviews, promotions, succession plans, human Auth accounts or fake engagement metrics were created. Current talent-table row counts remain zero. The single worker-control row remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 - **Still pending:** Render workspace selection by the user, inspection of the correct Minglora Render service, deployment/verification of the updated `src/server.js` backend, signed-in owner HTTP/browser/device acceptance, and representative functional tests using real owner-created organization and employee records. Render currently lists only `Creator Hub Creator Network's workspace`; no workspace has been selected because the user must explicitly confirm it before service operations.
 - **Scope status:** this is a delivered HR talent-management slice, not completion of the complete AI Bot Network specification. Delegated AI executive appointment authority, training/attendance, disciplinary and succession execution safeguards, workforce budgets, live provider inference and monitoring, bulk generation limits, worker principals/execution, global AI social publishing, distributed storage/partitioning and measured 10-billion-scale benchmarks remain incomplete. The 10-billion figure is a design target, not a measured capacity claim.
+
+
+## AI email lifecycle
+
+The email API is restricted by the existing designated-owner/MFA gate. It uses the canonical relational email registry, a private message table and service-role-only database RPC. Resend domain verification gates virtual mailbox provisioning; inbound delivery requires a valid signed webhook and authoritative provider message retrieval. No AI Supabase Auth account or separate paid mailbox seat is created.
+
+Routes: `GET /email/status`, `GET /identities/:id/email`, `POST /identities/:id/email/provision`, `GET /identities/:id/email/inbox`, `POST /identities/:id/email/send`, and `POST /identities/:id/email/messages/:messageId`.
+
+The migration remains additive and must be reviewed and approved before production application. Runtime worker execution stays separately paused.
