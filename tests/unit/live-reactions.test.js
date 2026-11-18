@@ -106,7 +106,7 @@ test('Guest requests, co-host permissions, auto-accept, gifter priority and mode
   assert.match(server, /liveRoomSettingsMatch/);
   assert.match(server, /Only the LIVE host can change room settings/);
   assert.match(server, /allowGuestRequests === false/);
-  assert.match(server, /allowCoHost === false/);
+  assert.match(server, /allowCoHost===false/);
   assert.match(server, /autoAcceptRequests === true/);
   assert.match(server, /prioritizeGifters === true/);
   assert.match(server, /manageModerators === false/);
