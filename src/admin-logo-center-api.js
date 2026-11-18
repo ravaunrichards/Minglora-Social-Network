@@ -56,14 +56,6 @@ export async function handleAdminLogoCenterApi(context) {
     return json(res,403,{error:"This Logo Center change must be submitted from Minglora."});
   }
 
-  const runtime = async (action,payload={}) => {
-    const result=await requestSupabaseState(action,{
-      actorUserId:user.id,mfaVerified:true,brandAction:action==="admin_brand_command"?payload.brandAction:undefined,
-      payload:payload.payload||{}
-    });
-    if(result?.skipped)throw Object.assign(new Error("The Logo Center requires durable Supabase persistence."),{status:503});
-    return result;
-  };
   const handleFailure = error => json(res,Number(error?.status)||503,{
     error:String(error?.message||"The Logo Center request could not be completed.").slice(0,240)
   });
