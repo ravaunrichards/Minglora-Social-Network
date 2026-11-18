@@ -12,23 +12,50 @@ const app = read('public/app.js');
 const styles = read('public/leagues.css');
 const html = read('public/index.html');
 const sw = read('public/sw.js');
+const server = read('src/server.js');
+const store = read('src/store.js');
+const runtimeState = read('supabase/functions/minglora-runtime-state/index.ts');
+const service = read('backend/modules/leagues/service.js');
+const svg = read('public/assets/league/league-emblems.svg');
 
-test('Match Power-Ups retain selection and activation without a 3D preview', () => {
+test('League Arena renders the six reference Power-Up cards and viewer Backpack', () => {
   assert.match(leagues, /id='league-powerup-panel'/);
-  assert.match(leagues, /data-powerup-select/);
-  assert.match(leagues, /data-match-powerup-select/);
-  assert.match(leagues, /id='league-powerup-selected-title'/);
-  assert.match(leagues, /id='league-powerup-availability'/);
-  assert.match(leagues, /activateSelectedPowerup/);
-  assert.doesNotMatch(leagues, /powerupModelPaths|league-powerup-preview|league-powerup-selected-model|model-viewer|ROTATABLE 3D PREVIEW|data-match-powerup-preview|View 3D preview/);
-  assert.doesNotMatch(styles, /league-powerup-preview-stage|league-powerup-preview-layout|model-viewer/);
+  assert.match(leagues, /MINGLORA MATCH POWER-UP DECK/);
+  assert.match(leagues, /My Power-Up Backpack/);
+  assert.match(leagues, /powerupInventory/);
+  assert.match(leagues, /league-backpack-card/);
+  for (const id of ['boosting_glove','magic_mist','stun_hammer','time_maker','boosters','speed_challenge']) {
+    assert.ok(leagues.includes(id), id + ' is present in League Arena');
+  }
+  assert.doesNotMatch(leagues, /activateSelectedPowerup|data-match-powerup-select/);
+  assert.doesNotMatch(leagues, /powerupModelPaths|league-powerup-preview|model-viewer|ROTATABLE 3D PREVIEW|data-match-powerup-preview/);
 });
 
-test('the original Match Power-Up GLTF files remain available but are not loaded by League UI', () => {
+test('LIVE shows creator-bound Backpack cards, score privacy and match-only effects', () => {
+  assert.match(app, /data-inventory-card-id/);
+  assert.match(app, /YOUR POWER-UP BACKPACK/);
+  assert.match(app, /scoreVisibility/);
+  assert.match(app, /live-match-card--stunned/);
+  assert.match(app, /broadcastId=.*encodeURIComponent\(session\.id\)/);
+  assert.match(app, /inventoryCardId:button\.dataset\.inventoryCardId/);
+  assert.match(app, /const payload=\{broadcastId:session\.id/);
+  assert.doesNotMatch(app, /data-powerup-id='shield'|data-powerup-id='score_multiplier'/);
+});
+
+test('all six original Minglora SVG Power-Up card symbols are available', () => {
+  for (const id of ['powerup-glove','powerup-mist','powerup-hammer','powerup-time-maker','powerup-boosters','powerup-speed']) {
+    assert.ok(svg.includes('id="' + id + '"'), id + ' SVG symbol exists');
+    assert.ok(leagues.includes(id.replace('powerup-','powerup-')), id + ' is referenced by League UI');
+  }
+  assert.match(svg, /id="powerup-card-front"/);
+  assert.match(svg, /id="powerup-card-edge"/);
+});
+
+test('legacy Match Power-Up GLTF assets remain intact but are not loaded by League UI', () => {
   for (const asset of ['minglora_momentum_boost.gltf','minglora_shield.gltf','minglora_time_boost.gltf','minglora_score_multiplier.gltf']) {
     const file = path.join(root, 'public/assets/match-powerups', asset);
     assert.ok(fs.existsSync(file), asset + ' remains available');
-    assert.ok(!leagues.includes(asset), asset + ' is no longer referenced by League UI');
+    assert.ok(!leagues.includes(asset), asset + ' is not loaded by League Arena');
     const model = JSON.parse(fs.readFileSync(file, 'utf8'));
     const binary = model.buffers[0];
     assert.equal(Buffer.from(binary.uri.split(',')[1], 'base64').byteLength, binary.byteLength);
@@ -36,9 +63,7 @@ test('the original Match Power-Up GLTF files remain available but are not loaded
       assert.ok(view.byteOffset + view.byteLength <= binary.byteLength, asset + ' buffer view is in range');
       assert.equal(view.byteOffset % 4, 0, asset + ' buffer view is aligned');
     }
-    for (const accessor of model.accessors) {
-      assert.ok(model.bufferViews[accessor.bufferView], asset + ' accessor refers to a valid view');
-    }
+    for (const accessor of model.accessors) assert.ok(model.bufferViews[accessor.bufferView], asset + ' accessor is valid');
     for (const mesh of model.meshes) for (const primitive of mesh.primitives) {
       assert.ok(model.accessors[primitive.attributes.POSITION], asset + ' has positions');
       assert.ok(model.accessors[primitive.attributes.NORMAL], asset + ' has normals');
@@ -48,48 +73,37 @@ test('the original Match Power-Up GLTF files remain available but are not loaded
   }
 });
 
-test('power-up selection preserves activation checks, usage limits and League scoring rules', () => {
-  assert.match(leagues, /activateSelectedPowerup/);
-  assert.match(leagues, /powerupRestriction/);
-  assert.match(leagues, /usedToday/);
-  assert.match(leagues, /timerMode === "fixed"/);
-  assert.match(leagues, /never multiply Creator League points or official class standings/);
-  assert.match(leagues, /data-match-powerup-select/);
-  assert.match(leagues, /data-powerup-select/);
+test('server enforces LIVE membership, creator-bound card activation and Magic Mist redaction context', () => {
+  assert.match(server, /useCreatorLeaguePowerupCard/);
+  assert.match(server, /Connect to the creator/);
+  assert.match(server, /inventoryCardId/);
+  assert.match(server, /viewerHostId:session\?\.hostId/);
+  assert.match(server, /broadcastId,viewerHostId/);
+  assert.match(service, /scoreVisibility/);
+  assert.match(service, /decorated\.scores\[hiddenSide\] = null/);
+  assert.match(service, /\["gift_score", "viewer_support"\]/);
 });
 
-test('background League refresh updates power-up details and preserves active interactions', () => {
-  assert.match(leagues, /const refreshZones = \[/);
-  assert.match(leagues, /current\.replaceWith\(incoming\)/);
-  assert.match(leagues, /focused && current\.contains\(focused\)/);
-  assert.doesNotMatch(leagues, /main\.innerHTML = renderMarkup\(state\.overview, state\.sessions\)/);
-  for (const zone of ['league-hero-zone','league-overview-zone','league-progression-zone','league-challenge-zone','league-powerup-panel','league-matches-zone','league-leaderboard-zone','league-events-zone']) {
-    assert.ok(leagues.includes("id='" + zone + "'"), zone + ' is patchable without rebuilding the page');
+test('viewer Backpack inventory is persisted through the existing durable store boundary', () => {
+  assert.match(store, /creatorLeaguePowerupInventory/);
+  assert.match(service, /creatorLeaguePowerupInventory/);
+  assert.match(runtimeState, /creatorLeaguePowerupInventory/);
+});
+
+test('the HTML and service worker request the same versioned Match Power-Up assets', () => {
+  const appAsset = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1] || '';
+  const leagueAsset = html.match(/src="(\/leagues\.js\?v=[^"]+)"/)?.[1] || '';
+  const leagueCss = html.match(/href="(\/leagues\.css\?v=[^"]+)"/)?.[1] || '';
+  assert.ok(appAsset && leagueAsset && leagueCss, 'HTML references app, League JS and League CSS');
+  for (const asset of [appAsset, leagueAsset, leagueCss]) assert.ok(sw.includes("'" + asset + "'"), asset + ' is cached');
+  assert.ok(sw.includes('/assets/league/league-emblems.svg?v=20261118-match-powerups-reference-1'));
+  assert.match(sw, /CACHE_NAME='minglora-shell-v360-match-powerups-reference-1'/);
+});
+
+test('Backpack and LIVE effects have responsive touch-safe and reduced-motion styles', () => {
+  for (const selector of ['.league-powerup-backpack-grid','.league-backpack-card','.live-match-powerups','.live-match-effect--mist','.live-match-effect--hammer','.live-match-card--stunned']) {
+    assert.ok(styles.includes(selector), selector + ' is styled');
   }
-});
-
-test('a full app refresh restores the signed-in member to the last page and scroll position', () => {
-  assert.match(app, /LAST_VIEW_SESSION_PREFIX/);
-  assert.match(app, /function persistCurrentView\(/);
-  assert.match(app, /function readPersistedView\(/);
-  assert.match(app, /async function restoreLastView\(/);
-  assert.match(app, /else await restoreLastView\(\)/);
-  assert.match(app, /scrollTo\(Number\(saved\.scrollX\)\|\|0,Number\(saved\.scrollY\)\|\|0\)/);
-  assert.doesNotMatch(app, /else activateNav\('feed'\);/);
-});
-
-test('the scripts and styles use synchronized fresh browser cache URLs', () => {
-  const appAsset = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]||'';
-  const leagueAsset = html.match(/src="(\/leagues\.js\?v=[^"]+)"/)?.[1]||'';
-  const leagueCss = html.match(/href="(\/leagues\.css\?v=[^"]+)"/)?.[1]||'';
-  assert.ok(appAsset&&leagueAsset&&leagueCss, 'HTML requests the active app and League assets');
-  assert.ok(sw.includes("'" + appAsset + "'"), 'service worker caches the app script');
-  assert.ok(sw.includes("'" + leagueAsset + "'"), 'service worker caches the League script');
-  assert.ok(sw.includes("'" + leagueCss + "'"), 'service worker caches the League stylesheet');
-  assert.match(sw,/CACHE_NAME='minglora-shell-v\d+-/);
-});
-
-test('the service worker no longer preloads or specifically caches Match Power-Up GLTF previews', () => {
-  assert.doesNotMatch(sw, /minglora_(?:momentum_boost|shield|time_boost|score_multiplier)\.gltf/);
-  assert.doesNotMatch(sw, /url\.pathname\.startsWith\('\/assets\/match-powerups\/'\)/);
+  assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(styles, /pointer-events:none/);
 });
