@@ -2170,7 +2170,7 @@ function renderLiveMatches(matches,session){
             boosting_glove:'powerup-glove',magic_mist:'powerup-mist',stun_hammer:'powerup-hammer',
             time_maker:'powerup-time-maker',boosters:'powerup-boosters',speed_challenge:'powerup-speed'
           }[card.powerupId];
-          const art=icon?"<svg class='league-powerup-svg-icon' viewBox='0 0 128 128' aria-hidden='true' focusable='false'><use href='/assets/league/league-emblems.svg?v=20261118-match-powerups-reference-2#"+icon+"'></use></svg>":"";
+          const art=icon?"<svg class='league-powerup-svg-icon' viewBox='0 0 128 128' aria-hidden='true' focusable='false'><use href='/assets/league/league-emblems.svg?v=20261118-match-powerups-reference-1#"+icon+"'></use></svg>":"";
           const expiry=card.expiresAt?'Expires '+new Date(card.expiresAt).toLocaleDateString():'';
           return "<button type='button' class='live-match-powerup-card' data-live-match-action='powerup' data-inventory-card-id='"+esc(card.inventoryCardId)+"' data-match-id='"+esc(match.id)+"' data-broadcast-id='"+esc(session.id)+"'"+(disabled?' disabled':'')+" aria-label='"+esc(card.name+' — '+status+' — '+expiry)+"'><span class='live-match-powerup-icon'>"+art+"</span><strong>"+esc(card.name)+"</strong><small>"+esc(card.description||'Use this card to support the creator')+"</small><span class='live-match-powerup-state'>"+status+"</span><small class='live-match-powerup-expiry'>"+esc(expiry)+"</small></button>";
         }).join("")+"</section>"
