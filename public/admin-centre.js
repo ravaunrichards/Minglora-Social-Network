@@ -189,6 +189,7 @@
     const pageDefinitions = [
       {key:'overview',title:'Overview',group:'Dashboard',description:'A clear starting point with shortcuts to every available administration workspace.'},
       {key:'ai-bot-centre',title:'AI Bot Centre',group:'AI Operations',description:'Open the protected Minglora AI Bot Network workspace for bot identities, teams, provider status, memory, task controls and safeguards.',selector:'#admin-ai-bot-centre'},
+      {key:'approvals',title:'Approval Center',group:'Administration',description:'Review verified administrator approval requests with audited approve and reject actions.',selector:'#admin-approval-center'},
       {key:'company-finance',title:'Company finance & service management',group:'Finance & Operations',description:'Manage operating providers, subscriptions, budgets, invoices and expenses without mixing creator or seller balances.',selector:'#admin-finance-control'},
       {key:'internal-operations',title:'Platform operations',group:'Dashboard',description:'Review metadata-only activity across accounts, social features, calls, meetings, LIVE and finance.',selector:'#admin-internal-operations'},
       {key:'platform-overview',title:'Platform inventory',group:'Dashboard',description:'Review live inventory counts for active Minglora runtime collections.',selector:'#admin-platform-overview'},
@@ -496,7 +497,87 @@
     renderPage(initialKey,{remember:true});
   }
 
-  function addControlCentrePanel(rootOverride = null) {
+
+  function initializeAdminApprovalCenter(panel) {
+    if (!panel || panel.querySelector('#admin-approval-center')) return;
+    const section = document.createElement('section');
+    section.id = 'admin-approval-center';
+    section.className = 'admin-control-centre-section admin-approval-center';
+    section.setAttribute('aria-labelledby','admin-approval-center-title');
+    section.innerHTML = \`
+      <div class="admin-approval-center-heading">
+        <div>
+          <span class="admin-centre-dashboard-eyebrow">ADMINISTRATOR INBOX</span>
+          <h3 id="admin-approval-center-title">Approval Center</h3>
+          <p>Review actual pending requests from Minglora's supervised AI approval and task-queue workflows.</p>
+        </div>
+        <button type="button" class="secondary" id="admin-approval-refresh">Refresh requests</button>
+      </div>
+      <div class="admin-approval-center-summary">
+        <div><strong id="admin-approval-total">—</strong><span>Pending decisions</span></div>
+        <div><strong id="admin-approval-ai-count">—</strong><span>AI action reviews</span></div>
+        <div><strong id="admin-approval-task-count">—</strong><span>AI task reviews</span></div>
+      </div>
+      <p id="admin-approval-status" class="admin-approval-status" role="status" aria-live="polite">Connecting to the protected approval queue…</p>
+      <div id="admin-approval-runtime-note" class="admin-approval-runtime-note">Approval decisions do not bypass separate execution and security controls.</div>
+      <div id="admin-approval-request-list" class="admin-approval-request-list">
+        <div class="admin-approval-empty">Loading verified requests…</div>
+      </div>
+      <p class="admin-approval-footnote">Only requests recorded by existing backend workflows appear here. Approval is an auditable human decision; it does not itself execute a high-impact AI action or enable autonomous workers. Other business departments will appear when their workflows submit requests to the central approval queue.</p>
+    \`;
+    panel.append(section);
+
+    const notification = panel.querySelector('#admin-approval-notification');
+    const notificationCount = panel.querySelector('#admin-approval-notification-count');
+    const toast = panel.querySelector('#admin-approval-toast');
+    const toastMessage = panel.querySelector('#admin-approval-toast-message');
+    const toastDismiss = panel.querySelector('#admin-approval-toast-dismiss');
+    const list = section.querySelector('#admin-approval-request-list');
+    const status = section.querySelector('#admin-approval-status');
+    const total = section.querySelector('#admin-approval-total');
+    const aiCount = section.querySelector('#admin-approval-ai-count');
+    const taskCount = section.querySelector('#admin-approval-task-count');
+    const runtimeNote = section.querySelector('#admin-approval-runtime-note');
+    const refreshButton = section.querySelector('#admin-approval-refresh');
+    let busy = false;
+    let initialized = false;
+    let previousPending = new Set();
+    let toastTimer = null;
+
+    const formatDate = value => {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? 'Time unavailable' : parsed.toLocaleString();
+    };
+    const shortId = value => String(value || '').slice(0,8);
+    const pendingRequests = (snapshot, taskQueue) => {
+      const approvals = (Array.isArray(snapshot?.approvals) ? snapshot.approvals : [])
+        .filter(item => item && item.status === 'pending_human_review' && item.id);
+      const tasks = (Array.isArray(taskQueue?.tasks) ? taskQueue.tasks : [])
+        .filter(item => item && item.status === 'pending_approval' && item.task_id);
+      return { approvals, tasks };
+    };
+    const renderApproval = approval => {
+      const bot = (Array.isArray(window.__mingloraAdminApprovalBots) ? window.__mingloraAdminApprovalBots : [])
+        .find(item => String(item.id || '') === String(approval.botId || ''));
+      const botLabel = bot?.name || bot?.displayName || ('AI bot ' + shortId(approval.botId));
+      return '<article class="admin-approval-request-card">' +
+        '<div class="admin-approval-card-top"><span class="admin-approval-kind">AI HIGH-IMPACT ACTION</span><span class="admin-approval-pending">Pending review</span></div>' +
+        '<h4>' + escapeText(approval.actionType || 'AI action request') + '</h4>' +
+        '<p>' + escapeText(approval.summary || 'No action summary was provided.') + '</p>' +
+        '<dl><div><dt>Requested by</dt><dd>' + escapeText(botLabel) + '</dd></div>' +
+        '<div><dt>Requested</dt><dd>' + escapeText(formatDate(approval.requestedAt)) + '</dd></div>' +
+        '<div><dt>Expires</dt><dd>' + escapeText(formatDate(approval.expiresAt)) + '</dd></div></dl>' +
+        '<div class="admin-approval-card-actions">' +
+        '<button type="button" class="primary" data-admin-approval-decision="approve" data-request-type="ai-action" data-request-id="' + escapeText(approval.id) + '">Approve</button>' +
+        '<button type="button" class="secondary" data-admin-approval-decision="reject" data-request-type="ai-action" data-request-id="' + escapeText(approval.id) + '">Reject</button>' +
+        '</div></article>';
+    };
+    const renderTask = task => {
+      const identityId = task.identity_id || '';
+      const budget = Number.isFinite(Number(task.token_budget)) && task.token_budget !== null
+        ? Number(task.token_budget).toLocaleString() + ' tokens' : 'Not supplied';
+      const cost = task.cost_limit_usd === null || task.cost_limit_usd === undefined
+        ? 'Not supplied' : 'US
     const root = rootOverride || document.querySelector('#admin-centre-root');
     if (!root || root.querySelector('#admin-control-centre')) return;
     const access = window.__mingloraAdminAccess || {};
@@ -515,6 +596,15 @@
       </div>
       <div class="admin-control-centre-note">
         This is the private Minglora platform workspace inside the administrator profile. Protected actions require the designated Creator Hub account and an authenticator-verified session.
+      </div>
+      <div id="admin-approval-notification" class="admin-approval-notification" hidden role="status" aria-live="polite">
+        <div class="admin-approval-notification-copy"><span>ADMIN ACTION REQUIRED</span><strong><span id="admin-approval-notification-count">0</span> request(s) waiting for your decision</strong></div>
+        <a href="?page=approvals" data-admin-route="approvals">Review approvals</a>
+      </div>
+      <div id="admin-approval-toast" class="admin-approval-toast" hidden role="alert" aria-live="assertive">
+        <div><strong>New admin approval notification</strong><span id="admin-approval-toast-message"></span></div>
+        <a href="?page=approvals" data-admin-route="approvals">Open Approval Center</a>
+        <button type="button" id="admin-approval-toast-dismiss" aria-label="Dismiss notification">×</button>
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <div class="admin-centre-nav-group">
@@ -1625,6 +1715,1963 @@
       initializeAdminAuditLog(panel);
       loadAdminModerationQueue(panel);
       loadAdminSupportInbox(panel);
+      initializeAdminApprovalCenter(panel);
+    }
+    // Build the dedicated page workspace only after all existing feature sections and controls exist.
+    initializeAdminPageNavigation(panel, unlocked);
+  }
+
+  async function adminCentreApi(path, options = {}) {
+    const response = await fetch('/api' + path, {
+      credentials:'same-origin', headers:{'Content-Type':'application/json',...(options.headers || {})}, ...options
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'The administrator request could not be completed.');
+    return payload;
+    initializeAdminPageNavigation(panel, unlocked);
+  }
+
+  function formatAdminEarningsMoney(minor) {
+    const amount = Number(minor || 0);
+    return new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format((Number.isFinite(amount) ? amount : 0) / 100);
+  }
+
+  function renderAdminWithdrawalTracker(panel) {
+    const target = panel.querySelector('#admin-withdrawal-tracker-list');
+    const summary = panel.querySelector('#admin-withdrawal-tracker-summary');
+    const updated = panel.querySelector('#admin-withdrawal-tracker-updated');
+    const searchInput = panel.querySelector('#admin-withdrawal-tracker-search');
+    const statusInput = panel.querySelector('#admin-withdrawal-tracker-status');
+    if (!target) return;
+    const rows = Array.isArray(panel._mingloraCreatorPayoutRows) ? panel._mingloraCreatorPayoutRows : [];
+    const statuses = ['requested','processing','paid','failed','cancelled'];
+    const summaryMarkup = statuses.map(status => {
+      const matches = rows.filter(row => String(row.status || '').toLowerCase() === status);
+      const amount = matches.reduce((sum,row) => sum + Math.max(0,Number(row.amountMinor || 0)),0);
+      const label = status === 'requested' ? 'Pending' : status.charAt(0).toUpperCase() + status.slice(1);
+      return '<article class="admin-withdrawal-tracker-metric"><small>' + escapeText(label) +
+        ' · ' + matches.length.toLocaleString() + '</small><strong>' +
+        escapeText(formatAdminEarningsMoney(amount)) + '</strong></article>';
+    }).join('');
+    if (summary) summary.innerHTML = summaryMarkup || '<p>No withdrawal requests have been recorded.</p>';
+    const query = String(searchInput?.value || '').trim().toLowerCase();
+    const selectedStatus = String(statusInput?.value || 'all').toLowerCase();
+    const filtered = rows.filter(row => {
+      if (selectedStatus !== 'all' && String(row.status || '').toLowerCase() !== selectedStatus) return false;
+      if (!query) return true;
+      return [row.displayName,row.username,row.paypalEmail,row.paypalBatchId,row.id]
+        .some(value => String(value || '').toLowerCase().includes(query));
+    });
+    if (updated) updated.textContent = 'Auto-refresh · ' + (panel._mingloraReportAsOf
+      ? new Date(panel._mingloraReportAsOf).toLocaleTimeString()
+      : 'just now');
+    target.innerHTML = filtered.length ? filtered.map(row => {
+      const status = String(row.status || 'requested').toLowerCase();
+      const statusLabel = status === 'requested' ? 'Pending' : status.charAt(0).toUpperCase() + status.slice(1);
+      const created = row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable';
+      const paid = row.paidAt ? ' · Paid ' + escapeText(new Date(row.paidAt).toLocaleString()) : '';
+      const batch = row.paypalBatchId ? escapeText(row.paypalBatchId) : 'Awaiting PayPal batch reference';
+      return '<article class="admin-withdrawal-tracker-row">' +
+        '<div class="admin-withdrawal-tracker-identity"><strong>' + escapeText(row.displayName || 'Unavailable creator') +
+          '</strong><small>' + (row.username ? '@' + escapeText(row.username) : 'Creator account') +
+          ' · ' + escapeText(row.paypalEmail || 'PayPal destination not available') + '</small></div>' +
+        '<div class="admin-withdrawal-tracker-amount"><strong>' + escapeText(formatAdminEarningsMoney(row.amountMinor)) +
+          '</strong><span class="admin-withdrawal-status admin-withdrawal-status-' + escapeText(status) + '">' +
+          escapeText(statusLabel) + '</span></div>' +
+        '<div class="admin-withdrawal-tracker-reference"><small>Requested ' + escapeText(created) +
+          '</small><small>PayPal batch: ' + batch + paid + '</small><small>Request ID: ' +
+          escapeText(row.id || 'Unavailable') + '</small></div></article>';
+    }).join('') : '<p class="admin-gift-earnings-empty">' +
+      (rows.length ? 'No withdrawal requests match these filters.' : 'No creator/member withdrawal requests have been recorded yet.') +
+      '</p>';
+  }
+
+  async function loadAdminGiftEarnings(panel, { quiet = false } = {}) {
+    const status = panel.querySelector('#admin-gift-earnings-status');
+    const metrics = panel.querySelector('#admin-gift-earnings-metrics');
+    const creators = panel.querySelector('#admin-gift-earnings-creators');
+    const platformSummary = panel.querySelector('#admin-platform-payout-summary');
+    const platformAccountInput = panel.querySelector('#admin-platform-payout-email');
+    const platformPayoutHistory = panel.querySelector('#admin-platform-payout-history');
+    const platformPayoutSubmit = panel.querySelector('#admin-platform-payout-submit');
+    const promoSummary = panel.querySelector('#admin-promotional-tracker-summary');
+    const promoWalletsTarget = panel.querySelector('#admin-promotional-wallets');
+    const promoWalletLedgerTarget = panel.querySelector('#admin-promotional-wallet-ledger');
+    const promoFundLedgerTarget = panel.querySelector('#admin-promotional-fund-ledger');
+    const promoBackedGiftsTarget = panel.querySelector('#admin-promotional-cash-backed-gifts');
+    if (!status || !metrics || !creators) return;
+    if (!quiet) status.textContent = 'Loading the verified creator earnings, withdrawals and promotional ledgers…';
+    try {
+      const report = await adminCentreApi('/admin/creator-earnings');
+      const totals = report.totals || {};
+      const finance = report.platformFinance || {};
+      const cards = [
+        ['Eligible gift value · cash-backed', totals.grossMinor],
+        ['Creator share · 50%', totals.creatorShareMinor],
+        ['Minglora share · 50% · recorded', finance.recordedPlatformShareMinor ?? totals.platformShareMinor],
+        ['Creator payouts pending', totals.pendingPayoutMinor],
+        ['Creator payouts paid', totals.paidPayoutMinor],
+        ['Minglora available to withdraw', finance.availablePlatformShareMinor],
+        ['Minglora withdrawals pending', finance.pendingPlatformPayoutMinor],
+        ['Minglora withdrawals paid', finance.paidPlatformPayoutMinor],
+        ['Promotional creator share · separately tracked', finance.excludedPromotionalCreatorShareMinor ?? totals.excludedPromotionalCreatorShareMinor],
+        ['Promotional platform share · separately tracked', finance.excludedPromotionalPlatformShareMinor ?? totals.excludedPromotionalPlatformShareMinor]
+      ];
+      metrics.innerHTML = cards.map(([label, value]) =>
+        '<article class="admin-gift-earnings-metric"><small>' + escapeText(label) +
+        '</small><strong>' + escapeText(formatAdminEarningsMoney(value)) + '</strong></article>'
+      ).join('');
+
+      const platformAccountEmail = String(report.platformPayoutAccount?.paypal_email || '');
+      if (platformAccountInput && document.activeElement !== platformAccountInput) {
+        platformAccountInput.value = platformAccountEmail;
+      }
+      const availablePlatformMinor = Math.max(0, Number(finance.availablePlatformShareMinor || 0));
+      const reservedPlatformMinor = Math.max(0, Number(finance.pendingPlatformPayoutMinor || 0));
+      const paidPlatformMinor = Math.max(0, Number(finance.paidPlatformPayoutMinor || 0));
+      if (platformSummary) {
+        platformSummary.innerHTML =
+          '<div class="admin-platform-payout-balances">' +
+            '<div><small>Recorded Minglora 50% share</small><strong>' + escapeText(formatAdminEarningsMoney(finance.recordedPlatformShareMinor)) + '</strong></div>' +
+            '<div><small>Available to withdraw</small><strong>' + escapeText(formatAdminEarningsMoney(availablePlatformMinor)) + '</strong></div>' +
+            '<div><small>Reserved / processing</small><strong>' + escapeText(formatAdminEarningsMoney(reservedPlatformMinor)) + '</strong></div>' +
+            '<div><small>Paid through PayPal</small><strong>' + escapeText(formatAdminEarningsMoney(paidPlatformMinor)) + '</strong></div>' +
+          '</div><p>Destination: ' + escapeText(platformAccountEmail || 'Not configured') +
+          '. The available amount is calculated from eligible cash-backed earnings and excludes pending and paid platform withdrawals.</p>';
+      }
+      if (platformPayoutSubmit) {
+        platformPayoutSubmit.disabled = !platformAccountEmail || availablePlatformMinor < 100;
+      }
+      if (platformPayoutHistory) {
+        const platformPayouts = Array.isArray(report.platformPayouts) ? report.platformPayouts : [];
+        platformPayoutHistory.innerHTML = platformPayouts.length
+          ? platformPayouts.map(item => {
+              const created = item.created_at ? new Date(item.created_at).toLocaleString() : 'Date unavailable';
+              const batch = item.paypal_batch_id ? ' · PayPal batch ' + escapeText(item.paypal_batch_id) : '';
+              const paid = item.paid_at ? ' · Paid ' + escapeText(new Date(item.paid_at).toLocaleString()) : '';
+              const failure = item.failure_message ? '<p>' + escapeText(item.failure_message) + '</p>' : '';
+              return '<article class="admin-platform-payout-history-row"><div><strong>' +
+                escapeText(formatAdminEarningsMoney(item.amount_minor)) + ' · ' +
+                escapeText(String(item.status || 'requested').replace(/_/g,' ')) +
+                '</strong><small>To ' + escapeText(item.paypal_email || 'PayPal destination unavailable') +
+                ' · ' + escapeText(created) + batch + paid + '</small>' + failure + '</div></article>';
+            }).join('')
+          : '<p class="admin-platform-payout-empty">No platform withdrawals have been sent.</p>';
+      }
+
+      panel._mingloraCreatorPayoutRows = Array.isArray(report.creatorPayouts) ? report.creatorPayouts : [];
+      panel._mingloraReportAsOf = report.asOf || new Date().toISOString();
+      if (!panel.dataset.mingloraWithdrawalFilterBound) {
+        panel.querySelector('#admin-withdrawal-tracker-search')?.addEventListener('input', () => renderAdminWithdrawalTracker(panel));
+        panel.querySelector('#admin-withdrawal-tracker-status')?.addEventListener('change', () => renderAdminWithdrawalTracker(panel));
+        panel.dataset.mingloraWithdrawalFilterBound = 'true';
+      }
+      renderAdminWithdrawalTracker(panel);
+
+      const promoWalletTotals = report.promotionalWalletTotals || {};
+      const promoReserve = report.promotionalCashReserve || {};
+      const promoBacking = report.promotionalCashBackings || {};
+      const promoActivity = report.excludedPromotionalActivity || {};
+      const promoMetrics = [
+        ['Promotional Coins available in member wallets', Number(promoWalletTotals.availableCoins || 0).toLocaleString() + ' Coins'],
+        ['Promotional Coins allocated · lifetime', Number(promoWalletTotals.lifetimeAllocatedCoins || 0).toLocaleString() + ' Coins'],
+        ['Promotional Coins spent · lifetime', Number(promoWalletTotals.lifetimeSpentCoins || 0).toLocaleString() + ' Coins'],
+        ['Promotional gift cash reserve · funded', formatAdminEarningsMoney(promoReserve.fundedMinor)],
+        ['Promotional gift cash reserve · spent', formatAdminEarningsMoney(promoReserve.spentMinor)],
+        ['Promotional gift cash reserve · available', formatAdminEarningsMoney(promoReserve.availableMinor)],
+        ['Promotional gift activity · recorded gross', formatAdminEarningsMoney(promoActivity.grossMinor)],
+        ['Promotional creator share · recorded', formatAdminEarningsMoney(promoActivity.creatorShareMinor)],
+        ['Promotional platform share · recorded', formatAdminEarningsMoney(promoActivity.platformShareMinor)],
+        ['Cash-backed promotional gifts', Number(promoBacking.giftCount || 0).toLocaleString() + ' gifts'],
+        ['Cash backing attached to promotional gifts', formatAdminEarningsMoney(promoBacking.backingMinor)],
+        ['Cash-backed promotional creator share · 50%', formatAdminEarningsMoney(promoBacking.creatorShareMinor)],
+        ['Cash-backed promotional platform share · 50%', formatAdminEarningsMoney(promoBacking.platformShareMinor)]
+      ];
+      if (promoSummary) promoSummary.innerHTML = promoMetrics.map(([label,value]) =>
+        '<article class="admin-withdrawal-tracker-metric"><small>' + escapeText(label) +
+        '</small><strong>' + escapeText(value) + '</strong></article>'
+      ).join('') + '<p class="admin-gift-earnings-footnote">Promotional Coin balances remain separate from the main Coin wallet. Promotional activity is always visible here. Cash-backed payouts are reported only where matching reserve funding/backing records exist; this dashboard does not move or convert promotional balances.</p>';
+      const promoWallets = Array.isArray(report.promotionalWallets) ? report.promotionalWallets : [];
+      if (promoWalletsTarget) promoWalletsTarget.innerHTML = promoWallets.length
+        ? promoWallets.map(wallet => '<article class="admin-promotional-ledger-row"><strong>' +
+            escapeText(wallet.displayName || 'Unavailable member') + (wallet.username ? ' · @' + escapeText(wallet.username) : '') +
+            '</strong><small>Available ' + Number(wallet.availableCoins || 0).toLocaleString() +
+            ' Coins · Allocated ' + Number(wallet.lifetimeAllocatedCoins || 0).toLocaleString() +
+            ' · Spent ' + Number(wallet.lifetimeSpentCoins || 0).toLocaleString() +
+            ' · Updated ' + escapeText(wallet.updatedAt ? new Date(wallet.updatedAt).toLocaleString() : 'unknown') +
+            '</small></article>').join('')
+        : '<p class="admin-gift-earnings-empty">No member promotional gift wallets recorded.</p>';
+      const promoWalletLedger = Array.isArray(report.promotionalWalletLedger) ? report.promotionalWalletLedger : [];
+      if (promoWalletLedgerTarget) promoWalletLedgerTarget.innerHTML = promoWalletLedger.length
+        ? promoWalletLedger.map(row => {
+            const delta = Number(row.deltaCoins || 0);
+            return '<article class="admin-promotional-ledger-row"><strong>' +
+              escapeText(row.memberDisplayName || 'Unavailable member') + ' · ' +
+              (delta > 0 ? '+' : '') + delta.toLocaleString() + ' Coins</strong><small>' +
+              escapeText(String(row.eventType || 'activity').replace(/_/g,' ')) +
+              ' · Balance after ' + Number(row.balanceAfter || 0).toLocaleString() +
+              ' · Actor ' + escapeText(row.actorUsername ? '@' + row.actorUsername : 'system') +
+              ' · ' + escapeText(row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable') +
+              (row.note ? ' · ' + escapeText(row.note) : '') + '</small></article>';
+          }).join('')
+        : '<p class="admin-gift-earnings-empty">No promotional wallet transactions recorded.</p>';
+      const promoFundLedger = Array.isArray(promoReserve.ledger) ? promoReserve.ledger : [];
+      if (promoFundLedgerTarget) promoFundLedgerTarget.innerHTML = promoFundLedger.length
+        ? promoFundLedger.map(row => '<article class="admin-promotional-ledger-row"><strong>' +
+            escapeText(String(row.eventType || 'activity').replace(/_/g,' ')) +
+            ' · Funded ' + escapeText(formatAdminEarningsMoney(row.fundedDeltaMinor)) +
+            ' · Spent ' + escapeText(formatAdminEarningsMoney(row.spentDeltaMinor)) +
+            '</strong><small>By ' + escapeText(row.actorUsername ? '@' + row.actorUsername : 'system') +
+            ' · ' + escapeText(row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable') +
+            (row.paypalCaptureId ? ' · PayPal capture ' + escapeText(row.paypalCaptureId) : '') +
+            (row.note ? ' · ' + escapeText(row.note) : '') + '</small></article>').join('')
+        : '<p class="admin-gift-earnings-empty">No promotional cash-fund transactions recorded.</p>';
+      const promoBackedRecords = Array.isArray(promoBacking.records) ? promoBacking.records : [];
+      if (promoBackedGiftsTarget) promoBackedGiftsTarget.innerHTML = promoBackedRecords.length
+        ? promoBackedRecords.map(row => '<article class="admin-promotional-ledger-row"><strong>' +
+            escapeText(row.creatorDisplayName || 'Unavailable creator') + ' · ' +
+            Number(row.giftCoins || 0).toLocaleString() + ' promotional gift Coins</strong><small>Cash backing ' +
+            escapeText(formatAdminEarningsMoney(row.backingMinor)) + ' · Creator 50% ' +
+            escapeText(formatAdminEarningsMoney(row.creatorShareMinor)) + ' · Minglora 50% ' +
+            escapeText(formatAdminEarningsMoney(row.platformShareMinor)) + ' · ' +
+            escapeText(row.createdAt ? new Date(row.createdAt).toLocaleString() : 'Date unavailable') +
+            '</small></article>').join('')
+        : '<p class="admin-gift-earnings-empty">No promotional gift cash-backing records have been posted yet.</p>';
+
+      const rows = Array.isArray(report.creators) ? report.creators : [];
+      creators.innerHTML = rows.map(creator => {
+        const username = String(creator.username || '').replace(/^@/, '');
+        const identity = escapeText(creator.displayName || 'Unavailable creator');
+        const handle = username ? '@' + escapeText(username) : 'Account profile unavailable';
+        return '<article class="admin-gift-earnings-creator">' +
+          '<div class="admin-gift-earnings-creator-heading"><strong>' + identity +
+            '</strong><small>' + handle + ' · ' + Number(creator.giftCount || 0).toLocaleString() + ' eligible gifts</small></div>' +
+          '<div class="admin-gift-earnings-creator-values">' +
+            '<div><small>Gift value</small><strong>' + escapeText(formatAdminEarningsMoney(creator.grossMinor)) + '</strong></div>' +
+            '<div><small>Creator 50%</small><strong>' + escapeText(formatAdminEarningsMoney(creator.creatorShareMinor)) + '</strong></div>' +
+            '<div><small>Minglora 50%</small><strong>' + escapeText(formatAdminEarningsMoney(creator.platformShareMinor)) + '</strong></div>' +
+            '<div><small>Pending payouts</small><strong>' + escapeText(formatAdminEarningsMoney(creator.pendingPayoutMinor)) + '</strong></div>' +
+            '<div><small>Paid payouts</small><strong>' + escapeText(formatAdminEarningsMoney(creator.paidPayoutMinor)) + '</strong></div>' +
+          '</div></article>';
+      }).join('') || '<p class="admin-gift-earnings-empty">No eligible gift earnings have been recorded yet.</p>';
+
+      const updated = report.asOf ? new Date(report.asOf) : new Date();
+      const updateLabel = Number.isNaN(updated.getTime()) ? 'just now' : updated.toLocaleString();
+      const excludedPromoCount = Number(finance.excludedPromotionalGiftCount ?? totals.excludedPromotionalGiftCount ?? 0);
+      status.textContent = Number(totals.giftCount || 0).toLocaleString() +
+        ' cash-backed eligible gift records across ' + Number(totals.creatorCount || 0).toLocaleString() +
+        ' creators · ' + Number(totals.splitMismatchCount || 0).toLocaleString() +
+        ' split exceptions. Promotional activity (' + excludedPromoCount.toLocaleString() +
+        ' records) is displayed separately with wallet and cash-reserve tracking. Minglora share is a recorded ledger amount, not a live PayPal balance confirmation · refreshed ' + updateLabel + '.';
+    } catch (error) {
+      if (quiet) {
+        const lastUpdate = panel._mingloraReportAsOf
+          ? ' Last successful report: ' + new Date(panel._mingloraReportAsOf).toLocaleString() + '.'
+          : '';
+        status.textContent = 'Automatic sync could not reach the latest withdrawal and promotional records. The last successful report remains displayed.' +
+          lastUpdate + ' ' + (error.message || '');
+      } else {
+        metrics.innerHTML = '';
+        creators.textContent = 'The verified earnings report could not be loaded. ' +
+          (error.message || 'Automatic updates will retry.');
+        status.textContent = 'Financial report unavailable.';
+      }
+    }
+  }
+
+  function adminUserStatusLabel(status) {
+    return ({active:'Active',banned:'Banned',suspended:'Suspended',deactivated:'Deactivated'})[status] || 'Unknown';
+  }
+
+  function renderAdminUserSelection(panel, member) {
+    const selection = panel.querySelector('#admin-user-selection');
+    const summary = panel.querySelector('#admin-user-selected-summary');
+    const status = panel.querySelector('#admin-user-selected-status');
+    const banForm = panel.querySelector('#admin-user-ban-form');
+    const banButton = panel.querySelector('#admin-user-ban-submit');
+    const unbanButton = panel.querySelector('#admin-user-unban-button');
+    const unbanControls = panel.querySelector('.admin-user-unban-controls');
+    if (!selection || !summary || !status || !banForm || !unbanButton) return;
+    if (!member) {
+      selection.hidden = true;
+      return;
+    }
+    selection.hidden = false;
+    const username = member.username ? '@' + member.username : 'Username unavailable';
+    summary.innerHTML = '<strong>' + escapeText(member.displayName || 'Minglora member') + '</strong>' +
+      '<span>' + escapeText(username) + '</span><span>' + escapeText(member.email || 'No email on record') + '</span>' +
+      '<small>User ID: ' + escapeText(member.id) + '</small>';
+    status.textContent = adminUserStatusLabel(member.status);
+    status.className = 'admin-user-status admin-user-status--' + escapeText(member.status || 'unknown');
+    const ownerProtected = Boolean(member.isOwner);
+    banForm.hidden = ownerProtected || member.status === 'banned';
+    if (unbanControls) unbanControls.hidden = ownerProtected || member.status !== 'banned';
+    unbanButton.hidden = ownerProtected || member.status !== 'banned';
+    if (banButton) banButton.disabled = ownerProtected || member.status === 'banned';
+    const reason = panel.querySelector('#admin-user-ban-reason');
+    if (reason) reason.required = !ownerProtected && member.status !== 'banned';
+  }
+
+  async function loadAdminManagedUsers(panel) {
+    const searchInput = panel.querySelector('#admin-user-search');
+    const statusFilter = panel.querySelector('#admin-user-status-filter');
+    const results = panel.querySelector('#admin-user-management-results');
+    const status = panel.querySelector('#admin-user-management-status');
+    if (!searchInput || !statusFilter || !results || !status) return;
+    const search = String(searchInput.value || '').trim();
+    const filter = String(statusFilter.value || 'all');
+    status.textContent = 'Searching Minglora accounts…';
+    results.innerHTML = '<p class="settings-empty">Loading matching accounts…</p>';
+    try {
+      const query = new URLSearchParams({search,status:filter});
+      const response = await adminCentreApi('/admin/users?' + query.toString());
+      const members = Array.isArray(response.users) ? response.users : [];
+      panel._mingloraAdminUsers = members;
+      const selectedId = panel._mingloraSelectedAdminUser?.id;
+      const updatedSelected = members.find(member => member.id === selectedId);
+      if (updatedSelected) panel._mingloraSelectedAdminUser = updatedSelected;
+      results.innerHTML = members.map(member => {
+        const selected = member.id === panel._mingloraSelectedAdminUser?.id;
+        const username = member.username ? '@' + member.username : 'Username unavailable';
+        const avatar = member.avatarUrl
+          ? '<img src="' + escapeText(member.avatarUrl) + '" alt="" loading="lazy">'
+          : '<span class="admin-user-avatar-fallback">' + escapeText((member.displayName || 'M').slice(0,1).toUpperCase()) + '</span>';
+        return '<button type="button" class="admin-user-result' + (selected ? ' is-selected' : '') +
+          '" data-admin-user-select="' + escapeText(member.id) + '">' +
+          '<span class="admin-user-result-avatar">' + avatar + '</span>' +
+          '<span class="admin-user-result-copy"><strong>' + escapeText(member.displayName || 'Minglora member') +
+          '</strong><small>' + escapeText(username) + ' · ' + escapeText(member.email || 'No email') + '</small></span>' +
+          '<span class="admin-user-status admin-user-status--' + escapeText(member.status || 'unknown') + '">' +
+          escapeText(adminUserStatusLabel(member.status)) + '</span></button>';
+      }).join('') || '<p class="settings-empty">No matching Minglora accounts were found.</p>';
+      if (updatedSelected) renderAdminUserSelection(panel, updatedSelected);
+      status.textContent = members.length + ' account' + (members.length === 1 ? '' : 's') +
+        ' shown. Select an account to manage its access.';
+    } catch (error) {
+      results.innerHTML = '<p class="settings-empty">' + escapeText(error.message || 'Accounts could not be loaded.') + '</p>';
+      status.textContent = 'Account search unavailable.';
+    }
+  }
+
+  async function runAdminAccountAction(panel, operation) {
+    const member = panel._mingloraSelectedAdminUser;
+    const actionStatus = panel.querySelector('#admin-user-action-status');
+    if (!member || !member.id || member.isOwner) return;
+    const reasonField = panel.querySelector(operation === 'ban' ? '#admin-user-ban-reason' : '#admin-user-unban-note');
+    const reason = String(reasonField?.value || '').trim();
+    const duration = String(panel.querySelector('#admin-user-ban-duration')?.value || '7d');
+    if (operation === 'ban' && reason.length < 3) {
+      if (actionStatus) actionStatus.textContent = 'Enter a reason of at least 3 characters before applying a ban.';
+      return;
+    }
+    const permanent = operation === 'ban' && duration === '876000h';
+    const confirmation = operation === 'ban'
+      ? 'Ban ' + (member.username ? '@' + member.username : member.displayName) + ' for ' +
+        (permanent ? '100 years (permanent)' : duration) + '? This will end their saved Minglora sessions.'
+      : 'Unban ' + (member.username ? '@' + member.username : member.displayName) + ' and restore the account status recorded before the ban?';
+    if (!window.confirm(confirmation)) return;
+    const buttons = [
+      panel.querySelector('#admin-user-ban-submit'),
+      panel.querySelector('#admin-user-unban-button')
+    ].filter(Boolean);
+    buttons.forEach(button => { button.disabled = true; });
+    if (actionStatus) actionStatus.textContent = operation === 'ban' ? 'Applying account ban…' : 'Removing account ban…';
+    try {
+      const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id) + '/' + operation, {
+        method:'POST',
+        body:JSON.stringify({duration,reason})
+      });
+      const nextStatus = String(result.status || (operation === 'ban' ? 'banned' : 'active'));
+      member.status = nextStatus;
+      member.bannedUntil = result.bannedUntil || null;
+      panel._mingloraSelectedAdminUser = member;
+      if (actionStatus) {
+        let message = operation === 'ban' ? 'Account banned successfully.' : 'Account unbanned successfully.';
+        if (operation === 'ban' && !result.sessionRevoked) {
+          message += ' No live Supabase session token was available to confirm global refresh-token revocation; Minglora app sessions were still closed.';
+        }
+        if (!result.auditRecorded) message += ' Warning: the action was applied, but the audit record could not be confirmed.';
+        actionStatus.textContent = message;
+      }
+      if (reasonField) reasonField.value = '';
+      renderAdminUserSelection(panel, member);
+      await loadAdminManagedUsers(panel);
+    } catch (error) {
+      if (actionStatus) actionStatus.textContent = error.message || 'The account action could not be completed.';
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+      renderAdminUserSelection(panel, panel._mingloraSelectedAdminUser);
+    }
+  }
+
+  function initializeAdminUserManagement(panel) {
+    const searchInput = panel.querySelector('#admin-user-search');
+    const searchButton = panel.querySelector('#admin-user-search-button');
+    const statusFilter = panel.querySelector('#admin-user-status-filter');
+    const results = panel.querySelector('#admin-user-management-results');
+    const banForm = panel.querySelector('#admin-user-ban-form');
+    const unbanButton = panel.querySelector('#admin-user-unban-button');
+    if (!searchInput || !searchButton || !statusFilter || !results || !banForm || !unbanButton) return;
+    const search = () => loadAdminManagedUsers(panel);
+    searchButton.addEventListener('click', search);
+    statusFilter.addEventListener('change', search);
+    searchInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        search();
+      }
+    });
+    results.addEventListener('click', event => {
+      const button = event.target.closest('[data-admin-user-select]');
+      if (!button) return;
+      const member = (panel._mingloraAdminUsers || []).find(item => item.id === button.dataset.adminUserSelect);
+      if (!member) return;
+      panel._mingloraSelectedAdminUser = member;
+      results.querySelectorAll('[data-admin-user-select]').forEach(item => item.classList.toggle('is-selected', item === button));
+      renderAdminUserSelection(panel, member);
+    });
+    banForm.addEventListener('submit', event => {
+      event.preventDefault();
+      void runAdminAccountAction(panel, 'ban');
+    });
+    unbanButton.addEventListener('click', () => {
+      void runAdminAccountAction(panel, 'unban');
+    });
+    void loadAdminManagedUsers(panel);
+  }
+
+  async function loadAdminModerationQueue(panel) {
+    const target = panel.querySelector('#moderation-reports-list');
+    if (!target) return;
+    target.textContent = 'Loading reports…';
+    try {
+      const result = await adminCentreApi('/moderation/reports?status=open');
+      target.innerHTML = (result.reports || []).map(report => {
+        const actions = report.targetType === 'post' ? '<option value="hide_post">Hide post</option><option value="remove_post">Remove post</option>' :
+          report.targetType === 'story' ? '<option value="remove_story">Remove story</option>' :
+          report.targetType === 'user' ? '<option value="suspend_account">Suspend account</option>' : '';
+        return '<article class="moderation-report"><strong>' + escapeText(report.targetType) + ' · ' + escapeText(report.category) +
+          '</strong><p>' + escapeText(report.details || 'No extra details') + '</p><small>Reporter: ' +
+          escapeText(report.reporter?.username || 'member') + ' · Target owner: ' +
+          escapeText(report.targetOwner?.username || 'unknown') + '</small><form data-admin-moderate-report="' +
+          escapeText(report.id) + '"><select name="status"><option value="triaged">In review</option><option value="actioned">Actioned</option>' +
+          '<option value="dismissed">Dismiss</option><option value="open">Keep open</option></select><select name="action">' +
+          '<option value="">No content action</option>' + actions + '</select><button class="primary" type="submit">Apply</button></form></article>';
+      }).join('') || '<p class="settings-empty">No open reports.</p>';
+      target.querySelectorAll('[data-admin-moderate-report]').forEach(form => form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const values = new FormData(form), button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+          await adminCentreApi('/moderation/reports/' + encodeURIComponent(form.dataset.adminModerateReport), {
+            method:'PATCH', body:JSON.stringify({status:values.get('status'),action:values.get('action') || null})
+          });
+          await loadAdminModerationQueue(panel);
+        } catch (error) { window.alert(error.message); button.disabled = false; }
+      }));
+    } catch (error) { target.textContent = error.message || 'Moderation reports could not be loaded.'; }
+  }
+
+  async function loadAdminSupportInbox(panel) {
+    const target = panel.querySelector('#moderator-support-tickets');
+    if (!target) return;
+    target.textContent = 'Loading support tickets…';
+    try {
+      const result = await adminCentreApi('/support/tickets?scope=all');
+      target.innerHTML = (result.tickets || []).map(ticket =>
+        '<article class="settings-ticket"><strong>' + escapeText(ticket.subject) + '</strong><small>' +
+        escapeText(ticket.requester?.name || ticket.userId) + ' · ' + escapeText(ticket.category) +
+        ' · ' + escapeText(ticket.status) + '</small><div class="settings-ticket-messages">' +
+        (ticket.messages || []).map(message => '<p><strong>' + escapeText(message.sender?.name || message.senderId) +
+        ':</strong> ' + escapeText(message.message) + '</p>').join('') + '</div>' +
+        (ticket.status === 'closed' ? '' : '<form data-admin-moderator-reply="' + escapeText(ticket.id) +
+        '"><textarea name="message" maxlength="5000" rows="2" placeholder="Reply to this member"></textarea>' +
+        '<select name="status"><option value="waiting_for_member">Waiting for member</option><option value="in_progress">In progress</option>' +
+        '<option value="closed">Close ticket</option></select><button class="primary" type="submit">Reply / update</button></form>') +
+        '</article>').join('') || '<p class="settings-empty">The support inbox is empty.</p>';
+      target.querySelectorAll('[data-admin-moderator-reply]').forEach(form => form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const values = new FormData(form), button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+          const message = String(values.get('message') || '').trim();
+          if (message) await adminCentreApi('/support/tickets/' + encodeURIComponent(form.dataset.adminModeratorReply) + '/messages', {
+            method:'POST', body:JSON.stringify({message})
+          });
+          await adminCentreApi('/support/tickets/' + encodeURIComponent(form.dataset.adminModeratorReply), {
+            method:'PATCH', body:JSON.stringify({status:values.get('status')})
+          });
+          await loadAdminSupportInbox(panel);
+        } catch (error) { window.alert(error.message); button.disabled = false; }
+      }));
+    } catch (error) { target.textContent = error.message || 'Support inbox could not be loaded.'; }
+  }
+
+  async function loadAdminBadgeMembers(panel, search = '') {
+    const status = panel.querySelector('#admin-badge-member-search-status');
+    const verificationSelect = panel.querySelector('#admin-profile-verification-member');
+    const gifterSelect = panel.querySelector('#admin-gifter-badge-member');
+    if (!verificationSelect || !gifterSelect) return;
+    if (status) status.textContent = search ? 'Searching Minglora accounts…' : 'Loading Minglora member accounts…';
+    verificationSelect.innerHTML = '<option value="">Loading accounts…</option>';
+    gifterSelect.innerHTML = '<option value="">Loading accounts…</option>';
+    try {
+      const result = await adminCentreApi('/admin/badge-controls/members?search=' + encodeURIComponent(search));
+      const members = Array.isArray(result.members) ? result.members : [];
+      const options = '<option value="">Choose a member account</option>' + members.map(member => {
+        const name = member.displayName || member.username || 'Minglora member';
+        const username = member.username ? ' · @' + member.username : '';
+        const email = member.email ? ' · ' + member.email : '';
+        const label = name + username + email + ' · ' + (member.verificationStatus || 'not_submitted');
+        return '<option value="' + escapeText(member.id) + '">' + escapeText(label) + '</option>';
+      }).join('');
+      verificationSelect.innerHTML = options;
+      gifterSelect.innerHTML = options;
+      const preferred = members.find(member => String(member.email || '').toLowerCase() === 'creatorhubcreatornetwork@gmail.com');
+      if (preferred) {
+        verificationSelect.value = preferred.id;
+        gifterSelect.value = preferred.id;
+      }
+      if (status) status.textContent = (search ? 'Search results' : 'Available accounts') + ' · ' +
+        members.length + ' member' + (members.length === 1 ? '' : 's') + ' shown.';
+      await loadAdminGifterBadgeStatus(panel);
+    } catch (error) {
+      verificationSelect.innerHTML = '<option value="">Account list unavailable</option>';
+      gifterSelect.innerHTML = '<option value="">Account list unavailable</option>';
+      if (status) status.textContent = error.message || 'Minglora member accounts could not be loaded.';
+    }
+  }
+
+  async function loadAdminGifterBadgeStatus(panel) {
+    const targetUserId = String(panel.querySelector('#admin-gifter-badge-member')?.value || '');
+    const target = panel.querySelector('#admin-gifter-badge-current-status');
+    if (!target) return;
+    if (!targetUserId) {
+      target.textContent = 'Select an account to inspect its badge status.';
+      return;
+    }
+    target.textContent = 'Loading current gifter badge status…';
+    try {
+      const result = await adminCentreApi('/admin/gifter-badges/status?userId=' + encodeURIComponent(targetUserId));
+      const member = result.member || {};
+      const badge = result.badge || null;
+      const current = result.current || {};
+      const override = result.override || {};
+      target.innerHTML =
+        '<strong>' + escapeText(member.displayName || member.username || 'Minglora member') + '</strong>' +
+        '<small>@' + escapeText(member.username || 'member') + ' · ' + escapeText(member.email || '') + '</small>' +
+        '<p>Current gifter level: <b>' + Number(current.level || 0) + ' / 50</b> · Lifetime Coins sent: <b>' +
+        Number(current.totalCoinsSent || 0).toLocaleString() + '</b></p>' +
+        '<p>Badge source: <b>' + escapeText(current.badgeSource || 'none') + '</b> · Admin granted level: <b>' +
+        Number(override.grantedLevel || 0) + '</b></p>' +
+        (override.progressionResetAt ? '<small>Last progression reset: ' + escapeText(override.progressionResetAt) + '</small>' : '') +
+        (badge?.adminAwarded ? '<span class="admin-gifter-awarded-label">ADMIN AWARDED</span>' : '');
+    } catch (error) {
+      target.textContent = error.message || 'Gifter badge status could not be loaded.';
+    }
+  }
+
+  async function submitAdminGifterBadgeAction(panel, mode) {
+    const targetUserId = String(panel.querySelector('#admin-gifter-badge-member')?.value || '');
+    const level = Number(panel.querySelector('#admin-gifter-badge-level')?.value);
+    const noteInput = panel.querySelector('#admin-gifter-badge-note');
+    const note = String(noteInput?.value || '').trim().slice(0,240);
+    const status = panel.querySelector('#admin-gifter-badge-status-message');
+    const button = panel.querySelector(mode === 'unlock_all' ? '#admin-gifter-badge-unlock-all' :
+      mode === 'reset' ? '#admin-gifter-badge-reset' : '#admin-gifter-badge-grant');
+    const memberOption = panel.querySelector('#admin-gifter-badge-member option:checked');
+    const memberLabel = memberOption?.textContent || 'the selected member';
+    if (!targetUserId || (mode === 'grant_level' && (!Number.isSafeInteger(level) || level < 1 || level > 50)) || note.length < 5) {
+      if (status) status.textContent = 'Choose a member, provide a valid level when granting, and write an admin note of at least five characters.';
+      return;
+    }
+    const prompt = mode === 'unlock_all'
+      ? 'Unlock all 50 gifter badge levels for ' + memberLabel + '? This does not add gift spend or change any Coin balance.'
+      : mode === 'reset'
+        ? 'Reset badge progress for ' + memberLabel + '? Admin awards will be cleared and new progression will start from zero. Existing gift history and lifetime Coins sent are preserved.'
+        : 'Grant gifter Level ' + level + ' to ' + memberLabel + '? This is an admin award, not a gift-spend reward.';
+    if (!window.confirm(prompt)) return;
+    if (button) button.disabled = true;
+    if (status) status.textContent = mode === 'reset' ? 'Resetting gifter badge progress…' : 'Saving admin gifter badge award…';
+    try {
+      const result = await adminCentreApi('/admin/gifter-badges/manage', {
+        method:'POST',
+        body:JSON.stringify({targetUserId,mode,level:mode === 'grant_level' ? level : null,note})
+      });
+      const current = result.current || {};
+      if (status) status.textContent = mode === 'reset'
+        ? 'Badge progress reset. Original gift records and lifetime history remain intact.'
+        : mode === 'unlock_all'
+          ? 'All 50 gifter badge levels are unlocked for ' + (result.member?.email || memberLabel) + '.'
+          : 'Level ' + Number(current.level || level) + ' admin-awarded to ' + (result.member?.email || memberLabel) + '.';
+      await loadAdminGifterBadgeStatus(panel);
+    } catch (error) {
+      if (status) status.textContent = error.message || 'The gifter badge action could not be completed.';
+    } finally { if (button) button.disabled = false; }
+  }
+
+  function adminTotpQrSource(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^data:image\/(?:svg\+xml|png|webp);/i.test(raw)) return raw;
+    return /^(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(raw)
+      ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(raw) : '';
+  }
+
+  async function loadAdminSecuritySettings(panel) {
+    const status = panel.querySelector('#admin-centre-security-status');
+    const factorsPanel = panel.querySelector('#admin-centre-mfa-factors');
+    const sessionsPanel = panel.querySelector('#admin-centre-session-list');
+    try {
+      const result = await adminCentreApi('/security/mfa');
+      if (status) status.textContent = result.enabled
+        ? (window.__mingloraAdminAccess?.canAccess ? 'Authenticator is enabled and this session is verified.' : 'Authenticator is enabled. Sign in again with a current code to unlock protected actions.')
+        : 'Authenticator is not enabled. Set it up here to protect this administrator account.';
+      const factors = Array.isArray(result.factors) ? result.factors : [];
+      if (factorsPanel) factorsPanel.innerHTML = factors.map(factor =>
+        '<div class="admin-centre-factor-row"><strong>' + escapeText(factor.friendlyName || 'Authenticator') +
+        '</strong><small>' + escapeText(factor.type || 'TOTP') + ' · ' + escapeText(factor.status || 'unknown') +
+        '</small></div>').join('') || '<p class="settings-empty">No authenticator factors enrolled.</p>';
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Authenticator status is unavailable.';
+      if (factorsPanel) factorsPanel.textContent = 'Authenticator details could not be loaded.';
+    }
+    try {
+      const result = await adminCentreApi('/security/sessions');
+      const sessions = Array.isArray(result.sessions) ? result.sessions : [];
+      if (sessionsPanel) sessionsPanel.innerHTML = sessions.map(session =>
+        '<div class="admin-centre-session-row"><div><strong>' + escapeText(session.userAgent || 'Unknown device') +
+        (session.current ? ' · This device' : '') + '</strong><small>Last active ' + escapeText(session.lastSeenAt || 'Unknown') +
+        ' · Expires ' + escapeText(session.expiresAt || 'Unknown') + '</small></div>' +
+        (session.current ? '<span class="settings-current-session">Current</span>' : '<span class="settings-status-pill">Active</span>') +
+        '</div>').join('') || '<p class="settings-empty">No active sessions found.</p>';
+    } catch (error) { if (sessionsPanel) sessionsPanel.textContent = error.message || 'Active sessions are unavailable.'; }
+  }
+
+  async function startAdminMfaEnrollment(panel) {
+    const button = panel.querySelector('#admin-centre-enable-mfa');
+    const enrollment = panel.querySelector('#admin-centre-mfa-enrollment-panel');
+    const status = panel.querySelector('#admin-centre-security-status');
+    if (button) button.disabled = true;
+    if (status) status.textContent = 'Starting authenticator setup…';
+    try {
+      const result = await adminCentreApi('/security/mfa/totp/enroll', {method:'POST',body:'{}'});
+      const factor = result.factor || {}, totp = result.totp || {};
+      const qr = adminTotpQrSource(totp.qr_code || totp.qrCode || totp.qr || '');
+      const secret = String(totp.secret || '').trim(), uri = String(totp.uri || '').trim();
+      if (!factor.id || (!qr && !secret && !uri)) throw new Error('The provider did not return complete authenticator setup details.');
+      enrollment.innerHTML = '<div class="mfa-enrollment"><p>Scan this QR code or enter the setup key in your authenticator app.</p>' +
+        (qr ? '<img class="mfa-qr" src="' + escapeText(qr) + '" alt="Authenticator QR code">' : '') +
+        (secret ? '<div class="mfa-secret"><small>Authenticator setup key</small><code>' + escapeText(secret) + '</code></div>' : '') +
+        (uri ? '<p class="muted">Manual setup URI: ' + escapeText(uri) + '</p>' : '') +
+        '<form id="admin-centre-mfa-verify-form"><input type="hidden" name="factorId" value="' + escapeText(factor.id) +
+        '"><label class="field"><span>Enter the current 6–8 digit code</span><input name="code" type="text" inputmode="numeric" ' +
+        'autocomplete="one-time-code" pattern="[0-9 ]{6,8}" minlength="6" maxlength="8" required></label>' +
+        '<p id="admin-centre-mfa-verify-status" role="status"></p><button class="primary" type="submit">Verify authenticator</button></form></div>';
+      enrollment.querySelector('#admin-centre-mfa-verify-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget, values = new FormData(form);
+        const verifyButton = form.querySelector('button[type="submit"]'), verifyStatus = form.querySelector('#admin-centre-mfa-verify-status');
+        verifyButton.disabled = true;
+        if (verifyStatus) verifyStatus.textContent = 'Checking your authenticator code…';
+        try {
+          await adminCentreApi('/security/mfa/totp/verify', {method:'POST',body:JSON.stringify({
+            factorId:values.get('factorId'),code:String(values.get('code') || '').replace(/\s/g,'')
+          })});
+          if (verifyStatus) verifyStatus.textContent = 'Authenticator verified. Refreshing private access…';
+          window.location.reload();
+        } catch (error) {
+          if (verifyStatus) verifyStatus.textContent = error.message || 'The code could not be verified.';
+          verifyButton.disabled = false;
+        }
+      });
+      if (status) status.textContent = 'Authenticator enrollment started. Verify the code to complete setup.';
+    } catch (error) { if (status) status.textContent = error.message || 'Authenticator setup could not be started.'; }
+    finally { if (button) button.disabled = false; }
+  }
+
+  async function initializeAdminCentre(rootOverride = null) {
+    const root = rootOverride || document.querySelector('#admin-centre-root');
+    if (!root) return;
+    root.dataset.initialized = 'true';
+    root.innerHTML = '<section class="admin-centre-loading"><h2>Verifying private administrator access…</h2><p>Checking the protected Admin Centre for this account.</p></section>';
+    try {
+      const response = await fetch('/api/admin/access', {credentials:'same-origin',headers:{Accept:'application/json'}});
+      const access = await response.json().catch(() => ({}));
+      if (!response.ok || (!access.canAccess && !access.setupRequired)) {
+        root.dataset.initialized = 'false';
+        root.innerHTML = '<section class="admin-centre-access-denied"><h2>Private Admin Centre</h2><p>This control centre is available only to the designated Creator Hub administrator with the required secure session.</p><a class="secondary" href="/">Return to Minglora</a></section>';
+        return;
+      }
+      window.__mingloraAdminAccess = access;
+      addControlCentrePanel(root);
+    } catch (error) {
+      root.dataset.initialized = 'false';
+      root.innerHTML = '<section class="admin-centre-access-denied"><h2>Admin access could not be checked</h2><p>' +
+        escapeText(error.message || 'Sign in with the designated administrator account and try again.') +
+        '</p><a class="secondary" href="/">Return to Minglora</a></section>';
+    }
+  }
+
+  window.MingloraAdminCentre = Object.freeze({ initialize: initializeAdminCentre });
+  if (document.querySelector('#admin-centre-root')) initializeAdminCentre();
+})(); + Number(task.cost_limit_usd).toFixed(2);
+      return '<article class="admin-approval-request-card">' +
+        '<div class="admin-approval-card-top"><span class="admin-approval-kind">AI TASK AUTHORIZATION</span><span class="admin-approval-pending">Pending review</span></div>' +
+        '<h4>' + escapeText(task.task_title || 'AI task request') + '</h4>' +
+        '<p>Action class: ' + escapeText(task.action_class || 'Not classified') + ' · Task type: ' + escapeText(task.task_type || 'Not supplied') + '</p>' +
+        '<dl><div><dt>AI identity</dt><dd>' + escapeText(identityId ? shortId(identityId) : 'Not supplied') + '</dd></div>' +
+        '<div><dt>Scheduled</dt><dd>' + escapeText(formatDate(task.scheduled_for)) + '</dd></div>' +
+        '<div><dt>Token budget</dt><dd>' + escapeText(budget) + '</dd></div>' +
+        '<div><dt>Cost limit</dt><dd>' + escapeText(cost) + '</dd></div></dl>' +
+        '<label class="admin-approval-review-reason"><span>Review reason (required)</span><textarea data-admin-approval-reason minlength="3" maxlength="1000" rows="2" placeholder="Explain your approval or rejection"></textarea></label>' +
+        '<div class="admin-approval-card-actions">' +
+        '<button type="button" class="primary" data-admin-approval-decision="approve" data-request-type="ai-task" data-request-id="' + escapeText(task.task_id) + '">Approve</button>' +
+        '<button type="button" class="secondary" data-admin-approval-decision="reject" data-request-type="ai-task" data-request-id="' + escapeText(task.task_id) + '">Reject</button>' +
+        '</div></article>';
+    };
+    const showToast = count => {
+      if (!toast || !toastMessage) return;
+      toastMessage.textContent = count + ' new request' + (count === 1 ? '' : 's') + ' need your decision.';
+      toast.hidden = false;
+      if (toastTimer) window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => { toast.hidden = true; }, 12000);
+    };
+    const render = (snapshot, taskQueue) => {
+      const { approvals, tasks } = pendingRequests(snapshot, taskQueue);
+      const items = [
+        ...approvals.map(item => ({ id:'ai-action:' + item.id, item })),
+        ...tasks.map(item => ({ id:'ai-task:' + item.task_id, item }))
+      ];
+      const ids = new Set(items.map(item => item.id));
+      const newlyPending = [...ids].filter(id => !previousPending.has(id));
+      total.textContent = String(items.length);
+      aiCount.textContent = String(approvals.length);
+      taskCount.textContent = String(tasks.length);
+      notificationCount.textContent = String(items.length);
+      notification.hidden = items.length === 0;
+      window.__mingloraAdminApprovalBots = Array.isArray(snapshot?.bots) ? snapshot.bots : [];
+      list.innerHTML = items.length
+        ? approvals.map(renderApproval).join('') + tasks.map(renderTask).join('')
+        : '<div class="admin-approval-empty"><strong>No pending approvals</strong><span>New administrator requests will appear here automatically.</span></div>';
+      const runtime = taskQueue?.runtime || {};
+      if (runtime.global_paused === true || runtime.execution_enabled === false || Number(runtime.max_concurrent_workers) === 0) {
+        runtimeNote.textContent = 'AI worker execution is currently paused or disabled. Approving a task records your decision but does not start workers or execute the task.';
+      } else if (runtime.global_paused === false && runtime.execution_enabled === true && Number(runtime.max_concurrent_workers) > 0) {
+        runtimeNote.textContent = 'The task runtime reports enabled workers. Approval still does not guarantee execution; the task must pass its separate worker and provider gates.';
+      } else {
+        runtimeNote.textContent = 'Task execution status could not be verified. Approval records the decision only; execution is not claimed.';
+      }
+      if (newlyPending.length && initialized) showToast(newlyPending.length);
+      previousPending = ids;
+      initialized = true;
+      status.textContent = 'Synced ' + formatDate(new Date()) + ' · ' + items.length + ' pending decision(s).';
+    };
+    const refresh = async () => {
+      if (busy || document.visibilityState === 'hidden') return;
+      busy = true;
+      if (refreshButton) refreshButton.disabled = true;
+      try {
+        const [snapshot, taskQueue] = await Promise.all([
+          adminCentreApi('/ai-network'),
+          adminCentreApi('/ai-network/tasks')
+        ]);
+        render(snapshot, taskQueue);
+      } catch (error) {
+        status.textContent = error.message || 'The protected approval queue could not be loaded.';
+        if (!initialized) list.innerHTML = '<div class="admin-approval-empty admin-approval-empty--error">Approval requests could not be verified. Sign in with the designated administrator account and a current MFA session, then refresh.</div>';
+      } finally {
+        busy = false;
+        if (refreshButton) refreshButton.disabled = false;
+      }
+    };
+    const decide = async button => {
+      const requestType = button.dataset.requestType;
+      const requestId = button.dataset.requestId;
+      const decision = button.dataset.adminApprovalDecision;
+      if (!requestId || !['approve','reject'].includes(decision)) return;
+      let path, body;
+      if (requestType === 'ai-action') {
+        if (!window.confirm((decision === 'approve' ? 'Approve' : 'Reject') + ' this AI high-impact action request? The decision is audited; this will not execute the action.')) return;
+        path = '/ai-network/approvals/' + encodeURIComponent(requestId);
+        body = { decision };
+      } else if (requestType === 'ai-task') {
+        const card = button.closest('.admin-approval-request-card');
+        const reason = String(card?.querySelector('[data-admin-approval-reason]')?.value || '').trim();
+        if (reason.length < 3) {
+          status.textContent = 'Enter a review reason of at least three characters before deciding this task.';
+          card?.querySelector('[data-admin-approval-reason]')?.focus();
+          return;
+        }
+        if (!window.confirm((decision === 'approve' ? 'Approve' : 'Reject') + ' this AI task request? Your decision will be recorded; worker execution remains subject to the separate runtime controls.')) return;
+        path = '/ai-network/tasks/' + encodeURIComponent(requestId) + '/approval';
+        body = { status: decision === 'approve' ? 'approved' : 'rejected', reason };
+      } else return;
+      button.disabled = true;
+      status.textContent = 'Recording your decision…';
+      try {
+        await adminCentreApi(path, { method:'PATCH', body:JSON.stringify(body) });
+        status.textContent = 'Decision recorded and audited. Refreshing the pending queue…';
+        await refresh();
+      } catch (error) {
+        status.textContent = error.message || 'The approval decision could not be saved.';
+        button.disabled = false;
+      }
+    };
+    list.addEventListener('click',event => {
+      const button = event.target.closest('[data-admin-approval-decision]');
+      if (button && list.contains(button) && !busy) decide(button);
+    });
+    refreshButton?.addEventListener('click',refresh);
+    toastDismiss?.addEventListener('click',() => { toast.hidden = true; });
+    panel.querySelector('#admin-approval-toast')?.addEventListener('click',event => {
+      if (event.target.closest('a[data-admin-route]')) toast.hidden = true;
+    });
+    refresh();
+    window.setInterval(() => { if (document.visibilityState !== 'hidden') refresh(); }, 30000);
+    window.addEventListener('focus',refresh);
+    document.addEventListener('visibilitychange',() => { if (document.visibilityState === 'visible') refresh(); });
+  }
+
+  function addControlCentrePanel(rootOverride = null) {
+    const root = rootOverride || document.querySelector('#admin-centre-root');
+    if (!root || root.querySelector('#admin-control-centre')) return;
+    const access = window.__mingloraAdminAccess || {};
+    const unlocked = access.canAccess === true;
+
+    const panel = document.createElement('div');
+    panel.className = 'admin-control-centre admin-control-centre-page';
+    panel.id = 'admin-control-centre';
+    panel.innerHTML = `
+      <div class="admin-control-centre-head">
+        <div>
+          <h3>Minglora Admin Centre</h3>
+          <p>A dedicated workspace for platform oversight, member administration, creator operations and security.</p>
+        </div>
+        <span class="admin-control-centre-status">${unlocked ? 'Secure session active' : 'MFA required'}</span>
+      </div>
+      <div class="admin-control-centre-note">
+        This is the private Minglora platform workspace inside the administrator profile. Protected actions require the designated Creator Hub account and an authenticator-verified session.
+      </div>
+      <div id="admin-approval-notification" class="admin-approval-notification" hidden role="status" aria-live="polite">
+        <div class="admin-approval-notification-copy"><span>ADMIN ACTION REQUIRED</span><strong><span id="admin-approval-notification-count">0</span> request(s) waiting for your decision</strong></div>
+        <a href="?page=approvals" data-admin-route="approvals">Review approvals</a>
+      </div>
+      <div id="admin-approval-toast" class="admin-approval-toast" hidden role="alert" aria-live="assertive">
+        <div><strong>New admin approval notification</strong><span id="admin-approval-toast-message"></span></div>
+        <a href="?page=approvals" data-admin-route="approvals">Open Approval Center</a>
+        <button type="button" id="admin-approval-toast-dismiss" aria-label="Dismiss notification">×</button>
+      </div>
+      <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Dashboard</span>
+          <a href="#admin-control-centre">Overview</a>
+          ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-platform-overview">Platform overview</a>` : ''}
+        </div>
+        ${unlocked ? `
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">People &amp; community</span>
+          <a href="#admin-audit-log">Audit log</a>
+          <a href="#admin-user-management">User management</a>
+        </div>
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Creators &amp; finance</span>
+          <a href="#admin-badge-controls">Profile &amp; badge controls</a>
+          <a href="#admin-campaign-coins-wallet">Admin promotional gift wallet</a>
+          <a href="#admin-member-promotions">Member promotions</a>
+          <a href="#admin-marketing-budget">Marketing budget</a>
+          <a href="#admin-live-pro-access">LIVE Pro access</a>
+          <a href="#admin-gift-earnings">Gift revenue &amp; earnings</a>
+          <a href="#admin-withdrawal-tracker">Creator withdrawals</a>
+          <a href="#admin-promotional-tracker">Promotional tracking</a>
+        </div>
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Trust &amp; support</span>
+          <a href="#moderation-workspace">Moderation</a>
+          <a href="#moderator-support-workspace">Support inbox</a>
+        </div>` : ''}
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Administration</span>
+          <a href="#admin-centre-settings">Admin settings</a>
+        </div>
+      </nav>
+      ${unlocked ? `
+        <section class="admin-ai-bot-centre admin-control-centre-section" id="admin-ai-bot-centre" aria-labelledby="admin-ai-bot-centre-title">
+          <div class="admin-platform-overview-heading">
+            <div>
+              <span class="admin-centre-dashboard-eyebrow">AI OPERATIONS</span>
+              <h3 id="admin-ai-bot-centre-title">Minglora AI Bot Centre</h3>
+              <p>Open the dedicated, owner-protected workspace for AI identities, bot teams, creator drafts, provider health, memory controls, budgets and task safeguards</p>
+            </div>
+            <span class="admin-control-centre-status">Designated administrator only</span>
+          </div>
+          <div class="admin-centre-dashboard-links">
+            <a class="admin-centre-dashboard-link" href="/?mingloraView=ai-network">
+              <span class="admin-centre-dashboard-link-group">AI Operations</span>
+              <strong>Open AI Bot Centre</strong>
+              <span>Launch the complete Minglora AI Network workspace in the main application</span>
+              <span class="admin-centre-dashboard-link-arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
+          <p class="admin-internal-activity-footnote">This entry does not grant new privileges. The AI Network server routes independently re-check the designated owner identity, moderator status and MFA-verified session before returning workspace data or accepting changes.</p>
+        </section>
+        <section class="admin-internal-activity" id="admin-internal-operations" aria-labelledby="admin-internal-activity-title">
+          <div class="admin-internal-activity-heading">
+            <div><h3 id="admin-internal-activity-title">Minglora internal operations</h3>
+              <p>Live metadata-only activity from the application database, including social activity, calls, meetings, LIVE, moderation, accounts and financial operations.</p></div>
+            <div class="admin-internal-activity-state">
+              <span id="admin-internal-activity-status" role="status" aria-live="polite">Connecting to live activity…</span>
+              <small id="admin-internal-activity-updated">Waiting for the first database sync</small>
+            </div>
+          </div>
+          <div id="admin-internal-activity-summary" class="admin-internal-activity-summary" aria-live="polite"></div>
+          <div class="admin-internal-activity-list-wrap">
+            <div class="admin-internal-activity-list-heading"><strong>Recent internal events</strong><small>Newest first · latest 50 events</small></div>
+            <div id="admin-internal-activity-feed" class="admin-internal-activity-feed" aria-live="polite">
+              <p class="admin-internal-activity-empty">Connecting to the Minglora database…</p>
+            </div>
+          </div>
+          <p class="admin-internal-activity-footnote">The journal records event type, time, source table, operation and a reference ID only. It never stores message bodies, passwords, session tokens, media URLs or payment credentials.</p>
+        </section>
+        <section class="admin-platform-overview admin-control-centre-section" id="admin-platform-overview" aria-labelledby="admin-platform-overview-title">
+          <div class="admin-platform-overview-heading">
+            <div><h3 id="admin-platform-overview-title">Complete Minglora platform overview</h3>
+              <p>Live counts for every active runtime collection, grouped by feature area and refreshed with the internal activity feed.</p></div>
+            <span class="admin-control-centre-status">Owner-only · metadata counts</span>
+          </div>
+          <div id="admin-platform-module-grid" class="admin-platform-module-grid" aria-live="polite">
+            <p class="admin-platform-inventory-empty">Loading all active Minglora feature areas…</p>
+          </div>
+          <p class="admin-platform-overview-footnote">This inventory reports record counts only. It does not expose private message contents, passwords, authentication tokens, media URLs or payment credentials. Moderation, support and financial details remain in their dedicated protected workspaces.</p>
+        </section>
+        <section class="admin-audit-log admin-control-centre-section" id="admin-audit-log" aria-labelledby="admin-audit-log-title">
+          <div class="admin-control-centre-section-heading"><div><h3 id="admin-audit-log-title">Administrator audit log</h3>
+            <p>Review account bans and restores with the acting administrator, affected account, reason, duration and session-revocation outcome.</p></div>
+            <span class="admin-control-centre-status">Owner-only</span></div>
+          <div class="admin-audit-log-controls">
+            <label for="admin-audit-log-search">Search audit history</label>
+            <input id="admin-audit-log-search" type="search" maxlength="100" autocomplete="off" placeholder="Reason, username, user ID or action">
+            <label for="admin-audit-log-action">Action type</label>
+            <select id="admin-audit-log-action"><option value="all">All account actions</option><option value="account.ban">Account bans</option><option value="account.unban">Account restores</option></select>
+            <button type="button" class="secondary" id="admin-audit-log-refresh">Refresh history</button>
+          </div>
+          <p id="admin-audit-log-status" class="admin-audit-log-status" role="status" aria-live="polite">Loading administrator history…</p>
+          <div id="admin-audit-log-results" class="admin-audit-log-results" aria-live="polite"><p class="admin-audit-log-empty">Loading administrator records…</p></div>
+          <p class="admin-user-safety-note">Only non-secret audit metadata is displayed. Passwords, tokens and private message contents are never included.</p>
+        </section>
+        <div class="admin-control-centre-grid">
+          <button type="button" class="admin-control-centre-tile" data-admin-jump="moderation-workspace">
+            <strong>Moderation reports</strong><small>Review reports and apply available moderation actions.</small>
+          </button>
+          <button type="button" class="admin-control-centre-tile" data-admin-jump="moderator-support-workspace">
+            <strong>Member support inbox</strong><small>Review support tickets and respond to members.</small>
+          </button>
+        </div>
+        <section class="admin-user-management admin-control-centre-section" id="admin-user-management" aria-labelledby="admin-user-management-title">
+          <div class="admin-control-centre-section-heading">
+            <div><h3 id="admin-user-management-title">User management &amp; account bans</h3>
+              <p>Search Minglora accounts by name, @username, email or user ID. Select one account to review its status and manage access.</p></div>
+            <span class="admin-control-centre-status">Owner-only</span>
+          </div>
+          <div class="admin-user-management-search">
+            <div class="admin-user-search-field">
+              <label for="admin-user-search">Find any member account</label>
+              <input id="admin-user-search" type="search" maxlength="120" autocomplete="off" placeholder="Name, @username, email address or user ID">
+            </div>
+            <div class="admin-user-search-field">
+              <label for="admin-user-status-filter">Account status</label>
+              <select id="admin-user-status-filter">
+                <option value="all">All accounts</option>
+                <option value="active">Active</option>
+                <option value="banned">Banned</option>
+                <option value="suspended">Suspended</option>
+                <option value="deactivated">Deactivated</option>
+              </select>
+            </div>
+            <button type="button" class="primary" id="admin-user-search-button">Search accounts</button>
+          </div>
+          <p id="admin-user-management-status" class="admin-user-management-status" role="status" aria-live="polite">Loading member accounts…</p>
+          <div id="admin-user-management-results" class="admin-user-management-results" aria-live="polite">
+            <p class="settings-empty">Loading member accounts…</p>
+          </div>
+          <section id="admin-user-selection" class="admin-user-selection" aria-labelledby="admin-user-selection-title" hidden>
+            <div class="admin-user-selection-heading">
+              <div><h4 id="admin-user-selection-title">Selected account</h4>
+                <div id="admin-user-selected-summary"></div></div>
+              <span id="admin-user-selected-status" class="admin-user-status">Select an account</span>
+            </div>
+            <div class="admin-user-ban-controls">
+              <form id="admin-user-ban-form">
+                <label for="admin-user-ban-duration">Ban duration</label>
+                <select id="admin-user-ban-duration" name="duration" required>
+                  <option value="1h">1 hour</option>
+                  <option value="24h">24 hours</option>
+                  <option value="7d">7 days</option>
+                  <option value="30d">30 days</option>
+                  <option value="90d">90 days</option>
+                  <option value="876000h">Permanent — 100 years</option>
+                </select>
+                <label for="admin-user-ban-reason">Reason for ban</label>
+                <textarea id="admin-user-ban-reason" name="reason" rows="3" maxlength="500" required placeholder="Explain the policy violation or account-safety reason"></textarea>
+                <button type="submit" class="primary" id="admin-user-ban-submit">Ban selected account</button>
+              </form>
+              <div class="admin-user-unban-controls">
+                <label for="admin-user-unban-note">Unban review note (optional)</label>
+                <textarea id="admin-user-unban-note" rows="3" maxlength="500" placeholder="Reason for restoring access"></textarea>
+                <button type="button" class="secondary" id="admin-user-unban-button">Unban selected account</button>
+              </div>
+            </div>
+            <p id="admin-user-action-status" class="admin-user-management-status" role="status" aria-live="polite"></p>
+            <p class="admin-user-safety-note">Bans do not delete an account or its posts, photos, messages or other content. Minglora revokes saved app sessions and blocks app access; already-issued Supabase access tokens can remain valid for direct database requests until their expiry, even after refresh tokens are revoked.</p>
+          </section>
+        </section>
+        <section class="admin-marketing-budget admin-badge-controls" id="admin-badge-controls" aria-labelledby="admin-badge-controls-title">
+          <div class="admin-marketing-budget-heading">
+            <div>
+              <strong id="admin-badge-controls-title">Profile verification &amp; gifter badge controls</strong>
+              <p>Search a Minglora account once, then manage its blue profile check and 50-level gifter badges independently.</p>
+            </div>
+          </div>
+          <div class="admin-badge-member-search">
+            <label for="admin-badge-member-search-input">Find an account by email, username or display name</label>
+            <div class="admin-member-search-row">
+              <input id="admin-badge-member-search-input" type="search" maxlength="80" autocomplete="off" placeholder="Search email or @username">
+              <button type="button" class="secondary" id="admin-badge-member-find">Search</button>
+            </div>
+            <p id="admin-badge-member-search-status" aria-live="polite">Loading Minglora member accounts…</p>
+          </div>
+          <div class="admin-badge-control-grid">
+            <form id="admin-profile-verification-form" class="admin-badge-control-card">
+              <div><strong>Profile verification</strong><p>Grant or remove one blue verification sticker. A verified member receives exactly one check beside the @username.</p></div>
+              <label for="admin-profile-verification-member">Member account</label>
+              <select id="admin-profile-verification-member" name="targetUserId" required><option value="">Loading accounts…</option></select>
+              <label for="admin-profile-verification-status">Verification status</label>
+              <select id="admin-profile-verification-status" name="verificationStatus" required>
+                <option value="verified">Verified — one blue check beside username</option>
+                <option value="not_submitted">Remove verification — not submitted</option>
+                <option value="needs_information">Needs more information</option>
+                <option value="pending">Pending review</option>
+                <option value="rejected">Rejected</option>
+                <option value="suspended">Suspend verification</option>
+              </select>
+              <label for="admin-profile-verification-note">Admin review note</label>
+              <textarea id="admin-profile-verification-note" name="note" rows="2" maxlength="1000" required placeholder="Record the reason for this verification decision"></textarea>
+              <button type="submit" class="primary" id="admin-profile-verification-submit">Save verification status</button>
+              <p id="admin-profile-verification-status-message" aria-live="polite"></p>
+            </form>
+            <div class="admin-badge-control-card">
+              <div><strong>Gifter badge management</strong><p>Grant any level from 1–50, unlock all 50, or reset the progression badge state.</p></div>
+              <label for="admin-gifter-badge-member">Member account</label>
+              <select id="admin-gifter-badge-member" name="targetUserId" required><option value="">Loading accounts…</option></select>
+              <label for="admin-gifter-badge-level">Grant a specific level</label>
+              <input id="admin-gifter-badge-level" type="number" min="1" max="50" step="1" inputmode="numeric" value="50">
+              <label for="admin-gifter-badge-note">Admin award / reset note</label>
+              <textarea id="admin-gifter-badge-note" rows="2" maxlength="240" placeholder="Reason for the admin badge action"></textarea>
+              <div class="admin-badge-action-row">
+                <button type="button" class="secondary" id="admin-gifter-badge-grant">Grant selected level</button>
+                <button type="button" class="primary" id="admin-gifter-badge-unlock-all">Unlock all 50 levels</button>
+                <button type="button" class="secondary" id="admin-gifter-badge-reset">Reset badge progress</button>
+              </div>
+              <p id="admin-gifter-badge-status-message" aria-live="polite"></p>
+              <div id="admin-gifter-badge-current-status" class="admin-gifter-badge-current-status" aria-live="polite">Select an account to inspect its badge status.</div>
+            </div>
+          </div>
+          <p class="admin-badge-safety-note">Admin-awarded badges do not create gift transactions, count as Coin spending, or change Main Coins, promotional wallets, or any financial balance. Reset starts a new gifter progression period while retaining the original gift ledger and lifetime gift history.</p>
+        </section>
+        <section class="admin-marketing-budget" id="admin-campaign-coins-wallet" aria-labelledby="admin-campaign-coins-wallet-title">
+          <div class="admin-marketing-budget-heading">
+            <div><strong id="admin-campaign-coins-wallet-title">Admin Promotional Gift Wallet</strong>
+              <p>Independent campaign allocation and transaction ledger. This wallet is separate from Main Coins, Main Promotional Coins and cash-backed marketing funds.</p></div>
+          </div>
+          <div class="admin-marketing-budget-summary" id="admin-campaign-coins-summary" aria-live="polite">Loading verified campaign balance…</div>
+          <div class="admin-promotional-gift-fund" id="admin-promotional-gift-fund">
+            <div class="admin-marketing-budget-heading">
+              <div><strong>Real USD backing for promotional gifts</strong>
+                <p>This is a separate PayPal-funded cash reserve. Campaign Coin allocations do not count as USD funding. Promotional gifts are enabled only up to captured reserve funds.</p></div>
+            </div>
+            <div id="admin-paypal-readiness" class="admin-control-centre-note" aria-live="polite">Checking PayPal configuration…</div>
+            <div id="admin-promotional-gift-fund-summary" class="admin-marketing-budget-summary" aria-live="polite">Loading verified USD reserve…</div>
+            <form id="admin-promotional-gift-fund-form" class="admin-marketing-form">
+              <strong>Fund the promotional gift reserve through PayPal</strong>
+              <label for="admin-promotional-gift-fund-amount">USD amount</label>
+              <input id="admin-promotional-gift-fund-amount" name="amount" type="number" min="1" max="500000" step="0.01" inputmode="decimal" value="25.00" required>
+              <button type="submit" class="primary" id="admin-promotional-gift-fund-submit">Continue to PayPal</button>
+              <p id="admin-promotional-gift-fund-status" role="status" aria-live="polite"></p>
+            </form>
+            <div id="admin-promotional-gift-fund-history" aria-live="polite">Loading verified funding history…</div>
+          </div>
+        </section>
+        <div class="admin-control-centre-note" id="admin-main-wallet-protection">
+          CreatorHub Main Coin balance is protected. Member promotions are issued only from the separate Admin Promotional Gift Wallet shown above.
+        </div>
+        <section class="admin-member-promotions" aria-labelledby="admin-member-promotions-title">
+          <div class="admin-member-promotions-heading">
+            <div>
+              <strong id="admin-member-promotions-title">Member promotional Coins</strong>
+              <p>Choose each recipient and the exact amount yourself. No Coins are sent automatically when a person registers.</p>
+            </div>
+          </div>
+          <form id="admin-member-promotion-form" class="admin-marketing-form">
+            <strong>Send a promotion to one member</strong>
+            <p>Newest members are listed first. Search by username or display name, then select the exact recipient before entering an amount.</p>
+            <label for="admin-member-promotion-search">Find a member</label>
+            <div class="admin-member-search-row">
+              <input id="admin-member-promotion-search" type="search" maxlength="80" autocomplete="off" placeholder="Search username or display name">
+              <button type="button" class="secondary" id="admin-member-promotion-find">Search</button>
+            </div>
+            <p id="admin-member-promotion-search-status" class="admin-member-search-status" aria-live="polite">Showing the newest members first.</p>
+            <label for="admin-member-promotion-recipient">Choose recipient</label>
+            <select id="admin-member-promotion-recipient" name="memberUsername" required>
+              <option value="">Loading members…</option>
+            </select>
+            <p class="admin-member-promotion-funding-note">These Coins are allocated from the separate Admin Campaign Coins wallet into each member’s Promotional Gift Wallet. They never deduct from the owner’s Main Coin balance or the member’s Main Coin balance.</p>
+            <label for="admin-member-promotion-amount">Promotional Coin amount</label>
+            <input id="admin-member-promotion-amount" name="amountCoins" type="number" min="1" max="9007199254740991" step="1" inputmode="numeric" placeholder="Enter the amount you choose" required>
+            <label for="admin-member-promotion-note">Reason or promotion note</label>
+            <input id="admin-member-promotion-note" name="note" type="text" maxlength="240" value="Minglora member promotional Coins">
+            <button type="submit" class="primary" id="admin-member-promotion-submit">Send promotional Coins</button>
+            <p id="admin-member-promotion-status" aria-live="polite"></p>
+          </form>
+          <div class="admin-member-promotion-history">
+            <div class="admin-member-promotion-history-heading">
+              <strong>Recent member promotions</strong>
+            </div>
+            <div id="admin-member-promotion-history-list" aria-live="polite">Loading promotion history…</div>
+          </div>
+        </section>
+        <section class="admin-marketing-budget" aria-labelledby="admin-marketing-budget-title">
+          <div class="admin-marketing-budget-heading">
+            <div>
+              <strong id="admin-marketing-budget-title">Creator marketing budget</strong>
+              <p>Cash-backed promotional Coins for member campaigns. Creator earnings from these gifts are paid only from this reserved, funded budget.</p>
+            </div>
+          </div>
+          <div class="admin-marketing-budget-summary" id="admin-marketing-budget-summary" aria-live="polite">Loading verified budget…</div>
+          <form id="admin-marketing-funding-form" class="admin-marketing-form">
+            <strong>Record verified marketing funding</strong>
+            <p>Only record money already received and independently matched to the external transfer or settlement reference.</p>
+            <label for="admin-marketing-funding-amount">Amount received (USD)</label>
+            <input id="admin-marketing-funding-amount" name="amount" type="number" min="1.00" step="0.01" inputmode="decimal" placeholder="100.00" required>
+            <label for="admin-marketing-funding-reference">External transfer / settlement reference</label>
+            <input id="admin-marketing-funding-reference" name="reference" type="text" minlength="6" maxlength="160" autocomplete="off" placeholder="Bank or PayPal transaction reference" required>
+            <label for="admin-marketing-funding-note">Funding note</label>
+            <input id="admin-marketing-funding-note" name="note" type="text" maxlength="240" value="Verified Minglora creator marketing funding">
+            <button type="submit" class="primary" id="admin-marketing-funding-submit">Record received funds</button>
+            <p id="admin-marketing-funding-status" aria-live="polite"></p>
+          </form>
+          <form id="admin-marketing-grant-form" class="admin-marketing-form">
+            <strong>Grant marketing-funded Coins</strong>
+            <p>Grants reserve the equivalent USD cents from the funded budget. These are different from ordinary non-cash owner/admin promotional credits.</p>
+            <label for="admin-marketing-member">Member username</label>
+            <input id="admin-marketing-member" name="memberUsername" type="text" maxlength="31" placeholder="@username" required>
+            <label for="admin-marketing-grant-amount">Coin amount</label>
+            <input id="admin-marketing-grant-amount" name="amountCoins" type="number" min="1" step="1" inputmode="numeric" placeholder="1000" required>
+            <label for="admin-marketing-grant-note">Grant note</label>
+            <input id="admin-marketing-grant-note" name="note" type="text" maxlength="240" value="Minglora funded creator campaign">
+            <button type="submit" class="primary" id="admin-marketing-grant-submit">Grant funded Coins</button>
+            <p id="admin-marketing-grant-status" aria-live="polite"></p>
+          </form>
+        </section>
+      ` : `
+        <div class="admin-control-centre-note">
+          The owner account is recognized, but protected tools are not unlocked in this session. Set up an authenticator app, then sign in again using its current code.
+        </div>
+        <p class="admin-control-centre-note">Open Admin Settings below to configure or verify your authenticator.</p>
+      `}
+    `;
+    if (unlocked) {
+      panel.insertAdjacentHTML('beforeend',
+        '<section class="admin-control-centre-section" id="moderation-workspace" aria-labelledby="admin-moderation-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-moderation-title">Moderation reports</h3><p>Review member reports and apply available content or account actions.</p></div>' +
+          '<div id="moderation-reports-list" aria-live="polite">Loading reports…</div></section>' +
+        '<section class="admin-control-centre-section" id="moderator-support-workspace" aria-labelledby="admin-support-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-support-title">Member support inbox</h3><p>Respond to member tickets and update their status.</p></div>' +
+          '<div id="moderator-support-tickets" aria-live="polite">Loading support tickets…</div></section>'
+      );
+    }
+
+    if (unlocked) {
+      panel.insertAdjacentHTML('beforeend',
+        '<section class="admin-control-centre-section admin-live-pro-section" id="admin-live-pro-access" aria-labelledby="admin-live-pro-title">' +
+          '<div class="admin-control-centre-section-heading"><div><h3 id="admin-live-pro-title">LIVE Pro access</h3><p>Grant or revoke LIVE Pro for real Minglora member accounts. The designated administrator already receives LIVE Pro automatically.</p></div>' +
+          '<div class="admin-live-pro-grid">' +
+            '<form id="admin-live-pro-grant-form" class="admin-centre-settings-card admin-live-pro-form">' +
+              '<label for="admin-live-pro-search">Find a member by username, name or email</label>' +
+              '<div class="admin-live-pro-search-row"><input id="admin-live-pro-search" type="search" maxlength="80" autocomplete="off" placeholder="Search Minglora accounts"><button type="button" class="secondary" id="admin-live-pro-search-button">Search</button></div>' +
+              '<p id="admin-live-pro-search-status" aria-live="polite">Choose an actual registered member account.</p>' +
+              '<label for="admin-live-pro-member">Member account</label><select id="admin-live-pro-member" required><option value="">Search for a member first</option></select>' +
+              '<label for="admin-live-pro-duration">LIVE Pro access duration</label><select id="admin-live-pro-duration"><option value="0">Permanent — no expiry</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">365 days</option></select>' +
+              '<label for="admin-live-pro-reason">Admin note (optional)</label><textarea id="admin-live-pro-reason" maxlength="500" rows="2" placeholder="Reason for this LIVE Pro grant"></textarea>' +
+              '<button type="submit" class="primary" id="admin-live-pro-grant-submit">Grant LIVE Pro</button><p id="admin-live-pro-grant-status" aria-live="polite"></p>' +
+            '</form>' +
+            '<section class="admin-centre-settings-card"><h4>Active LIVE Pro grants</h4><p>Expired or revoked access is not shown as active.</p><div id="admin-live-pro-grants-list" aria-live="polite">Loading grants…</div></section>' +
+          '</div>' +
+          '<p class="admin-live-pro-safety-note">LIVE Pro access does not grant platform-admin permissions. Broadcast publishing, guest approval, room moderation and ending a LIVE remain protected by their existing server-side role checks. Grants do not change Coins or wallet balances.</p>' +
+        '</section>'
+      );
+      const liveProSearch = panel.querySelector('#admin-live-pro-search');
+      const liveProMember = panel.querySelector('#admin-live-pro-member');
+      const liveProSearchStatus = panel.querySelector('#admin-live-pro-search-status');
+      const liveProGrantStatus = panel.querySelector('#admin-live-pro-grant-status');
+      const liveProGrantsList = panel.querySelector('#admin-live-pro-grants-list');
+      const loadLiveProMembers = async (search = '') => {
+        if (!liveProMember) return;
+        liveProMember.innerHTML = '<option value="">Searching accounts…</option>';
+        if (liveProSearchStatus) liveProSearchStatus.textContent = 'Searching Minglora member accounts…';
+        try {
+          const result = await adminCentreApi('/admin/live-pro/members?search=' + encodeURIComponent(search));
+          const members = Array.isArray(result.members) ? result.members : [];
+          liveProMember.innerHTML = '<option value="">Choose a member account</option>' + members.map(member => {
+            const label = (member.displayName || member.username || 'Minglora member') +
+              (member.username ? ' · @' + member.username : '') +
+              (member.email ? ' · ' + member.email : '') +
+              (member.hasLivePro ? ' · LIVE Pro active' : '');
+            return '<option value="' + escapeText(member.id) + '">' + escapeText(label) + '</option>';
+          }).join('');
+          if (liveProSearchStatus) liveProSearchStatus.textContent = members.length
+            ? members.length + ' registered account(s) found. Select one to grant access.'
+            : 'No member accounts matched that search.';
+        } catch (error) {
+          liveProMember.innerHTML = '<option value="">Member search unavailable</option>';
+          if (liveProSearchStatus) liveProSearchStatus.textContent = error.message || 'Could not search member accounts.';
+        }
+      };
+      const loadLiveProGrants = async () => {
+        if (!liveProGrantsList) return;
+        liveProGrantsList.textContent = 'Loading active grants…';
+        try {
+          const result = await adminCentreApi('/admin/live-pro/grants');
+          const grants = Array.isArray(result.grants) ? result.grants : [];
+          liveProGrantsList.innerHTML = grants.length ? grants.map(grant => {
+            const expiry = grant.expiresAt ? 'Expires ' + new Date(grant.expiresAt).toLocaleDateString() : 'Permanent access';
+            const label = (grant.displayName || 'Minglora member') +
+              (grant.username ? ' · @' + grant.username : '') +
+              (grant.email ? ' · ' + grant.email : '');
+            return '<article class="admin-live-pro-grant-row"><div><strong>' + escapeText(label) + '</strong><small>' +
+              escapeText(expiry) + ' · Granted ' + escapeText(grant.grantedAt ? new Date(grant.grantedAt).toLocaleDateString() : 'date unavailable') +
+              '</small></div><button type="button" class="secondary" data-live-pro-revoke="' + escapeText(grant.userId) + '">Revoke</button></article>';
+          }).join('') : '<p class="admin-live-pro-empty">No active member grants yet.</p>';
+        } catch (error) {
+          liveProGrantsList.textContent = error.message || 'Active grants could not be loaded.';
+        }
+      };
+      const runLiveProSearch = () => loadLiveProMembers(String(liveProSearch?.value || '').trim());
+      panel.querySelector('#admin-live-pro-search-button')?.addEventListener('click', runLiveProSearch);
+      void loadLiveProGrants();
+      liveProSearch?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') { event.preventDefault(); runLiveProSearch(); }
+      });
+      panel.querySelector('#admin-live-pro-grant-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const submit = panel.querySelector('#admin-live-pro-grant-submit');
+        const userId = String(liveProMember?.value || '');
+        const durationDays = Number(panel.querySelector('#admin-live-pro-duration')?.value || 0);
+        const reason = String(panel.querySelector('#admin-live-pro-reason')?.value || '').trim();
+        if (!userId) { if (liveProGrantStatus) liveProGrantStatus.textContent = 'Select a real member account first.'; return; }
+        if (submit) submit.disabled = true;
+        if (liveProGrantStatus) liveProGrantStatus.textContent = 'Saving LIVE Pro access…';
+        try {
+          const result = await adminCentreApi('/admin/live-pro/grants', {
+            method:'POST',body:JSON.stringify({userId,durationDays,reason})
+          });
+          if (liveProGrantStatus) liveProGrantStatus.textContent = 'LIVE Pro granted to ' +
+            (result.grant?.displayName || 'the selected member') + (result.grant?.expiresAt
+              ? ' until ' + new Date(result.grant.expiresAt).toLocaleDateString() + '.'
+              : ' permanently.');
+          if (panel.querySelector('#admin-live-pro-reason')) panel.querySelector('#admin-live-pro-reason').value = '';
+          await Promise.all([loadLiveProMembers(String(liveProSearch?.value || '').trim()),loadLiveProGrants()]);
+        } catch (error) {
+          if (liveProGrantStatus) liveProGrantStatus.textContent = error.message || 'LIVE Pro could not be granted.';
+        } finally { if (submit) submit.disabled = false; }
+      });
+      liveProGrantsList?.addEventListener('click', async event => {
+        const button = event.target.closest('[data-live-pro-revoke]');
+        if (!button) return;
+        const memberId = String(button.dataset.liveProRevoke || '');
+        if (!memberId || !window.confirm('Revoke LIVE Pro for this member?')) return;
+        button.disabled = true;
+        try {
+          await adminCentreApi('/admin/live-pro/grants/' + encodeURIComponent(memberId), {method:'DELETE'});
+          if (liveProGrantStatus) liveProGrantStatus.textContent = 'LIVE Pro access revoked.';
+          await Promise.all([loadLiveProMembers(String(liveProSearch?.value || '').trim()),loadLiveProGrants()]);
+        } catch (error) {
+          if (liveProGrantStatus) liveProGrantStatus.textContent = error.message || 'LIVE Pro could not be revoked.';
+          button.disabled = false;
+        }
+      });
+      void Promise.all([loadLiveProMembers(''),loadLiveProGrants()]);
+    }
+
+    const adminSettings = document.createElement('section');
+    adminSettings.className = 'admin-control-centre-section admin-centre-settings';
+    adminSettings.id = 'admin-centre-settings';
+    adminSettings.innerHTML =
+      '<div class="admin-control-centre-section-heading"><div><h3>Admin settings</h3><p>Security and session controls for this private administrator workspace.</p></div>' +
+        '<span class="admin-control-centre-status">' + (unlocked ? 'Secure session active' : 'Security setup required') + '</span></div>' +
+      '<div class="admin-centre-settings-grid">' +
+        '<section class="admin-centre-settings-card"><h4>Administrator account security</h4>' +
+          '<p id="admin-centre-security-status" aria-live="polite">Checking authenticator status…</p>' +
+          '<div id="admin-centre-mfa-factors">Loading authenticator details…</div>' +
+          '<button type="button" class="secondary" id="admin-centre-enable-mfa">Set up or restart authenticator</button>' +
+          '<div id="admin-centre-mfa-enrollment-panel"></div></section>' +
+        '<section class="admin-centre-settings-card"><h4>Signed-in devices</h4>' +
+          '<p>Review sessions belonging to this account. You can sign out other devices without ending this session.</p>' +
+          '<div id="admin-centre-session-list" aria-live="polite">Loading active sessions…</div>' +
+          '<button type="button" class="secondary" id="admin-centre-revoke-other-sessions">Log out other devices</button>' +
+          '<p id="admin-centre-session-status" role="status" aria-live="polite"></p></section>' +
+      '</div>';
+    if (unlocked) {
+      const giftEarningsSection = document.createElement('section');
+      giftEarningsSection.className = 'admin-control-centre-section admin-gift-earnings-report';
+      giftEarningsSection.id = 'admin-gift-earnings';
+      giftEarningsSection.setAttribute('aria-labelledby', 'admin-gift-earnings-title');
+      giftEarningsSection.innerHTML = `
+        <div class="admin-control-centre-section-heading admin-gift-earnings-heading">
+          <div><h3 id="admin-gift-earnings-title">LIVE gift revenue &amp; creator earnings</h3>
+            <p>Read-only financial reporting from the verified gift earnings ledger. This does not move or change any wallet funds.</p></div>
+          <span class="admin-control-centre-status">Updates automatically while this workspace is open</span>
+        </div>
+        <p id="admin-gift-earnings-status" class="admin-gift-earnings-status" role="status" aria-live="polite">Loading actual gift earnings…</p>
+        <div id="admin-gift-earnings-metrics" class="admin-gift-earnings-metrics"></div>
+        <div class="admin-gift-earnings-list-wrap">
+          <h4>Creator-by-creator 50/50 breakdown</h4>
+          <div id="admin-gift-earnings-creators" class="admin-gift-earnings-creators" aria-live="polite">Loading creator earnings…</div>
+        </div>
+        <p class="admin-gift-earnings-footnote">Gift revenue and both 50% shares come from eligible creator earnings ledger records. Pending and paid payout totals cover all creator earnings sources because Minglora uses a shared creator payout ledger. Amounts are recorded earnings, not a statement of cleared bank cash.</p>
+        <section class="admin-platform-payout-controls" aria-labelledby="admin-platform-payout-title">
+          <div>
+            <h4 id="admin-platform-payout-title">Withdraw Minglora's 50% platform share</h4>
+            <p>Manual withdrawals only. No payment is sent until you enter an amount and confirm the PayPal transfer.</p>
+          </div>
+          <div id="admin-platform-payout-summary" class="admin-control-centre-note" aria-live="polite">Loading available platform share…</div>
+          <form id="admin-platform-payout-account-form" class="admin-marketing-form">
+            <strong>PayPal receiving account</strong>
+            <label for="admin-platform-payout-email">Receiving PayPal email</label>
+            <input id="admin-platform-payout-email" name="paypalEmail" type="email" maxlength="127" autocomplete="email" placeholder="Enter the receiving PayPal email" required>
+            <button type="submit" class="secondary" id="admin-platform-payout-account-save">Save PayPal destination</button>
+            <p id="admin-platform-payout-account-status" role="status" aria-live="polite"></p>
+          </form>
+          <p class="admin-platform-payout-warning">PayPal does not allow a Payout to be sent to the same PayPal account that submits it. Use a different receiving PayPal account. If Minglora's sales already settle into the same Business account, those funds are already there and do not need to be paid to that account again.</p>
+          <form id="admin-platform-payout-form" class="admin-marketing-form">
+            <strong>Send an amount when you are ready</strong>
+            <label for="admin-platform-payout-amount">Withdrawal amount (USD)</label>
+            <input id="admin-platform-payout-amount" name="amount" type="number" min="1.00" max="20000.00" step="0.01" inputmode="decimal" placeholder="Enter amount up to available share" required>
+            <button type="submit" class="primary" id="admin-platform-payout-submit">Withdraw to PayPal</button>
+            <p id="admin-platform-payout-status" role="status" aria-live="polite"></p>
+          </form>
+          <div class="admin-platform-payout-history">
+            <strong>Platform withdrawal history</strong>
+            <div id="admin-platform-payout-history" aria-live="polite">Loading platform withdrawals…</div>
+          </div>
+        </section>
+        <section class="admin-withdrawal-tracker" id="admin-withdrawal-tracker" aria-labelledby="admin-withdrawal-tracker-title">
+          <div class="admin-withdrawal-tracker-heading">
+            <div><h4 id="admin-withdrawal-tracker-title">All creator/member withdrawal requests</h4>
+              <p>Every creator payout request, its PayPal batch reference and confirmed status. This report stays synchronized automatically.</p></div>
+            <span id="admin-withdrawal-tracker-updated" role="status" aria-live="polite">Loading status…</span>
+          </div>
+          <div id="admin-withdrawal-tracker-summary" class="admin-withdrawal-tracker-summary" aria-live="polite"></div>
+          <div class="admin-withdrawal-tracker-filters">
+            <label>Search account or PayPal reference
+              <input id="admin-withdrawal-tracker-search" type="search" maxlength="100" placeholder="Search username, name, email or batch ID">
+            </label>
+            <label>Filter by status
+              <select id="admin-withdrawal-tracker-status">
+                <option value="all">All statuses</option>
+                <option value="requested">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="paid">Paid</option>
+                <option value="failed">Failed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+          </div>
+          <div id="admin-withdrawal-tracker-list" class="admin-withdrawal-tracker-list" aria-live="polite">Loading withdrawal records…</div>
+        </section>
+        <section class="admin-promotional-tracker" id="admin-promotional-tracker" aria-labelledby="admin-promotional-tracker-title">
+          <div class="admin-withdrawal-tracker-heading">
+            <div><h4 id="admin-promotional-tracker-title">Promotional Gift Wallet &amp; cash backing</h4>
+              <p>Separate promotional Coins, member allocations, spending, verified cash funding and any resulting 50/50 creator/platform shares. This report is read-only and never changes the main Coin balance.</p></div>
+          </div>
+          <div id="admin-promotional-tracker-summary" class="admin-withdrawal-tracker-summary" aria-live="polite">Loading promotional wallet and reserve…</div>
+          <div class="admin-promotional-tracker-grid">
+            <div><strong>Member promotional wallets</strong><div id="admin-promotional-wallets" aria-live="polite">Loading wallet balances…</div></div>
+            <div><strong>Promotional wallet activity</strong><div id="admin-promotional-wallet-ledger" aria-live="polite">Loading promotional transactions…</div></div>
+            <div><strong>Cash reserve activity</strong><div id="admin-promotional-fund-ledger" aria-live="polite">Loading cash funding history…</div></div>
+            <div><strong>Cash-backed promotional gifts</strong><div id="admin-promotional-cash-backed-gifts" aria-live="polite">Loading backed gifts…</div></div>
+          </div>
+        </section>
+      `;
+      adminSettings.append(giftEarningsSection);
+    }
+
+    panel.append(adminSettings);
+    root.replaceChildren(panel);
+    if (unlocked) window.MingloraAdminFinance?.mount(panel, adminCentreApi);
+    if (unlocked) window.MingloraAdminRbac?.mount(panel, adminCentreApi);
+    root.dataset.adminCentreReady = 'true';
+    if (unlocked) initializeInternalActivityFeed(panel);
+
+    if (unlocked) {
+      panel.querySelector('#admin-platform-payout-account-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const input = form.querySelector('#admin-platform-payout-email');
+        const status = panel.querySelector('#admin-platform-payout-account-status');
+        const submit = form.querySelector('#admin-platform-payout-account-save');
+        const paypalEmail = String(input?.value || '').trim().toLowerCase();
+        if (!paypalEmail || paypalEmail.length > 127) {
+          if (status) status.textContent = 'Enter a valid receiving PayPal email address.';
+          return;
+        }
+        if (submit) submit.disabled = true;
+        if (status) status.textContent = 'Saving the platform PayPal destination…';
+        try {
+          const result = await adminCentreApi('/admin/platform-payout-account', {
+            method:'PUT', body:JSON.stringify({paypalEmail})
+          });
+          if (status) status.textContent = 'PayPal receiving account saved: ' +
+            String(result.payoutAccount?.paypal_email || paypalEmail) + '.';
+          await loadAdminGiftEarnings(panel);
+        } catch (error) {
+          if (status) status.textContent = error.message || 'PayPal destination could not be saved.';
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
+      panel.querySelector('#admin-platform-payout-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const amountInput = form.querySelector('#admin-platform-payout-amount');
+        const status = panel.querySelector('#admin-platform-payout-status');
+        const submit = panel.querySelector('#admin-platform-payout-submit');
+        const amount = Number(amountInput?.value);
+        const amountMinor = Math.round(amount * 100);
+        const paypalEmail = String(panel.querySelector('#admin-platform-payout-email')?.value || '').trim().toLowerCase();
+        if (!paypalEmail) {
+          if (status) status.textContent = 'Save the PayPal receiving account before requesting a withdrawal.';
+          return;
+        }
+        if (!Number.isFinite(amount) || !Number.isSafeInteger(amountMinor) ||
+            amountMinor < 100 || amountMinor > 2000000) {
+          if (status) status.textContent = 'Enter an amount from USD 1.00 to USD 20,000.00.';
+          return;
+        }
+        if (!window.confirm('Send USD ' + (amountMinor / 100).toFixed(2) +
+            ' to ' + paypalEmail + ' from Minglora’s available platform share? This submits a real PayPal payout.')) return;
+        if (submit) submit.disabled = true;
+        if (status) status.textContent = 'Submitting your manually approved PayPal withdrawal…';
+        const requestId = form.dataset.pendingRequestId || window.crypto.randomUUID();
+        form.dataset.pendingRequestId = requestId;
+        try {
+          const result = await adminCentreApi('/admin/platform-payouts', {
+            method:'POST', body:JSON.stringify({amountMinor,requestId})
+          });
+          delete form.dataset.pendingRequestId;
+          await loadAdminGiftEarnings(panel);
+          if (status) status.textContent = result.alreadyCompleted
+            ? 'This withdrawal was already completed by PayPal.'
+            : 'PayPal accepted the withdrawal batch ' +
+              String(result.batchId || 'without a batch reference') +
+              '. It remains Processing until PayPal confirms the final payment.';
+        } catch (error) {
+          if (/marked Failed|previously marked Failed/i.test(String(error.message || ''))) {
+            delete form.dataset.pendingRequestId;
+          }
+          if (status) status.textContent = error.message ||
+            'Withdrawal could not be confirmed. The same request reference will be reused if you retry; check history before starting another withdrawal.';
+          await loadAdminGiftEarnings(panel);
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
+      void loadAdminGiftEarnings(panel);
+      if (panel._mingloraCreatorEarningsTimer) window.clearInterval(panel._mingloraCreatorEarningsTimer);
+      panel._mingloraCreatorEarningsTimer = window.setInterval(() => {
+        if (!panel.isConnected) {
+          window.clearInterval(panel._mingloraCreatorEarningsTimer);
+          panel._mingloraCreatorEarningsTimer = null;
+          return;
+        }
+        if (document.visibilityState === 'visible') void loadAdminGiftEarnings(panel, { quiet:true });
+      }, 30000);
+    }
+
+    panel.querySelectorAll('[data-admin-jump]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.getElementById(button.dataset.adminJump)?.scrollIntoView({behavior:'smooth',block:'start'});
+      });
+    });
+    const promotionHistoryList = panel.querySelector('#admin-member-promotion-history-list');
+    const promotionMemberSearch = panel.querySelector('#admin-member-promotion-search');
+    const promotionMemberSelect = panel.querySelector('#admin-member-promotion-recipient');
+    const promotionMemberSearchStatus = panel.querySelector('#admin-member-promotion-search-status');
+    const loadPromotionMembers = async (search = '') => {
+      if (!promotionMemberSelect) return;
+      promotionMemberSelect.innerHTML = '<option value="">Loading members…</option>';
+      if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent = search
+        ? 'Searching members…' : 'Loading the newest members…';
+      try {
+        const response = await fetch('/api/admin/coins/member-promotions/members?search=' + encodeURIComponent(search), {
+          credentials:'same-origin',
+          headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Member list could not be loaded.');
+        const members = Array.isArray(result.members) ? result.members : [];
+        if (!members.length) {
+          promotionMemberSelect.innerHTML = '<option value="">No matching members found</option>';
+          if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent =
+            search ? 'No members matched that search.' : 'No member accounts are available yet.';
+          return;
+        }
+        promotionMemberSelect.innerHTML = '<option value="">Choose a recipient</option>' + members.map(member => {
+          const username = String(member.username || '');
+          const name = String(member.displayName || '').trim();
+          const joined = member.joinedAt && !Number.isNaN(new Date(member.joinedAt).getTime())
+            ? new Date(member.joinedAt).toLocaleDateString() : '';
+          const label = '@' + username + (name ? ' — ' + name : '') + (joined ? ' · Joined ' + joined : '');
+          return '<option value="' + escapeText(username) + '">' + escapeText(label) + '</option>';
+        }).join('');
+        if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent =
+          (search ? 'Search results' : 'Newest members first') + ' · ' + members.length + ' member' +
+          (members.length === 1 ? '' : 's') + ' shown.';
+      } catch (error) {
+        promotionMemberSelect.innerHTML = '<option value="">Member list unavailable</option>';
+        if (promotionMemberSearchStatus) promotionMemberSearchStatus.textContent =
+          error.message || 'Member list could not be loaded.';
+      }
+    };
+    panel.querySelector('#admin-member-promotion-find')?.addEventListener('click', () => {
+      loadPromotionMembers(String(promotionMemberSearch?.value || '').trim());
+    });
+    promotionMemberSearch?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadPromotionMembers(String(promotionMemberSearch.value || '').trim());
+      }
+    });
+    loadPromotionMembers();
+    const refreshMemberPromotionHistory = async () => {
+      if (!promotionHistoryList) return;
+      promotionHistoryList.textContent = 'Loading promotion history…';
+      try {
+        const response = await fetch('/api/admin/coins/member-promotions/history', {
+          credentials:'same-origin',
+          headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Promotion history could not be loaded.');
+        const items = Array.isArray(result.items) ? result.items : [];
+        if (!items.length) {
+          promotionHistoryList.textContent = 'No member promotional Coins have been issued yet.';
+          return;
+        }
+        promotionHistoryList.innerHTML = items.map(item => {
+          const username = escapeText(item.memberUsername ? '@' + item.memberUsername : 'Minglora member');
+          const displayName = escapeText(item.memberDisplayName || '');
+          const amount = Number(item.amountCoins || 0);
+          const note = escapeText(item.note || 'Promotional Coins');
+          const createdAt = item.createdAt && !Number.isNaN(new Date(item.createdAt).getTime())
+            ? escapeText(new Date(item.createdAt).toLocaleString()) : 'Date unavailable';
+          return '<article class="admin-member-promotion-row"><div class="admin-member-promotion-recipient"><strong>' +
+            username + '</strong>' + (displayName ? '<small>' + displayName + '</small>' : '') +
+            '<small>' + createdAt + ' · ' + note + '</small></div><strong class="admin-member-promotion-amount">' +
+            (Number.isSafeInteger(amount) ? amount.toLocaleString() : escapeText(item.amountCoins)) + ' Coins</strong></article>';
+        }).join('');
+      } catch (error) {
+        promotionHistoryList.textContent = error.message || 'Promotion history could not be loaded.';
+      }
+    };
+    refreshMemberPromotionHistory();
+
+    panel.querySelector('#admin-member-promotion-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberInput = panel.querySelector('#admin-member-promotion-recipient');
+      const amountInput = form.querySelector('#admin-member-promotion-amount');
+      const noteInput = form.querySelector('#admin-member-promotion-note');
+      const status = form.querySelector('#admin-member-promotion-status');
+      const submit = form.querySelector('#admin-member-promotion-submit');
+      const memberUsername = String(memberInput?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(amountInput?.value);
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+          !Number.isSafeInteger(amountCoins) || amountCoins < 1 || amountCoins > Number.MAX_SAFE_INTEGER) {
+        if (status) status.textContent = 'Enter a valid member username and a positive whole-number Coin amount.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure promotion reference could not be generated on this device.';
+        return;
+      }
+      const note = String(noteInput?.value || 'Minglora member promotional Coins').trim().slice(0,240);
+      if (!window.confirm('Send ' + amountCoins.toLocaleString() + ' promotional Coins to @' + memberUsername + '? This will be recorded in the member promotion history.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Sending your approved promotional Coins…';
+      try {
+        const response = await fetch('/api/admin/coins/member-promotions', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({memberUsername,amountCoins,note,requestId:window.crypto.randomUUID()})
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Promotional Coins could not be sent.');
+        const credit = result.credit || {};
+        const balance = Number(credit.balanceAfter || 0);
+        if (status) status.textContent = (credit.alreadyCredited ? 'This promotion was already processed. ' : 'Sent ') +
+          Number(credit.amountCoins || amountCoins).toLocaleString() + ' promotional Coins to @' +
+          escapeText(credit.memberUsername || memberUsername) + '. Recipient wallet balance: ' +
+          balance.toLocaleString() + ' Coins.';
+        if (amountInput) amountInput.value = '';
+        await refreshMemberPromotionHistory();
+        await refreshAdminCampaignWallet();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Promotional Coins could not be sent.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    const money = minor => 'USD ' + (Number(minor || 0) / 100).toFixed(2);
+    const budgetSummary = panel.querySelector('#admin-marketing-budget-summary');
+    const refreshMarketingBudget = async () => {
+      if (!budgetSummary) return;
+      budgetSummary.textContent = 'Loading verified budget…';
+      try {
+        const response = await fetch('/api/admin/marketing/budget', {
+          credentials: 'same-origin',
+          headers: {Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing budget could not be loaded.');
+        budgetSummary.textContent =
+          'Funded: ' + money(result.fundedMinor) +
+          ' · Reserved in member wallets/reward pools: ' + money(result.reservedMinor) +
+          ' · Spent on eligible gifts: ' + money(result.spentMinor) +
+          ' · Available to grant: ' + money(result.availableMinor);
+      } catch (error) {
+        budgetSummary.textContent = error.message || 'Marketing budget is unavailable.';
+      }
+    };
+    refreshMarketingBudget();
+
+    panel.querySelector('#admin-marketing-funding-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-marketing-funding-amount');
+      const referenceInput = form.querySelector('#admin-marketing-funding-reference');
+      const noteInput = form.querySelector('#admin-marketing-funding-note');
+      const status = form.querySelector('#admin-marketing-funding-status');
+      const submit = form.querySelector('#admin-marketing-funding-submit');
+      const rawAmount = String(amountInput?.value || '').trim();
+      const amount = Number(rawAmount);
+      const amountMinor = Math.round(amount * 100);
+      const reference = String(referenceInput?.value || '').trim();
+      if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(rawAmount) ||
+          !Number.isSafeInteger(amountMinor) || amountMinor < 100 ||
+          reference.length < 6 || reference.length > 160) {
+        if (status) status.textContent = 'Enter at least USD $1.00 and a valid external funding reference.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure funding reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Confirm that USD ' + money(amountMinor) + ' has already been received and matched to external reference ' + reference + '? Do not record pending or expected funds.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Recording verified funding…';
+      try {
+        const response = await fetch('/api/admin/marketing/funding', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            amountMinor,
+            requestId:window.crypto.randomUUID(),
+            fundingReference:reference,
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing funding could not be recorded.');
+        if (status) status.textContent = 'Funding recorded. Available marketing balance: ' + money(result.availableMinor) + '.';
+        if (amountInput) amountInput.value = '';
+        if (referenceInput) referenceInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing funding could not be recorded.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    panel.querySelector('#admin-marketing-grant-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberInput = form.querySelector('#admin-marketing-member');
+      const amountInput = form.querySelector('#admin-marketing-grant-amount');
+      const noteInput = form.querySelector('#admin-marketing-grant-note');
+      const status = form.querySelector('#admin-marketing-grant-status');
+      const submit = form.querySelector('#admin-marketing-grant-submit');
+      const memberUsername = String(memberInput?.value || '').trim().replace(/^@/,'').toLowerCase();
+      const amountCoins = Number(amountInput?.value);
+      if (!/^[a-z0-9_]{3,30}$/.test(memberUsername) ||
+          !Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a valid Minglora username and a positive whole-number Coin amount.';
+        return;
+      }
+      if (!window.crypto?.randomUUID) {
+        if (status) status.textContent = 'A secure grant reference could not be generated on this device.';
+        return;
+      }
+      if (!window.confirm('Grant ' + amountCoins.toLocaleString() + ' marketing-funded Coins to @' + memberUsername + '? This reserves ' + money(amountCoins) + ' from the confirmed marketing budget.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Reserving marketing funds and granting Coins…';
+      try {
+        const response = await fetch('/api/admin/marketing/grants', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            memberUsername,amountCoins,requestId:window.crypto.randomUUID(),
+            note:String(noteInput?.value || '').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Marketing Coin grant failed.');
+        if (status) status.textContent = 'Granted ' + Number(result.amountCoins || amountCoins).toLocaleString() +
+          ' marketing-funded Coins to @' + memberUsername + '.';
+        if (amountInput) amountInput.value = '';
+        await refreshMarketingBudget();
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Marketing Coin grant failed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    const refreshAdminCampaignWallet = async () => {
+      const target = panel.querySelector('#admin-campaign-coins-summary');
+      if (!target) return;
+      target.textContent = 'Loading verified campaign balance…';
+      try {
+        const response = await fetch('/api/admin/coins/campaign-wallet', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Campaign wallet could not be loaded.');
+        const wallet = result.wallet || {};
+        const available = Number(wallet.available_coins || 0);
+        const funded = Number(wallet.lifetime_funded_coins || 0);
+        const allocated = Number(wallet.lifetime_allocated_coins || 0);
+        target.innerHTML = '<div class="admin-marketing-budget-metrics">' +
+          '<div><small>Available campaign Coins</small><strong>' + available.toLocaleString() + '</strong></div>' +
+          '<div><small>Total allocated</small><strong>' + allocated.toLocaleString() + '</strong></div>' +
+          '<div><small>Total funded</small><strong>' + funded.toLocaleString() + '</strong></div>' +
+          '<div><small>Wallet limit</small><strong>' + Number(wallet.max_balance_coins || 0).toLocaleString() + '</strong></div></div>';
+      } catch (error) {
+        target.textContent = error.message || 'Campaign wallet could not be loaded.';
+      }
+    };
+    refreshAdminCampaignWallet();
+
+    const refreshPromotionalGiftFund = async () => {
+      const summary = panel.querySelector('#admin-promotional-gift-fund-summary');
+      const history = panel.querySelector('#admin-promotional-gift-fund-history');
+      if (!summary) return;
+      summary.textContent = 'Loading verified USD reserve…';
+      try {
+        const response = await fetch('/api/admin/promotional-gift-fund', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Promotional gift cash reserve could not be loaded.');
+        const fund = result.fund || {};
+        const dollars = value => 'USD ' + (Number(value || 0) / 100).toFixed(2);
+        summary.innerHTML = '<div class="admin-marketing-budget-metrics">' +
+          '<div><small>USD funded</small><strong>' + dollars(fund.fundedMinor) + '</strong></div>' +
+          '<div><small>USD spent</small><strong>' + dollars(fund.spentMinor) + '</strong></div>' +
+          '<div><small>USD available</small><strong>' + dollars(fund.availableMinor) + '</strong></div></div>' +
+          '<p class="muted">One promotional Coin represents USD 0.01 of this reserve. Only a successful PayPal capture increases the funded total.</p>';
+        const items = Array.isArray(result.ledger) ? result.ledger : [];
+        if (history) history.innerHTML = items.length
+          ? '<strong>Recent verified funding and spend events</strong><ul>' + items.slice(0,12).map(item =>
+              '<li>' + escapeText(String(item.event_type || 'event').replace(/_/g,' ')) + ' - ' +
+              (Number(item.funded_delta_minor || 0) ? dollars(item.funded_delta_minor) + ' funded' : dollars(item.spent_delta_minor) + ' spent') +
+              ' - ' + escapeText(item.created_at || '') + '</li>'
+            ).join('') + '</ul>'
+          : 'No promotional gift cash funding or spending recorded yet.';
+      } catch (error) {
+        summary.textContent = error.message || 'Promotional gift cash reserve could not be loaded.';
+        if (history) history.textContent = 'Funding history unavailable.';
+      }
+    };
+
+    const refreshPayPalReadiness = async () => {
+      const target = panel.querySelector('#admin-paypal-readiness');
+      if (!target) return;
+      target.textContent = 'Checking server-side PayPal configuration…';
+      try {
+        const response = await fetch('/api/admin/paypal-readiness', {
+          credentials:'same-origin', headers:{Accept:'application/json'}
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'PayPal readiness could not be checked.');
+        const checks = [
+          'Mode: ' + String(result.mode || 'not set').toUpperCase(),
+          'Server credentials: ' + (result.credentialsConfigured ? 'present' : 'missing'),
+          'PayPal OAuth: ' + (result.oauthAuthenticated ? 'authenticated' : 'not authenticated'),
+          'Webhook ID: ' + (result.webhookConfigured ? 'configured' : 'missing'),
+          'PayPal Payouts entitlement: not confirmed; verify in PayPal Business'
+        ];
+        target.textContent = (result.productionBlocked ? 'BLOCKED: production requires PayPal Live mode and the official live API endpoint. ' : '') +
+          checks.join(' - ') + (result.oauthError ? ' - ' + result.oauthError : '');
+      } catch (error) {
+        target.textContent = error.message || 'PayPal readiness could not be checked.';
+      }
+    };
+    void refreshPromotionalGiftFund();
+    void refreshPayPalReadiness();
+    panel.querySelector('#admin-promotional-gift-fund-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-promotional-gift-fund-amount');
+      const status = form.querySelector('#admin-promotional-gift-fund-status');
+      const submit = form.querySelector('#admin-promotional-gift-fund-submit');
+      const amount = Number(amountInput?.value);
+      const amountMinor = Math.round(amount * 100);
+      if (!Number.isFinite(amount) || !Number.isSafeInteger(amountMinor) || amountMinor < 100 || amountMinor > 50000000) {
+        if (status) status.textContent = 'Enter a USD amount from 1.00 to 500000.00.';
+        return;
+      }
+      if (!window.confirm('Continue to PayPal to fund the promotional gift reserve with USD ' + (amountMinor / 100).toFixed(2) + '? Coins will not be issued as USD until PayPal confirms the payment.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Creating a real PayPal funding order…';
+      try {
+        const response = await fetch('/api/admin/promotional-gift-fund/orders', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json',Accept:'application/json'},
+          body:JSON.stringify({amountMinor})
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'PayPal funding order could not be created.');
+        if (!result.approveUrl || !result.orderId) throw new Error('PayPal did not return a valid approval destination.');
+        if (status) status.textContent = 'PayPal order created. Redirecting to PayPal for payment approval…';
+        window.location.assign(result.approveUrl);
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Promotional reserve funding could not be started.';
+        if (submit) submit.disabled = false;
+      }
+    });
+    refreshPromotionalGiftFund();
+    refreshPayPalReadiness();
+    if (new URLSearchParams(window.location.search).get('promoGiftFunding') === 'success') {
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      window.setTimeout(refreshPromotionalGiftFund, 350);
+    }
+
+    panel.querySelector('#admin-owner-coin-issuance-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const amountInput = form.querySelector('#admin-owner-coin-amount');
+      const noteInput = form.querySelector('#admin-owner-coin-note');
+      const status = form.querySelector('#admin-owner-coin-issuance-status');
+      const submit = form.querySelector('#admin-owner-coin-issue-submit');
+      const amountCoins = Number(amountInput?.value);
+      if (!Number.isSafeInteger(amountCoins) || amountCoins < 1) {
+        if (status) status.textContent = 'Enter a whole-number amount from 1 to 9,007,199,254,740,991.';
+        return;
+      }
+      const formattedAmount = amountCoins.toLocaleString();
+      if (!window.confirm('Issue ' + formattedAmount + ' owner-issued Coins to CreatorHubCreatorNetwork@gmail.com? This is not member credit.')) return;
+      if (submit) submit.disabled = true;
+      if (status) status.textContent = 'Submitting owner Coin issuance…';
+      try {
+        if (!window.crypto?.randomUUID) throw new Error('A secure request reference could not be generated on this device.');
+        const response = await fetch('/api/admin/coins/owner-issuance', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            amountCoins,
+            requestId: window.crypto.randomUUID(),
+            note: String(noteInput?.value || 'Creator Hub owner promotional Coins').slice(0,240)
+          })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Owner Coin issuance failed.');
+        const balance = Number(result.wallet?.wallet?.balance_coins ?? result.issuance?.issuance?.balanceAfter ?? 0);
+        if (status) status.textContent = 'Issued ' + formattedAmount + ' owner Coins to CreatorHubCreatorNetwork@gmail.com. Wallet balance: ' + balance.toLocaleString() + ' Coins.';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Owner Coin issuance could not be completed.';
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    const badgeMemberSearch = panel.querySelector('#admin-badge-member-search-input');
+    panel.querySelector('#admin-badge-member-find')?.addEventListener('click', () => {
+      loadAdminBadgeMembers(panel, String(badgeMemberSearch?.value || '').trim());
+    });
+    badgeMemberSearch?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadAdminBadgeMembers(panel, String(badgeMemberSearch.value || '').trim());
+      }
+    });
+    panel.querySelector('#admin-profile-verification-form')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const memberId = String(form.querySelector('#admin-profile-verification-member')?.value || '');
+      const verificationStatus = String(form.querySelector('#admin-profile-verification-status')?.value || '');
+      const note = String(form.querySelector('#admin-profile-verification-note')?.value || '').trim().slice(0,1000);
+      const status = panel.querySelector('#admin-profile-verification-status-message');
+      const button = panel.querySelector('#admin-profile-verification-submit');
+      if (!memberId || note.length < 5) {
+        if (status) status.textContent = 'Choose a member and enter a review note of at least five characters.';
+        return;
+      }
+      const memberOption = form.querySelector('#admin-profile-verification-member option:checked');
+      const memberLabel = memberOption?.textContent || 'the selected member';
+      if (!window.confirm('Set ' + memberLabel + ' to "' + verificationStatus + '"? This action will be recorded in the verification audit.')) return;
+      if (button) button.disabled = true;
+      if (status) status.textContent = 'Saving profile verification…';
+      try {
+        const result = await adminCentreApi('/admin/profile-verification/set', {
+          method:'POST',
+          body:JSON.stringify({targetUserId:memberId,verificationStatus,note})
+        });
+        if (status) status.textContent = 'Saved: @' + escapeText(result.member?.username || 'member') +
+          ' is now ' + escapeText(result.member?.verificationStatus || verificationStatus) +
+          (result.member?.verificationBadge === 'blue' ? ' with the blue verified check ✔️.' : '.');
+        await loadAdminBadgeMembers(panel, String(badgeMemberSearch?.value || '').trim());
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Profile verification could not be updated.';
+      } finally { if (button) button.disabled = false; }
+    });
+    panel.querySelector('#admin-gifter-badge-member')?.addEventListener('change', () => loadAdminGifterBadgeStatus(panel));
+    panel.querySelector('#admin-gifter-badge-grant')?.addEventListener('click', () => submitAdminGifterBadgeAction(panel, 'grant_level'));
+    panel.querySelector('#admin-gifter-badge-unlock-all')?.addEventListener('click', () => submitAdminGifterBadgeAction(panel, 'unlock_all'));
+    panel.querySelector('#admin-gifter-badge-reset')?.addEventListener('click', () => submitAdminGifterBadgeAction(panel, 'reset'));
+    if (unlocked) loadAdminBadgeMembers(panel, '');
+    panel.querySelector('#admin-centre-enable-mfa')?.addEventListener('click', () => startAdminMfaEnrollment(panel));
+    panel.querySelector('#admin-centre-revoke-other-sessions')?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      const status = panel.querySelector('#admin-centre-session-status');
+      if (!window.confirm('Log out all other Minglora sessions for this administrator account?')) return;
+      button.disabled = true;
+      try {
+        await adminCentreApi('/security/sessions/revoke-others', {method:'POST',body:'{}'});
+        if (status) status.textContent = 'Other device sessions have been signed out.';
+        await loadAdminSecuritySettings(panel);
+      } catch (error) {
+        if (status) status.textContent = error.message || 'Other sessions could not be revoked.';
+      } finally { button.disabled = false; }
+    });
+    loadAdminSecuritySettings(panel);
+    if (unlocked) {
+      initializeAdminUserManagement(panel);
+      initializeAdminAuditLog(panel);
+      loadAdminModerationQueue(panel);
+      loadAdminSupportInbox(panel);
+      initializeAdminApprovalCenter(panel);
     }
     // Build the dedicated page workspace only after all existing feature sections and controls exist.
     initializeAdminPageNavigation(panel, unlocked);
