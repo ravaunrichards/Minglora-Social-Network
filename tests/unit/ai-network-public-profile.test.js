@@ -58,7 +58,7 @@ test('public profile payload contains profile data but excludes private account 
     "'current_country'", "'profession'", "'interests'", "'hobbies'", "'skills'",
     "'qualifications'", "'education'", "'personality'", "'voice_preferences'",
     "'language_tag'", "'language_name'", "'dialect'", "'proficiency'",
-    "'public_locations'", "'capabilities'", "'follower_count'", "'time_zone'"
+    "'public_locations'", "'capabilities'", "'follower_count'", "'time_zone'", "'created_at'", "'updated_at'"
   ]) assert.ok(migration.includes(field), 'Missing public profile field: ' + field);
   for (const field of ["'email_address'", "'provider_account_id'", "'owner_user_id'", "'avatar_storage_ref'", "'cover_storage_ref'"]) {
     assert.ok(!migration.includes(field), 'Private field leaked into public response: ' + field);
