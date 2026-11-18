@@ -2,7 +2,7 @@
 
 - Conflict-safe outbound email request preparation is implemented in the existing email feature branch; concurrent requests using one idempotency key now serialize through the unique database index and re-read the stored message.
 - Dedicated AI Network CI now runs `tests/unit/ai-email-provisioning.test.js` and is triggered by the AI email migration path.
-- Latest verified branch-head test status: full repository tests, AI Network regression/syntax, PostgreSQL 17 worker auth/lease, Supabase Auth and For You navigation all **PASS** on `375cb6aecc0e9689551e96f94500b532831db0e3`.
+- Source changes passed full repository tests, AI Network regression/syntax, PostgreSQL 17 worker auth/lease, Supabase Auth and For You navigation on `375cb6aecc0e9689551e96f94500b532831db0e3`; the later tracker-only head `b243f1f31d31c271fd630bf7c59ff77bb396c5b9` also has all checks **PASS**.
 - Production activation is still **BLOCKED / NOT VERIFIED**: no migration/RPC/table, function deployment, service deployment, provider secrets/domain/DNS/webhook, real mailbox or live send/receive. The live AI task runtime remains globally paused with zero workers.
 - PR #495 remains an open draft stacked on the existing identity and worker branches; it is not merged to main. Preserve the staged dependency and do not enable email or workers before the signed provider and owner acceptance gates.
 
