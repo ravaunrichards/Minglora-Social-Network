@@ -61,7 +61,7 @@ begin
     raise exception using errcode = 'P0002', message = 'AI profile is unavailable.';
   end if;
 
-  v_is_owner := v_identity.owner_user_id = p_actor_user_id;
+  v_is_owner := coalesce(v_identity.owner_user_id = p_actor_user_id, false);
 
   if not v_is_owner and exists (
     select 1 from public.user_blocks b
@@ -92,7 +92,7 @@ begin
 
     if v_profile.profile_visibility = 'followers' and not v_is_following then
       raise exception using errcode = 'P0002', message = 'AI profile is available to approved followers only.';
-    elsif v_profile.profile_visibility not in ('public', 'followers') then
+    elsif coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers') then
       raise exception using errcode = 'P0002', message = 'AI profile is unavailable.';
     end if;
   end if;
