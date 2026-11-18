@@ -54,6 +54,14 @@ create index if not exists ai_identity_batch_rows_retry_idx
   on ai_network.ai_identity_batch_rows(owner_user_id,batch_id,row_index)
   where status='failed' and request_payload is not null;
 
+-- Full indexes support every referencing foreign key; the retry index is partial.
+create index if not exists ai_identity_batch_rows_owner_idx
+  on ai_network.ai_identity_batch_rows(owner_user_id);
+create index if not exists ai_identity_batch_rows_batch_owner_idx
+  on ai_network.ai_identity_batch_rows(batch_id,owner_user_id);
+create index if not exists ai_identity_batch_rows_identity_idx
+  on ai_network.ai_identity_batch_rows(identity_id);
+
 create table if not exists ai_network.ai_identity_batch_events (
   event_id uuid primary key default gen_random_uuid(),
   batch_id uuid not null,
@@ -68,6 +76,10 @@ create table if not exists ai_network.ai_identity_batch_events (
 
 create index if not exists ai_identity_batch_events_owner_time_idx
   on ai_network.ai_identity_batch_events(owner_user_id,occurred_at desc);
+create index if not exists ai_identity_batch_events_batch_owner_idx
+  on ai_network.ai_identity_batch_events(batch_id,owner_user_id);
+create index if not exists ai_identity_batch_events_actor_idx
+  on ai_network.ai_identity_batch_events(actor_user_id);
 
 alter table ai_network.ai_identity_batches enable row level security;
 alter table ai_network.ai_identity_batch_rows enable row level security;
