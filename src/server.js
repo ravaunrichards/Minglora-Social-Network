@@ -5832,7 +5832,8 @@ async function route(req, res) {
         let canPublish=false,role='viewer',ownLive=null;
         if(participant){
           ownLive=(db.liveSessions||[]).find(item=>item.status==='live'&&item.hostId===user.id&&item.id===participant.broadcast_id);
-          if(ownLive){canPublish=true;role=participant.role==='host'?'host':'cohost';}
+          if(!ownLive)return json(res,409,{error:'Your own LIVE must remain active to publish into Co-host.'});
+          canPublish=true;role=participant.role==='host'?'host':'cohost';
         }
         if(!canPublish){
           const sourceBroadcast=(db.liveSessions||[]).find(item=>item.id===String(input.broadcastId||''));
@@ -5865,9 +5866,10 @@ async function route(req, res) {
           if(action==='end'){
             if(current.session.host_user_id!==user.id)return json(res,403,{error:'Only the Co-host host can end the collaboration.'});
             for(const participant of current.participants||[]){
-              if(participant.user_id!==user.id)await removeLiveKitParticipant(current.session.room_ref,participant.user_id).catch(()=>{});
+              await removeLiveKitParticipant(current.session.room_ref,participant.user_id).catch(()=>{});
             }
             const result=await requestSupabaseState('live_cohost_end',{sessionId:cohostId,hostId:user.id});
+            await deleteLiveKitRoom(current.session.room_ref).catch(()=>{});
             return json(res,200,{ok:true,session:result.session});
           }
           await removeLiveKitParticipant(current.session.room_ref,user.id).catch(()=>{});
@@ -6056,6 +6058,7 @@ async function route(req, res) {
               if(collaboration.session.host_user_id===user.id){
                 await requestSupabaseState('live_cohost_end',{sessionId:collaboration.session.id,hostId:user.id});
                 for(const member of collaboration.participants||[])await removeLiveKitParticipant(collaboration.session.room_ref,member.user_id).catch(()=>{});
+                await deleteLiveKitRoom(collaboration.session.room_ref).catch(()=>{});
               }else{
                 await removeLiveKitParticipant(collaboration.session.room_ref,user.id).catch(()=>{});
                 await requestSupabaseState('live_cohost_leave',{sessionId:collaboration.session.id,userId:user.id});
