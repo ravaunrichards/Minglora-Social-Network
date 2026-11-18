@@ -114,6 +114,10 @@
       try{await post(action,payload);say(message||"Logo Center updated.");await load();}
       catch(error){say(error.message||"The requested Logo Center action failed.",true);}
     };
+    const can=permission=>{
+      const permissions=Array.isArray(state.data?.permissions)?state.data.permissions:[];
+      return permissions.includes("brand:manage")||permissions.includes(permission);
+    };
     const cats=()=> (state.data?.categories||[]).map(x=>({value:x.id,label:x.name}));
     const cols=()=> (state.data?.collections||[]).map(x=>({value:x.id,label:x.name}));
     const approved=()=> (state.data?.assets||[]).filter(x=>["approved","active"].includes(x.status)&&x.approved_version_id&&x.approved_version_id===x.current_version_id).map(x=>({value:x.id,label:x.title}));
@@ -135,6 +139,9 @@
     const renderTabs=()=>{
       tabs.replaceChildren();
       TABS.forEach(item=>{
+        const required={upload:"brand:upload",design:"brand:edit",editing:"brand:edit",
+          identity:"brand:edit",scheduling:"brand:publish",security:"brand:manage"}[item[0]];
+        if(required&&!can(required))return;
         const b=button(item[1],()=>setTab(item[0]),state.tab===item[0]?"primary":"quiet");
         b.dataset.tab=item[0];b.classList.toggle("is-active",state.tab===item[0]);tabs.append(b);
       });
@@ -206,15 +213,20 @@
         const meta=make("div","brand-asset-meta");meta.append(make("span","brand-state",statusLabel(a.status)),make("span","",Number(a.version_count||0)+" version(s)"));detail.append(meta);
         const actions=make("div","brand-asset-actions");
         actions.append(button(a.is_favorite?"★ Saved":"☆ Favorite",()=>run("favorite_toggle",{assetId:a.id},"Favorite updated."),"quiet"));
-        actions.append(button("New version",()=>{state.uploadAssetId=a.id;state.duplicateAssetId="";setTab("upload");say("Choose a new source file. The existing logo version will remain preserved.");},"quiet"));
-        actions.append(button("Duplicate",()=>{state.uploadAssetId="";state.duplicateAssetId=a.id;setTab("upload");say("Choose the original file to create a separate copy. The source asset remains unchanged.");},"quiet"));
+        if(can("brand:upload")){
+          actions.append(button("New version",()=>{state.uploadAssetId=a.id;state.duplicateAssetId="";setTab("upload");say("Choose a new source file. The existing logo version will remain preserved.");},"quiet"));
+          actions.append(button("Duplicate",()=>{state.uploadAssetId="";state.duplicateAssetId=a.id;setTab("upload");say("Choose the original file to create a separate copy. The source asset remains unchanged.");},"quiet"));
+        }
         if(String(a.mime_type||"").startsWith("image/")){
-          actions.append(button("Design",()=>{state.studioSourceId=a.id;state.editorImage=null;state.editorBlob=null;setTab("design");},"quiet"));
+          if(can("brand:edit"))actions.append(button("Design",()=>{state.studioSourceId=a.id;state.editorImage=null;state.editorBlob=null;setTab("design");},"quiet"));
           actions.append(button("Mockup",()=>{state.mockupAssetId=a.id;setTab("mockups");},"quiet"));
         }
-        if(a.current_version_id&&a.approved_version_id!==a.current_version_id)actions.append(button("Approve current version",()=>run("asset_approve",{assetId:a.id},"Current logo version approved."),"primary"));
-        if(a.status==="archived")actions.append(button("Restore",()=>run("asset_status",{assetId:a.id,status:"draft"},"Logo restored as a draft."),"quiet"));
-        else if(a.status!=="deleted")actions.append(button("Archive",()=>run("asset_status",{assetId:a.id,status:"archived"},"Logo archived and retained."),"quiet"));
+        if(can("brand:approve")&&a.current_version_id&&a.approved_version_id!==a.current_version_id)
+          actions.append(button("Approve current version",()=>run("asset_approve",{assetId:a.id},"Current logo version approved."),"primary"));
+        if(can("brand:edit")){
+          if(a.status==="archived")actions.append(button("Restore",()=>run("asset_status",{assetId:a.id,status:"draft"},"Logo restored as a draft."),"quiet"));
+          else if(a.status!=="deleted")actions.append(button("Archive",()=>run("asset_status",{assetId:a.id,status:"archived"},"Logo archived and retained."),"quiet"));
+        }
         const edit=make("details","brand-panel brand-asset-edit");
         edit.append(make("summary","","Edit title, description, category and collection"));
         const editForm=make("form","brand-form-grid");
@@ -233,7 +245,9 @@
           const open=make("a","brand-button brand-button-quiet","Open file");
           open.href=a.previewUrl;open.target="_blank";open.rel="noopener noreferrer";actions.append(open);
         }
-        card.append(preview,detail,actions,edit);cards.append(card);
+        card.append(preview,detail,actions);
+        if(can("brand:edit"))card.append(edit);
+        cards.append(card);
       });
       view.append(cards);
       const versions=make("div","brand-panel");versions.append(title("Version history","Recent immutable uploads. Older original versions are never overwritten."));
@@ -241,7 +255,7 @@
         const row=make("div","brand-list-row");
         row.append(make("strong","", "Version "+v.version_number+" · "+v.original_name),make("span","",when(v.created_at)),make("span","brand-state",v.is_approved?"Approved":"Unapproved"));
         if(v.previewUrl){const link=make("a","brand-inline-link","Preview");link.href=v.previewUrl;link.target="_blank";link.rel="noopener noreferrer";row.append(link);}
-        if(v.asset_id)row.append(button("Restore version",()=>run("version_restore",{assetId:v.asset_id,versionId:v.id},"Previous immutable version restored. Reapprove it before publishing when required."),"quiet"));
+        if(can("brand:edit")&&v.asset_id)row.append(button("Restore version",()=>run("version_restore",{assetId:v.asset_id,versionId:v.id},"Previous immutable version restored. Reapprove it before publishing when required."),"quiet"));
         versions.append(row);
       });
       view.append(versions);
@@ -475,63 +489,83 @@
 
     function renderCategories(){
       view.append(title("Logo Categories","Browse the protected standard categories and add unlimited custom logo categories."));
-      const panelWrap=make("div","brand-panel"),form=make("form","brand-compact-form");
-      const name=field("text","New category name");name.required=true;name.maxLength=80;
-      const description=field("text","Description (optional)");description.maxLength=500;
-      const submit=make("button","brand-button brand-button-primary","Add category");submit.type="submit";
-      form.append(label("Category name",name),label("Description",description),submit);
-      form.addEventListener("submit",async event=>{
-        event.preventDefault();submit.disabled=true;await run("category_create",{name:name.value,description:description.value},"Category created.");
-        name.value="";description.value="";submit.disabled=false;
-      });
-      panelWrap.append(form);
+      const panelWrap=make("div","brand-panel");
+      if(can("brand:edit")){
+        const form=make("form","brand-compact-form");
+        const name=field("text","New category name");name.required=true;name.maxLength=80;
+        const description=field("text","Description (optional)");description.maxLength=500;
+        const submit=make("button","brand-button brand-button-primary","Add category");submit.type="submit";
+        form.append(label("Category name",name),label("Description",description),submit);
+        form.addEventListener("submit",async event=>{
+          event.preventDefault();submit.disabled=true;
+          await run("category_create",{name:name.value,description:description.value},"Category created.");
+          name.value="";description.value="";submit.disabled=false;
+        });
+        panelWrap.append(form);
+      }else panelWrap.append(make("p","brand-note","Read-only access: category changes require the Brand Asset Editor or Brand Administrator role."));
       (state.data?.categories||[]).forEach(category=>{
-        const row=make("div","brand-list-row");row.append(make("strong","",category.name),make("span","",category.is_system?"System category":"Custom category"));panelWrap.append(row);
+        const row=make("div","brand-list-row");
+        row.append(make("strong","",category.name),make("span","",category.is_system?"System category":"Custom category"));
+        panelWrap.append(row);
       });
       view.append(panelWrap);
     }
 
     function renderCollections(){
       view.append(title("Logo Collections","Organize approved logos and wider visual identity assets into reusable collections."));
-      const panelWrap=make("div","brand-panel"),enigma=(state.data?.collections||[]).find(item=>item.slug==="enigma-branding");
+      const panelWrap=make("div","brand-panel");
+      const enigma=(state.data?.collections||[]).find(item=>item.slug==="enigma-branding");
       panelWrap.append(make("p","brand-note",enigma?"Enigma Branding is a real collection. It stays empty until approved Enigma source artwork is added; no sample logos are inserted.":"No Enigma collection record is currently available."));
-      const form=make("form","brand-compact-form"),name=field("text","New collection name"),description=field("text","Description (optional)");
-      name.required=true;name.maxLength=100;description.maxLength=1000;
-      const submit=make("button","brand-button brand-button-primary","Create collection");submit.type="submit";
-      form.append(label("Collection name",name),label("Description",description),submit);
-      form.addEventListener("submit",async event=>{
-        event.preventDefault();submit.disabled=true;await run("collection_create",{name:name.value,description:description.value},"Collection created.");
-        name.value="";description.value="";submit.disabled=false;
-      });
-      panelWrap.append(form);
+      if(can("brand:edit")){
+        const form=make("form","brand-compact-form"),name=field("text","New collection name"),description=field("text","Description (optional)");
+        name.required=true;name.maxLength=100;description.maxLength=1000;
+        const submit=make("button","brand-button brand-button-primary","Create collection");submit.type="submit";
+        form.append(label("Collection name",name),label("Description",description),submit);
+        form.addEventListener("submit",async event=>{
+          event.preventDefault();submit.disabled=true;
+          await run("collection_create",{name:name.value,description:description.value},"Collection created.");
+          name.value="";description.value="";submit.disabled=false;
+        });
+        panelWrap.append(form);
+      }else panelWrap.append(make("p","brand-note","Read-only access: collection changes require the Brand Asset Editor or Brand Administrator role."));
       (state.data?.collections||[]).forEach(collection=>{
-        const row=make("div","brand-list-row");row.append(make("strong","",collection.name),make("span","",collection.is_system?"System collection":"Custom collection"));panelWrap.append(row);
+        const row=make("div","brand-list-row");
+        row.append(make("strong","",collection.name),make("span","",collection.is_system?"System collection":"Custom collection"));
+        panelWrap.append(row);
       });
       view.append(panelWrap);
     }
 
     function renderPlacements(){
       view.append(title("Logo placement manager","Choose an approved version, prepare a placement for approval, then publish it to the live brand manifest."));
-      const form=make("form","brand-form-grid");
-      const place=select("Application location",PLACEMENTS.map(x=>({value:x[0],label:x[1]})));
-      const asset=select("Approved logo",approved());
-      const submit=make("button","brand-button brand-button-primary","Prepare placement");submit.type="submit";
-      form.append(label("Application location",place),label("Approved logo",asset),submit);
-      form.addEventListener("submit",async e=>{e.preventDefault();if(!place.value||!asset.value){say("Select a location and an approved logo.",true);return;}submit.disabled=true;await run("assignment_set",{placementKey:place.value,assetId:asset.value},"Placement is pending publication approval.");submit.disabled=false;});
-      const panelWrap=make("div","brand-panel");panelWrap.append(title("Pending and published placements","Only published assignments appear in the public brand manifest."));
+      let form=null;
+      if(can("brand:publish")){
+        form=make("form","brand-form-grid");
+        const place=select("Application location",PLACEMENTS.map(x=>({value:x[0],label:x[1]})));
+        const asset=select("Approved logo",approved());
+        const submit=make("button","brand-button brand-button-primary","Prepare placement");submit.type="submit";
+        form.append(label("Application location",place),label("Approved logo",asset),submit);
+        form.addEventListener("submit",async e=>{
+          e.preventDefault();
+          if(!place.value||!asset.value){say("Select a location and an approved logo.",true);return;}
+          submit.disabled=true;await run("assignment_set",{placementKey:place.value,assetId:asset.value},"Placement is pending publication approval.");submit.disabled=false;
+        });
+      }else view.append(make("p","brand-note","Read-only access: publishing and rollback require the Brand Publisher or Brand Administrator role."));
+      const panelWrap=make("div","brand-panel");
+      panelWrap.append(title("Pending and published placements","Only published assignments appear in the public brand manifest."));
       (state.data?.assignments||[]).forEach(item=>{
-        const row=make("div","brand-list-row");const meta=make("div","brand-list-row-main");
+        const row=make("div","brand-list-row"),meta=make("div","brand-list-row-main");
         const pendingAsset=(state.data?.assets||[]).find(asset=>asset.id===item.pending_asset_id);
         meta.append(make("strong","",placementName(item.placement_key)),make("small","",statusLabel(item.status)+(pendingAsset?" · Pending change: "+pendingAsset.title:"")));
         row.append(meta);
         const previewAssetId=item.pending_asset_id||item.asset_id;
         if(previewAssetId)row.append(button("Preview",()=>{state.mockupAssetId=previewAssetId;setTab("mockups");},"quiet"));
-        if(item.pending_asset_id)row.append(button("Publish",()=>run("assignment_publish",{placementKey:item.placement_key},"Approved logo placement published."),"primary"));
-        if(item.status==="active")row.append(button("Rollback",()=>run("assignment_rollback",{placementKey:item.placement_key},"Placement rollback recorded."),"quiet"));
+        if(can("brand:publish")&&item.pending_asset_id)row.append(button("Publish",()=>run("assignment_publish",{placementKey:item.placement_key},"Approved logo placement published."),"primary"));
+        if(can("brand:publish")&&item.status==="active")row.append(button("Rollback",()=>run("assignment_rollback",{placementKey:item.placement_key},"Placement rollback recorded."),"quiet"));
         panelWrap.append(row);
       });
       if(!(state.data?.assignments||[]).length)panelWrap.append(empty("No logo placements yet","Choose an approved logo to prepare the first placement."));
-      view.append(form,panelWrap);
+      if(form)view.append(form,panelWrap);else view.append(panelWrap);
     }
 
     function renderIdentity(){
@@ -562,26 +596,35 @@
 
     function renderScheduling(){
       view.append(title("Logo scheduling","Approved changes activate automatically at their scheduled time and restore the previous approved placement when an expiry is reached."));
-      const form=make("form","brand-form-grid");
-      const place=select("Application location",PLACEMENTS.map(x=>({value:x[0],label:x[1]})));
-      const asset=select("Approved logo",approved());
-      const start=field("datetime-local");const expiry=field("datetime-local");
-      const zone=field("text","IANA timezone","America/Jamaica");
-      const submit=make("button","brand-button brand-button-primary","Save schedule");submit.type="submit";
-      form.append(label("Location",place),label("Approved logo",asset),label("Activation time",start),label("Optional expiry",expiry),label("Timezone",zone),submit);
-      form.addEventListener("submit",async e=>{e.preventDefault();if(!place.value||!asset.value||!start.value){say("Choose a placement, logo and future activation time.",true);return;}
-        try{
-          const timezone=zone.value.trim()||"America/Jamaica";
-          await run("schedule_create",{placementKey:place.value,assetId:asset.value,activatesAt:zonedDateTimeToIso(start.value,timezone),
-            expiresAt:expiry.value?zonedDateTimeToIso(expiry.value,timezone):null,timezone},
-            "Schedule saved. Minglora will process activation and expiry automatically.");
-        }catch(error){say(error.message||"The selected schedule time is invalid.",true);}
-      });
+      let form=null;
+      if(can("brand:publish")){
+        form=make("form","brand-form-grid");
+        const place=select("Application location",PLACEMENTS.map(x=>({value:x[0],label:x[1]})));
+        const asset=select("Approved logo",approved());
+        const start=field("datetime-local"),expiry=field("datetime-local");
+        const zone=field("text","IANA timezone","America/Jamaica");
+        const submit=make("button","brand-button brand-button-primary","Save schedule");submit.type="submit";
+        form.append(label("Location",place),label("Approved logo",asset),label("Activation time",start),label("Optional expiry",expiry),label("Timezone",zone),submit);
+        form.addEventListener("submit",async e=>{
+          e.preventDefault();
+          if(!place.value||!asset.value||!start.value){say("Choose a placement, logo and future activation time.",true);return;}
+          try{
+            const timezone=zone.value.trim()||"America/Jamaica";
+            await run("schedule_create",{placementKey:place.value,assetId:asset.value,activatesAt:zonedDateTimeToIso(start.value,timezone),
+              expiresAt:expiry.value?zonedDateTimeToIso(expiry.value,timezone):null,timezone},
+              "Schedule saved. Minglora will process activation and expiry automatically.");
+          }catch(error){say(error.message||"The selected schedule time is invalid.",true);}
+        });
+      }else view.append(make("p","brand-note","Read-only access: creating, cancelling and publishing schedules require the Brand Publisher or Brand Administrator role."));
       const list=make("div","brand-panel");list.append(title("Scheduled changes","Future activation requests currently recorded."));
-      (state.data?.schedules||[]).forEach(item=>{const row=make("div","brand-list-row");row.append(make("strong","",placementName(item.placement_key)),make("span","",when(item.activates_at)));
-        row.append(button("Cancel",()=>run("schedule_cancel",{scheduleId:item.id},"Schedule cancelled."),"quiet"));list.append(row);});
+      (state.data?.schedules||[]).forEach(item=>{
+        const row=make("div","brand-list-row");
+        row.append(make("strong","",placementName(item.placement_key)),make("span","",when(item.activates_at)));
+        if(can("brand:publish"))row.append(button("Cancel",()=>run("schedule_cancel",{scheduleId:item.id},"Schedule cancelled."),"quiet"));
+        list.append(row);
+      });
       if(!(state.data?.schedules||[]).length)list.append(empty("No scheduled changes","Scheduled branding changes will appear here."));
-      view.append(form,list);
+      if(form)view.append(form,list);else view.append(list);
     }
 
     function renderVersionHistory(){
@@ -594,7 +637,7 @@
           make("small","",version.original_name+" · "+formatBytes(version.byte_size)),make("span","",when(version.created_at)),
           make("span","brand-state",version.is_approved?"Approved":"Not approved"));
         if(version.previewUrl){const preview=make("a","brand-inline-link","Preview");preview.href=version.previewUrl;preview.target="_blank";preview.rel="noopener noreferrer";row.append(preview);}
-        row.append(button("Restore version",()=>run("version_restore",{assetId:version.asset_id,versionId:version.id},
+        if(can("brand:edit"))row.append(button("Restore version",()=>run("version_restore",{assetId:version.asset_id,versionId:version.id},
           "The selected immutable version is now current. Reapprove it before publishing when required."),"quiet"));
         panelWrap.append(row);
       });view.append(panelWrap);
@@ -618,23 +661,23 @@
       if(!archived.length)panelWrap.append(empty("No archived assets","Archived branding is retained and can be restored here."));
       archived.forEach(asset=>{
         const row=make("div","brand-list-row");row.append(make("strong","",asset.title),make("span","",Number(asset.version_count||0)+" retained version(s)"));
-        row.append(button("Restore as draft",()=>run("asset_status",{assetId:asset.id,status:"draft"},"Archived asset restored."),"quiet"));panelWrap.append(row);
+        if(can("brand:edit"))row.append(button("Restore as draft",()=>run("asset_status",{assetId:asset.id,status:"draft"},"Archived asset restored."),"quiet"));panelWrap.append(row);
       });view.append(panelWrap);
     }
     function renderSecurity(){
-      view.append(title("Brand Security & Permissions","Official brand changes remain behind Minglora's designated-owner and active MFA verification gates."));
+      view.append(title("Brand Security & Permissions","Minglora's owner-controlled RBAC catalogue grants only the brand capabilities assigned to each operator."));
       const panelWrap=make("div","brand-panel");
       const rules=[
-        ["Owner control","Official brand management is restricted to the designated platform owner."],
-        ["MFA verification","Administrative writes and publishing require an active verified reviewer session."],
-        ["Server-side enforcement","The API and database independently validate the owner, staff record and service-role boundary."],
-        ["Member isolation","Ordinary member sessions cannot read private brand tables or write logo records."],
+        ["Owner protection","The designated platform owner retains full control. Brand-only roles cannot become platform owners."],
+        ["MFA verification","Every brand operator must use an active MFA-verified Minglora session."],
+        ["Scoped permissions","Upload, editing, approval, publishing and read-only access are enforced separately by database RPCs."],
+        ["Admin isolation","Brand-only accounts receive no access to finance, member management, moderation, AI operations or general Admin Centre controls."],
         ["Private media","Logo originals use the private minglora-brand-assets bucket and short-lived signed previews."],
         ["Audit protection","Brand activity logs are append-only; deployment history supports rollback."]
       ];
       rules.forEach(([name,description])=>{const row=make("div","brand-list-row");row.append(make("strong","",name),make("span","",description));panelWrap.append(row);});
       view.append(panelWrap,button("View administrative audit activity",()=>setTab("activity"),"quiet"),
-        make("p","brand-note","This workspace uses owner-only official-brand permissions. It does not silently grant delegated administrator upload or publishing privileges."));
+        make("p","brand-note","Delegated roles are granted or revoked by the designated owner through Minglora's existing Administrator Roles & Permissions workspace. Backend permission checks remain authoritative."));
     }
     function renderAnalytics(){
       const data=state.data||{},assets=data.assets||[],assignments=(data.assignments||[]).filter(item=>item.status==="active");
