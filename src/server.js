@@ -5877,6 +5877,38 @@ async function route(req, res) {
           return json(res,200,{ok:true,participant:result.participant});
         }catch(error){return json(res,error.status||503,{error:error.message||'Could not leave the Co-host stage.'});}
       }
+      const cohostMatchGet=p.match(/^\/api\/live\/cohost\/sessions\/([^/]+)\/match$/);
+      if(method==='GET'&&cohostMatchGet){
+        const sessionResult=await requestSupabaseState('live_cohost_session_get',{sessionId:cohostMatchGet[1]});
+        const cohost=sessionResult.session;
+        if(!cohost||cohost.status!=='active')return json(res,404,{error:'Co-host stage not found.'});
+        const hostBroadcast=(db.liveSessions||[]).find(item=>item.id===cohost.host_broadcast_id&&item.status==='live');
+        const isCreator=(sessionResult.participants||[]).some(item=>item.user_id===user.id&&['accepted','connected'].includes(item.status));
+        const canView=hostBroadcast&&(hostBroadcast.hostId===user.id||hostBroadcast.visibility==='public'||
+          (hostBroadcast.visibility==='friends'&&isFriend(user.id,hostBroadcast.hostId))||
+          (hostBroadcast.visibility==='subscribers'&&listActiveCreatorSubscriptions(db.creatorSubscriptions,hostBroadcast.hostId).some(item=>item.subscriberId===user.id)));
+        if(!isCreator&&!canView)return json(res,404,{error:'Co-host match not found.'});
+        try{
+          const result=await requestSupabaseState('live_cohost_match_get',{sessionId:cohost.id});
+          return json(res,200,result);
+        }catch(error){return json(res,error.status||503,{error:error.message||'Co-host match could not be loaded.'});}
+      }
+      const cohostMatchCreate=p.match(/^\/api\/live\/cohost\/sessions\/([^/]+)\/matches$/);
+      if(method==='POST'&&cohostMatchCreate){
+        const sessionId=cohostMatchCreate[1],mode=String(input.mode||'');
+        if(!['solo','team'].includes(mode))return json(res,400,{error:'Choose Solo or Team match mode.'});
+        try{
+          const result=await requestSupabaseState('live_cohost_match_create',{sessionId,hostId:user.id,mode,matchId:uid()});
+          return json(res,201,result);
+        }catch(error){return json(res,error.status||409,{error:error.message||'Co-host match could not be started.'});}
+      }
+      const cohostMatchEnd=p.match(/^\/api\/live\/cohost\/matches\/([^/]+)\/end$/);
+      if(method==='POST'&&cohostMatchEnd){
+        try{
+          const result=await requestSupabaseState('live_cohost_match_end',{matchId:cohostMatchEnd[1],hostId:user.id});
+          return json(res,200,{ok:true,match:result.match});
+        }catch(error){return json(res,error.status||409,{error:error.message||'Co-host match could not be ended.'});}
+      }
       const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
       if (method === 'GET' && liveSpeakerStatusMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerStatusMatch[1] && item.status === 'live');
