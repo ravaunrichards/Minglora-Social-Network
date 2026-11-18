@@ -529,7 +529,7 @@ FROM (VALUES
  ('brand_administrator','brand:edit'),('brand_administrator','brand:approve'),
  ('brand_administrator','brand:publish'),('brand_administrator','brand:manage'),
  ('brand_asset_uploader','brand:read'),('brand_asset_uploader','brand:upload'),
- ('brand_asset_editor','brand:read'),('brand_asset_editor','brand:edit'),
+ ('brand_asset_editor','brand:read'),('brand_asset_editor','brand:upload'),('brand_asset_editor','brand:edit'),
  ('brand_approval_manager','brand:read'),('brand_approval_manager','brand:approve'),
  ('brand_publisher','brand:read'),('brand_publisher','brand:publish'),
  ('brand_read_only','brand:read')
