@@ -157,7 +157,8 @@ begin
       'population', v_identity.population,
       'category_key', v_identity.category_key,
       'subcategory', v_identity.subcategory,
-      'created_at', v_identity.created_at
+      'created_at', v_identity.created_at,
+      'updated_at', v_identity.updated_at
     ),
     'name', jsonb_build_object(
       'first_name', v_name.first_name,
