@@ -904,10 +904,10 @@ async function deliverUserPush(userId,notification){
   if(!subscriptions.length)return;
   const stale=new Set();
   const payload=JSON.stringify({
-    title:({live:'Minglora LIVE',live_moderator:'LIVE moderator update',call:'Incoming Minglora call',message:'New Minglora message',profile_view:'Profile view',friend:'Friend update',reaction:'Post reaction',comment:'New comment',follow:'New follower',gift:'You received a gift',fan_club:'Fan Club update',meetwave_invite:'MeetWave invitation',league_match:'League match update'})[notification.type]||'Minglora account update',
+    title:({live:'Minglora LIVE',live_moderator:'LIVE moderator update',call:'Incoming Minglora call',message:'New Minglora message',profile_view:'Profile view',friend:'Friend update',reaction:'Post reaction',comment:'New comment',follow:'New follower',gift:'You received a gift',fan_club:'Fan Club update',meetwave_invite:'MeetWave invitation',league_match:'League match update',ai_task_approval:'Minglora AI approval required'})[notification.type]||'Minglora account update',
     body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
     tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
-    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,sellerId:notification.sellerId||null,roomId:notification.roomId||null,invitationId:notification.invitationId||null,matchId:notification.matchId||null}
+    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,aiTaskId:notification.aiTaskId||null,sellerId:notification.sellerId||null,roomId:notification.roomId||null,invitationId:notification.invitationId||null,matchId:notification.matchId||null}
   });
   await Promise.all(subscriptions.map(async subscription=>{
     try{
@@ -935,7 +935,7 @@ function notificationPreferenceKey(type){
   if(type==='meetwave_invite')return 'meetWave';
   if(['video_remix','video_collaboration_invite','video_collaboration_response'].includes(type))return 'interactions';
   if(type==='league_match')return 'leagues';
-  if(['account_security','verification_application','verification_status','admin_alert'].includes(type))return 'account';
+  if(['account_security','verification_application','verification_status','admin_alert','ai_task_approval'].includes(type))return 'account';
   return null;
 }
 function notificationTypeEnabled(preferences,type){
@@ -945,14 +945,28 @@ function notificationTypeEnabled(preferences,type){
 const notify = (userId, actorId, type, text, extra = {}) => {
   const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;
   const prefs=getUserSettings(recipient).notifications;
-  if(!notificationTypeEnabled(prefs,type)||(!prefs.inApp&&!prefs.push))return;
+  const mandatoryApproval=type==='ai_task_approval';
+  if((!mandatoryApproval&&!notificationTypeEnabled(prefs,type))||(!prefs.inApp&&!prefs.push&&!mandatoryApproval))return;
   const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
-  if(prefs.inApp){
+  if(prefs.inApp||mandatoryApproval){
     db.notifications.unshift(notification);
     publishNotificationEvent(userId,'notification:new',notification.id);
   }
   if(prefs.push)void deliverUserPush(userId,notification).catch(()=>{});
 };
+function notifyAINetworkTaskApproval(user,task){
+  const taskId=String(task?.task_id||'').trim();
+  if(!user?.id||!taskId||task?.status!=='pending_approval'||task?.requires_approval!==true)return false;
+  db.notifications ||= [];
+  if(db.notifications.some(item=>item.userId===user.id&&item.type==='ai_task_approval'&&item.aiTaskId===taskId))return false;
+  const title=String(task.task_title||'AI task').trim().slice(0,180)||'AI task';
+  const actionClass=String(task.action_class||'other').slice(0,32);
+  const before=db.notifications.length;
+  notify(user.id,null,'ai_task_approval',
+    'Approval required: '+title+'. Action class: '+actionClass+'. Review the task details before deciding.',
+    {aiTaskId:taskId,aiTaskTitle:title,aiTaskActionClass:actionClass});
+  return db.notifications.length>before;
+}
 function publishNotificationEvent(userId,type,notificationId=null){
   if(!userId||!['notification:new','notification:changed'].includes(type))return 0;
   return messengerRealtime?.publish([userId],{type,notificationId:notificationId||null})||0;
@@ -2422,6 +2436,10 @@ async function route(req, res) {
           throw Object.assign(new Error('AI task input must be a JSON object.'), { status: 400 });
         }
         const result = await runAITaskCommand('create_task', input);
+        if(result?.task?.status==='pending_approval'&&result.task.requires_approval===true){
+          const notificationCreated=notifyAINetworkTaskApproval(user,result.task);
+          if(notificationCreated)await saveStore();
+        }
         return json(res, result?.reused ? 200 : 201, result || {});
       }
       if (parts[0] === 'tasks' && parts.length === 3 && method === 'PATCH' && parts[2] === 'approval') {
@@ -9957,7 +9975,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
         if(db.notifications.length!==before)await saveStore();
-        const notifications=prefs.inApp?db.notifications.filter(n=>n.userId===user.id&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&notificationTypeEnabled(prefs,n.type)).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)})):[];
+        const notifications=db.notifications.filter(n=>n.userId===user.id&&(prefs.inApp||n.type==='ai_task_approval')&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&(n.type==='ai_task_approval'||notificationTypeEnabled(prefs,n.type))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)}));
         const unreadCount=notifications.filter(item=>!item.read).length;
         const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
         return json(res,200,{notifications,unreadCount,categoryCounts});
