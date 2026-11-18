@@ -4370,7 +4370,8 @@ async function route(req, res) {
 
       if(method==='GET'&&p==='/api/admin/access'){
         const designatedCreatorHubAdmin = isDesignatedCreatorHubAdmin(user);
-        const ownerCanAccess = designatedCreatorHubAdmin && isModerator(user,req) && hasActiveReviewerSession(user);
+        const canAccess = designatedCreatorHubAdmin && isModerator(user,req) && hasActiveReviewerSession(user);
+        const ownerCanAccess = canAccess;
         if(ownerCanAccess){
           return json(res,200,{canAccess:true,brandOnly:false,setupRequired:false,mfaVerified:true});
         }
@@ -4389,7 +4390,7 @@ async function route(req, res) {
         }
         return json(res,200,{
           canAccess:false,brandOnly:false,
-          setupRequired:designatedCreatorHubAdmin&&!ownerCanAccess,
+          setupRequired:designatedCreatorHubAdmin&&!canAccess,
           mfaVerified:false
         });
       }
