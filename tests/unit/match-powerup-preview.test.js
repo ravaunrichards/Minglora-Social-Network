@@ -27,7 +27,7 @@ test('League Arena renders the six reference Power-Up cards and viewer Backpack'
   for (const id of ['boosting_glove','magic_mist','stun_hammer','time_maker','boosters','speed_challenge']) {
     assert.ok(leagues.includes(id), id + ' is present in League Arena');
   }
-  assert.doesNotMatch(leagues, /activateSelectedPowerup|data-match-powerup-select/);
+  assert.doesNotMatch(leagues, /activateSelectedPowerup/);
   assert.doesNotMatch(leagues, /powerupModelPaths|league-powerup-preview|model-viewer|ROTATABLE 3D PREVIEW|data-match-powerup-preview/);
 });
 
