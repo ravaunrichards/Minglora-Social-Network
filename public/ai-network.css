@@ -156,3 +156,10 @@
 .ai-network-chat-message small{color:var(--muted,#69778d);font-size:.72rem}
 .ai-network-bot-chat .ai-network-form{margin-top:2px}
 @media(max-width:760px){.ai-network-bot-chat-heading{align-items:center}.ai-network-chat-thread{max-height:48vh;padding:8px}.ai-network-chat-message{max-width:100%}}
+
+
+/* Keep organization identity readable when action controls need a second line. */
+.ai-network-organization-row{display:flex;flex-wrap:wrap;align-items:flex-start}
+.ai-network-organization-row>.ai-network-list-main{flex:1 1 280px;min-width:min(100%,280px)}
+.ai-network-organization-row>.ai-network-organization-actions{flex:0 1 auto;min-width:0;max-width:100%}
+.ai-network-organization-row>.ai-network-hr-workspace{flex:1 0 100%;min-width:0}
