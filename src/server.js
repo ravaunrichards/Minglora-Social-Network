@@ -904,10 +904,10 @@ async function deliverUserPush(userId,notification){
   if(!subscriptions.length)return;
   const stale=new Set();
   const payload=JSON.stringify({
-    title:({live:'Minglora LIVE',live_moderator:'LIVE moderator update',call:'Incoming Minglora call',message:'New Minglora message',profile_view:'Profile view',friend:'Friend update',reaction:'Post reaction',comment:'New comment',follow:'New follower',gift:'You received a gift',fan_club:'Fan Club update',meetwave_invite:'MeetWave invitation',league_match:'League match update',ai_task_approval:'Minglora AI approval required'})[notification.type]||'Minglora account update',
+    title:({live:'Minglora LIVE',live_moderator:'LIVE moderator update',call:'Incoming Minglora call',message:'New Minglora message',profile_view:'Profile view',friend:'Friend update',reaction:'Post reaction',comment:'New comment',follow:'New follower',gift:'You received a gift',fan_club:'Fan Club update',meetwave_invite:'MeetWave invitation',league_match:'League match update',ai_task_approval:'Minglora AI approval required',ai_approval:'Minglora AI approval required'})[notification.type]||'Minglora account update',
     body:String(notification.text||'You have a new Minglora notification.').slice(0,240),
     tag:'minglora-'+notification.type+'-'+String(notification.id).slice(0,24),
-    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,aiTaskId:notification.aiTaskId||null,sellerId:notification.sellerId||null,roomId:notification.roomId||null,invitationId:notification.invitationId||null,matchId:notification.matchId||null}
+    data:{type:notification.type,callId:notification.callId||null,liveSessionId:notification.liveSessionId||null,actorId:notification.actorId||null,notificationId:notification.id,aiTaskId:notification.aiTaskId||null,aiApprovalId:notification.aiApprovalId||null,sellerId:notification.sellerId||null,roomId:notification.roomId||null,invitationId:notification.invitationId||null,matchId:notification.matchId||null}
   });
   await Promise.all(subscriptions.map(async subscription=>{
     try{
@@ -3347,14 +3347,14 @@ async function route(req, res) {
         const approval = createAIApprovalRequest(db, user.id, await body(req, 8000));
         const notificationCreated=notifyAINetworkBotApproval(user,approval);
         await saveStore();
-        if(notificationCreated)publishNotificationEvent(user.id,'notification:new',db.notifications[0]?.id||null);
         return json(res, 201, { approval });
       }
       if (method === 'PATCH' && parts[0] === 'approvals' && parts.length === 2) {
         const input = await body(req, 4000);
         const approval = decideAIApproval(db, user.id, parts[1], input.decision);
-        if(resolveAINetworkBotApprovalNotification(user.id,parts[1],input.decision))publishNotificationEvent(user.id,'notification:changed');
+        const notificationResolved=resolveAINetworkBotApprovalNotification(user.id,parts[1],input.decision);
         await saveStore();
+        if(notificationResolved)publishNotificationEvent(user.id,'notification:changed');
         return json(res, 200, { approval });
       }
       if (method === 'POST' && sub === 'companion/consent') {
