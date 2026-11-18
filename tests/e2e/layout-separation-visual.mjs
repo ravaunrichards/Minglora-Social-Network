@@ -31,7 +31,7 @@ const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;c
 const report={
   result:'pending',
   originalCropDirectory:'assets/Crop References/Guests Layout/',
-  products:['LIVE','MeetWave'],
+  products:['LIVE','AUDIO LIVE','MeetWave'],
   layouts:layouts.map(item=>item.id),
   viewports:[],
   screenshots:[],
@@ -40,7 +40,7 @@ const report={
   occupiedSeatChecks:[],
   emptySeatChecks:[],
   geometryComparisons:[],
-  notes:['Every seat remains in the DOM; each reference determines which stage panels are visible.','Side by Side preserves the reference 4-column, 3-row structure; the ninth participant fills nine of its ten depicted cells because current capacity is one host plus eight guests.']
+  notes:['Every seat remains in the DOM; each reference determines which stage panels are visible.','Side by Side exposes ten seats: one host plus nine guest seats. The ninth guest position is enabled only for this layout.']
 };
 function seatMarkup(product,state){
   const nodes=[];
@@ -58,24 +58,42 @@ function seatMarkup(product,state){
 function markup(product,state){
   const heading='<div class="live-guest-layout-heading"><strong>'+product.toUpperCase()+' STAGE</strong><small>Original-crop visual QA</small></div>';
   const seats=heading+seatMarkup(product,state);
-  if(product==='LIVE'){
-    return '<section id="live-player-shell" class="live-player-shell live-mode-video_audio"><header class="live-player-header"><strong>MINGLORA LIVE</strong></header><div class="live-player-layout"><div class="live-video-column"><section id="live-video-stage" class="live-video-stage live-mode-video_audio"><div id="live-guest-layout" class="live-guest-layout">'+seats+'</div><div id="live-screen-share-stage" class="live-screen-share-stage" aria-label="Shared screen"></div></section><div class="live-player-controls live-icon-controls" role="group" aria-label="LIVE controls"></div></div><aside id="live-fullscreen-chat-slot" class="live-fullscreen-chat-slot"></aside></div></section>';
+  if(product==='LIVE'||product==='AUDIO LIVE'){
+    const audioOnly=product==='AUDIO LIVE';
+    const playerClass=audioOnly?'live-player-shell live-mode-audio_only live-player-audio-only':'live-player-shell live-mode-video_audio';
+    const stageClass=audioOnly?'live-video-stage live-audio-stage':'live-video-stage live-mode-video_audio';
+    const gridClass=audioOnly?'live-guest-layout audio-guest-layout':'live-guest-layout';
+    const header=audioOnly?'<div class="live-stage-topbar"><div class="live-stage-top-left"><div class="live-host-profile-wrap"><div class="live-host-identity-block"><button type="button" class="live-host-profile"><span class="live-host-identity-copy"><strong>Host participant</strong></span></button></div></div></div></div>':'';
+    const audioScene=audioOnly?'<div class="live-audio-scene"><div class="live-audio-orb"></div><span class="live-audio-live-label">LIVE AUDIO</span></div>':'';
+    const stageTail=audioOnly?'<div id="live-speaker-list" class="live-speaker-list"></div>':'<div id="live-screen-share-stage" class="live-screen-share-stage" aria-label="Shared screen"></div>';
+    const audioRoot=audioOnly?'<div id="live-audio-root" class="live-audio-root"></div>':'';
+    return '<section id="live-player-shell" class="'+playerClass+'"><header class="live-player-header"><strong>MINGLORA LIVE</strong><span class="live-broadcast-type">'+(audioOnly?'AUDIO ONLY':'VIDEO + AUDIO')+'</span></header><div class="live-player-layout"><div class="live-video-column">'+header+'<section id="live-video-stage" class="'+stageClass+'">'+audioScene+'<div id="live-guest-layout" class="'+gridClass+'">'+seats+'</div>'+stageTail+'</section>'+audioRoot+'<div class="live-player-controls live-icon-controls" role="group" aria-label="LIVE controls"></div></div><aside id="live-fullscreen-chat-slot" class="live-fullscreen-chat-slot"></aside></div></section>';
   }
   return '<section class="mw-meeting live-player-shell"><header class="mw-meeting-head live-player-header"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Visual QA room</h1></div><b id="mw-count" class="mw-meeting-count">9 seats</b></header><div class="mw-meeting-layout live-player-layout"><section class="mw-stage-column live-video-column"><div id="mw-screen-stage" class="mw-screen-stage" data-screen-layout="fluid-grid"><div id="mw-grid" class="mw-video-grid live-guest-layout live-video-stage" data-grid-role="host-eight-guest-seats" data-layout="fluid-grid">'+seats+'</div><div id="mw-screen-share-stage" class="mw-screen-share-stage" hidden></div></div><div id="mw-audio" class="mw-audio"></div><div class="mw-controls live-player-controls live-icon-controls" role="group" aria-label="MeetWave controls"></div></section><aside id="mw-chat-panel" class="mw-chat-panel"></aside></div></section>';
 }
 async function buildPage(browser,product,viewport,state){
   const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height},deviceScaleFactor:1});
-  const css=product==='LIVE'?liveCss:meetwaveCss;
+  const css=product==='MeetWave'?meetwaveCss:liveCss;
   await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'\n'+sizing+'</style></head><body>'+markup(product,state)+'</body></html>');
   return page;
 }
 async function applyLayout(page,product,layout){
   return page.evaluate(args=>{
-    const stage=document.querySelector(args.product==='LIVE'?'#live-video-stage':'#mw-screen-stage');
-    const grid=document.querySelector(args.product==='LIVE'?'#live-guest-layout':'#mw-grid');
-    if(args.product==='LIVE'){
+    const stage=document.querySelector(args.product!=='MeetWave'?'#live-video-stage':'#mw-screen-stage');
+    const grid=document.querySelector(args.product!=='MeetWave'?'#live-guest-layout':'#mw-grid');
+    if(args.product!=='MeetWave'){
       grid.dataset.liveLayout=args.layout;
       delete grid.dataset.liveGuestLayout;
+      if(args.layout==='side-by-side'&&!grid.querySelector('[data-seat-index="9"]')){
+        const ninth=document.createElement('div');
+        ninth.className='live-guest-seat is-guest';
+        ninth.dataset.seatIndex='9';
+        ninth.dataset.identity='qa-guest-9';
+        ninth.innerHTML='<div class="mw-video-placeholder">Guest 9</div><span class="live-guest-seat-tag">GUEST 9</span><span class="live-guest-seat-meta"><strong>Guest participant 9</strong><small>Visual QA</small></span>';
+        grid.append(ninth);
+      }else if(args.layout!=='side-by-side'){
+        grid.querySelector('[data-seat-index="9"]')?.remove();
+      }
     }else{
       stage.dataset.screenLayout=args.layout;
       grid.dataset.layout=args.layout;
@@ -87,6 +105,11 @@ async function applyLayout(page,product,layout){
       if(selected)selected.classList.add('is-spotlight','is-focused');
     }
     const bounds=stage.getBoundingClientRect();
+    const audioHeader=document.querySelector('#live-player-shell.live-player-audio-only .live-stage-topbar');
+    const audioHeaderBounds=audioHeader?audioHeader.getBoundingClientRect():null;
+    const audioScene=stage.querySelector('.live-audio-scene');
+    const audioHeading=grid.querySelector(':scope > .live-guest-layout-heading');
+    const audioHeadingBounds=audioHeading?audioHeading.getBoundingClientRect():null;
     const seats=[...grid.querySelectorAll('.live-guest-seat')].map(node=>{
       const r=node.getBoundingClientRect(),s=getComputedStyle(node);
       return {
@@ -108,9 +131,12 @@ async function applyLayout(page,product,layout){
     return {
       product:args.product,layout:args.layout,
       stage:{width:bounds.width,height:bounds.height},
+      audioHeaderGap:audioHeaderBounds?bounds.top-audioHeaderBounds.bottom:null,
+      audioSceneDisplay:audioScene?getComputedStyle(audioScene).display:null,
+      audioHeadingBounds:audioHeadingBounds?{width:audioHeadingBounds.width,height:audioHeadingBounds.height}:null,
       grid:{x:gridBounds.x-bounds.x,y:gridBounds.y-bounds.y,width:gridBounds.width,height:gridBounds.height},
-      layoutAttribute:grid.getAttribute(args.product==='LIVE'?'data-live-layout':'data-layout'),
-      productionSelectorMatches:args.product==='LIVE'?document.querySelectorAll(liveSelector).length:document.querySelectorAll('.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="'+args.layout+'"]').length,
+      layoutAttribute:grid.getAttribute(args.product!=='MeetWave'?'data-live-layout':'data-layout'),
+      productionSelectorMatches:args.product!=='MeetWave'?document.querySelectorAll(liveSelector).length:document.querySelectorAll('.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="'+args.layout+'"]').length,
       columns:computed.gridTemplateColumns.trim().split(/\s+/).length,
       rows:rowTracks.length-(hasDedicatedHeadingTrack?1:0),
       totalGridRows:rowTracks.length,
@@ -129,14 +155,22 @@ function assertInside(result,seat,label){
 }
 function verify(result,definition,viewport,state){
   const label=result.product+' '+definition.id+' '+viewport.name+' '+state;
+  if(result.product==='AUDIO LIVE'){
+    assert.ok(result.audioHeaderGap>=-1,label+' keeps the host identity row above the seat stage; gap='+result.audioHeaderGap);
+    assert.equal(result.audioSceneDisplay,'none',label+' removes the decorative scene overlay from the seat grid');
+    assert.ok(result.audioHeadingBounds&&result.audioHeadingBounds.width<=1.1&&result.audioHeadingBounds.height<=1.1,label+' keeps the seat-count heading off visible panels');
+  }
   if(result.headingRowHeight!==null){
     assert.ok(Math.abs(result.headingRowHeight-22)<=1,label+' reserves a separate 22px heading row');
     const host=result.seats.find(seat=>seat.index===0&&seat.visible);
     if(host)assert.ok(host.y>=result.headingRowHeight-1,label+' keeps the host panel below the heading row');
   }
-  assert.equal(result.seats.length,9,label+' retains all nine seat records');
+  const hasNinthGuest=result.layout==='side-by-side'&&result.product!=='MeetWave';
+  assert.equal(result.seats.length,hasNinthGuest?10:9,label+' retains the expected seat records');
   const visible=result.seats.filter(seat=>seat.visible);
-  assert.equal(visible.length,definition.visible,label+' stage panel count matches its source-crop arrangement');
+  const expectedVisible=hasNinthGuest?10:definition.visible;
+  assert.equal(visible.length,expectedVisible,label+' stage panel count matches its source-crop arrangement');
+  if(hasNinthGuest)assert.ok(visible.some(seat=>seat.index===9),label+' displays Guest seat 9');
   visible.forEach(seat=>assertInside(result,seat,label));
   const get=index=>visible.find(seat=>seat.index===index);
   if(definition.id==='full-screen'){
@@ -179,6 +213,7 @@ function verify(result,definition,viewport,state){
     assert.ok(top.every(Boolean)&&Math.abs(top[0].y-top[1].y)<3,label+' places two large panels on the top row');
     assert.ok(top.every(item=>item.h>small[0].h*1.3),label+' keeps top panels larger than compact panels');
     assert.ok(small.every(item=>item.y>top[0].y+top[0].h*.7),label+' places compact panels underneath');
+    assert.equal(small.length,8,label+' includes all eight compact guest positions beneath the first pair');
     assert.equal(result.columns,4,label+' uses four columns');
     assert.equal(result.rows,3,label+' uses three rows');
   }
@@ -228,7 +263,7 @@ async function compareCrop(browser,product,definition,viewport,png){
 const browser=await chromium.launch({headless:true});
 try{
   for(const viewport of viewports){
-    for(const product of ['LIVE','MeetWave']){
+    for(const product of ['LIVE','AUDIO LIVE','MeetWave']){
       const page=await buildPage(browser,product,viewport,'occupied');
       const signatures=new Set();
       const productResults=[];
@@ -239,7 +274,7 @@ try{
         report.occupiedSeatChecks.push(summary);
         signatures.add(signature(result));
         productResults.push(result);
-        const selector=product==='LIVE'?'#live-video-stage':'#mw-screen-stage';
+        const selector=product==='MeetWave'?'#mw-screen-stage':'#live-video-stage';
         const png=await page.locator(selector).screenshot();
         await compareCrop(browser,product,definition,viewport,png);
       }

@@ -4750,7 +4750,7 @@ async function route(req, res) {
           canManageAccess: adminAccess,
           capabilities: [
             {id:'live-studio',label:'LIVE Studio',description:'Camera, microphone and host screen sharing.'},
-            {id:'multi-guest',label:'Multi-guest stage',description:'Host-approved guest stage with up to eight guest seats.'},
+            {id:'multi-guest',label:'Multi-guest stage',description:'Host-approved guest stage with eight guest seats, or nine in Side by Side.'},
             {id:'room-moderators',label:'Room moderators',description:'Assign up to ten room-scoped chat moderators.'},
             {id:'live-chat',label:'LIVE chat controls',description:'Group chat, pinned comments and host moderation.'},
             {id:'broadcast-modes',label:'Broadcast modes',description:'Video + Audio, Audio Only, Mobile Gaming and LIVE Studio.'},
@@ -5266,6 +5266,14 @@ async function route(req, res) {
         if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change the screen layout.' });
         const layout = String(input.layout || '');
         if (!LIVE_SCREEN_LAYOUTS.includes(layout)) return json(res, 400, { error: 'Choose a supported LIVE screen layout.' });
+        if (layout !== 'side-by-side') {
+          const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
+            item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+          ).length;
+          if (activeSpeakers > 8) {
+            return json(res, 409, { error: 'Remove one guest from the stage before switching to a layout that supports eight guest seats.' });
+          }
+        }
         session.liveLayout = layout;
         await saveStore();
         return json(res, 200, { ok: true, liveLayout: session.liveLayout });
@@ -5278,6 +5286,12 @@ async function route(req, res) {
         if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change the guest-box layout.' });
         const layout = String(input.layout || '');
         if (!LIVE_GUEST_LAYOUTS.includes(layout)) return json(res, 400, { error: 'Choose Roundtable 1 or Roundtable 2 for the LIVE guest-box layout.' });
+        const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
+          item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+        ).length;
+        if (activeSpeakers > 8) {
+          return json(res, 409, { error: 'Remove one guest from the stage before switching to a layout that supports eight guest seats.' });
+        }
         session.liveGuestLayout = layout;
         session.liveLayout = layout; // Compatibility: older guest-box clients update the unified guest-stage layout.
         await saveStore();
@@ -5381,10 +5395,11 @@ async function route(req, res) {
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
         const previous = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id);
         if (previous && ['requested', 'accepted'].includes(previous.status)) return json(res, 200, { request: previous });
+        const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
         const autoAccepted = session.liveSettings?.autoAcceptRequests === true;
         if (autoAccepted) {
           const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)).length;
-          if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+          if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         }
         await requestSupabaseState('live_speaker_request', { broadcastId: session.id, userId: user.id });
         const requestedAt = now();
@@ -5412,10 +5427,11 @@ async function route(req, res) {
         if (existing && ['requested', 'accepted', 'connected', 'invited'].includes(existing.status)) {
           return json(res, 409, { error: 'This member already has an active guest request or invitation.' });
         }
+        const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
         const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
           item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
         ).length;
-        if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+        if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         const invitedAt = now();
         const invitation = {
           id: uid(), sessionId: session.id, userId: target.id, role: 'guest', status: 'invited',
@@ -5446,10 +5462,11 @@ async function route(req, res) {
         if (!participants.some(participant => participant.identity === user.id)) {
           return json(res, 409, { error: 'Join this LIVE room first, then accept the Co-host invitation.' });
         }
+        const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
         const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
           item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
         ).length;
-        if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+        if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         request.status = 'accepted';
         request.acceptedAt = now();
         request.reviewedAt = now();
@@ -5494,12 +5511,13 @@ async function route(req, res) {
         }
         if (decision === 'accept') {
           if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
+          const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
           const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
             item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
           ).length;
-          if (activeSpeakers >= 8) return json(res, 409, { error: 'The eight guest speaker places are full.' });
+          if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         }
-        await requestSupabaseState('live_speaker_request_review', { broadcastId: session.id, hostId: user.id, speakerId, decision });
+        await requestSupabaseState('live_speaker_request_review', { broadcastId: session.id, hostId: user.id, speakerId, decision, guestSeatLimit: session.liveLayout === 'side-by-side' ? 9 : 8 });
         request.status = decision === 'accept' ? 'accepted' : 'rejected';
         request.acceptedAt = decision === 'accept' ? now() : null;
         request.reviewedAt = now();

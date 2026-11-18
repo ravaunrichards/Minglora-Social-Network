@@ -12,6 +12,8 @@ const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const fit = read('public/live-room-fit.css');
 const guestLayouts = read('public/live-tiktok-compact.css');
+const audioGuardrails = read('public/live-interface-guardrails.css');
+const audioVisualMatrix = read('tests/e2e/layout-separation-visual.mjs');
 const index = read('public/index.html');
 const serviceWorker = read('public/sw.js');
 
@@ -113,16 +115,18 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 
 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
-  assert.ok(index.includes('/app.js?v=20261117-audio-only-mic-guest-seats-1'));
+  assert.ok(index.includes('/app.js?v=20261118-side-by-side-guest-seat-nine-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1'));
-  assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
+  assert.ok(serviceWorker.includes("'/app.js?v=20261118-side-by-side-guest-seat-nine-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
-  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1')"));
+  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3')"));
+  assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'));
+  assert.ok(serviceWorker.includes("'/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'"));
   assert.doesNotMatch(fit,/data-live-guest-layout=/);
 });
 
-test('Audio LIVE uses the full stage for the same nine reference grids; metadata stays overlaid', () => {
+test('Audio LIVE uses all nine reference grids without covering seat panels', () => {
   const referenceStart=guestLayouts.indexOf('/* FINAL NINE GUEST LAYOUTS');
   const referenceEnd=guestLayouts.indexOf("/* Responsive fit scales tile proportions without changing a crop's row/column count.",referenceStart);
   const audioStart=guestLayouts.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
@@ -132,7 +136,7 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   const audioContract=guestLayouts.slice(audioStart);
   const layoutRules=(source,layout)=>[...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .map(match=>({
-      selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage'),
+      selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage').replaceAll(':is(.audio-guest-layout)',''),
       body:match[2].trim().replace(/\s+/g,' ')
     }))
     .filter(rule=>rule.selector.includes('data-live-layout="'+layout+'"'));
@@ -143,11 +147,52 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   assert.match(audioContract,/#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
   assert.ok(audioContract.includes('#live-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
     'Audio LIVE guest panels must occupy the single full-stage row, not the retired row 2');
-  assert.match(audioContract,/\.live-audio-scene\{[\s\S]*?position:absolute!important/);
+  const safeAudioScene=audioGuardrails.slice(audioGuardrails.lastIndexOf('/* Audio LIVE keeps its host identity'));
+  assert.match(safeAudioScene,/\.live-video-column\{[\s\S]*?grid-template-rows:48px minmax\(0,1fr\) 54px!important/);
+  assert.match(safeAudioScene,/\.live-video-column>\.live-stage-topbar\{[\s\S]*?position:relative!important/);
+  assert.match(safeAudioScene,/\.live-video-column #live-video-stage\.live-audio-stage\{[\s\S]*?grid-row:2!important/);
+  assert.match(safeAudioScene,/\.live-audio-scene\{[\s\S]*?display:none!important/);
+  assert.match(safeAudioScene,/#live-player-shell #live-video-stage\.live-audio-stage #live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?width:1px!important;[\s\S]*?height:1px!important;[\s\S]*?clip-path:inset\(50%\)!important/);
+  assert.match(app,/stage\?\.insertAdjacentHTML\("beforebegin",liveStageHud\)/);
+  assert.match(audioVisualMatrix,/products:\['LIVE','AUDIO LIVE','MeetWave'\]/);
+  assert.match(audioVisualMatrix,/audioHeaderGap/);
   assert.match(audioContract,/#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app, /class='live-guest-layout audio-guest-layout'/);
   assert.match(app, /function renderLiveGuestLayout\(/);
   assert.match(app, /function renderLiveSpeakerRoster\(/);
+});
+
+test('Audio LIVE Full Screen keeps its single full-stage host tile above the mobile header row', () => {
+  const start=guestLayouts.lastIndexOf('/* 1. FULL SCREEN — exactly one full-height participant panel. */');
+  const end=guestLayouts.indexOf('/* 2. FLUID PANEL',start);
+  const rule=guestLayouts.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.ok(rule.includes('#live-guest-layout[data-live-layout="full-screen"]:is(.audio-guest-layout){grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}'));
+  assert.ok(rule.includes('#live-guest-layout[data-live-layout="full-screen"]:is(.audio-guest-layout)>.live-guest-seat.is-host{grid-column:1!important;grid-row:1!important}'));
+  assert.ok(rule.includes('>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){display:none!important}'));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
+  assert.ok(serviceWorker.includes("'/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'"));
+});
+
+test('Side by Side alone exposes and enforces a ninth LIVE guest seat', () => {
+  const start=app.indexOf('function renderLiveGuestLayout(');
+  const end=app.indexOf('\nfunction renderLiveViewerPanel(',start);
+  const renderer=app.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(renderer,/const guestSeatLimit=activeLiveScreenLayout==='side-by-side'\?9:8/);
+  assert.match(renderer,/guests\.slice\(0,guestSeatLimit\)/);
+  assert.match(renderer,/while\(specs\.length<guestSeatLimit\+1\)/);
+  assert.match(renderer,/Guest seat "\+esc\(spec\.seatNumber\)/);
+  assert.match(renderer,/guestSeatLimit\+1/);
+  assert.match(app,/Manage up to 8 guest seats in the other layouts, or 9 in Side by Side\./);
+  assert.equal((server.match(/activeSpeakers >= guestSeatLimit/g)||[]).length,4,
+    'requests, invitations, invitation acceptance, and host approvals use the active layout capacity');
+  assert.match(server,/session\.liveLayout === 'side-by-side' \? 9 : 8/);
+  assert.match(server,/guestSeatLimit: session\.liveLayout === 'side-by-side' \? 9 : 8/);
+  assert.match(server,/if \(layout !== 'side-by-side'\) \{[\s\S]*?if \(activeSpeakers > 8\)[\s\S]*?Remove one guest from the stage before switching/);
+  assert.match(server,/if \(activeSpeakers > 8\)[\s\S]*?Remove one guest from the stage before switching/);
+  assert.match(edge,/Number\(input\.guestSeatLimit\)===9\?9:8/);
+  assert.match(edge,/Number\(count\|\|0\)>=guestSeatLimit/);
 });
 
 test('Audio-only guest seats use microphone publishers while video LIVE keeps its media-track check', () => {
