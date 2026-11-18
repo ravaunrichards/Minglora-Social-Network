@@ -1,15 +1,15 @@
 # Minglora Blockers and Verification Limits
 
-## Current Admin Finance stage
+> Current verified state: [.agent-work/EXECUTION_RECOVERY_CHECKPOINT_20261118.md](EXECUTION_RECOVERY_CHECKPOINT_20261118.md). The historical snapshot below is preserved for audit only. Statements in that snapshot about Render being absent, Edge Function v129, or the old main SHA are superseded.
 
-- Implementation is merged in main commit 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd.
-- PR #333 merged successfully. Pre-merge CI passed all three jobs; separate repository layout QA passed; post-merge main CI run 43638100531 completed successfully.
-- Finance records are genuinely empty: zero subscriptions, budgets, invoices, operating expenses and finance audit events at inspection. Do not replace these with sample/demo records.
-- The 42 provider records are candidates only. All inspected candidates reported not_registered and not_connected. No provider was marked connected during this work.
-- The configured Supabase connection-test operation exists in source, but the actual owner/MFA Admin Centre button was not exercised. Do not change the Supabase provider record to connected until the live database and Storage probes succeed through the protected runtime path.
-- No actual invoice/receipt file has been uploaded. The private minglora-company-finance Storage bucket was absent at inspection; runtime source is designed to create it privately on first attachment preparation. First upload and audited download still need end-to-end verification.
-- There is no direct company bill-payment action, bank feed, card vault or company payment-provider connection. The API intentionally requires manual provider billing portal action and verified provider confirmation before an invoice can be marked paid.
-- Finance records and permissions are currently owner/MFA restricted. A delegated Finance Administrator or second-person approval workflow has not been implemented.
+## Active verified blocker / acceptance gate — 2026-11-18
+- No repository, CI or Render build blocker remains for the Logo Center completion slice: PR #526 is merged, its exact-head checks passed 9/9, main CI passed 4/4, and Render deployment `dep-dbuufkjm8hqs738kug90` is LIVE on `e03c8b615ddaaba774558b952524181756c6a27e`.
+- Production Supabase migration `20261118160000_minglora_logo_center_completion` is applied; Edge Function `minglora-runtime-state` is ACTIVE v139.
+- Owner's signed-in MFA browser acceptance of Logo Center workflows has not been performed in this inspection. Do not simulate or bypass that acceptance.
+- Public manifest HTTP smoke test was not completed because the available web fetch could not reach the Render URL. Deployment live/readiness is confirmed by Render's own deployment record and service logs; do not represent the public manifest as separately tested.
+- This checkpoint does not measure overall Minglora completion or imply unrelated workstreams are complete.
+
+## Historical blocker snapshot (preserved; not current)
 
 ## Access and roles
 
