@@ -16,6 +16,8 @@ declare
   v_is_owner boolean := false;
   v_is_following boolean := false;
   v_is_blocked boolean := false;
+  v_origin_location_public boolean := false;
+  v_current_location_public boolean := false;
   v_follower_count bigint := 0;
   v_languages jsonb := '[]'::jsonb;
   v_locations jsonb := '[]'::jsonb;
@@ -101,6 +103,23 @@ begin
   from ai_network.ai_identity_follows f
   where f.identity_id = p_identity_id and f.follow_status = 'active';
 
+  -- Keep profile-level location values behind the same explicit location-sharing
+  -- consent as the structured public location list. Profile visibility alone does
+  -- not imply consent to disclose country, parish, district, city or town.
+  select exists (
+    select 1 from ai_network.ai_identity_locations loc
+    where loc.identity_id = p_identity_id
+      and loc.location_type = 'origin'
+      and loc.is_public is true
+  ) into v_origin_location_public;
+
+  select exists (
+    select 1 from ai_network.ai_identity_locations loc
+    where loc.identity_id = p_identity_id
+      and loc.location_type = 'current'
+      and loc.is_public is true
+  ) into v_current_location_public;
+
   select coalesce(jsonb_agg(jsonb_build_object(
     'language_tag', l.language_tag,
     'language_name', l.language_name,
@@ -155,14 +174,14 @@ begin
       'gender', v_profile.gender,
       'gender_presentation', v_profile.gender_presentation,
       'nationality', v_profile.nationality,
-      'country_of_origin', v_profile.country_of_origin,
-      'current_country', v_profile.current_country,
-      'time_zone', v_profile.time_zone,
-      'state_province', v_profile.state_province,
-      'parish_county', v_profile.parish_county,
-      'district', v_profile.district,
-      'city', v_profile.city,
-      'town', v_profile.town,
+      'country_of_origin', case when v_origin_location_public then v_profile.country_of_origin else null end,
+      'current_country', case when v_current_location_public then v_profile.current_country else null end,
+      'time_zone', case when v_current_location_public then v_profile.time_zone else null end,
+      'state_province', case when v_current_location_public then v_profile.state_province else null end,
+      'parish_county', case when v_current_location_public then v_profile.parish_county else null end,
+      'district', case when v_current_location_public then v_profile.district else null end,
+      'city', case when v_current_location_public then v_profile.city else null end,
+      'town', case when v_current_location_public then v_profile.town else null end,
       'interests', to_jsonb(v_profile.interests),
       'hobbies', to_jsonb(v_profile.hobbies),
       'profession', v_profile.profession,
