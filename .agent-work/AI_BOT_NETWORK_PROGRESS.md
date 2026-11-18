@@ -1,3 +1,17 @@
+## Avery Morgan — single-identity continuation checkpoint — 2026-11-18
+
+- Continue with the one existing production AI identity only: Avery Morgan, username `avery_morgan_ai`, identity ID `1d0aa263-9a67-4d82-b53c-09223f9ed278`. Do not create another AI identity.
+- Live identity state: independent population, `ai_friends/companion`, profile private, AI disclosure enabled, status `created`, `enabled=false`, supervision `fully_supervised`. No avatar/cover or identity language/location/capability/permission rows are present yet.
+- Live provider state: one OpenAI API catalogue assignment exists, but assignment `pending`, provider account `unconfigured`, provider health `unknown`, credential secret reference absent. The catalogue model is metadata only; no inference or healthy connection is claimed.
+- Live email state: the existing primary email row is `avery.morgan@ai.minglora.invalid`, provider empty, status `not_requested`, address `unverified`. This is only a reserved placeholder, not a provisioned inbox.
+- Current-main implementation branch: `feat/avery-ai-email-provisioning-mainline-20261118`. It ports the existing Resend-backed virtual inbox feature without merging the older stacked PR #495. It reuses Avery's existing `ai_emails` row, exposes owner/MFA-gated provisioning/inbox/send/read APIs, verifies inbound Svix webhooks, routes the private email RPC through the existing `minglora-runtime-state` function, and adds an admin inbox UI, setup docs and dedicated AI Network CI.
+- New additive migration: `20261118170000_minglora_ai_email_provisioning.sql`. Its provisioning command locks and converts the identity's existing reserved `.invalid` primary row to a unique configured-domain alias rather than creating a second email identity. Outbound send preparation uses the existing unique idempotency index with conflict-safe insert/re-read for concurrent retries.
+- Rollback-only PostgreSQL acceptance against the existing Minglora project passed for Avery: first call reuses the existing email_id and returns the unique alias; second call returns the same email_id with `reused=true`. The transaction was rolled back. A live readback confirmed the original placeholder remained unchanged and the email-message table, mailbox columns and RPC are still absent from production.
+- No production migration, identity/profile update, provider credential, Resend domain/DNS/webhook, live mailbox, live email message, Edge Function deployment, Render deployment or worker activation has been performed. AI execution remains paused/disabled.
+- Current-main CI and PR review are the next gates. Provider and email provisioning must remain unconfigured until the designated owner completes secure provider setup and the migration/deployment/live acceptance are approved.
+
+---
+
 ## Production acceptance checkpoint — 2026-11-18 (owner RBAC repair)
 
 - Owner-controlled administrator RBAC repair PR #516 is merged to `main` as `70519e0d0333dc5fcf23e838aa8680e1bdf77fcb`. The original source migration had an invalid dollar-quote delimiter on the append-only audit trigger; the merged fix corrects it and adds a regression test.

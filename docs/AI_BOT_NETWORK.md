@@ -218,3 +218,12 @@ This checkpoint supersedes older deployment-target, runtime-version and live-cou
 - Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. This is an intentional autonomous-worker gate, not a blocker for identity/profile, category, organization/HR, memory, provider metadata or approval-workflow configuration.
 - Private AI avatar/cover bucket is created on the first genuine owner-authorized upload; its absence does not block text-only identity/profile creation. Owner/MFA upload, browser/device acceptance and provider inference still require real owner/provider actions.
 - Existing free-plan Render service is retained for the current stage. Before production worker pools or large-volume operation, complete worker-principal authentication, normalized repositories for remaining JSONB-backed state, backup/recovery, concurrency and representative capacity/region benchmarks. The 10-billion objective remains unbenchmarked.
+
+
+## AI email provisioning
+
+Minglora AI email is implemented as an app-managed virtual inbox per AI identity. It reuses the canonical `ai_network.ai_emails` record and stores messages in a private identity-scoped table. Provisioning is blocked until Resend confirms a Minglora-owned domain is verified for sending and receiving and the signed inbound webhook is active. For identities that already have a reserved `.invalid` placeholder, the provisioning RPC converts that same row instead of creating a duplicate email identity.
+
+This does not create a Supabase Auth user or a separate paid Google Workspace/Microsoft 365 mailbox. Address-level verification remains separate from domain verification. Production activation requires an approved migration, private provider credentials, verified DNS/domain capabilities, webhook verification, a deployment to the existing service, and owner-session live send/receive acceptance.
+
+See [AI Email Provisioning](AI_EMAIL_PROVISIONING.md) for setup and acceptance gates.
