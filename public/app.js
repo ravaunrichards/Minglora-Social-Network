@@ -9491,9 +9491,11 @@ async function renderNotifications(){if(state.view!=='notifications')activateSil
       : '<span class="notification-avatar-fallback" aria-hidden="true">'+notificationCategoryIcon(item)+'</span>';
     const verified=actor?.verificationBadge==='blue'?'<span class="notification-verified" title="Minglora Verified" aria-label="Minglora Verified">✓</span>':'';
     let actions='';
-    if(item.type==='ai_task_approval'&&item.aiTaskId){
+    if(item.type==='ai_task_approval'&&item.aiTaskId&&!item.aiTaskDecision){
       actions='<button type="button" class="primary" data-notice-ai-approval="'+esc(item.id)+'" data-task-id="'+esc(item.aiTaskId)+'" data-status="approved">Approve task</button>'+
         '<button type="button" class="secondary" data-notice-ai-approval="'+esc(item.id)+'" data-task-id="'+esc(item.aiTaskId)+'" data-status="rejected">Reject</button>';
+    }else if(item.type==='ai_task_approval'&&item.aiTaskDecision){
+      actions='<span class="notification-state">'+(item.aiTaskDecision==='approved'?'Approval recorded':item.aiTaskDecision==='rejected'?'Request rejected':'Task cancelled')+'</span>';
     }else if(item.type==='call'&&item.callId){
       actions='<button type="button" class="primary" data-notice-answer="'+esc(item.id)+'" data-call-id="'+esc(item.callId)+'">Answer</button><button type="button" class="secondary" data-notice-decline="'+esc(item.id)+'" data-call-id="'+esc(item.callId)+'">Decline</button>';
     }else if(item.type==='live'&&item.liveSessionId){
@@ -9654,7 +9656,8 @@ async function pollBrowserNotifications(){
       }
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
-        if(webPushSubscriptionActive||state.settings?.notifications?.push===false||!('Notification' in window)||Notification.permission!=='granted')continue;
+        if(item.type==='ai_task_approval')toast('Approval required: '+String(item.aiTaskTitle||'AI task')+'. Open Notifications to approve or reject.');
+        if((webPushSubscriptionActive&&state.settings?.notifications?.push!==false)||(state.settings?.notifications?.push===false&&item.type!=='ai_task_approval')||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='ai_task_approval'?'Minglora AI approval required':item.type==='live'?'Minglora LIVE':item.type==='live_moderator'?'LIVE moderator update':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':item.type==='gift'?'New gift':item.type==='fan_club'?'Fan Club update':item.type==='meetwave_invite'?'MeetWave invitation':item.type==='league_match'?'League match update':item.type==='friend'?'Friend update':item.type==='reaction'?'Post reaction':item.type==='comment'?'New comment':item.type==='follow'?'New follower':item.type==='message'?'New Minglora message':'Minglora account update';
         try{
           const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/Logo/Logo.jpg',silent:true});
