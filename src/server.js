@@ -5709,7 +5709,6 @@ async function route(req, res) {
         if (!allowed) return json(res, 404, { error: 'LIVE session not found.' });
         if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
         if (session.liveSettings?.allowGuestRequests === false) return json(res, 403, { error: 'The host is not accepting guest speaker requests right now.' });
-        if (session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled co-host and guest stage requests for this LIVE.' });
         const joined = (db.liveParticipants || []).some(item => item.sessionId === session.id && item.userId === user.id && !item.leftAt);
         if (!joined) return json(res, 409, { error: 'Join the LIVE room before requesting a speaker place.' });
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
@@ -5732,6 +5731,7 @@ async function route(req, res) {
         const broadcastId=String(input.broadcastId||'');
         const ownLive=(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live'&&item.hostId===user.id);
         if(!ownLive)return json(res,409,{error:'Start your own LIVE before starting Co-host.'});
+        if(ownLive.liveSettings?.allowCoHost===false)return json(res,403,{error:'Co-host is disabled in your LIVE settings.'});
         if(!isLiveKitConfigured())return json(res,503,{error:'Co-host requires an active LiveKit connection.'});
         const health=await verifyLiveKitConnection();
         if(!health.connected)return json(res,503,{error:health.error||'LiveKit is unavailable.'});
@@ -5772,6 +5772,7 @@ async function route(req, res) {
         const cohostId=cohostInviteMatch[1];
         const live=(db.liveSessions||[]).find(item=>item.status==='live'&&item.hostId===user.id);
         if(!live)return json(res,409,{error:'Your own LIVE must remain active to invite a Co-host.'});
+        if(live.liveSettings?.allowCoHost===false)return json(res,403,{error:'Co-host invitations are disabled in your LIVE settings.'});
         const username=normalizeUsername(input.username||'');
         if(!username)return json(res,400,{error:'Enter the LIVE creator username.'});
         const target=(db.users||[]).find(member=>normalizeUsername(member.username||'')===username);
@@ -5806,6 +5807,10 @@ async function route(req, res) {
           const current=await requestSupabaseState('live_cohost_session_get',{sessionId:cohostId});
           const participant=(current.participants||[]).find(item=>item.user_id===participantId);
           if(!participant)return json(res,404,{error:'Co-host participant was not found.'});
+          if(decision==='accept'){
+            const participantLive=(db.liveSessions||[]).find(item=>item.id===participant.broadcast_id&&item.status==='live'&&item.hostId===participantId);
+            if(!participantLive)return json(res,409,{error:'The invited creator must still be LIVE on their own account to accept Co-host.'});
+          }
           if(decision==='remove'){
             if(current.session?.host_user_id!==user.id)return json(res,403,{error:'Only the Co-host host can remove a creator.'});
             await removeLiveKitParticipant(current.session.room_ref,participantId).catch(error=>{
@@ -5833,7 +5838,8 @@ async function route(req, res) {
           const sourceBroadcast=(db.liveSessions||[]).find(item=>item.id===String(input.broadcastId||''));
           if(!sourceBroadcast||sourceBroadcast.status!=='live')return json(res,404,{error:'Join an active creator LIVE to view this Co-host stage.'});
           const allowed=sourceBroadcast.hostId===user.id||sourceBroadcast.visibility==='public'||
-            (sourceBroadcast.visibility==='friends'&&isFriend(user.id,sourceBroadcast.hostId));
+            (sourceBroadcast.visibility==='friends'&&isFriend(user.id,sourceBroadcast.hostId))||
+            (sourceBroadcast.visibility==='subscribers'&&listActiveCreatorSubscriptions(db.creatorSubscriptions,sourceBroadcast.hostId).some(item=>item.subscriberId===user.id));
           if(!allowed)return json(res,404,{error:'LIVE session not found.'});
         }
         if(!isLiveKitConfigured())return json(res,503,{error:'Live video is not configured for Minglora.'});
@@ -5868,17 +5874,6 @@ async function route(req, res) {
           const result=await requestSupabaseState('live_cohost_leave',{sessionId:cohostId,userId:user.id});
           return json(res,200,{ok:true,participant:result.participant});
         }catch(error){return json(res,error.status||503,{error:error.message||'Could not leave the Co-host stage.'});}
-      }
-      const cohostEndMatch=p.match(/^\/api\/live\/cohost\/sessions\/([^/]+)\/end$/);
-      if(method==='POST'&&cohostEndMatch){
-        const cohostId=cohostEndMatch[1];
-        try{
-          const current=await requestSupabaseState('live_cohost_session_get',{sessionId:cohostId});
-          if(current.session?.host_user_id!==user.id)return json(res,403,{error:'Only the Co-host host can end the collaboration.'});
-          for(const participant of current.participants||[])await removeLiveKitParticipant(current.session.room_ref,participant.user_id).catch(()=>{});
-          const result=await requestSupabaseState('live_cohost_end',{sessionId:cohostId,hostId:user.id});
-          return json(res,200,{ok:true,session:result.session});
-        }catch(error){return json(res,error.status||503,{error:error.message||'Could not end the Co-host stage.'});}
       }
       const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
       if (method === 'GET' && liveSpeakerStatusMatch) {
@@ -6053,6 +6048,20 @@ async function route(req, res) {
         if (!session) return json(res, 404, { error: 'Live session not found.' });
         if (session.hostId !== user.id) return json(res, 403, { error: 'Only the host can end this live session.' });
         try {
+          // Close or leave only the shared Co-host room associated with this creator's
+          // own broadcast. Other creators' independent LIVE broadcasts remain untouched.
+          try{
+            const collaboration=await requestSupabaseState('live_cohost_session_get',{broadcastId:session.id});
+            if(collaboration.session?.status==='active'){
+              if(collaboration.session.host_user_id===user.id){
+                await requestSupabaseState('live_cohost_end',{sessionId:collaboration.session.id,hostId:user.id});
+                for(const member of collaboration.participants||[])await removeLiveKitParticipant(collaboration.session.room_ref,member.user_id).catch(()=>{});
+              }else{
+                await removeLiveKitParticipant(collaboration.session.room_ref,user.id).catch(()=>{});
+                await requestSupabaseState('live_cohost_leave',{sessionId:collaboration.session.id,userId:user.id});
+              }
+            }
+          }catch(cohostError){console.warn('[Minglora Co-host] Own LIVE is ending; collaboration cleanup needs reconciliation.',String(cohostError?.message||'').slice(0,180));}
           await endLiveSession(session, { deleteRoom: true });
         } catch (error) {
           console.error('[Minglora LIVE] Could not confirm that the session ended.', { sessionId: session.id, message: String(error?.message || 'cleanup failed').slice(0, 180) });
