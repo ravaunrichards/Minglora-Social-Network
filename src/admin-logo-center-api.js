@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 const BRAND_MIME_EXTENSIONS = Object.freeze({
   "image/svg+xml":"svg",
   "image/png":"png",
@@ -28,13 +30,13 @@ export async function handleAdminLogoCenterApi(context) {
   if (requestPath === "/api/brand/manifest" && method === "GET") {
     try {
       if (AUTH_PROVIDER !== "supabase" || !isSupabasePersistence()) {
-        return json(res,200,{placements:[],updatedAt:null},{"Cache-Control":"no-store"});
+        return respond(res,200,{placements:[],updatedAt:null},{"Cache-Control":"no-store"});
       }
       const manifest=await requestSupabaseState("brand_public_manifest");
-      if (manifest?.skipped) return json(res,200,{placements:[],updatedAt:null},{"Cache-Control":"no-store"});
-      return json(res,200,manifest,{"Cache-Control":"no-store"});
+      if (manifest?.skipped) return respond(res,200,{placements:[],updatedAt:null},{"Cache-Control":"no-store"});
+      return respond(res,200,manifest,{"Cache-Control":"no-store"});
     } catch {
-      return json(res,503,{error:"The published Minglora brand manifest is temporarily unavailable."},{"Cache-Control":"no-store"});
+      return respond(res,503,{error:"The published Minglora brand manifest is temporarily unavailable."},{"Cache-Control":"no-store"});
     }
   }
 
@@ -45,18 +47,19 @@ export async function handleAdminLogoCenterApi(context) {
   const isComplete=requestPath===root+"/upload/complete";
   const assetUrlMatch=requestPath.match(/^\/api\/admin\/logo-center\/assets\/([0-9a-f-]{36})\/preview$/i);
   if (!(isRoot||isAction||isPrepare||isComplete||assetUrlMatch)) return false;
-  if (!user) return json(res,401,{error:"Sign in to access the Minglora Logo Center."});
+  if (!user) return respond(res,401,{error:"Sign in to access the Minglora Logo Center."});
   if (!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)) {
-    return json(res,403,{error:"The Logo Center requires the designated administrator's verified MFA session."});
+    return respond(res,403,{error:"The Logo Center requires the designated administrator's verified MFA session."});
   }
   if (AUTH_PROVIDER !== "supabase" || !isSupabasePersistence()) {
-    return json(res,503,{error:"The Logo Center requires Minglora's connected Supabase database and Storage."});
+    return respond(res,503,{error:"The Logo Center requires Minglora's connected Supabase database and Storage."});
   }
   if (method !== "GET" && !isSameOriginApiWrite(req)) {
-    return json(res,403,{error:"This Logo Center change must be submitted from Minglora."});
+    return respond(res,403,{error:"This Logo Center change must be submitted from Minglora."});
   }
 
-  const handleFailure = error => json(res,Number(error?.status)||503,{
+  const respond = (...args) => { json(...args); return true; };
+  const handleFailure = error => respond(res,Number(error?.status)||503,{
     error:String(error?.message||"The Logo Center request could not be completed.").slice(0,240)
   });
 
@@ -70,27 +73,27 @@ export async function handleAdminLogoCenterApi(context) {
           collectionId:String(url.searchParams.get("collectionId")||"").slice(0,36)
         }
       });
-      if(result?.skipped) return json(res,503,{error:"The Logo Center requires durable Supabase persistence."});
-      return json(res,200,result);
+      if(result?.skipped) return respond(res,503,{error:"The Logo Center requires durable Supabase persistence."});
+      return respond(res,200,result);
     }
 
     if (assetUrlMatch && method === "GET") {
       const result=await requestSupabaseState("admin_brand_asset_url",{
         actorUserId:user.id,mfaVerified:true,payload:{assetId:assetUrlMatch[1]}
       });
-      if(result?.skipped) return json(res,503,{error:"The Logo Center requires durable Supabase persistence."});
-      return json(res,200,result);
+      if(result?.skipped) return respond(res,503,{error:"The Logo Center requires durable Supabase persistence."});
+      return respond(res,200,result);
     }
 
     if (isAction && method === "POST") {
       const brandAction=String(input?.brandAction||"").trim().toLowerCase();
-      if(!BRAND_ACTIONS.has(brandAction))return json(res,400,{error:"Choose a supported Logo Center action."});
+      if(!BRAND_ACTIONS.has(brandAction))return respond(res,400,{error:"Choose a supported Logo Center action."});
       const payload=input?.payload&&typeof input.payload==="object"&&!Array.isArray(input.payload)?input.payload:{};
       const result=await requestSupabaseState("admin_brand_command",{
         actorUserId:user.id,mfaVerified:true,brandAction,payload
       });
-      if(result?.skipped) return json(res,503,{error:"The Logo Center requires durable Supabase persistence."});
-      return json(res,200,result);
+      if(result?.skipped) return respond(res,503,{error:"The Logo Center requires durable Supabase persistence."});
+      return respond(res,200,result);
     }
 
     if (isPrepare && method === "POST") {
@@ -99,9 +102,9 @@ export async function handleAdminLogoCenterApi(context) {
       const fileName=String(input?.fileName||"").trim().replace(/[\\/\u0000-\u001f]/g,"_").slice(0,255);
       const title=String(input?.title||"").trim().slice(0,120);
       if(!BRAND_MIME_EXTENSIONS[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>BRAND_MAX_UPLOAD_BYTES) {
-        return json(res,400,{error:"Choose SVG, PNG, APNG, JPG, WebP, GIF, ICO, Lottie JSON, MP4 or WebM up to 50 MB."});
+        return respond(res,400,{error:"Choose SVG, PNG, APNG, JPG, WebP, GIF, ICO, Lottie JSON, MP4 or WebM up to 50 MB."});
       }
-      if(!title||!fileName)return json(res,400,{error:"Enter a logo title and choose a file."});
+      if(!title||!fileName)return respond(res,400,{error:"Enter a logo title and choose a file."});
       const payload={
         assetId:String(input?.assetId||""),
         versionId:crypto.randomUUID(),
@@ -116,17 +119,17 @@ export async function handleAdminLogoCenterApi(context) {
       const prepared=await requestSupabaseState("admin_brand_upload_prepare",{
         actorUserId:user.id,mfaVerified:true,payload
       });
-      if(prepared?.skipped)return json(res,503,{error:"The Logo Center requires durable Supabase persistence."});
+      if(prepared?.skipped)return respond(res,503,{error:"The Logo Center requires durable Supabase persistence."});
       const publicApiKey=String(process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||"").trim();
-      if(!publicApiKey)return json(res,503,{error:"The public Supabase upload key is not configured on Minglora."});
-      return json(res,201,{...prepared,apiKey:publicApiKey});
+      if(!publicApiKey)return respond(res,503,{error:"The public Supabase upload key is not configured on Minglora."});
+      return respond(res,201,{...prepared,apiKey:publicApiKey});
     }
 
     if (isComplete && method === "POST") {
       const assetId=String(input?.assetId||"");
       const versionId=String(input?.versionId||"");
       const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if(!uuid.test(assetId)||!uuid.test(versionId))return json(res,400,{error:"A valid logo asset and version reference are required."});
+      if(!uuid.test(assetId)||!uuid.test(versionId))return respond(res,400,{error:"A valid logo asset and version reference are required."});
       const result=await requestSupabaseState("admin_brand_upload_complete",{
         actorUserId:user.id,mfaVerified:true,payload:{
           assetId,versionId,
@@ -135,11 +138,11 @@ export async function handleAdminLogoCenterApi(context) {
           durationMs:Number(input?.durationMs||0)
         }
       });
-      if(result?.skipped)return json(res,503,{error:"The Logo Center requires durable Supabase persistence."});
-      return json(res,200,result);
+      if(result?.skipped)return respond(res,503,{error:"The Logo Center requires durable Supabase persistence."});
+      return respond(res,200,result);
     }
 
-    return json(res,405,{error:"This Logo Center method is not supported."});
+    return respond(res,405,{error:"This Logo Center method is not supported."});
   } catch(error) {
     return handleFailure(error);
   }
