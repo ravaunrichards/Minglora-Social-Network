@@ -1,3 +1,16 @@
+## Current-main AI Corporate Governance and HR integration — 2026-11-17 Jamaica local / 2026-11-18 UTC
+
+- Created fresh integration branch `feat/ai-hr-disciplinary-cases-main-sync-20261117` from current `main` commit `808dcb21ddac47ad7c0125f14138bedf0a4b8c75`. The older draft PR #353 branch was 400 commits behind and is deliberately not merged.
+- Re-applied the confidential HR disciplinary-case implementation against current main: organization-scoped case and append-only history tables, server moderator gate, private Edge Function action allowlist, HR workspace create/list/note/status controls, and focused tests.
+- Added migration source `supabase/migrations/20261118034600_minglora_ai_hr_disciplinary_cases.sql` with a version later than the current production migration ledger. It explicitly revokes all table privileges from the client roles and service_role before granting only case SELECT/INSERT/UPDATE and history SELECT/INSERT; organization deletion is restricted while disciplinary records exist.
+- CI on this new integration head is **PENDING**. The previous PR #353 green checks belong to its old head and are not counted as acceptance for this branch.
+- No migration was applied, no Edge Function was deployed, no Render service was changed, no production HR/AI rows were created, and no workers or runtime controls were enabled. The proposed SQL is source-only pending rollback-only contract verification and later release approval.
+- Existing production database inspection: 62/62 `ai_network` base tables have RLS enabled; `anon` and `authenticated` have no `ai_network` schema USAGE; existing HR command functions remain SECURITY INVOKER with locked empty search_path and service_role-only EXECUTE. Security-advisor INFO/WARN findings remain documented; this is not a claim that all project-wide lints are zero.
+- **HR acceptance remains PARTIAL.** Required: new-head CI green, rollback-only database contract on current schema, signed-in owner/API/browser acceptance with real owner-controlled org/employee records, desktop/mobile acceptance, migration/function release verification, and existing Render service verification. Keep AI workers paused.
+- Existing 20 department templates, 20 position templates and zero production organizations/employees are unchanged. No synthetic HR or AI records were retained.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
 
 - Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.
