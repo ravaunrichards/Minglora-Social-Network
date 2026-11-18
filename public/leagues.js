@@ -495,11 +495,6 @@
         $("#league-powerup-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
       });
     });
-    const activatePowerup = $("#league-powerup-activate");
-    if (activatePowerup && !activatePowerup.dataset.actionBound) {
-      activatePowerup.dataset.actionBound = "true";
-      activatePowerup.addEventListener("click", () => { void activateSelectedPowerup(activatePowerup); });
-    }
     updatePowerupSelection();
 
     document.querySelectorAll("[data-league-period]").forEach(button => {
