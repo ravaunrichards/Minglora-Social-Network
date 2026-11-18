@@ -100,4 +100,6 @@ test("all Daily Top 20 references are reused on LIVE rankings, Top Gifters and m
  assert.match(gifter,/position >= 4 && position <= 20/);
  assert.match(gifter,/place-4-10/);
  assert.match(gifter,/place-11-20/);
+ assert.match(css,/\.minglora-gifter-row \.minglora-gifter-ranked-frame-art/);
+ assert.match(css,/\.minglora-gifter-ranked-frame \.minglora-gifter-rank-fallback/);
 });
