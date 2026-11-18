@@ -43,6 +43,9 @@ let savedGroups = [];
 let identityCreateRequests = [];
 let identityPatchRequests = [];
 let identitySearchRequests = [];
+let identityBatchRequests = [];
+let identityBatchRetryRequests = [];
+let identityBatches = [];
 let discoveryQueries = [];
 let bulkFollowRequests = [];
 let memorySettings = {
@@ -184,6 +187,55 @@ function aiApiResponse(req, url, body) {
       memoryEntries = memoryEntries.filter(item => !(item.identity_id === identityId && item.memory_id === memoryId));
       return { deleted:true, memory_id:memoryId };
     }
+  }
+
+  if (method === 'GET' && pathname === '/identities/batches') {
+    return { batches: identityBatches.map(item => structuredClone(item)), count: identityBatches.length };
+  }
+  if (method === 'POST' && pathname === '/identities/bulk') {
+    identityBatchRequests.push(structuredClone(body));
+    let created_count = 0;
+    const failed_rows = [];
+    for (let index = 0; index < body.items.length; index++) {
+      const item = body.items[index];
+      if (item.name?.username === 'retry_nia') {
+        failed_rows.push({
+          row_index:index + 1, idempotency_key:item.idempotency_key,
+          status:'failed', error_code:'TEST_RETRY', error:'Disposable browser fixture requires a retry.'
+        });
+        continue;
+      }
+      const identity_id = randomUUID();
+      identities.push({
+        identity: { identity_id, status:'created', enabled:false, population:item.population || 'independent', category_key:item.category_key },
+        name: { ...item.name, full_name:[item.name.first_name,item.name.middle_name,item.name.last_name].filter(Boolean).join(' ') },
+        profile:item.profile || {}, languages:item.languages || [], locations:item.locations || [], primary_email:null
+      });
+      created_count++;
+    }
+    const batch = {
+      batch_id:randomUUID(), idempotency_key:body.batch_idempotency_key,
+      source:body.source || 'ai_network_admin_center',
+      status:failed_rows.length ? (created_count ? 'partial' : 'failed') : 'completed',
+      requested_count:body.items.length, created_count, reused_count:0,
+      succeeded_count:created_count, failed_count:failed_rows.length,
+      failed_rows, created_at:new Date().toISOString(), updated_at:new Date().toISOString()
+    };
+    identityBatches.unshift(batch);
+    return structuredClone(batch);
+  }
+  const batchRetryPath = pathname.match(/^\/identities\/batches\/([0-9a-f-]+)\/retry$/i);
+  if (method === 'POST' && batchRetryPath) {
+    identityBatchRetryRequests.push({ batch_id:batchRetryPath[1], body:structuredClone(body) });
+    const batch = identityBatches.find(item => item.batch_id === batchRetryPath[1]);
+    if (!batch) return { error:'Fixture batch not found.' };
+    batch.created_count += batch.failed_count;
+    batch.succeeded_count = batch.created_count + batch.reused_count;
+    batch.failed_count = 0;
+    batch.failed_rows = [];
+    batch.status = 'completed';
+    batch.updated_at = new Date().toISOString();
+    return structuredClone(batch);
   }
 
   if (method === 'GET' && pathname === '/identities') {
@@ -530,6 +582,62 @@ try {
   assert.equal(identityCreateRequests[0].profile.profile_visibility, 'private');
   assert.equal(identities.length, 2, 'The in-memory registry should refresh after creation.');
   await page.getByText('Email record: not_requested · unverified').waitFor({ state: 'visible' });
+
+  const bulkIdentityForm = page.locator('form[data-ai-form="identity-bulk"]');
+  const bulkIdentityRows = [
+    {
+      population:'independent', category_key:'ai_friends', idempotency_key:'browser-batch-row-0001',
+      name:{first_name:'Maya',last_name:'Reid',username:'maya_reid'},
+      profile:{gender:'female',profile_visibility:'private'}, languages:[], locations:[]
+    },
+    {
+      population:'independent', category_key:'ai_friends', idempotency_key:'browser-batch-row-0002',
+      name:{first_name:'Retry',last_name:'Nia',username:'retry_nia'},
+      profile:{gender:'female',profile_visibility:'private'}, languages:[], locations:[]
+    }
+  ];
+  await bulkIdentityForm.locator('[name="items"]').fill(JSON.stringify(bulkIdentityRows));
+  await bulkIdentityForm.locator('button[type="submit"]').click();
+  try {
+  await page.getByText(/Bulk identity batch .*1 created; 0 reused; 1 failed\./).waitFor({ state:'visible' });
+  } catch (error) {
+    const diagnostics = {
+      identityBatchRequestCount: identityBatchRequests.length,
+      identityBatchRequests,
+      identityBatches,
+      visibleAlerts: await page.locator('.ai-network-alert').allTextContents(),
+      visiblePageText: (await page.locator('#main-content').innerText()).slice(-6000)
+    };
+    console.error('[AI Network batch import diagnostic]', JSON.stringify(diagnostics));
+    await page.screenshot({ path:path.join(artifactsDir,'ai-network-batch-import-debug.png'), fullPage:true });
+    throw error;
+  }
+  assert.equal(identityBatchRequests.length, 1, 'A bulk identity import should create one durable batch request.');
+  assert.equal(identityBatchRequests[0].items.length, 2);
+  assert.ok(identityBatchRequests[0].batch_idempotency_key.length >= 8, 'The overall batch must have its own stable idempotency key.');
+  assert.equal(identityBatches[0].failed_rows[0].idempotency_key, 'browser-batch-row-0002');
+  await page.getByText('Recent identity imports').waitFor({ state:'visible' });
+  const retryButton = page.locator('[data-ai-action="identity-batch-retry"]').first();
+  await retryButton.waitFor({ state:'visible' });
+  page.once('dialog', dialog => dialog.accept());
+  await retryButton.click();
+  await page.getByText('AI identity batch retry: 2 created, 0 reused, 0 still failed.').waitFor({ state:'visible' });
+  assert.equal(identityBatchRetryRequests.length, 1, 'Retry must target the existing durable batch.');
+  assert.equal(identityBatches[0].failed_count, 0, 'A successful retry clears only the failed rows.');
+  assert.equal(identityBatches[0].status, 'completed');
+
+  const firstBatchKey = identityBatchRequests[0].batch_idempotency_key;
+  const secondBatchRows = [{
+    population:'independent', category_key:'ai_friends', idempotency_key:'browser-batch-row-0003',
+    name:{first_name:'Ava',last_name:'Morgan',username:'second_import'},
+    profile:{gender:'female',profile_visibility:'private'}, languages:[], locations:[]
+  }];
+  await bulkIdentityForm.locator('[name="items"]').fill(JSON.stringify(secondBatchRows));
+  await bulkIdentityForm.locator('button[type="submit"]').click();
+  await page.getByText(/Bulk identity batch .*1 created; 0 reused; 0 failed\./).waitFor({ state:'visible' });
+  assert.equal(identityBatchRequests.length, 2, 'The same import form must support a second distinct batch.');
+  assert.notEqual(identityBatchRequests[1].batch_idempotency_key, firstBatchKey, 'Every new batch must use a fresh batch idempotency key.');
+  assert.equal(identityBatchRequests[1].items[0].idempotency_key, 'browser-batch-row-0003');
 
   const identitySearchForm = page.locator('form[data-ai-form="identity-search"]');
   await identitySearchForm.locator('[name="search"]').fill('Ari');

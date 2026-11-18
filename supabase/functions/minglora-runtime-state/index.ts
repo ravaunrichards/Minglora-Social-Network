@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
     "internal_activity_feed", "admin_finance_command",
     "admin_finance_attachment_prepare", "admin_finance_attachment_complete", "admin_finance_attachment_download",
     "admin_rbac_command", "admin_users_list", "admin_user_set_ban", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_bot_chat_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_bot_chat_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -4180,6 +4180,36 @@ Deno.serve(async (req: Request) => {
       const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
       return json(status, {
         error: String(error.message || "Minglora AI identity request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_identity_batch_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedBatchCommands = ["create_batch", "retry_failed", "list_batches"];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI identity batch access." });
+    }
+    if (!supportedBatchCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI identity batch command." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_identity_batch_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI identity batch request failed.").slice(0, 240)
       });
     }
     return json(200, { result: data });

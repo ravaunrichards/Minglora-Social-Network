@@ -1606,6 +1606,21 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const runAIIdentityBatchCommand = async (batchAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('Durable AI identity batches require Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_identity_batch_command', {
+          actorUserId: user.id,
+          aiAction: batchAction,
+          payload
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('Durable AI identity batches are unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+
       const runAICategoryCommand = async (categoryAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(new Error('Only an authorized Minglora administrator can manage AI categories.'), { status: 403 });
@@ -1891,6 +1906,25 @@ async function route(req, res) {
         }
         return json(res, 200, response?.result || { requested_count: identityIds.length, succeeded_count: 0, failed_count: identityIds.length, results: [], failed: [] });
       }
+      if (method === 'GET' && sub === 'identities/batches') {
+        const batchUrl = new URL(req.url || '/', 'http://localhost');
+        const requestedLimit = Number.parseInt(batchUrl.searchParams.get('limit') || '12', 10);
+        const result = await runAIIdentityBatchCommand('list_batches', {
+          limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 50) : 12
+        });
+        return json(res, 200, result || { batches: [], count: 0 });
+      }
+
+      if (method === 'POST' && parts[0] === 'identities' && parts[1] === 'batches' &&
+          parts.length === 4 && parts[3] === 'retry') {
+        const batchId = parts[2];
+        if (!aiIdentityIdPattern.test(batchId)) {
+          throw Object.assign(new Error('A valid AI identity batch ID is required.'), { status: 400 });
+        }
+        const result = await runAIIdentityBatchCommand('retry_failed', { batch_id: batchId });
+        return json(res, 200, result || { failed_count: 0, succeeded_count: 0 });
+      }
+
       if (method === 'GET' && parts[0] === 'identities' && parts.length === 2) {
         const result = await runAIIdentityCommand('get', { identity_id: parts[1] });
         return json(res, 200, { identity: result });
@@ -2008,8 +2042,15 @@ async function route(req, res) {
         if (requestsElevatedPopulation && !isModerator(user, req)) {
           throw Object.assign(new Error('Only an authorized Minglora platform administrator may bulk-create organizational or specialized-service AI identities.'), { status: 403 });
         }
-        const result = await runAIIdentityCommand('bulk_create', input);
-        return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
+        if (!input.batch_idempotency_key) {
+          throw Object.assign(new Error('A batch idempotency key is required for safe AI identity import.'), { status: 400 });
+        }
+        const result = await runAIIdentityBatchCommand('create_batch', {
+          batch_idempotency_key: String(input.batch_idempotency_key),
+          source: String(input.source || 'ai_network_admin_center').slice(0, 80),
+          items: input.items
+        });
+        return json(res, 200, result || { created_count: 0, reused_count: 0, failed_count: 0, failed_rows: [] });
       }
 
       if (parts[0] === 'identities' && parts.length >= 3 && parts[2] === 'memory') {
