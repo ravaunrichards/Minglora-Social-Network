@@ -935,7 +935,7 @@ function notificationPreferenceKey(type){
   if(type==='meetwave_invite')return 'meetWave';
   if(['video_remix','video_collaboration_invite','video_collaboration_response'].includes(type))return 'interactions';
   if(type==='league_match')return 'leagues';
-  if(['account_security','verification_application','verification_status','admin_alert','ai_task_approval'].includes(type))return 'account';
+  if(['account_security','verification_application','verification_status','admin_alert','ai_task_approval','ai_approval'].includes(type))return 'account';
   return null;
 }
 function notificationTypeEnabled(preferences,type){
@@ -945,7 +945,7 @@ function notificationTypeEnabled(preferences,type){
 const notify = (userId, actorId, type, text, extra = {}) => {
   const recipient=db.users.find(item=>item.id===userId);if(!recipient)return;
   const prefs=getUserSettings(recipient).notifications;
-  const mandatoryApproval=type==='ai_task_approval';
+  const mandatoryApproval=type==='ai_task_approval'||type==='ai_approval';
   if((!mandatoryApproval&&!notificationTypeEnabled(prefs,type))||(!prefs.inApp&&!prefs.push&&!mandatoryApproval))return;
   const notification={id:uid(),userId,actorId,type,text,...extra,createdAt:now(),read:false};
   if(prefs.inApp||mandatoryApproval){
@@ -966,6 +966,31 @@ function notifyAINetworkTaskApproval(user,task){
     'Approval required: '+title+'. Action class: '+actionClass+'. Review the task details before deciding.',
     {aiTaskId:taskId,aiTaskTitle:title,aiTaskActionClass:actionClass});
   return db.notifications.length>before;
+}
+function notifyAINetworkBotApproval(user,approval){
+  const approvalId=String(approval?.id||'').trim();
+  if(!user?.id||!approvalId||approval?.status!=='pending_human_review')return false;
+  db.notifications ||= [];
+  if(db.notifications.some(item=>item.userId===user.id&&item.type==='ai_approval'&&item.aiApprovalId===approvalId))return false;
+  const summary=String(approval.summary||'High-impact AI action').trim().slice(0,500)||'High-impact AI action';
+  const actionType=String(approval.actionType||'other').slice(0,50);
+  const before=db.notifications.length;
+  notify(user.id,null,'ai_approval',
+    'AI action approval required: '+summary+'. Action type: '+actionType+'. Review the request before deciding.',
+    {aiApprovalId:approvalId,aiApprovalSummary:summary,aiActionType:actionType});
+  return db.notifications.length>before;
+}
+function resolveAINetworkBotApprovalNotification(userId,approvalId,decision){
+  if(!userId||!approvalId||!['approve','reject'].includes(decision))return false;
+  let changed=false;
+  for(const item of (db.notifications||[])){
+    if(item.userId===userId&&item.type==='ai_approval'&&item.aiApprovalId===approvalId&&!item.aiApprovalDecision){
+      item.aiApprovalDecision=decision;
+      item.aiApprovalDecisionAt=now();
+      changed=true;
+    }
+  }
+  return changed;
 }
 function resolveAINetworkTaskApprovalNotification(userId,taskId,decision){
   if(!userId||!taskId||!['approved','rejected','cancelled'].includes(decision))return false;
@@ -3320,12 +3345,15 @@ async function route(req, res) {
       }
       if (method === 'POST' && sub === 'approvals') {
         const approval = createAIApprovalRequest(db, user.id, await body(req, 8000));
+        const notificationCreated=notifyAINetworkBotApproval(user,approval);
         await saveStore();
+        if(notificationCreated)publishNotificationEvent(user.id,'notification:new',db.notifications[0]?.id||null);
         return json(res, 201, { approval });
       }
       if (method === 'PATCH' && parts[0] === 'approvals' && parts.length === 2) {
         const input = await body(req, 4000);
         const approval = decideAIApproval(db, user.id, parts[1], input.decision);
+        if(resolveAINetworkBotApprovalNotification(user.id,parts[1],input.decision))publishNotificationEvent(user.id,'notification:changed');
         await saveStore();
         return json(res, 200, { approval });
       }
@@ -9995,7 +10023,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const before=(db.notifications||[]).length;
         db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id||item.type!=='call'||(item.callId&&activeCallIds.has(item.callId)));
         if(db.notifications.length!==before)await saveStore();
-        const notifications=db.notifications.filter(n=>n.userId===user.id&&(prefs.inApp||n.type==='ai_task_approval')&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&(n.type==='ai_task_approval'||notificationTypeEnabled(prefs,n.type))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)}));
+        const notifications=db.notifications.filter(n=>n.userId===user.id&&(prefs.inApp||n.type==='ai_task_approval'||n.type==='ai_approval')&&(!n.actorId||(!blockedBetween(user.id,n.actorId)&&!friendUpdatesSnoozed(user.id,n.actorId)))&&(n.type==='ai_task_approval'||n.type==='ai_approval'||notificationTypeEnabled(prefs,n.type))).map(n=>({...n,actor:safeUser(db.users.find(u=>u.id===n.actorId),user.id)}));
         const unreadCount=notifications.filter(item=>!item.read).length;
         const categoryCounts={all:notifications.length,unread:unreadCount,social:notifications.filter(item=>['friend','reaction','comment','follow','profile_view'].includes(item.type)).length,messages:notifications.filter(item=>item.type==='message').length,calls:notifications.filter(item=>item.type==='call').length,live:notifications.filter(item=>['live','live_moderator'].includes(item.type)).length,gifts:notifications.filter(item=>['gift','fan_club'].includes(item.type)).length,meetWave:notifications.filter(item=>item.type==='meetwave_invite').length,leagues:notifications.filter(item=>item.type==='league_match').length,other:notifications.filter(item=>!['friend','reaction','comment','follow','profile_view','message','call','live','live_moderator','gift','fan_club','meetwave_invite','league_match'].includes(item.type)).length};
         return json(res,200,{notifications,unreadCount,categoryCounts});
