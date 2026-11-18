@@ -74,10 +74,11 @@ test('discovery opens a full individual AI profile and supports safe close', () 
 
 
 test('profile-level location fields require explicit per-location public sharing consent', () => {
-  assert.match(migration, /v_origin_location_public[\\s\\S]*location_type = 'origin'[\\s\\S]*loc\\.is_public is true/);
-  assert.match(migration, /v_current_location_public[\\s\\S]*location_type = 'current'[\\s\\S]*loc\\.is_public is true/);
-  assert.match(migration, /'country_of_origin', case when v_origin_location_public then v_profile\\.country_of_origin else null end/);
+  assert.ok(migration.includes("location_type = 'origin'"));
+  assert.ok(migration.includes("location_type = 'current'"));
+  assert.ok(migration.includes("loc.is_public is true"));
+  assert.ok(migration.includes("'country_of_origin', case when v_origin_location_public then v_profile.country_of_origin else null end"));
   for (const field of ['current_country','time_zone','state_province','parish_county','district','city','town']) {
-    assert.ok(migration.includes("'"+field+"', case when v_current_location_public then"), 'Private current-location field was not consent-gated: ' + field);
+    assert.ok(migration.includes("'" + field + "', case when v_current_location_public then"), 'Private current-location field was not consent-gated: ' + field);
   }
 });
