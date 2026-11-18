@@ -5731,7 +5731,7 @@ async function route(req, res) {
         const broadcastId=String(input.broadcastId||'');
         const ownLive=(db.liveSessions||[]).find(item=>item.id===broadcastId&&item.status==='live'&&item.hostId===user.id);
         if(!ownLive)return json(res,409,{error:'Start your own LIVE before starting Co-host.'});
-        if(ownLive.liveSettings?.allowCoHost===false)return json(res,403,{error:'Co-host is disabled in your LIVE settings.'});
+        if(ownLive.liveSettings?.allowCoHost === false)return json(res,403,{error:'Co-host is disabled in your LIVE settings.'});
         if(!isLiveKitConfigured())return json(res,503,{error:'Co-host requires an active LiveKit connection.'});
         const health=await verifyLiveKitConnection();
         if(!health.connected)return json(res,503,{error:health.error||'LiveKit is unavailable.'});
