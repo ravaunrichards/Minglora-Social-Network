@@ -206,10 +206,10 @@ test('Audio LIVE clears both top overlays from the guest seats and keeps Fluid P
   const finalSafety=guestLayouts.slice(guestLayouts.lastIndexOf('/* AUDIO LIVE reference clearance'));
   assert.ok(finalSafety.includes('padding:40px clamp(5px,.65vw,9px) clamp(5px,.65vw,9px)!important;'),
     'the stage labels have a reserved strip above every audio guest grid');
-  assert.ok(finalSafety.includes('bottom:clamp(8px,1vw,12px)!important;'),
-    'the first Fluid Panel guest tile stays near the lower-right edge');
-  assert.ok(finalSafety.includes('clamp(8px,1vw,12px) + clamp(44px,15vw,120px) + 8px'),
-    'the second Fluid Panel guest tile has a measured fixed stack gap');
+  assert.match(finalSafety,/:nth-child\(3\)\{\s*bottom:calc\(clamp\(8px,1vw,12px\) \+ clamp\(44px,15vw,120px\) \+ 8px\)!important;/,
+    'Fluid Panel Guest 1 is the upper right thumbnail');
+  assert.match(finalSafety,/:nth-child\(4\)\{\s*bottom:clamp\(8px,1vw,12px\)!important;/,
+    'Fluid Panel Guest 2 is the lower right thumbnail');
   assert.ok(finalSafety.includes('#live-player-shell #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout.live-guest-layout'),
     'the final spacing override outranks legacy audio fit rules');
   assert.ok(finalSafety.includes('left:auto!important;right:8px!important;')&&finalSafety.includes('justify-content:flex-end!important;text-align:right!important;'),
