@@ -33,7 +33,8 @@ test('profile cover and portrait are separate blocks with a clear gap and indepe
   assert.ok(app.includes('class="profile-cover-image"'));
   assert.ok(app.includes('esc(u.cover)'));
   assert.ok(app.includes('avatar(u)'));
-  assert.ok(app.includes('class="profile-avatar-edit-wrap"><img class="avatar"'));
+  assert.ok(app.includes('class="profile-avatar-edit-wrap"><span class="profile-ranking-frame-host"'));
+  assert.match(app,/profile-ranking-frame-host" data-profile-ranking-user=.*?<img class="avatar"/);
   assert.ok(app.includes("const profileThoughtMarkup=data.profileStatus?.text"));
   assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
 });
