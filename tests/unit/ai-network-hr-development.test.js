@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261115030000_minglora_ai_hr_training_attendance.sql');
+const disciplinaryMigration = read('supabase/migrations/20261118034600_minglora_ai_hr_disciplinary_cases.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -78,5 +79,52 @@ test('HR development endpoints and admin workspace are connected to persistence'
     'data-ai-form="attendance"','Correct attendance record','Save correction with audit history','Correction reason (minimum 10 characters)',"kind === 'training-course'","kind === 'training-enrollment'","kind === 'attendance'",
     'No employee training assignments have been made','No attendance records have been entered']) {
     assert.ok(ui.includes(token),'Missing HR training/attendance UI: '+token);
+  }
+});
+
+
+test('disciplinary case records are private, organization-scoped and append-only', () => {
+  for (const table of ['ai_employee_disciplinary_cases','ai_employee_disciplinary_case_history']) {
+    assert.ok(disciplinaryMigration.includes('create table if not exists ai_network.' + table));
+    assert.ok(disciplinaryMigration.includes('alter table ai_network.' + table + ' enable row level security'));
+  }
+  assert.match(disciplinaryMigration,/revoke all on table[\\s\\S]*from public,anon,authenticated/);
+  assert.match(disciplinaryMigration,/grant select,insert,update on ai_network\\.ai_employee_disciplinary_cases to service_role/);
+  assert.match(disciplinaryMigration,/grant select,insert on ai_network\\.ai_employee_disciplinary_case_history to service_role/);
+  assert.match(disciplinaryMigration,/security invoker/i);
+  assert.match(disciplinaryMigration,/current_user<>'service_role'/);
+  assert.match(disciplinaryMigration,/set search_path=''/);
+  assert.match(disciplinaryMigration,/x\\.owner_user_id=p_actor_user_id/);
+  assert.match(disciplinaryMigration,/unique\\(organization_id,idempotency_key\\)/);
+});
+
+test('disciplinary case lifecycle validates employee scope, idempotency and status transitions', () => {
+  for (const token of ['case_opened','note_added','case_status_changed','Incident date cannot be in the future',
+    'Employee must belong to this organization on the incident date','Idempotency key was already used for a different case',
+    "oldst='open' and st in('under_review','dismissed')",
+    "oldst='under_review' and st in('awaiting_response','resolved','dismissed')",
+    "oldst='awaiting_response' and st in('under_review','resolved','dismissed')"]) {
+    assert.ok(disciplinaryMigration.includes(token),'Missing disciplinary invariant: '+token);
+  }
+});
+
+test('disciplinary commands are restricted to the administrator-only private runtime', () => {
+  for (const token of ['"ai_hr_disciplinary_command"','"list_disciplinary_cases"','"create_disciplinary_case"',
+    '"add_disciplinary_case_note"','"set_disciplinary_case_status"',
+    'admin.rpc("minglora_ai_hr_disciplinary_command"']) {
+    assert.ok(runtime.includes(token),'Missing private HR disciplinary command: '+token);
+  }
+  for (const token of ['const runAIHRDisciplinaryCommand = async',"requestSupabaseState('ai_hr_disciplinary_command'",
+    "parts[2] === 'disciplinary-cases'","isModerator(user, req)"]) {
+    assert.ok(server.includes(token),'Missing authenticated HR disciplinary route: '+token);
+  }
+});
+
+test('AI Network HR workspace loads and manages confidential disciplinary records', () => {
+  for (const token of ["request(base + '/disciplinary-cases')",'disciplinaryCases:',
+    'data-ai-form="disciplinary-case"','data-ai-form="disciplinary-case-note"',
+    'data-ai-form="disciplinary-case-status"',"kind === 'disciplinary-case'",
+    "kind === 'disciplinary-case-note'","kind === 'disciplinary-case-status'"]) {
+    assert.ok(ui.includes(token),'Missing HR disciplinary UI control: '+token);
   }
 });
