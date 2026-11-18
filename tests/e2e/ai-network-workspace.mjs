@@ -598,7 +598,7 @@ try {
   ];
   await bulkIdentityForm.locator('[name="items"]').fill(JSON.stringify(bulkIdentityRows));
   await bulkIdentityForm.locator('button[type="submit"]').click();
-  await page.getByText(/Bulk identity batch .*1 created; 0 reused; 1 failed\\./).waitFor({ state:'visible' });
+  await page.getByText(/Bulk identity batch .*1 created; 0 reused; 1 failed\./).waitFor({ state:'visible' });
   assert.equal(identityBatchRequests.length, 1, 'A bulk identity import should create one durable batch request.');
   assert.equal(identityBatchRequests[0].items.length, 2);
   assert.ok(identityBatchRequests[0].batch_idempotency_key.length >= 8, 'The overall batch must have its own stable idempotency key.');
