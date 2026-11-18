@@ -101,6 +101,13 @@ ALTER TABLE public.minglora_brand_logo_assets
   FOREIGN KEY (current_version_id)
   REFERENCES public.minglora_brand_logo_versions(id)
   ON DELETE RESTRICT;
+ALTER TABLE public.minglora_brand_logo_assets
+  DROP CONSTRAINT IF EXISTS minglora_brand_logo_assets_approved_version_fk;
+ALTER TABLE public.minglora_brand_logo_assets
+  ADD CONSTRAINT minglora_brand_logo_assets_approved_version_fk
+  FOREIGN KEY (approved_version_id)
+  REFERENCES public.minglora_brand_logo_versions(id)
+  ON DELETE RESTRICT;
 
 CREATE TABLE IF NOT EXISTS public.minglora_brand_logo_favorites (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -398,7 +405,7 @@ BEGIN
           SELECT l.id,l.title,l.description,l.category_id,c.name AS category_name,
             l.collection_id,k.name AS collection_name,l.original_name,l.mime_type,l.file_format,
             l.byte_size,l.width,l.height,l.duration_ms,l.storage_bucket,l.storage_path,
-            l.current_version_id,l.status,l.created_by,l.created_at,l.updated_at,
+            l.current_version_id,l.approved_version_id,l.status,l.created_by,l.created_at,l.updated_at,
             (SELECT count(*)::integer FROM public.minglora_brand_logo_versions v WHERE v.asset_id=l.id) AS version_count,
             EXISTS(SELECT 1 FROM public.minglora_brand_logo_favorites f WHERE f.asset_id=l.id AND f.user_id=v_actor) AS is_favorite
           FROM public.minglora_brand_logo_assets l
@@ -576,13 +583,23 @@ BEGIN
     v_asset_id := nullif(v_payload->>'assetId','')::uuid;
     v_status := lower(btrim(coalesce(v_payload->>'status','')));
     IF v_status NOT IN ('archived','draft') THEN RAISE EXCEPTION 'Choose archive or restore for this logo.' USING ERRCODE='22023'; END IF;
-    UPDATE public.minglora_brand_logo_assets SET status=v_status,updated_by=v_actor,updated_at=now()
-    WHERE id=v_asset_id AND (status<>'deleted') AND
-      ((v_status='archived' AND status<>'archived') OR (v_status='draft' AND status='archived'));
+    UPDATE public.minglora_brand_logo_assets a SET
+      status=CASE
+        WHEN v_status='archived' THEN 'archived'
+        WHEN a.approved_version_id=a.current_version_id AND a.approved_version_id IS NOT NULL THEN 'approved'
+        WHEN EXISTS (
+          SELECT 1 FROM public.minglora_brand_logo_assignments p
+          WHERE p.asset_id=a.id AND p.version_id=a.approved_version_id AND p.status='active'
+        ) THEN 'active'
+        ELSE 'draft'
+      END,
+      updated_by=v_actor,updated_at=now()
+    WHERE a.id=v_asset_id AND a.status<>'deleted' AND
+      ((v_status='archived' AND a.status<>'archived') OR (v_status='draft' AND a.status='archived'));
     IF NOT FOUND THEN RAISE EXCEPTION 'The logo could not be archived or restored from its current state.' USING ERRCODE='P0002'; END IF;
     INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id,details)
     VALUES(v_actor,'asset.'||v_status,'logo',v_asset_id);
-    RETURN jsonb_build_object('ok',true,'status',v_status);
+    RETURN jsonb_build_object('ok',true,'status',(SELECT status FROM public.minglora_brand_logo_assets WHERE id=v_asset_id));
   ELSIF v_action='favorite_toggle' THEN
     v_asset_id := nullif(v_payload->>'assetId','')::uuid;
     IF NOT EXISTS (SELECT 1 FROM public.minglora_brand_logo_assets WHERE id=v_asset_id AND status<>'deleted') THEN
@@ -597,9 +614,12 @@ BEGIN
   ELSIF v_action='asset_approve' THEN
     v_asset_id := nullif(v_payload->>'assetId','')::uuid;
     SELECT current_version_id INTO v_version_id
-    FROM public.minglora_brand_logo_assets WHERE id=v_asset_id AND status IN ('draft','approved');
+    FROM public.minglora_brand_logo_assets WHERE id=v_asset_id AND status IN ('draft','approved','active');
     IF NOT FOUND OR v_version_id IS NULL THEN RAISE EXCEPTION 'The logo has no valid current version to approve.' USING ERRCODE='P0002'; END IF;
-    UPDATE public.minglora_brand_logo_assets SET status='approved',updated_by=v_actor,updated_at=now() WHERE id=v_asset_id;
+    UPDATE public.minglora_brand_logo_assets SET
+      approved_version_id=v_version_id,
+      status=CASE WHEN status='active' THEN 'active' ELSE 'approved' END,
+      updated_by=v_actor,updated_at=now() WHERE id=v_asset_id;
     INSERT INTO public.minglora_brand_logo_approval_records(asset_id,version_id,decision,notes,actor_user_id)
     VALUES(v_asset_id,v_version_id,'approved',left(coalesce(v_payload->>'notes',''),1000),v_actor);
     INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id)
@@ -611,7 +631,7 @@ BEGIN
     v_version_id := coalesce(nullif(v_payload->>'versionId','')::uuid,
       (SELECT current_version_id FROM public.minglora_brand_logo_assets WHERE id=v_asset_id));
     IF NOT EXISTS (SELECT 1 FROM public.minglora_brand_logo_assets
-      WHERE id=v_asset_id AND status IN ('approved','active') AND current_version_id=v_version_id) THEN
+      WHERE id=v_asset_id AND status IN ('approved','active') AND approved_version_id=v_version_id) THEN
       RAISE EXCEPTION 'Only an approved current logo version can be assigned for publication.' USING ERRCODE='42501';
     END IF;
     INSERT INTO public.minglora_brand_logo_assignments(placement_key,asset_id,version_id,status,updated_by)
@@ -629,7 +649,7 @@ BEGIN
     WHERE placement_key=v_placement AND status='pending_approval' FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'No pending logo placement approval was found.' USING ERRCODE='P0002'; END IF;
     IF NOT EXISTS (SELECT 1 FROM public.minglora_brand_logo_assets
-      WHERE id=v_row.asset_id AND status IN ('approved','active') AND current_version_id=v_row.version_id) THEN
+      WHERE id=v_row.asset_id AND status IN ('approved','active') AND approved_version_id=v_row.version_id) THEN
       RAISE EXCEPTION 'The assigned logo version is no longer approved.' USING ERRCODE='42501';
     END IF;
     v_previous_asset := v_row.asset_id;
