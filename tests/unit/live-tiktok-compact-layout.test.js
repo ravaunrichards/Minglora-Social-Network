@@ -93,8 +93,9 @@ test('LIVE Fluid Panel guest seats are inset and size-clamped inside the video-s
   assert.match(correction, /max-width:none!important;max-height:none!important/);
   assert.match(correction, /nth-child\(3\)\{\s*bottom:clamp\(4px,1vw,8px\)!important/);
   assert.match(correction, /nth-child\(4\)\{\s*bottom:calc\(clamp\(4px,1vw,8px\)/);
-  assert.match(correction, /@media\(min-width:901px\)\{[\s\S]*?\}\s*$/);
-  assert.match(correction, /\{right:2px!important\}/);
-  assert.match(correction, /nth-child\(3\)\{bottom:2px!important\}/);
-  assert.match(correction, /nth-child\(4\)\{bottom:calc\(2px \+ clamp\(44px,15vw,120px\)/);
+  assert.match(correction, /right:clamp\(8px,1vw,12px\)!important/);
+  assert.match(correction, /nth-child\(3\)\{\s*bottom:clamp\(4px,1vw,8px\)!important/);
+  assert.match(correction, /nth-child\(4\)\{\s*bottom:calc\(clamp\(4px,1vw,8px\)/);
+  assert.match(correction, /@media\(min-width:901px\)\{[\s\S]*?data-live-layout="fluid-panel"[^}]*\{right:2px!important\}/);
+  assert.doesNotMatch(correction, /bottom:2px!important/);
 });
