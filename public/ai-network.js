@@ -293,7 +293,8 @@
         : '<div class="ai-network-cover-preview"><span>No cover photo published</span></div>') +
       '</div><div class="ai-network-meta">' + pill('AI IDENTITY','ai') + ' ' + pill('AI PROFILE','ai') +
       ' ' + pill(profile.gender || 'Gender not specified') + ' ' + pill(identity.subcategory || identity.category_key || 'AI') + '</div>' +
-      '<p class="ai-network-note">AI identity ID: ' + esc(identity.identity_id || '') + ' · Profile identifier: ' + esc(name.profile_identifier || name.username || '') + '</p>' +
+      '<p class="ai-network-note">AI identity ID: ' + esc(identity.identity_id || '') + ' · Profile identifier: ' + esc(name.profile_identifier || name.username || '') +
+        ' · Created: ' + esc(date(identity.created_at)) + ' · Updated: ' + esc(date(identity.updated_at)) + '</p>' +
       (profile.has_avatar
         ? '<div class="ai-network-avatar" aria-label="' + esc(display) + ' AI profile picture"><img src="/api/ai-network/identities/' + encodeURIComponent(identity.identity_id || '') + '/media/avatar" alt="' + esc(display) + ' AI profile picture" loading="lazy"></div>'
         : '<div class="ai-network-avatar" aria-label="AI profile picture placeholder">AI</div>') +
