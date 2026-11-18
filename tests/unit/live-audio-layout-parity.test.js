@@ -23,7 +23,7 @@ test('Audio LIVE gives the reference guest grid the complete stage', () => {
 
 test('All nine audio presets use dedicated reference panel geometries', () => {
   for (const layout of layouts) {
-    const marker = \`#live-guest-layout[data-live-layout="\${layout}"]{\`;
+        const marker = '#live-guest-layout[data-live-layout="' + layout + '"]{';
     const start = parity.indexOf(marker);
     assert.ok(start >= 0, layout + ' must have its own audio layout rule');
     const end = parity.indexOf('}', start);
