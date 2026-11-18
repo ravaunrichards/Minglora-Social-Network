@@ -84,3 +84,15 @@
   .live-cohost-tile{border-radius:18px}
   .live-cohost-name{left:12px;right:12px;bottom:12px;padding:8px 12px;font-size:14px}
 }
+
+.live-cohost-match-panel{display:grid;gap:9px;padding-top:12px;border-top:1px solid var(--border,#26354b)}
+.live-cohost-match-heading{display:grid;gap:4px}
+.live-cohost-match-heading strong{font-size:13px}
+.live-cohost-match-heading small,.live-cohost-match-status{font-size:11px;color:var(--muted,#9ba9bd);line-height:1.45}
+.live-cohost-match-start{display:flex;gap:8px;flex-wrap:wrap}
+.live-cohost-match-start button{min-height:36px;padding:7px 11px;font-size:11px}
+.live-cohost-match-start button[hidden]{display:none!important}
+.live-cohost-match-roster{display:grid;gap:6px}
+.live-cohost-match-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(127,145,170,.07);font-size:12px}
+.live-cohost-match-row strong{font-variant-numeric:tabular-nums}
+.live-cohost-match-actions button{min-height:34px;padding:6px 10px;font-size:11px}
