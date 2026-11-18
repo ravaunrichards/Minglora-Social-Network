@@ -778,7 +778,7 @@ try {
         identityEditorVisible: Boolean(document.querySelector('form[data-ai-form="identity-edit"]')),
         discoveryVisible: Boolean(document.querySelector('form[data-ai-form="discovery"]')),
         corporateGovernanceVisible: Boolean(document.querySelector('.ai-network-organization-row')),
-        disciplinaryCaseVisible: Boolean(document.querySelector('form[data-ai-form="disciplinary-case"]')))
+        disciplinaryCaseVisible: Boolean(document.querySelector('form[data-ai-form="disciplinary-case"]'))
       };
     });
     assert.ok(geometry.rootWidth > 0, viewport.name + ': AI Network workspace must render.');
