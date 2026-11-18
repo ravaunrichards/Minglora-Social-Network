@@ -66,8 +66,8 @@
           : "<span class='minglora-gifter-rank-fallback' aria-hidden='true'>" + initial + "</span>") +
         "</span>"
       : flameFrame
-        ? "<span class='minglora-gifter-ranked-frame' role='img' aria-label='Daily ranking position " + position + "'>"
-          "<img class='minglora-gifter-ranked-frame-art' src='/assets/daily-ranking-badges/" + flameFrame + ".png' alt='' loading='lazy' decoding='async'>"
+        ? "<span class='minglora-gifter-ranked-frame' role='img' aria-label='Daily ranking position " + position + "'>" +
+          "<img class='minglora-gifter-ranked-frame-art' src='/assets/daily-ranking-badges/" + flameFrame + ".png' alt='' loading='lazy' decoding='async'>" +
           (avatar
             ? "<img class='minglora-gifter-ranked-avatar' src='" + escapeHtml(avatar) + "' alt='' loading='lazy' referrerpolicy='no-referrer'>"
             : "<span class='minglora-gifter-rank-fallback' aria-hidden='true'>" + initial + "</span>") +
