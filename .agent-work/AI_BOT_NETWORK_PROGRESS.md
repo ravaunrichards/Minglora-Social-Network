@@ -567,3 +567,13 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - This audit made no production data/schema/runtime/environment changes, no migration, no secret reads, no worker activation and no deployment.
 
 **Next gates:** real owner/MFA identity/profile/media device acceptance; private provider health probe and moderated inference; genuine email-provider provisioning; then reviewed worker-principal port/release with the global pause retained; normalized data plane, backup/restore, shard integration and isolated scale tests.
+
+
+## Worker-principal source continuation — current-main port (2026-11-18)
+
+- The old PR #489 feature branch had diverged from current `main` (205 commits behind main and 52 branch-only commits at comparison), so it was not merged. Its worker-principal implementation was selectively ported to a fresh branch from current `main`: `feat/minglora-ai-worker-principals-mainline-20261118`, draft PR #532.
+- Ported source adds private worker principal / identity-grant / audit tables in migration `20261118190000_minglora_ai_worker_principals.sql`; SHA-256-only bearer credential storage; owner/MFA-gated create/list/rotate/revoke routes; separate bearer-authenticated runtime claim/heartbeat/complete/fail RPC gateway; and worker credential governance controls in the existing AI Network task panel.
+- Source remains **unmerged and undeployed**. No production migration was applied, no worker principal/credential/poller was created, and no runtime setting was changed. The sole live identity is disabled, so the UI does not offer it as a worker grant. Global worker controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- On source head `1b0cda562a1317203d1fa566a952698bd6738169`, GitHub Actions passed: dedicated PostgreSQL 17 worker-principal authentication/lease lifecycle; AI Network syntax/regression; durable identity-batch PostgreSQL acceptance; AI Network browser acceptance; full repository CI (including Supabase Auth provider acceptance and For You navigation). Audio Only LIVE nine-layout visual QA was still installing Chromium at the last check and remained in progress; do not mark visual QA complete until its workflow concludes.
+- PR #532: https://github.com/ravaunrichards/Minglora-Social-Network/pull/532 . Documentation-only live-audit PR #531 remains separate: https://github.com/ravaunrichards/Minglora-Social-Network/pull/531 .
+- Worker-principal migration, Edge/Node route, UI and integration tests are source only until reviewed and merged. A worker poll-loop host, production migration/deployment, provider inference, owner/MFA device acceptance, backup/recovery and scale testing remain outstanding.
