@@ -1019,7 +1019,12 @@
             '<form class="ai-network-inline-form" data-ai-form="provider-assignment-status" data-assignment-id="' + esc(assignment.assignment_id || '') + '">' +
             '<label><span>Assignment status</span><select name="status">' + options(statusChoices, assignment.assignment_status || 'pending') + '</select></label>' +
             '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why is this assignment changing?"></label>' +
-            '<button class="secondary" type="submit">Save status</button></form></article>';
+            '<button class="secondary" type="submit">Save status</button></form>' +
+            (model.provider_name === 'openai' && account && assignment.assignment_status !== 'revoked'
+              ? '<form class="ai-network-inline-form" data-ai-form="provider-assignment-verify" data-assignment-id="' + esc(assignment.assignment_id || '') + '">' +
+                '<p class="ai-network-note">Runs a real billable model test using the private server key. The test sends no profile, conversation or memory data, uses moderation, store:false and no tools.</p>' +
+                '<button class="secondary" type="submit">Run billable model execution test</button></form>'
+              : '') + '</article>';
         }).join('') + '</div>'
       : empty('No provider model assignments have been registered.');
     const providersWithCredentials = providerCatalogue.filter(provider => provider.credentialsPresent).length;
@@ -1062,7 +1067,7 @@
       '<button class="secondary" type="submit">Check OpenAI API connection</button></form>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
-      : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
+      : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. A model assignment becomes active only after its billable moderated inference test succeeds. The current OpenAI adapter can use only a Minglora-managed account with the private server credential; user-managed provider references remain inactive until a supported secrets-manager integration is available.</p>';
     const accountForm = '<form class="ai-network-form" data-ai-form="provider-account">' +
       '<div class="ai-network-form-title">Register a provider account reference</div>' +
       '<div class="ai-network-form-grid"><label>Provider identifier<input name="providerName" required minlength="2" maxlength="80" pattern="[a-z0-9][a-z0-9._-]+" placeholder="openai"></label>' +
@@ -1987,6 +1992,11 @@
       path = '/provider-assignments/' + encodeURIComponent(assignmentId) + '/status';
       payload.status = value('status');
       payload.reason = value('reason');
+    } else if (kind === 'provider-assignment-verify') {
+      const assignmentId = form.dataset.assignmentId;
+      if (!assignmentId) throw new Error('Provider assignment details are missing.');
+      if (!window.confirm('Run a real, billable model test for this AI assignment? The test sends a fixed technical prompt to the provider and runs input/output moderation. No profile, conversation or memory data is sent. The assignment becomes active only if the model completes the test successfully.')) return;
+      path = '/provider-assignments/' + encodeURIComponent(assignmentId) + '/verify';
     } else if (kind === 'team') {
       const botIds = data.getAll('teamBotIds').map(item => String(item).trim()).filter(Boolean);
       if (botIds.length < 1 || botIds.length > 20) {
@@ -2318,7 +2328,9 @@
         ? (result.connected ? 'OpenAI model access verified by a read-only probe. AI inference and workers remain disabled.' : 'OpenAI probe completed: ' + String(result.status || 'unknown') + '. AI inference and workers remain disabled.')
       : kind === 'provider-assignment-status'
             ? 'Provider assignment status updated.'
-            : kind === 'identity'
+            : kind === 'provider-assignment-verify'
+              ? 'Provider model test finished. The assignment is active only when the response confirms a successful moderated inference test.'
+              : kind === 'identity'
       ? 'AI identity record saved in Minglora Supabase.'
       : kind === 'identity-bulk'
         ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'

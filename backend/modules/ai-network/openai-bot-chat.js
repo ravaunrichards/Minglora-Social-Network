@@ -109,6 +109,96 @@ async function postJson(fetchImpl, endpoint, apiKey, payload, timeoutMs) {
  * Human-initiated, owner-scoped bot conversation. No tools or external actions.
  * Conversation history is supplied by Minglora's owner-scoped store.
  */
+
+/**
+ * Billable, data-free smoke test for a selected OpenAI model assignment.
+ * Both prompt and output are moderated; Responses storage and tools are disabled.
+ * The caller must obtain the model identifier from a persisted, owner-scoped
+ * provider assignment, never from a browser-supplied override.
+ */
+export async function verifyOpenAIModelExecution({
+  model: assignedModel,
+  env = process.env,
+  fetchImpl = globalThis.fetch,
+  timeoutMs
+} = {}) {
+  const provider = assignedModel
+    ? 'openai'
+    : String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
+  if (provider && provider !== 'openai') {
+    throw providerError('provider_not_selected', 'OpenAI is not the selected Minglora provider.', 409);
+  }
+  const apiKey = String(env.OPENAI_API_KEY || (!assignedModel && provider === 'openai' ? env.MINGLORA_AI_API_KEY : '') || '').trim();
+  if (!apiKey) throw providerError('missing_credentials', 'OpenAI is not configured in the private Minglora server environment.', 503);
+  const model = String(assignedModel || '').trim();
+  if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,179}$/.test(model)) {
+    throw providerError('missing_model', 'Choose a valid model from the saved Minglora provider assignment.', 400);
+  }
+  if (typeof fetchImpl !== 'function') throw providerError('adapter_unavailable', 'This server runtime does not provide HTTP fetch.', 503);
+
+  const baseUrl = buildEndpoint(env.OPENAI_BASE_URL);
+  const moderationEndpoint = baseUrl + '/moderations';
+  const responsesEndpoint = baseUrl + '/responses';
+  const configuredTimeout = Number(timeoutMs ?? env.MINGLORA_AI_REQUEST_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
+  const requestTimeoutMs = Number.isFinite(configuredTimeout)
+    ? Math.min(Math.max(Math.trunc(configuredTimeout), 1000), MAX_TIMEOUT_MS)
+    : DEFAULT_TIMEOUT_MS;
+  const marker = 'MINGLORA_PROVIDER_READY';
+
+  const inputModeration = await postJson(fetchImpl, moderationEndpoint, apiKey, {
+    model: 'omni-moderation-latest',
+    input: 'Return exactly ' + marker + '. This is a provider connectivity test.'
+  }, requestTimeoutMs);
+  const inputResult = Array.isArray(inputModeration.results) ? inputModeration.results[0] : null;
+  if (!inputResult || typeof inputResult.flagged !== 'boolean') {
+    throw providerError('moderation_unavailable', 'The provider smoke-test prompt could not be checked. No generation request was sent.', 502);
+  }
+  if (inputResult.flagged) {
+    throw providerError('moderation_blocked', 'The provider smoke-test prompt was blocked by content moderation.', 422);
+  }
+
+  const generation = await postJson(fetchImpl, responsesEndpoint, apiKey, {
+    model,
+    instructions: 'This is a technical connectivity check. Return only the exact marker MINGLORA_PROVIDER_READY. Do not use tools or perform external actions.',
+    input: [{ role: 'user', content: [{ type: 'input_text', text: 'Return exactly MINGLORA_PROVIDER_READY.' }] }],
+    max_output_tokens: 32,
+    store: false,
+    tools: []
+  }, requestTimeoutMs);
+  const usage = readUsage(generation.usage);
+  const metadata = {
+    provider: 'openai',
+    model: String(generation.model || model).slice(0, 180),
+    usage,
+    responseId: String(generation.id || '').slice(0, 180) || null
+  };
+  if (generation.status !== 'completed') {
+    throw providerError('incomplete_generation', 'The assigned model did not complete the provider smoke test.', 502, metadata);
+  }
+  const output = extractOutputText(generation);
+  if (output !== marker) {
+    throw providerError('invalid_generation', 'The assigned model did not return the required smoke-test marker.', 502, metadata);
+  }
+
+  const outputModeration = await postJson(fetchImpl, moderationEndpoint, apiKey, {
+    model: 'omni-moderation-latest',
+    input: output
+  }, requestTimeoutMs);
+  const outputResult = Array.isArray(outputModeration.results) ? outputModeration.results[0] : null;
+  if (!outputResult || typeof outputResult.flagged !== 'boolean') {
+    throw providerError('moderation_unavailable', 'The provider smoke-test output could not be checked by moderation.', 502, metadata);
+  }
+  if (outputResult.flagged) {
+    throw providerError('moderation_blocked', 'The provider smoke-test output was blocked by content moderation.', 422, metadata);
+  }
+  return {
+    ...metadata,
+    probeStatus: 'inference_verified',
+    healthStatus: 'healthy',
+    moderation: { model: String(outputModeration.model || 'omni-moderation-latest').slice(0, 80), flagged: false }
+  };
+}
+
 export async function generateOpenAIBotReply({
   bot,
   identity,
@@ -118,14 +208,15 @@ export async function generateOpenAIBotReply({
   env = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs,
-  maxOutputTokens = MAX_OUTPUT_TOKENS
+  maxOutputTokens = MAX_OUTPUT_TOKENS,
+  model: assignedModel = null
 } = {}) {
   const provider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (provider && provider !== 'openai') {
     throw providerError('provider_not_selected', 'OpenAI is not the selected Minglora provider.', 409);
   }
-  const apiKey = String(env.OPENAI_API_KEY || (provider === 'openai' ? env.MINGLORA_AI_API_KEY : '') || '').trim();
-  const model = String(env.OPENAI_DEFAULT_MODEL || (provider === 'openai' ? env.MINGLORA_AI_MODEL : '') || '').trim();
+  const apiKey = String(env.OPENAI_API_KEY || (!assignedModel && provider === 'openai' ? env.MINGLORA_AI_API_KEY : '') || '').trim();
+  const model = String(assignedModel || env.OPENAI_DEFAULT_MODEL || (provider === 'openai' ? env.MINGLORA_AI_MODEL : '') || '').trim();
   if (!apiKey) throw providerError('missing_credentials', 'OpenAI is not configured in the private Minglora server environment.', 503);
   if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,179}$/.test(model)) {
     throw providerError('missing_model', 'Set OPENAI_DEFAULT_MODEL in the private Minglora server environment.', 503);
