@@ -38,18 +38,21 @@ test("platform Top Gifters offers period filters, earned rank titles and working
   }
   assert.match(addon, /\/api\/live\/rankings\/top-gifters/);
   assert.match(addon, /TOP 10 GIFTER/);
+  assert.match(addon, /position >= 4 && position <= 20/);
+  assert.match(addon, /place-4-10/);
+  assert.match(addon, /place-11-20/);
   assert.match(addon, /data-top-gifter-profile/);
   assert.match(addon, /window\.openProfile\(userId\)/);
 });
 
 test("Top Gifters assets are versioned and included in the PWA shell", () => {
-  assert.match(html, /top-gifters\.js\?v=20261117-avatar-rankings-sync-1/);
+  assert.match(html, /top-gifters\.js\?v=20261118-tiktok-ranking-frames-1/);
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||"";
   const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||"";
   assert.ok(appAsset&&sw.includes("/"+appAsset),"service worker caches the current HTML app script");
   assert.ok(styleAsset&&sw.includes("/"+styleAsset),"service worker caches the current HTML stylesheet");
   assert.match(sw, /minglora-shell-v\d+-[^']+/);
-  assert.match(sw, /top-gifters\.js\?v=20261117-avatar-rankings-sync-1/);
+  assert.match(sw, /top-gifters\.js\?v=20261118-tiktok-ranking-frames-1/);
   assert.match(css, /\.live-top-gifters-list/);
   assert.match(css, /\.minglora-gifter-profile/);
   assert.match(css, /\.live-weekly-title-gifters/);
@@ -103,7 +106,7 @@ test("Daily and embedded Top Gifters podium avatars stay compact and preserve ba
   assert.ok(css.includes(".live-daily-podium-card .live-daily-podium-frame"));
   assert.ok(css.includes("object-fit:contain;object-position:center"));
   assert.ok(css.includes("width:36%;height:36%;max-width:none;box-sizing:border-box"));
-  assert.ok(html.includes("leagues.js?v=20261117-avatar-rankings-sync-1"));
-  assert.ok(html.includes("rankings.js?v=20261117-avatar-rankings-sync-1"));
-  assert.ok(sw.includes("minglora-shell-v358-self-updating-1"));
+  assert.ok(html.includes("leagues.js?v=20261118-tiktok-ranking-frames-1"));
+  assert.ok(html.includes("rankings.js?v=20261118-tiktok-ranking-frames-1"));
+  assert.ok(sw.includes("minglora-shell-v359-tiktok-ranking-frames-20261118"));
 });
