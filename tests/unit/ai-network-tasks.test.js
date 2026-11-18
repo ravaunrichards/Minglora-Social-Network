@@ -157,7 +157,7 @@ test('Owner task requests requiring approval create a deduplicated account-owned
   assert.match(server,/item\.type==='ai_task_approval'&&item\.aiTaskId===taskId/);
   assert.match(server,/notificationCreated\)await saveStore\(\)/);
   assert.match(server,/if\(prefs\.inApp\|\|mandatoryApproval\)/);
-  assert.match(server,/n\.type==='ai_task_approval'\)\)\.map/);
+  assert.match(server,/\(n\.type==='ai_task_approval'\|\|notificationTypeEnabled\(prefs,n\.type\)\)/);
 });
 
 test('AI task approval notification actions use the MFA-protected task decision endpoint', () => {
