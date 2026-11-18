@@ -14,6 +14,8 @@ const ui = read('public/ai-network.js');
 test('individual AI profile RPC enforces active state and visibility rules', () => {
   for (const token of [
     "current_user <> 'service_role'",
+    "coalesce(v_identity.owner_user_id = p_actor_user_id, false)",
+    "coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers')",
     "v_identity.status <> 'active'",
     "v_identity.enabled is not true",
     "v_profile.profile_visibility = 'followers' and not v_is_following",
