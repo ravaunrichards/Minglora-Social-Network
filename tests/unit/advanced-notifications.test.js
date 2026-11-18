@@ -92,3 +92,15 @@ test('Notification changes are broadcast only to the authenticated recipient acc
   assert.match(app,/message\.type==='notification:new'[\s\S]*pollBrowserNotifications\(\)/);
   assert.match(app,/message\.type==='notification:changed'[\s\S]*updateNotificationDot\(\)/);
 });
+
+
+test('Mandatory AI task approval notices appear in the account inbox with direct review controls',()=>{
+  assert.match(server,/ai_task_approval/);
+  assert.match(server,/Minglora AI approval required/);
+  assert.match(app,/data-notice-ai-approval/);
+  assert.match(app,/Approve task/);
+  assert.match(app,/Reject/);
+  assert.match(app,/\/ai-network\/tasks\/\'+encodeURIComponent\(taskId\)\+\'\/approval/);
+  assert.match(app,/AI task approval recorded/);
+  assert.match(app,/item\.type==='ai_task_approval'\?'Minglora AI approval required'/);
+});
