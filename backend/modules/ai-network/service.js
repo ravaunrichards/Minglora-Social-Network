@@ -116,9 +116,9 @@ export function getAIProviderStatus(env = process.env) {
     connected: false,
     executionEnabled: false,
     note: manualDraftsAvailable
-      ? 'OpenAI moderated Creator Studio draft generation is available for explicit human requests. Autonomous workers, schedules and publishing remain disabled.'
+      ? 'OpenAI moderated, owner-initiated bot conversations and Creator Studio draft generation are available for explicit human requests. They use private server credentials, moderation and token budgets; autonomous workers, schedules and publishing remain disabled.'
       : configured
-        ? 'Provider credentials are present, but this provider has no accepted human-triggered Creator Studio generation adapter.'
+        ? 'Provider credentials are present, but the selected provider does not have an accepted human-initiated Minglora generation adapter.'
         : providerCredentialStatus?.credentialsPresent
           ? 'Selected provider credentials are present, but a usable model and approved generation adapter are not both configured.'
           : providerCredentialStatus?.note
