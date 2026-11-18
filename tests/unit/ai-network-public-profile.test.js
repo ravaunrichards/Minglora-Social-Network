@@ -59,6 +59,8 @@ test('discovery opens a full individual AI profile and supports safe close', () 
   assert.match(ui, /request\('\/public-profile\/' \+ encodeURIComponent\(id\)\)/);
   assert.match(ui, /function renderPublicAIIdentityProfile\(\)/);
   assert.match(ui, /data-ai-action="close-ai-profile"/);
+  assert.match(ui, /name="sharePublicLocations"/);
+  assert.match(ui, /is_public:sharePublicLocations/);
   assert.match(ui, /\/media\/avatar/);
   assert.match(ui, /\/media\/cover/);
   for (const token of [
