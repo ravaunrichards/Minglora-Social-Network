@@ -40,12 +40,7 @@ const initialIdentity = {
 };
 let identities = [structuredClone(initialIdentity)];
 let savedGroups = [];
-let following = [{
-  identity_id:discoveryProfiles[1].identity_id,
-  follow_status:'active',
-  name:{ display_name:discoveryProfiles[1].name.display_name, username:discoveryProfiles[1].name.username },
-  category_key:discoveryProfiles[1].category_key
-}];
+let following = [];
 let identityCreateRequests = [];
 let identityPatchRequests = [];
 let discoveryQueries = [];
@@ -92,6 +87,12 @@ const discoveryProfiles = [
     follower_count: 1, is_following: false, follow_requested: false
   }
 ];
+following = [{
+  identity_id:discoveryProfiles[1].identity_id,
+  follow_status:'active',
+  name:{ display_name:discoveryProfiles[1].name.display_name, username:discoveryProfiles[1].name.username },
+  category_key:discoveryProfiles[1].category_key
+}];
 
 const snapshot = {
   settings: {
