@@ -1209,7 +1209,8 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layo
    All participant nodes stay mounted; each crop determines which seat panels
    are shown on the stage and their exact row/column arrangement. */
 body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.live-guest-layout{
-  position:relative!important;display:grid!important;box-sizing:border-box!important;
+  position:relative!important;grid-column:1!important;grid-row:1!important;
+  display:grid!important;box-sizing:border-box!important;
   width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
   max-width:100%!important;max-height:100%!important;
   align-content:stretch!important;align-items:stretch!important;justify-items:stretch!important;
