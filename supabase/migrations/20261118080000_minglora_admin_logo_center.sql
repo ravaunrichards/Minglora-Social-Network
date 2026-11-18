@@ -524,7 +524,6 @@ BEGIN
       v_row.object_path,v_row.change_note,v_actor
     );
     UPDATE public.minglora_brand_logo_assets SET
-      title=CASE WHEN v_title IS NULL THEN title ELSE title END,
       storage_path=v_row.object_path,current_version_id=v_version_id,
       original_name=CASE WHEN v_version_number=1 THEN v_row.original_name ELSE original_name END,
       mime_type=v_row.mime_type,file_format=v_row.file_format,byte_size=v_row.byte_size,
@@ -532,7 +531,8 @@ BEGIN
       duration_ms=nullif(v_payload->>'durationMs','')::bigint,
       category_id=coalesce(v_row.category_id,category_id),
       collection_id=coalesce(v_row.collection_id,collection_id),
-      status='draft',updated_by=v_actor,updated_at=now()
+      status=CASE WHEN status IN ('approved','active') THEN status ELSE 'draft' END,
+      updated_by=v_actor,updated_at=now()
     WHERE id=v_asset_id;
     UPDATE public.minglora_brand_logo_upload_sessions SET status='completed',completed_at=now()
     WHERE id=v_row.id;
@@ -611,7 +611,7 @@ BEGIN
     v_version_id := coalesce(nullif(v_payload->>'versionId','')::uuid,
       (SELECT current_version_id FROM public.minglora_brand_logo_assets WHERE id=v_asset_id));
     IF NOT EXISTS (SELECT 1 FROM public.minglora_brand_logo_assets
-      WHERE id=v_asset_id AND status='approved' AND current_version_id=v_version_id) THEN
+      WHERE id=v_asset_id AND status IN ('approved','active') AND current_version_id=v_version_id) THEN
       RAISE EXCEPTION 'Only an approved current logo version can be assigned for publication.' USING ERRCODE='42501';
     END IF;
     INSERT INTO public.minglora_brand_logo_assignments(placement_key,asset_id,version_id,status,updated_by)
@@ -629,7 +629,7 @@ BEGIN
     WHERE placement_key=v_placement AND status='pending_approval' FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'No pending logo placement approval was found.' USING ERRCODE='P0002'; END IF;
     IF NOT EXISTS (SELECT 1 FROM public.minglora_brand_logo_assets
-      WHERE id=v_row.asset_id AND status='approved' AND current_version_id=v_row.version_id) THEN
+      WHERE id=v_row.asset_id AND status IN ('approved','active') AND current_version_id=v_row.version_id) THEN
       RAISE EXCEPTION 'The assigned logo version is no longer approved.' USING ERRCODE='42501';
     END IF;
     v_previous_asset := v_row.asset_id;
