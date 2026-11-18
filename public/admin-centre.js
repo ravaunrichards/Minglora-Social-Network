@@ -520,10 +520,6 @@
       '<p class="admin-approval-footnote">Only existing backend requests appear here. Human approval is an audited decision; it does not execute a high-impact action or enable autonomous workers. Other departments will be connected when they expose real protected approval workflows.</p>';
     panel.append(section);
 
-    const notification = panel.querySelector('#admin-approval-notification');
-    const notificationCount = panel.querySelector('#admin-approval-notification-count');
-    const toast = panel.querySelector('#admin-approval-toast');
-    const toastMessage = panel.querySelector('#admin-approval-toast-message');
     const list = section.querySelector('#admin-approval-request-list');
     const status = section.querySelector('#admin-approval-status');
     const total = section.querySelector('#admin-approval-total');
@@ -533,9 +529,6 @@
     const refreshButton = section.querySelector('#admin-approval-refresh');
     let loading = false;
     let deciding = false;
-    let firstSync = true;
-    let lastIds = new Set();
-    let toastTimer = null;
 
     const dateLabel = value => {
       const parsed = new Date(value);
@@ -581,26 +574,16 @@
         '<button type="button" class="primary" data-admin-approval-decision="approve" data-request-type="ai-task" data-request-id="' + escapeText(item.task_id) + '">Approve</button>' +
         '<button type="button" class="secondary" data-admin-approval-decision="reject" data-request-type="ai-task" data-request-id="' + escapeText(item.task_id) + '">Reject</button></div></article>';
     };
-    const showToast = count => {
-      if (!toast || !toastMessage) return;
-      toastMessage.textContent = count + ' new request' + (count === 1 ? '' : 's') + ' need your decision.';
-      toast.hidden = false;
-      if (toastTimer) window.clearTimeout(toastTimer);
-      toastTimer = window.setTimeout(() => { toast.hidden = true; }, 12000);
-    };
     const render = (snapshot, queue) => {
       const pending = readPending(snapshot, queue);
       const ids = new Set([
         ...pending.approvals.map(item => 'ai-action:' + item.id),
         ...pending.tasks.map(item => 'ai-task:' + item.task_id)
       ]);
-      const newlyPending = [...ids].filter(id => !lastIds.has(id));
       const count = ids.size;
       total.textContent = String(count);
       aiCount.textContent = String(pending.approvals.length);
       taskCount.textContent = String(pending.tasks.length);
-      notificationCount.textContent = String(count);
-      notification.hidden = count === 0;
       window.__mingloraAdminApprovalBots = Array.isArray(snapshot?.bots) ? snapshot.bots : [];
       list.innerHTML = count
         ? pending.approvals.map(approvalCard).join('') + pending.tasks.map(taskCard).join('')
@@ -613,9 +596,6 @@
       } else {
         runtimeNote.textContent = 'Task execution status could not be verified. Approval records a decision only; execution is not claimed.';
       }
-      if (!firstSync && newlyPending.length) showToast(newlyPending.length);
-      lastIds = ids;
-      firstSync = false;
       status.textContent = 'Synced ' + dateLabel(new Date()) + ' · ' + count + ' pending decision(s).';
     };
     const refresh = async () => {
@@ -678,7 +658,6 @@
       if (button && list.contains(button) && !loading && !deciding) decide(button);
     });
     refreshButton?.addEventListener('click', refresh);
-    panel.querySelector('#admin-approval-toast-dismiss')?.addEventListener('click', () => { toast.hidden = true; });
     refresh();
     window.setInterval(() => { if (document.visibilityState !== 'hidden') refresh(); }, 30000);
     window.addEventListener('focus', refresh);
@@ -704,15 +683,6 @@
       </div>
       <div class="admin-control-centre-note">
         This is the private Minglora platform workspace inside the administrator profile. Protected actions require the designated Creator Hub account and an authenticator-verified session.
-      </div>
-      <div id="admin-approval-notification" class="admin-approval-notification" hidden role="status" aria-live="polite">
-        <div class="admin-approval-notification-copy"><span>ADMIN ACTION REQUIRED</span><strong><span id="admin-approval-notification-count">0</span> request(s) waiting for your decision</strong></div>
-        <a href="?page=approvals" data-admin-route="approvals">Review approvals</a>
-      </div>
-      <div id="admin-approval-toast" class="admin-approval-toast" hidden role="alert" aria-live="assertive">
-        <div><strong>New admin approval notification</strong><span id="admin-approval-toast-message"></span></div>
-        <a href="?page=approvals" data-admin-route="approvals">Open Approval Center</a>
-        <button type="button" id="admin-approval-toast-dismiss" aria-label="Dismiss notification">×</button>
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <div class="admin-centre-nav-group">
