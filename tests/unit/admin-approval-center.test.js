@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const adminCentre = fs.readFileSync(new URL('../../public/admin-centre.js', import.meta.url), 'utf8');
 const adminCss = fs.readFileSync(new URL('../../public/admin-centre.css', import.meta.url), 'utf8');
+const adminHtml = fs.readFileSync(new URL('../../public/admin-centre.html', import.meta.url), 'utf8');
 
 test('Admin Centre exposes a protected Approval Center page and persistent pending-count banner', () => {
   assert.match(adminCentre, /key:'approvals',title:'Approval Center'/);
@@ -35,4 +36,9 @@ test('Approval notifications are refreshed in-app and remain accessible on mobil
   assert.match(adminCentre, /visibilitychange/);
   assert.match(adminCss, /\.admin-approval-toast/);
   assert.match(adminCss, /@media\(max-width:620px\)[\s\S]*\.admin-approval-toast/);
+});
+
+test('Admin Centre cache keys force browsers to load the new approval UI assets', () => {
+  assert.match(adminHtml, /admin-centre\.css\?v=20261117-approval-center-1/);
+  assert.match(adminHtml, /admin-centre\.js\?v=20261117-admin-approval-center-1/);
 });
