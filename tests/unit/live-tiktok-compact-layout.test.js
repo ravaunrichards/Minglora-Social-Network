@@ -66,10 +66,15 @@ test('Compact tools remain usable as a bottom sheet on touch devices and respect
   assert.match(compact, /@media\(prefers-reduced-motion:reduce\)/);
 });
 
-test('Audio-only LIVE keeps its original speaker grid instead of becoming a flattened video block', () => {
-  assert.match(compact, /#live-video-stage\.live-audio-stage\{[\s\S]*?display:grid!important/);
-  assert.match(compact, /grid-template-rows:minmax\(36px,auto\) minmax\(0,1fr\) minmax\(32px,auto\)/);
-  assert.match(compact, /#live-video-stage\.live-audio-stage #live-speaker-list/);
+test('Audio-only LIVE gives the reference guest grid the full stage and overlays room metadata', () => {
+  const audio=compact.slice(compact.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY'));
+  assert.match(audio, /#live-video-stage\.live-audio-stage\{[\s\S]*?display:grid!important/);
+  assert.match(audio, /grid-template-rows:minmax\(0,1fr\)!important/);
+  assert.match(audio, /\.live-audio-scene\{[\s\S]*?position:absolute!important/);
+  assert.match(audio, /#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
+  for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']){
+    assert.ok(audio.includes('#live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="'+layout+'"]'),layout+' audio reference geometry missing');
+  }
 });
 
 test('Mobile audio-only LIVE reserves space above the bottom control dock', () => {
@@ -78,7 +83,9 @@ test('Mobile audio-only LIVE reserves space above the bottom control dock', () =
 
 
 test('LIVE multi-guest stage reserves its heading row instead of covering the host panel', () => {
-  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  const correctionStart=compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry');
+  const audioParityStart=compact.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
+  const correction=compact.slice(correctionStart,audioParityStart>correctionStart?audioParityStart:undefined);
   assert.match(correction, /#live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?position:relative!important[\s\S]*?grid-row:1!important/);
   assert.match(correction, /data-live-layout="full-screen"\]\{\s*grid-template-rows:22px minmax\(0,1fr\)!important/);
   assert.match(correction, /data-live-layout="full-screen"\]>.live-guest-seat\.is-host\{\s*grid-column:1!important;grid-row:2!important/);
@@ -87,14 +94,15 @@ test('LIVE multi-guest stage reserves its heading row instead of covering the ho
 });
 
 test('LIVE Fluid Panel guest seats are inset and size-clamped inside the video-stage border', () => {
-  const correction=compact.slice(compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry'));
+  const correctionStart=compact.lastIndexOf('/* LIVE stage-safe multi-guest geometry');
+  const audioParityStart=compact.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
+  const correction=compact.slice(correctionStart,audioParityStart>correctionStart?audioParityStart:undefined);
   assert.match(correction, /data-live-layout="fluid-panel"\][\s\S]*?right:clamp\(8px,1vw,12px\)!important/);
   assert.match(correction, /width:clamp\(48px,15vw,120px\)!important;height:clamp\(44px,15vw,120px\)!important/);
   assert.match(correction, /max-width:none!important;max-height:none!important/);
   assert.match(correction, /nth-child\(3\)\{\s*bottom:clamp\(4px,1vw,8px\)!important/);
   assert.match(correction, /nth-child\(4\)\{\s*bottom:calc\(clamp\(4px,1vw,8px\)/);
-  assert.match(correction, /@media\(min-width:901px\)\{[\s\S]*?\}\s*$/);
-  assert.match(correction, /\{right:2px!important\}/);
-  assert.match(correction, /nth-child\(3\)\{bottom:2px!important\}/);
-  assert.match(correction, /nth-child\(4\)\{bottom:calc\(2px \+ clamp\(44px,15vw,120px\)/);
+  assert.match(compact, /@media\(min-width:901px\)\{[\s\S]*?right:2px!important\}/);
+  assert.match(correction, /nth-child\(3\)\{\s*bottom:clamp\(4px,1vw,8px\)!important/);
+  assert.match(correction, /nth-child\(4\)\{\s*bottom:calc\(clamp\(4px,1vw,8px\)/);
 });
