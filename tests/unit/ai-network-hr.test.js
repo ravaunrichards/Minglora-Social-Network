@@ -133,7 +133,7 @@ test('HR workspace uses database-backed identity, department, position and workf
     "request(base + '/vacancies')",
     "request(base + '/applications')",
     "request(base + '/employees')",
-    'request(\'/identities?limit=100\')',
+    'identityQuery.toString()',
     'identityRecords.map',
     'departmentOptions',
     'positionOptions',
