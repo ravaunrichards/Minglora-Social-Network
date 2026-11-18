@@ -132,6 +132,8 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   const audioContract=guestLayouts.slice(audioStart);
   assert.ok(audioContract.includes(videoReference),'Audio LIVE must use the exact same reference geometry as Video LIVE');
   assert.match(audioContract,/#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
+  assert.ok(audioContract.includes('#live-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
+    'Audio LIVE guest panels must occupy the single full-stage row, not the retired row 2');
   assert.match(audioContract,/\.live-audio-scene\{[\s\S]*?position:absolute!important/);
   assert.match(audioContract,/#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app, /class='live-guest-layout audio-guest-layout'/);
