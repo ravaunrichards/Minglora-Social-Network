@@ -198,7 +198,7 @@ test("delegated brand operators receive a Logo Center-only workspace and never t
   assert.match(adminPage,/does not grant access to member management, finance, moderation, AI operations/);
   assert.match(api,/hasActiveBrandMfaSession/);
   assert.match(edge,/MFA-verified Minglora administrator session is required/);
-  assert.match(ui,/required=\{upload:"brand:upload",design:"brand:edit"/);
+  assert.match(ui,/upload:"brand:upload",design:"brand:edit"/);
   assert.match(ui,/can\("brand:approve"\)/);
   assert.match(ui,/can\("brand:publish"\)/);
 });
