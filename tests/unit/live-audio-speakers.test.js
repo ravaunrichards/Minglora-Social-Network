@@ -136,7 +136,7 @@ test('Audio LIVE uses all nine reference grids without covering seat panels', ()
   const audioContract=guestLayouts.slice(audioStart);
   const layoutRules=(source,layout)=>[...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .map(match=>({
-      selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage'),
+      selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage').replaceAll(':is(.audio-guest-layout)',''),
       body:match[2].trim().replace(/\s+/g,' ')
     }))
     .filter(rule=>rule.selector.includes('data-live-layout="'+layout+'"'));
@@ -167,8 +167,8 @@ test('Audio LIVE Full Screen keeps its single full-stage host tile above the mob
   const end=guestLayouts.indexOf('/* 2. FLUID PANEL',start);
   const rule=guestLayouts.slice(start,end);
   assert.ok(start>=0&&end>start);
-  assert.match(rule,/#live-guest-layout\\.audio-guest-layout\\[data-live-layout="full-screen"\\]\\{grid-template-columns:minmax\\(0,1fr\\)!important;grid-template-rows:minmax\\(0,1fr\\)!important\\}/);
-  assert.match(rule,/#live-guest-layout\\.audio-guest-layout\\[data-live-layout="full-screen"\\]>\\.live-guest-seat\\.is-host\\{grid-column:1!important;grid-row:1!important\\}/);
+  assert.match(rule,/#live-guest-layout\\[data-live-layout="full-screen"\\]:is\\(\\.audio-guest-layout\\)\\{grid-template-columns:minmax\\(0,1fr\\)!important;grid-template-rows:minmax\\(0,1fr\\)!important\\}/);
+  assert.match(rule,/#live-guest-layout\\[data-live-layout="full-screen"\\]:is\\(\\.audio-guest-layout\\)>\\.live-guest-seat\\.is-host\\{grid-column:1!important;grid-row:1!important\\}/);
   assert.match(rule,/live-guest-seat\\.empty[^}]*display:none!important/);
   assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2'));
   assert.ok(serviceWorker.includes("'/live-tiktok-compact.css?v=20261118-audio-live-fullscreen-grid-specificity-2'"));
