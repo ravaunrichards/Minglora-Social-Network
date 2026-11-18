@@ -218,3 +218,64 @@ This checkpoint supersedes older deployment-target, runtime-version and live-cou
 - Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. This is an intentional autonomous-worker gate, not a blocker for identity/profile, category, organization/HR, memory, provider metadata or approval-workflow configuration.
 - Private AI avatar/cover bucket is created on the first genuine owner-authorized upload; its absence does not block text-only identity/profile creation. Owner/MFA upload, browser/device acceptance and provider inference still require real owner/provider actions.
 - Existing free-plan Render service is retained for the current stage. Before production worker pools or large-volume operation, complete worker-principal authentication, normalized repositories for remaining JSONB-backed state, backup/recovery, concurrency and representative capacity/region benchmarks. The 10-billion objective remains unbenchmarked.
+
+
+## Current live audit override — 2026-11-18 (read-only recheck)
+
+This is the newest directly observed checkpoint in this document. It supersedes older production counts, Edge Function versions, Render deployment IDs and provider-readiness statements above. Historical entries remain as history.
+
+### Existing production infrastructure
+
+- Existing Supabase project `gzycobgbasnqqhnympkr` (Minglora) is `ACTIVE_HEALTHY`, PostgreSQL 17.11, region `us-east-1`; measured database size is **41 MB**.
+- The private `ai_network` schema has **65 base tables; all 65/65 have RLS enabled**. Role verification: `anon` schema USAGE denied, `authenticated` schema USAGE denied, and `service_role` schema USAGE granted. This private server-only design is intentional; do not add browser grants or broad policies to silence advisor notices.
+- Supabase Edge Function `minglora-runtime-state` is ACTIVE at **v139**. The latest migration ledger entry observed is `20261118175938 / 20261118160000_minglora_logo_center_completion`; the live AI identity-batch migration remains `20261118075901 / minglora_ai_durable_identity_batches`.
+- Existing Render service `minglora-social-network-temp` (`srv-dbphq63rjlhs73fviegg`) remains attached to `main`; `autoDeploy=yes`, trigger `commit`, service not suspended. Deployment `dep-dbuv04m8bjmc73al1dfg` is **LIVE** on commit `10186a41620f254c8df43a4c067b958aa47b4e30` (2026-11-18 18:38:08 UTC). Build and deploy events succeeded. Startup logs confirm Node listening on port 10000, Supabase persistence durable/ready and LiveKit connected. A separate external HTTP readiness request could not be completed in this audit, so public HTTP acceptance is not claimed.
+
+### Direct live AI data counts
+
+| Area | Live count / state |
+|---|---:|
+| Active original AI categories | 15 |
+| AI identities / names / profiles | 1 / 1 / 1 |
+| AI email identity records | 1 |
+| Provider accounts / catalogue models / assignments | 1 / 1 / 1 |
+| Organizations / departments | 1 / 20 |
+| Employment records | 0 |
+| Queued tasks / bot conversations / bot messages | 0 / 0 / 0 |
+| Identity batches / batch rows / batch events | 0 / 0 / 0 |
+| Worker-principal tables | absent |
+
+The one identity is `population=independent`, category `ai_friends`, status `created`, `enabled=false`, supervision `fully_supervised`. Its existence is not proof of a functioning bot or active social account.
+
+The one email row is metadata only: primary, `verification_status=unverified`, `provisioning_status=not_requested`, empty provider, no management reference and no verification timestamp. **No inbox is provisioned or verified.**
+
+The one provider account is `OpenAI API`, status `unconfigured`, health `unknown`, with no credential-secret reference and no health-check timestamp. One model catalogue record is active, but its single identity assignment is `pending`, provider health `unknown` and has never been checked. Catalogue metadata is not proof of model access, connection or inference.
+
+### Runtime and provider boundary
+
+- The live `ai_task_runtime_controls.primary` row remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Keep this setting until worker authentication, real provider health/inference, moderation, budget, monitoring and recovery gates are accepted.
+- Latest Render startup readiness log reports `aiProvider=not_configured`, `aiCredentialsPresent=true`, `aiAdapterAvailable=true`, `aiBotChatAvailable=false`, `aiManualDraftsAvailable=false`, `aiExecutionEnabled=false`. Credential-presence true is only a boolean from process configuration; no secret value was read, and this does not prove key validity, model access or successful inference. The discrepancy between a presence flag and an unconfigured provider remains to be resolved by the designated-admin, MFA-protected read-only provider probe.
+- No real mailbox provisioning, provider inference, worker polling, autonomous execution, public AI publishing or AI social engagement was verified. The sole identity remains disabled.
+
+### Latest Supabase advisor readout
+
+- Health advisor: **0 findings**.
+- Security advisor: 138 INFO findings for RLS-enabled tables without policies; 65 correspond to the private `ai_network` schema, where browser-role schema access is denied by design. Separate findings include 65 anonymous-access-policy warnings across existing project tables and one warning that `public.minglora_list_my_mfa_factors()` is executable by `authenticated` while SECURITY DEFINER. The latter and the existing public policies need owner-reviewed, function-/table-specific security review; do not change unrelated social policies as part of the AI release.
+- Performance advisor: 85 unindexed-FK findings project-wide, **none in `ai_network`**; two auth RLS init-plan warnings on Help Center tables; 250 unused-index INFO notices. Unused-index notices on empty AI tables are not a reason to remove indexes. Health/performance findings do not establish load capacity.
+
+### Source release and acceptance status
+
+- PR #489 (`feat/minglora-ai-network-bulk-retry-20261117`) remains open and unmerged. Its worker-principal migration and runtime source are not deployed; the three worker-principal tables are absent from production. Earlier PR-head CI/browser/PostgreSQL acceptance is isolated-source evidence, not production worker acceptance.
+- Comparison with current `main` shows the PR branch has diverged: `main` is 205 commits ahead of the branch baseline and the feature branch contains 52 commits not in `main`. Do not merge PR #489 as-is; review/rebase or selectively port the required worker/bulk-retry commits onto current `main`, then rerun all relevant checks.
+- The prior `2/19` verified-task count is a historical acceptance checkpoint, not a current product-completion percentage. This read-only recheck does not close an acceptance task.
+- Ten billion registered identities and simultaneous execution capacity remain architecture targets only. No distributed identity directory, physical shard deployment, multi-region failover or representative 10-billion load/recovery benchmark was verified.
+
+### Exact next gates
+
+1. Complete real designated-owner/MFA signed-in acceptance for create/list/get/edit of the existing identity, plus genuine private avatar/cover upload and owner/follower/non-follower/block visibility checks on desktop and mobile. Do not create sample identities or fake Auth users.
+2. Resolve provider readiness using the private Render environment and the owner/MFA-protected read-only provider health endpoint. Never enter a key in browser UI or chat; do not mark the provider connected until the probe succeeds, and do not claim inference until moderated generation succeeds.
+3. Implement genuine email provisioning only through an approved email provider and record provider confirmation, verification and delivery status.
+4. Port/rebase the worker-principal changes onto current `main`, review the migration and complete a coordinated migration + Edge/Node release plan. Keep the worker pause and zero-worker cap unchanged until independent production acceptance.
+5. Continue normalized persistence, backup/restore, shard directory/repository integration and isolated representative performance/recovery testing before any capacity statement.
+
+**Audit actions:** read-only Supabase SQL/catalog/advisor inspection, GitHub branch/PR/workflow inspection, and Render service/deploy/log inspection only. No production migration, data write, environment-variable change, secret read, worker activation, service deployment or runtime-control change was made by this audit.
