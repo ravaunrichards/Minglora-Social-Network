@@ -41,7 +41,7 @@ async function signBrandPath(admin:any,path:string,expiresIn=600) {
 function isBrandSignatureValid(mimeType:string,bytes:Uint8Array) {
   const starts=(values:number[])=>values.every((v,i)=>bytes[i]===v);
   const ascii=(start:number,end:number)=>String.fromCharCode(...bytes.slice(start,end));
-  if(mimeType==="image/png")return starts([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);
+  if(mimeType==="image/png"||mimeType==="image/apng")return starts([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);
   if(mimeType==="image/jpeg")return starts([0xff,0xd8,0xff]);
   if(mimeType==="image/webp")return ascii(0,4)==="RIFF"&&ascii(8,12)==="WEBP";
   if(mimeType==="image/gif")return ["GIF87a","GIF89a"].includes(ascii(0,6));
@@ -133,8 +133,8 @@ export async function handleBrandRuntimeAction(action:string,input:Record<string
       const found=(objects||[]).find((item:any)=>item.name===objectName);
       if(listError||!found)return brandJson(409,{error:"The logo upload has not completed in private Storage."});
       const meta=found.metadata||{};
-      const actualSize=Number(meta.size??meta.contentLength??0);
-      const actualType=String(meta.mimetype??meta.contentType??"").toLowerCase();
+      const actualSize=Number(meta.size??meta.contentLength??session.byteSize);
+      const actualType=String(meta.mimetype??meta.contentType??session.mimeType).toLowerCase();
       if(actualSize!==Number(session.byteSize)||actualType!==String(session.mimeType).toLowerCase()) {
         return brandJson(409,{error:"The uploaded logo's size or content type does not match its prepared upload."});
       }
