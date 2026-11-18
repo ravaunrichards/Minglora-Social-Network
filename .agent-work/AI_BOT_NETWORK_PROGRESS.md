@@ -1,3 +1,16 @@
+## Email retry and CI hardening checkpoint — 2026-11-18 17:57 UTC
+
+- Continued the existing AI email implementation in PR #495 on `feat/minglora-ai-email-provisioning-20261117`; no new repository, Supabase project, Render service or email provider account was created.
+- Fixed a concurrent-send idempotency race in `minglora_ai_email_command`: outbound preparation now inserts against the existing unique `(email_id, client_idempotency_key)` index with `ON CONFLICT DO NOTHING`, then re-reads and validates the winning row. A reused request ID with different recipients or content is still rejected. The route returns an already-sent message without calling the provider again.
+- Added a regression assertion for the conflict-safe insert and expanded `.github/workflows/ai-network-checks.yml` so the email provisioning test and email migration changes are included in the AI Network check.
+- Latest branch head tested: `375cb6aecc0e9689551e96f94500b532831db0e3`. GitHub Actions passed: full repository `test`, AI Network syntax and regression tests, PostgreSQL 17 worker authentication/lease lifecycle, Supabase Auth provider acceptance, and For You functional navigation.
+- **Production remains blocked/not activated:** the additive email migration and `minglora_ai_email_command` RPC are absent from the existing production Supabase project; the existing Edge Function is not deployed with this action; the existing Render service has not been updated from this branch; no Resend key, verified domain, DNS, webhook or virtual mailbox was configured; no live email was sent or received.
+- Production registry counts remain zero for AI identities/profiles/names/email identities/provider accounts/models/assignments. The email message table is absent. Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- PR #495 remains **OPEN / DRAFT**, stacked on the open individual-identity branch (which in turn depends on the open worker/bulk branch). It has not been merged to `main` and is not deployed. Its mergeability applies to its current feature-branch base, not a verified current-main release.
+- Email remains **PARTIAL — code + automated checks passed; integration, provider configuration, production migration/deployment and signed end-to-end acceptance outstanding**. Do not mark it provisioned or complete based on automated test results.
+
+---
+
 ## AI email provisioning implementation — 2026-11-17
 
 - Email work is being implemented on \`feat/minglora-ai-email-provisioning-20261117\`, stacked on \`feat/minglora-ai-individual-identity-create-complete-20261117\` and therefore on the existing Minglora AI Network feature branch. No new repository or Supabase project was created.
