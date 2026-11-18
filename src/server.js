@@ -4327,6 +4327,101 @@ async function route(req, res) {
         return json(res,200,result);
       }
 
+      if(p==='/api/admin/brand-center'||p==='/api/admin/brand-center/download'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified designated Minglora owner can access the Logo Center.'});
+        }
+        if(AUTH_PROVIDER!=='supabase'||!isSupabasePersistence()){
+          return json(res,503,{error:'The Logo Center requires the connected Minglora Supabase project.'});
+        }
+        if(method==='GET'&&p==='/api/admin/brand-center'){
+          try{
+            const result=await requestSupabaseState('admin_brand_command',{
+              actorUserId:user.id,mfaVerified:true,brandAction:'list',payload:{}
+            });
+            return json(res,200,result);
+          }catch(error){
+            return json(res,Number(error?.status)||503,{error:error?.message||'The Logo Center library could not be loaded.'});
+          }
+        }
+        if(method==='GET'&&p==='/api/admin/brand-center/download'){
+          const requestUrl=new URL(req.url,'http://minglora.local');
+          const assetKind=String(requestUrl.searchParams.get('assetKind')||'logo');
+          const versionId=String(requestUrl.searchParams.get('versionId')||'');
+          if(!['logo','asset'].includes(assetKind)||!/^[0-9a-f-]{36}$/i.test(versionId)){
+            return json(res,400,{error:'Choose a valid brand asset version.'});
+          }
+          try{
+            const result=await requestSupabaseState('admin_brand_download',{
+              actorUserId:user.id,mfaVerified:true,assetKind,versionId
+            });
+            if(!result.url||!String(result.url).startsWith('https://')){
+              return json(res,404,{error:'The selected brand file is unavailable.'});
+            }
+            res.writeHead(302,{'Location':result.url,'Cache-Control':'no-store','Pragma':'no-cache'});
+            res.end();
+            return;
+          }catch(error){
+            return json(res,Number(error?.status)||503,{error:error?.message||'The private brand file could not be opened.'});
+          }
+        }
+        if(method==='POST'&&p==='/api/admin/brand-center'){
+          if(!isSameOriginApiWrite(req))return json(res,403,{error:'This Logo Center request must come from Minglora.'});
+          const operation=String(input?.operation||'command').trim().toLowerCase();
+          const payload=input?.payload&&typeof input.payload==='object'&&!Array.isArray(input.payload)?input.payload:{};
+          const actor={actorUserId:user.id,mfaVerified:true};
+          let result;
+          try{
+            if(operation==='upload_prepare'){
+              result=await requestSupabaseState('admin_brand_upload_prepare',{
+                ...actor,assetKind:String(payload.assetKind||'logo'),
+                fileName:String(payload.fileName||'').slice(0,200),
+                mimeType:String(payload.mimeType||'').toLowerCase(),
+                byteSize:Number(payload.byteSize||0)
+              });
+            }else if(operation==='upload_complete'){
+              result=await requestSupabaseState('admin_brand_upload_complete',{
+                ...actor,
+                assetKind:String(payload.assetKind||'logo'),
+                path:String(payload.path||''),
+                mimeType:String(payload.mimeType||'').toLowerCase(),
+                fileName:String(payload.fileName||'').slice(0,200),
+                byteSize:Number(payload.byteSize||0),
+                name:String(payload.name||'').slice(0,120),
+                description:String(payload.description||'').slice(0,1000),
+                categoryId:String(payload.categoryId||''),
+                collectionId:payload.collectionId?String(payload.collectionId):null,
+                assetType:String(payload.assetType||'other'),
+                logoId:payload.logoId?String(payload.logoId):null,
+                assetId:payload.assetId?String(payload.assetId):null,
+                changeNote:String(payload.changeNote||'').slice(0,500),
+                tags:Array.isArray(payload.tags)?payload.tags.slice(0,20):[]
+              });
+            }else if(operation==='command'){
+              const brandAction=String(input?.brandAction||'').trim().toLowerCase();
+              const allowed=new Set([
+                'create_category','update_category','create_collection','update_collection',
+                'update_logo','archive_logo','restore_logo','restore_logo_version','favorite_toggle',
+                'request_publish','decide_approval','publish','rollback','schedule_logo','cancel_schedule',
+                'update_identity','archive_asset','restore_asset','request_asset_publish','publish_asset'
+              ]);
+              if(!allowed.has(brandAction))return json(res,400,{error:'Choose a supported Logo Center operation.'});
+              const serialized=JSON.stringify(payload);
+              if(serialized.length>50000)return json(res,413,{error:'The Logo Center request is too large.'});
+              result=await requestSupabaseState('admin_brand_command',{
+                ...actor,brandAction,payload
+              });
+            }else{
+              return json(res,400,{error:'Choose a supported Logo Center request type.'});
+            }
+            return json(res,200,result);
+          }catch(error){
+            return json(res,Number(error?.status)||503,{error:error?.message||'The Logo Center request could not be completed.'});
+          }
+        }
+        return json(res,405,{error:'Unsupported Logo Center request method.'});
+      }
+
       if((method==='GET'||method==='POST')&&p==='/api/admin/rbac'){
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified designated Creator Hub owner can manage administrator permissions.'});
