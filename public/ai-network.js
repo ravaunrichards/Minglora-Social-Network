@@ -1249,7 +1249,7 @@
       '<button class="primary" type="submit">Create organization record</button></form>';
     return card('Corporate Governance & Workforce', '11 · ORGANIZATIONS', '<p>Establish an owner-controlled organization, then provision its department and position structures from the verified templates.</p>' +
       warning + templates + organizationRows + createForm +
-      '<p class="ai-network-note">Current scope: organization, 20 department templates and position templates. Recruitment, employee appointments, reporting-chain changes, payroll and employment lifecycle actions are not yet connected. Department and position creation does not imply that AI staff have been hired.</p>', 'ai-network-span-2');
+      '<p class="ai-network-note">This workspace connects organization structure, recruitment, appointment and employment history, reporting relationships, performance reviews, promotions, succession planning, training, attendance and confidential human-reviewed disciplinary investigations. Payroll, real-money transfers and automated employment sanctions are not enabled. Creating an organization or position never invents employees or AI identities.</p>', 'ai-network-span-2');
   }
 
   function renderDelegationCenter(teams) {
