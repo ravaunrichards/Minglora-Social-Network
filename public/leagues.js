@@ -15,7 +15,7 @@
     const safeSymbol = String(symbol || "").replace(/[^a-z0-9-]/gi, "");
     if (!safeSymbol) return "";
     const accessibility = label ? " role='img' aria-label='" + esc(label) + "'" : " aria-hidden='true'";
-    return "<svg class='league-asset-icon " + esc(className || "") + "' viewBox='0 0 128 128'" + accessibility + " focusable='false'><use href='/assets/league/league-emblems.svg?v=20261118-match-powerups-reference-1#" + safeSymbol + "'></use></svg>";
+    return "<svg class='league-asset-icon " + esc(className || "") + "' viewBox='0 0 128 128'" + accessibility + " focusable='false'><use href='/assets/league/league-emblems.svg?v=20261116-original-league-svg-assets-1#" + safeSymbol + "'></use></svg>";
   }
   const leagueReferenceAssetNames = new Set([
     'Screenshot_20261112_020335_TikTok(1).jpg',
