@@ -160,6 +160,16 @@ test('email HTML escaping prevents markup injection in rendered plain text', () 
   assert.equal(escapeAIEmailHtml('<script>alert("x")</script>\nhello'), '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;<br>hello');
 });
 
+test('outbound email preparation uses conflict-safe idempotency for concurrent retries', () => {
+  const migration = read('supabase/migrations/20261117130000_minglora_ai_email_provisioning.sql');
+  assert.match(
+    migration,
+    /on conflict \\(email_id, client_idempotency_key\\)\\s+where client_idempotency_key is not null\\s+do nothing\\s+returning \\* into v_message/i
+  );
+  assert.match(migration, /The email request is being committed; retry with the same request ID/i);
+  assert.match(migration, /This email request ID was already used with different recipients or message content/i);
+});
+
 test('AI email SQL and runtime gateway keep mailbox data private and webhook ingestion trusted', () => {
   const migration = read('supabase/migrations/20261117130000_minglora_ai_email_provisioning.sql');
   const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
