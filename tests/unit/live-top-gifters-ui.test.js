@@ -13,6 +13,7 @@ const addon = read("public/top-gifters.js");
 const html = read("public/index.html");
 const sw = read("public/sw.js");
 const css = read("public/styles.css");
+const rankingCss = read("public/rankings.css");
 
 test("LIVE room Top Gifters ranks broadcast-scoped confirmed LIVE gifts and refreshes in the existing gift poll", () => {
   assert.match(service, /export function getLiveGifterLeaderboard/);
@@ -41,7 +42,7 @@ test("platform Top Gifters offers period filters, earned rank titles and working
   assert.match(addon, /position >= 4 && position <= 20/);
   assert.match(addon, /place-4-10/);
   assert.match(addon, /place-11-20/);
-  assert.match(css, /\.minglora-gifter-row \.minglora-gifter-ranked-frame-art/);
+  assert.match(rankingCss, /\.minglora-gifter-row \.minglora-gifter-ranked-frame-art/);
   assert.match(addon, /data-top-gifter-profile/);
   assert.match(addon, /window\.openProfile\(userId\)/);
 });
