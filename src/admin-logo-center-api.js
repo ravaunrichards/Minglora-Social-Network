@@ -23,8 +23,7 @@ const BRAND_ACTIONS = new Set([
 export async function handleAdminLogoCenterApi(context) {
   const {
     method, path:requestPath, url, input, user, req, res, json, isSameOriginApiWrite,
-    isDesignatedCreatorHubAdmin, isModerator, hasActiveReviewerSession,
-    AUTH_PROVIDER, isSupabasePersistence, requestSupabaseState
+    hasActiveBrandMfaSession, AUTH_PROVIDER, isSupabasePersistence, requestSupabaseState
   } = context;
   const respond = (...args) => { json(...args); return true; };
 
@@ -49,8 +48,8 @@ export async function handleAdminLogoCenterApi(context) {
   const assetUrlMatch=requestPath.match(/^\/api\/admin\/logo-center\/assets\/([0-9a-f-]{36})\/preview$/i);
   if (!(isRoot||isAction||isPrepare||isComplete||assetUrlMatch)) return false;
   if (!user) return respond(res,401,{error:"Sign in to access the Minglora Logo Center."});
-  if (!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)) {
-    return respond(res,403,{error:"The Logo Center requires the designated administrator's verified MFA session."});
+  if (typeof hasActiveBrandMfaSession!=="function" || !hasActiveBrandMfaSession(user,req)) {
+    return respond(res,403,{error:"The Logo Center requires a signed-in, MFA-verified Minglora session."});
   }
   if (AUTH_PROVIDER !== "supabase" || !isSupabasePersistence()) {
     return respond(res,503,{error:"The Logo Center requires Minglora's connected Supabase database and Storage."});
