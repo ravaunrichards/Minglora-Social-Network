@@ -227,7 +227,7 @@
       .filter(entry => entry.member && entry.member.id);
     if (!ranked.length) return "";
     return "<div class='league-top-three-list league-podium' aria-label='Top three Creator League podium'>" + ranked.map(({member, place}) =>
-      "<button type='button' class='league-podium-member league-top-three-row is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
+      "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
         "<span class='league-podium-art' aria-label='Rank " + place + " profile badge'>" +
           "<img class='league-podium-rank-frame' src='/assets/daily-ranking-badges/place-" + place + ".png' alt='' loading='lazy' decoding='async'>" +
           "<span class='league-podium-avatar'>" + image(member, "ml-creator-ring ml-creator-ring--league") + "</span></span>" +
@@ -238,32 +238,49 @@
         "<span class='league-podium-base'><span>PLACE</span><strong>" + place + "</strong></span></button>"
     ).join("") + "</div>";
   }
+  function topThreeRowsMarkup(leaderboard) {
+    const rows = leaderboard.filter(item => {
+      const position = Number(item.position || 0);
+      return position >= 1 && position <= 3;
+    }).sort((a,b) => Number(a.position || 0) - Number(b.position || 0));
+    if (!rows.length) return "";
+    return "<div class='league-top-three-list' role='list' aria-label='Top three Creator League standings'>" +
+      rows.map(item => {
+        const place = Number(item.position || 0);
+        return "<button type='button' class='league-top-three-row' role='listitem' data-league-profile='" + esc(item.id || "") + "' aria-label='Open " + esc(item.name || item.username || "creator") + " profile, ranked number " + place + "'>" +
+          "<b class='league-top-three-number'>" + place + "</b>" +
+          "<span class='league-top-three-avatar'>" + image(item, "league-avatar") + "</span>" +
+          "<span class='league-top-three-identity'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small>" +
+          "<span class='league-rank-pill league-rank-pill--place-" + place + "'>No. " + place + "</span></span>" +
+          "<strong class='league-top-three-points'>" + Number(item.points ?? item.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>";
+      }).join("") + "</div>";
+  }
   function leaderboardMarkup(leaderboard) {
     const ranked = leaderboard.filter(item => {
       const position = Number(item.position || 0);
       return position >= 1 && position <= 20;
     });
     if (!ranked.length) return "<div class='league-empty-inline'>No creators have earned confirmed LIVE Gift points for this division and period yet.</div>";
-    const remaining = leaderboard.slice(3).filter(item => {
+    const remaining = leaderboard.filter(item => {
       const position = Number(item.position || 0);
-      return position > 3 && position <= 20;
+      return position >= 4 && position <= 20;
     }).map(item => {
       const position = Number(item.position || 0);
-      const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
-      const bandMarkup = award
-        ? "<span class='league-leader-band league-leader-band--" + award + "'>" + (award === "top-ten" ? "TOP 10" : "TOP 20") + "</span>"
-        : "";
-      const medalMarkup = award
-        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-label='Rank " + position + "'>#" + position + "</span>"
-        : "";
-      const rowClass = award ? " league-leader-row--" + award : "";
-      return "<button type='button' class='league-leader-row" + rowClass + "' data-league-profile='" + esc(item.id || "") + "' aria-label='Open " + esc(item.name || item.username || "creator") + " profile, place " + position + "' " + (!item.id ? "disabled" : "") + ">" +
+      const isTopTen = position >= 4 && position <= 10;
+      const award = isTopTen ? "top-ten" : "top-twenty";
+      const frame = isTopTen ? "place-4-10" : "place-11-20";
+      const bandMarkup = "<span class='league-leader-band league-leader-band--" + award + "'>" +
+        (isTopTen ? "TOP 10" : "TOP 20") + "</span>";
+      return "<button type='button' class='league-leader-row league-leader-row--" + award + "' data-league-profile='" + esc(item.id || "") + "' aria-label='Open " + esc(item.name || item.username || "creator") + " profile, place " + position + "' " + (!item.id ? "disabled" : "") + ">" +
         "<b class='league-position'>#" + position + "</b>" +
-        "<span class='league-rank-avatar-wrap'>" + image(item, "ml-creator-ring ml-creator-ring--league") + medalMarkup + "</span>" +
+        "<span class='league-rank-avatar-wrap league-rank-avatar-wrap--" + award + "'>" +
+          "<img class='league-ranking-avatar-frame' src='/assets/daily-ranking-badges/" + frame + ".png' alt='' loading='lazy' decoding='async'>" +
+          image(item, "league-avatar league-avatar--ranked") + "</span>" +
         "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small>" + bandMarkup + "</span>" +
         "<strong class='league-leader-points'>" + Number(item.points ?? item.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>";
     }).join("");
-    return podiumMarkup(ranked) + (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
+    return podiumMarkup(ranked) + topThreeRowsMarkup(ranked) +
+      (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
   }
   function meter(value, max) {
     const percent = Math.max(0, Math.min(100, Number(value || 0) / Math.max(1, Number(max || 1)) * 100));
@@ -341,7 +358,7 @@
         ]
       }
     ];
-    return "<details class='card league-ranking-reference-guide' id='league-ranking-reference-guide'>" +
+    return "<details class='card league-ranking-reference-guide' id='league-ranking-reference-guide' open>" +
       "<summary>View your original uploaded ranking references</summary>" +
       "<p class='league-ranking-reference-intro'>These are the exact source images you uploaded. Live standings above continue to use real Minglora member profiles, placement, scores and profile links.</p>" +
       groups.map(group => "<section class='league-ranking-reference-group'><h3>" + esc(group.title) + "</h3><div class='league-ranking-reference-grid'>" +
