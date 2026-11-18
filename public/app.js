@@ -1880,7 +1880,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
       return;
     }
     if(request&&request.status==="accepted"){
-      button.disabled=false;button.textContent="Join Co-host stage";
+      button.disabled=false;button.textContent="Join guest stage";
       if(status)status.textContent="The host approved your microphone. Join when you're ready.";
       button.onclick=async()=>{
         button.disabled=true;
@@ -1894,7 +1894,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
     if(status)status.textContent=request?.status==="requested"?"Waiting for the host to review your request.":request?.status==="rejected"?"Your last request was declined. You can ask again.":"You are listening as an audience member.";
     button.onclick=async()=>{
       button.disabled=true;
-      try{await api(root+"/speaker-requests",{method:"POST",body:"{}"});button.textContent="Request sent";if(status)status.textContent="Waiting for the host to review your request.";toast("Your request to speak was sent.");}
+      try{await api(root+"/speaker-requests",{method:"POST",body:"{}"});button.textContent="Request sent";if(status)status.textContent="Waiting for the host to review your request.";toast("Your Multi-guest request was sent.");}
       catch(error){toast(error.message);button.disabled=false;}
     };
   }catch(error){if(status)status.textContent=error.message;}
@@ -2059,7 +2059,7 @@ function renderLiveCohostRoster(participants){
     const name=String(item.user?.display_name||item.user?.username||"Minglora creator");
     const status=item.status==="connected"?"LIVE on Co-host":item.status==="accepted"?"Accepted · connecting":item.status==="requested"?"Requesting to join":"Invitation pending";
     const host=String(activeLiveCohostSession?.host_user_id||"")===String(state.user?.id||"");
-    const controls=item.status==="requested"&&host
+    const controls=(item.status==="requested"||item.status==="invited")&&host
       ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-accept='"+esc(item.user_id)+"'>Accept</button><button type='button' data-cohost-reject='"+esc(item.user_id)+"'>Decline</button></span>"
       :["accepted","connected"].includes(item.status)&&host&&item.role!=="host"
         ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-remove='"+esc(item.user_id)+"'>Remove</button></span>":"";
@@ -3851,12 +3851,14 @@ activeLivePinnedComment=null;
       document.removeEventListener("fullscreenchange",liveFullscreenChangeListener);
       if(document.fullscreenElement===livePlayerShell&&document.exitFullscreen)await document.exitFullscreen().catch(()=>{});
       activeLiveDevicePreferences=null;
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      await stopLiveCohostLocal();
+closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      await stopLiveCohostLocal();
+closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
@@ -4113,6 +4115,7 @@ activeLivePinnedComment=null;
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast(broadcastType==="audio_only"?"You're on stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on stage. Your microphone and camera are connected.");
   }catch(error){
+    await stopLiveCohostLocal();
     stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
