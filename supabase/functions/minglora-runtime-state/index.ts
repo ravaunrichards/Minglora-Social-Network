@@ -3422,12 +3422,13 @@ Deno.serve(async (req: Request) => {
     const sessionId=String(input.sessionId||""), userId=String(input.userId||"");
     const broadcastId=String(input.broadcastId||"");
     const actorId=String(input.actorId||"");
-    if(!validUuid(sessionId)||!validUuid(userId)||!validUuid(broadcastId)||!validUuid(actorId)||userId===actorId)
+    if(!validUuid(sessionId)||!validUuid(userId)||!validUuid(broadcastId)||!validUuid(actorId)||(action==="live_cohost_invite"&&userId===actorId))
       return json(400,{error:"Invalid Co-host participant details."});
     const {data:session,error:sessionError}=await admin.from("live_cohost_sessions")
       .select("id,host_user_id,status,max_participants").eq("id",sessionId).maybeSingle();
     if(sessionError||!session||session.status!=="active")return json(404,{error:"Co-host session is not active."});
     const isInvite=action==="live_cohost_invite";
+    if(userId===session.host_user_id)return json(409,{error:"The Co-host host is already in this session."});
     if(isInvite&&session.host_user_id!==actorId)return json(403,{error:"Only the Co-host host can send invitations."});
     const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
       .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
@@ -3467,7 +3468,7 @@ Deno.serve(async (req: Request) => {
     if(decision==="remove"&&!actorIsHost)return json(403,{error:"Only the Co-host host can remove a creator."});
     if(decision==="accept"&&!(actorId===userId&&participant.status==="invited"||actorIsHost&&participant.status==="requested"))
       return json(403,{error:"Only the invited creator or Co-host host can accept this participant."});
-    if(decision==="reject"&&!(actorId===userId&&participant.status==="invited"||actorIsHost&&participant.status==="requested"))
+    if(decision==="reject"&&!(actorId===userId&&participant.status==="invited"||actorIsHost&&["requested","invited"].includes(participant.status)))
       return json(403,{error:"This Co-host request cannot be declined by this account."});
     if(decision==="remove"&&!["accepted","connected"].includes(participant.status))
       return json(409,{error:"This creator is not connected to the Co-host stage."});
@@ -3542,7 +3543,7 @@ Deno.serve(async (req: Request) => {
     const {data:rows,error}=await admin.from("live_participants")
       .select("broadcast_id,user_id,role,status,joined_at,left_at")
       .eq("broadcast_id",broadcastId).eq("role","guest")
-      .in("status",["requested","invited","accepted","connected"])
+      .in("status",["requested","accepted","connected"])
       .order("joined_at",{ascending:true});
     if(error)return json(503,{error:"Speaker requests could not be loaded."});
     const ids=(rows||[]).map(row=>row.user_id);
