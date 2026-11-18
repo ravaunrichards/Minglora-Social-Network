@@ -38,7 +38,6 @@ test("Crop References use canonical folders and contain no duplicate image files
     "Screenshot_20261112_021355_TikTok(1).png",
     "Screenshot_20261112_021407_TikTok(1).png"
   ];
-  const unassignedRankingNames = rankingNames.slice(-2);
   const guestNames = [
     "Full Screen.png", "Fluid Panel.png", "Fluid Grid.png",
     "Fixed Grid.png", "Fixed Panel.png", "Side by Side.png",
@@ -60,11 +59,13 @@ test("Crop References use canonical folders and contain no duplicate image files
   }
   assert.equal(rankingNames.length, 8, "all supplied Daily Ranking PNGs are included in the source inventory");
   assert.equal(sourceFiles.length, 30, "all canonical Crop References PNGs are included in the uniqueness audit");
-  for (const name of unassignedRankingNames) {
-    const sourcePath = path.join(root, "assets", "Crop References", "Daily Ranking Badge", name);
-    assert.ok(fs.existsSync(sourcePath), name + " remains preserved in the canonical source folder");
-    assert.ok(!server.includes(name), name + " must not be assigned an invented ranking position");
-    assert.ok(!serviceWorker.includes(name), name + " must remain outside the runtime ranking cache");
+  const approvedFlameRoutes = [
+    ["Screenshot_20261112_021355_TikTok(1).png", "/assets/daily-ranking-badges/place-4-10.png"],
+    ["Screenshot_20261112_021407_TikTok(1).png", "/assets/daily-ranking-badges/place-11-20.png"]
+  ];
+  for (const [name, route] of approvedFlameRoutes) {
+    assert.ok(server.includes("'" + route + "': '" + name + "'"), name + " must use its approved rank-band route");
+    assert.ok(serviceWorker.includes(route), name + " must be included in the runtime ranking cache");
   }
   for (const name of milestoneNames) {
     assert.ok(fs.existsSync(path.join(root, "assets", "Crop References", "Gifters Badges", name)), name + " is in the canonical milestone folder");
@@ -121,6 +122,14 @@ test("Daily top-three ranking uses the supplied cropped first, second and third 
   assert.match(server, /daily-ranking-badges\/top-gifters-place-2\.png/);
   assert.match(server, /daily-ranking-badges\/top-gifters-place-3\.png/);
   assert.match(topGifters, /daily-ranking-badges\/top-gifters-place-/);
+  assert.match(server, /daily-ranking-badges\/place-4-10\.png/);
+  assert.match(server, /daily-ranking-badges\/place-11-20\.png/);
+  assert.match(topGifters, /place-4-10/);
+  assert.match(topGifters, /place-11-20/);
+  assert.match(app, /live-ranking-avatar-frame/);
+  assert.match(app, /live-ranking-avatar-image/);
+  assert.match(profileBadgeStyles, /profile-ranking-frame-host/);
+  assert.match(profileBadgeStyles, /profile-ranking-frame-art/);
   assert.match(serviceWorker, /daily-ranking-badges\/top-gifters-place-1\.png/);
   assert.match(rankingStyles, /\.minglora-gifter-podium \.minglora-gifter-rank-frame/);
   assert.match(rankingStyles, /\.minglora-gifter-podium \.minglora-gifter-rank-avatar/);
@@ -172,11 +181,11 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v358-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v359-tiktok-ranking-frames-20261118/);
   const appAsset='/app.js?v=20261118-audio-only-side-by-side-nine-seat-1';
   assert.ok(html.includes(appAsset),'HTML loads the current LIVE app bundle');
   assert.ok(serviceWorker.includes("'"+appAsset+"'"),'service worker precaches the same LIVE app bundle');
-  assert.match(html, /top-gifters\.js\?v=20261117-avatar-rankings-sync-1/);
+  assert.match(html, /top-gifters\.js\?v=20261118-tiktok-ranking-frames-1/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-range-sheet-single-layer-1/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheet-single-layer-1/);
 });
@@ -253,7 +262,9 @@ test("Daily ranking badge routes resolve from the canonical root-level PNG folde
     "Screenshot_20261112_021309_TikTok(1).png",
     "Screenshot_20261112_021309_TikTok(2).png",
     "Screenshot_20261112_021333_TikTok(1).png",
-    "Screenshot_20261112_021343_TikTok(1).png"
+    "Screenshot_20261112_021343_TikTok(1).png",
+    "Screenshot_20261112_021355_TikTok(1).png",
+    "Screenshot_20261112_021407_TikTok(1).png"
   ];
   for (const name of sourceNames) {
     assert.ok(fs.existsSync(path.join(sourceDirectory, name)), "missing ranking crop: " + name);
