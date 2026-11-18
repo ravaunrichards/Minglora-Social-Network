@@ -204,3 +204,17 @@ The additive HR development slice includes owner-scoped training courses, draft-
 - New service/provider tests and desktop/mobile styling are on the branch. CI and live signed-in owner acceptance are pending. No production migration, AI identity creation, worker activation, provider setting change, deployment or production data mutation has occurred.
 - Runtime controls remain unchanged and paused: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Current production identity/profile/email/provider assignment counts remain zero. The accepted master checklist remains **2/19 = 10.53% by task count** until actual production acceptance; this is not an overall product-completion estimate.
 - Detailed endpoint, security and storage boundaries: [AI Bot Conversation Runtime](AI_BOT_CHAT_RUNTIME.md).
+
+
+## Current live production checkpoint — 2026-11-18
+
+This checkpoint supersedes older deployment-target, runtime-version and live-count statements earlier in this document; prior entries remain historical.
+
+- The owner confirmed the existing Render service `minglora-social-network-temp` as the production deployment target. It is attached to `main` with automatic deploy-on-commit enabled. Current deployment `dep-dbujetui0phs73b41lu0` is **LIVE** on commit `b7e692edd6a35bb804a3b478c8fe454dda7651b8`; startup logs show Supabase persistence durable/ready and LiveKit connected.
+- The existing Supabase project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY. The `minglora-runtime-state` Edge Function is ACTIVE at version 135.
+- Production schema audit: 62/62 `ai_network` tables have RLS enabled. Browser roles have no schema USAGE or direct AI table access; service-role-only backend RPCs are the intended access path. Zero policy rows for this private schema are intentional and do not justify adding browser grants.
+- Live data: 15 active AI categories; 0 AI identities/names/profiles/email records/provider accounts/models/assignments; 1 organization; 20 departments; 0 employees; 0 bot conversations/messages; 0 task rows or pending approvals. Empty data is not a missing table or missing migration.
+- Deployed source includes the owner-initiated OpenAI bot-chat adapter and Creator Studio draft adapter. The live server still reports provider `not_configured`, no credentials, bot chat unavailable and Creator Studio generation unavailable. First human-initiated OpenAI requests require `OPENAI_API_KEY`, `OPENAI_DEFAULT_MODEL` and the read-only provider probe. Provider-account/model-assignment metadata is optional for this first path.
+- Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. This is an intentional autonomous-worker gate, not a blocker for identity/profile, category, organization/HR, memory, provider metadata or approval-workflow configuration.
+- Private AI avatar/cover bucket is created on the first genuine owner-authorized upload; its absence does not block text-only identity/profile creation. Owner/MFA upload, browser/device acceptance and provider inference still require real owner/provider actions.
+- Existing free-plan Render service is retained for the current stage. Before production worker pools or large-volume operation, complete worker-principal authentication, normalized repositories for remaining JSONB-backed state, backup/recovery, concurrency and representative capacity/region benchmarks. The 10-billion objective remains unbenchmarked.
