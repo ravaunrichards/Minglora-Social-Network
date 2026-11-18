@@ -82,6 +82,7 @@ Deno.serve(async (req: Request) => {
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
+    "live_cohost_invite", "live_cohost_invitation_accept",
     "economy_catalog", "economy_wallet", "economy_refunded_gift_ids", "economy_purchase_create", "economy_purchase_get",
     "economy_purchase_settle", "economy_send_gift", "economy_send_social_gift", "economy_live_reward_create",
     "economy_live_reward_list", "economy_live_reward_join", "economy_live_reward_claim", "economy_live_reward_settle",
@@ -3278,6 +3279,10 @@ Deno.serve(async (req: Request) => {
     // The same relational row stores speaker-request and participant status.
     if(role==="viewer"&&existing?.role==="guest"&&existing.status==="requested")
       return json(200,{participant:existing,requestPending:true});
+    // An invited co-host must first enter as a viewer. Preserve the invitation
+    // until they accept, then the normal guest-token reconnect promotes them.
+    if(role==="viewer"&&existing?.role==="guest"&&existing.status==="invited")
+      return json(200,{participant:existing,invitationPending:true});
     if(role==="viewer"&&existing?.role==="guest"&&["accepted","connected"].includes(existing.status))
       return json(409,{error:"Your speaker request is approved. Rejoin with the speaker-stage token."});
     const connectedAt=new Date().toISOString();
@@ -3316,6 +3321,57 @@ Deno.serve(async (req: Request) => {
     return json(201,{request:data});
   }
 
+  if (action === "live_cohost_invite") {
+    const broadcastId=String(input.broadcastId||""), hostId=String(input.hostId||""), userId=String(input.userId||"");
+    if(!validUuid(broadcastId)||!validUuid(hostId)||!validUuid(userId)||hostId===userId)
+      return json(400,{error:"Invalid LIVE co-host invitation."});
+    const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
+      .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
+    if(broadcastError||!broadcast||broadcast.host_id!==hostId||broadcast.status!=="live")
+      return json(404,{error:"LIVE host access is required."});
+    const {data:existing,error:existingError}=await admin.from("live_participants")
+      .select("role,status").eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
+    if(existingError)return json(503,{error:"Minglora could not check the member's existing LIVE stage access."});
+    if(existing?.role==="guest"&&["requested","invited","accepted","connected"].includes(existing.status))
+      return json(409,{error:"This member already has an active guest request or invitation."});
+    const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
+      .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["invited","accepted","connected"]);
+    if(countError)return json(503,{error:"Minglora could not verify the available co-host seats."});
+    const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
+    if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
+    const {data,error}=await admin.from("live_participants").upsert({
+      broadcast_id:broadcastId,user_id:userId,role:"guest",status:"invited",joined_at:null,left_at:null
+    },{onConflict:"broadcast_id,user_id"}).select("broadcast_id,user_id,role,status,joined_at").single();
+    if(error)return fail(error,"Minglora could not save the Co-host invitation.");
+    return json(201,{invitation:data});
+  }
+
+  if (action === "live_cohost_invitation_accept") {
+    const broadcastId=String(input.broadcastId||""), userId=String(input.userId||"");
+    if(!validUuid(broadcastId)||!validUuid(userId))
+      return json(400,{error:"Invalid LIVE co-host invitation acceptance."});
+    const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
+      .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
+    if(broadcastError||!broadcast||broadcast.status!=="live"||broadcast.host_id===userId)
+      return json(404,{error:"LIVE invitation is not available."});
+    const {data:invitation,error:invitationError}=await admin.from("live_participants")
+      .select("broadcast_id,user_id,role,status").eq("broadcast_id",broadcastId).eq("user_id",userId)
+      .eq("role","guest").eq("status","invited").maybeSingle();
+    if(invitationError)return json(503,{error:"Minglora could not verify this co-host invitation."});
+    if(!invitation)return json(409,{error:"There is no pending Co-host invitation for this member."});
+    const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
+      .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["accepted","connected"]);
+    if(countError)return json(503,{error:"Minglora could not verify the available co-host seats."});
+    const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
+    if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
+    const {data,error}=await admin.from("live_participants").update({status:"accepted"})
+      .eq("broadcast_id",broadcastId).eq("user_id",userId).eq("role","guest").eq("status","invited")
+      .select("broadcast_id,user_id,role,status").maybeSingle();
+    if(error)return fail(error,"Minglora could not accept this Co-host invitation.");
+    if(!data)return json(409,{error:"This Co-host invitation is no longer pending."});
+    return json(200,{request:data});
+  }
+
   if (action === "live_speaker_requests_list") {
     const broadcastId=String(input.broadcastId||""), hostId=String(input.hostId||"");
     if(!validUuid(broadcastId)||!validUuid(hostId))return json(400,{error:"Invalid LIVE speaker request lookup."});
@@ -3325,7 +3381,7 @@ Deno.serve(async (req: Request) => {
     const {data:rows,error}=await admin.from("live_participants")
       .select("broadcast_id,user_id,role,status,joined_at,left_at")
       .eq("broadcast_id",broadcastId).eq("role","guest")
-      .in("status",["requested","accepted","connected"])
+      .in("status",["requested","invited","accepted","connected"])
       .order("joined_at",{ascending:true});
     if(error)return json(503,{error:"Speaker requests could not be loaded."});
     const ids=(rows||[]).map(row=>row.user_id);
@@ -3356,7 +3412,8 @@ Deno.serve(async (req: Request) => {
     if(broadcastError||!broadcast||broadcast.host_id!==hostId||broadcast.status!=="live")
       return json(404,{error:"LIVE session not found."});
     const {data:pending,error:pendingError}=await admin.from("live_participants")
-      .select("user_id,status").eq("broadcast_id",broadcastId).eq("user_id",speakerId).eq("status","requested").maybeSingle();
+      .select("user_id,status").eq("broadcast_id",broadcastId).eq("user_id",speakerId).eq("role","guest")
+      .in("status",decision==="reject"?["requested","invited"]:["requested"]).maybeSingle();
     if(pendingError||!pending)return json(409,{error:"This speaker request is no longer pending."});
     if(decision==="accept"){
       const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
