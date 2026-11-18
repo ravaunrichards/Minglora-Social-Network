@@ -115,10 +115,10 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
   assert.ok(index.includes('/app.js?v=20261117-audio-only-mic-guest-seats-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1'));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1'));
   assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
-  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1')"));
+  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1')"));
   assert.doesNotMatch(fit,/data-live-guest-layout=/);
 });
 
@@ -198,4 +198,19 @@ test('All nine Audio LIVE guest presets share the unified layout state and synch
   assert.doesNotMatch(app,/live-guest-layout-options|data-live-guest-layout=/);
   assert.match(app,/topic:"minglora-live-layout"/);
   assert.match(app,/applyLiveScreenLayout\(nextLayout\)/);
+});
+
+
+test('Audio LIVE clears both top overlays from the guest seats and keeps Fluid Panel thumbnails at the reference edge', () => {
+  const finalSafety=guestLayouts.slice(guestLayouts.lastIndexOf('/* AUDIO LIVE reference clearance'));
+  assert.ok(finalSafety.includes('padding:40px clamp(5px,.65vw,9px) clamp(5px,.65vw,9px)!important;'),
+    'the stage labels have a reserved strip above every audio guest grid');
+  assert.ok(finalSafety.includes('bottom:clamp(8px,1vw,12px)!important;'),
+    'the first Fluid Panel guest tile stays near the lower-right edge');
+  assert.ok(finalSafety.includes('clamp(8px,1vw,12px) + clamp(44px,15vw,120px) + 8px'),
+    'the second Fluid Panel guest tile has a measured fixed stack gap');
+  assert.ok(finalSafety.includes('#live-video-stage.live-audio-stage #live-guest-layout'),
+    'the final safety rules are scoped to audio-only LIVE');
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1'));
+  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261117-audio-guest-layout-reference-no-overlap-1')"));
 });
