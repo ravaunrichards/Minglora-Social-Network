@@ -31,7 +31,7 @@ const sizing='html,body{margin:0;width:100%;min-height:100%;background:#080b12;c
 const report={
   result:'pending',
   originalCropDirectory:'assets/Crop References/Guests Layout/',
-  products:['LIVE','MeetWave'],
+  products:['LIVE','Audio LIVE','MeetWave'],
   layouts:layouts.map(item=>item.id),
   viewports:[],
   screenshots:[],
@@ -61,19 +61,25 @@ function markup(product,state){
   if(product==='LIVE'){
     return '<section id="live-player-shell" class="live-player-shell live-mode-video_audio"><header class="live-player-header"><strong>MINGLORA LIVE</strong></header><div class="live-player-layout"><div class="live-video-column"><section id="live-video-stage" class="live-video-stage live-mode-video_audio"><div id="live-guest-layout" class="live-guest-layout">'+seats+'</div><div id="live-screen-share-stage" class="live-screen-share-stage" aria-label="Shared screen"></div></section><div class="live-player-controls live-icon-controls" role="group" aria-label="LIVE controls"></div></div><aside id="live-fullscreen-chat-slot" class="live-fullscreen-chat-slot"></aside></div></section>';
   }
+  if(product==='Audio LIVE'){
+    return '<section id="live-player-shell" class="live-player-shell live-mode-audio_only"><header class="live-player-header"><strong>MINGLORA LIVE</strong></header><div class="live-player-layout"><div class="live-video-column"><section id="live-video-stage" class="live-video-stage live-audio-stage"><div class="live-audio-scene"><div class="live-audio-orb"></div><span class="live-audio-live-label">LIVE AUDIO</span></div><div id="live-guest-layout" class="live-guest-layout audio-guest-layout">'+seats+'</div><div id="live-speaker-list" class="live-speaker-list"></div></section><div class="live-player-controls live-icon-controls" role="group" aria-label="LIVE controls"></div></div><aside id="live-fullscreen-chat-slot" class="live-fullscreen-chat-slot"></aside></div></section>';
+  }
   return '<section class="mw-meeting live-player-shell"><header class="mw-meeting-head live-player-header"><div><span class="mw-eyebrow">MINGLORA MEETWAVE</span><h1>Visual QA room</h1></div><b id="mw-count" class="mw-meeting-count">9 seats</b></header><div class="mw-meeting-layout live-player-layout"><section class="mw-stage-column live-video-column"><div id="mw-screen-stage" class="mw-screen-stage" data-screen-layout="fluid-grid"><div id="mw-grid" class="mw-video-grid live-guest-layout live-video-stage" data-grid-role="host-eight-guest-seats" data-layout="fluid-grid">'+seats+'</div><div id="mw-screen-share-stage" class="mw-screen-share-stage" hidden></div></div><div id="mw-audio" class="mw-audio"></div><div class="mw-controls live-player-controls live-icon-controls" role="group" aria-label="MeetWave controls"></div></section><aside id="mw-chat-panel" class="mw-chat-panel"></aside></div></section>';
 }
 async function buildPage(browser,product,viewport,state){
   const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height},deviceScaleFactor:1});
-  const css=product==='LIVE'?liveCss:meetwaveCss;
+  const css=product==='MeetWave'?meetwaveCss:liveCss;
   await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'\n'+sizing+'</style></head><body>'+markup(product,state)+'</body></html>');
   return page;
 }
 async function applyLayout(page,product,layout){
   return page.evaluate(args=>{
-    const stage=document.querySelector(args.product==='LIVE'?'#live-video-stage':'#mw-screen-stage');
-    const grid=document.querySelector(args.product==='LIVE'?'#live-guest-layout':'#mw-grid');
-    if(args.product==='LIVE'){
+    const isMeetWave=args.product==='MeetWave';
+    const isAudioLive=args.product==='Audio LIVE';
+    const isLive=!isMeetWave;
+    const stage=document.querySelector(isLive?'#live-video-stage':'#mw-screen-stage');
+    const grid=document.querySelector(isLive?'#live-guest-layout':'#mw-grid');
+    if(isLive){
       grid.dataset.liveLayout=args.layout;
       delete grid.dataset.liveGuestLayout;
     }else{
@@ -83,7 +89,7 @@ async function applyLayout(page,product,layout){
       delete grid.dataset.guestLayout;
     }
     if(args.layout==='spotlight'){
-      const selected=grid.querySelector('[data-seat-index="3"]');
+      const selected=grid.querySelector('[data-seat-index="'+(isAudioLive?'0':'3')+'"]');
       if(selected)selected.classList.add('is-spotlight','is-focused');
     }
     const bounds=stage.getBoundingClientRect();
@@ -105,12 +111,19 @@ async function applyLayout(page,product,layout){
     const hasDedicatedHeadingTrack=!!heading&&headingStyle.display!=='none'&&headingStyle.gridRowStart==='1'&&headingBounds.height>0;
     const gridBounds=grid.getBoundingClientRect();
     const liveSelector='body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="'+args.layout+'"]';
+    const audioScene=isAudioLive?stage.querySelector('.live-audio-scene'):null;
+    const relativeBox=node=>{
+      if(!node)return null;
+      const r=node.getBoundingClientRect(),s=getComputedStyle(node);
+      return {x:r.x-bounds.x,y:r.y-bounds.y,w:r.width,h:r.height,visible:s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)>0};
+    };
     return {
       product:args.product,layout:args.layout,
       stage:{width:bounds.width,height:bounds.height},
       grid:{x:gridBounds.x-bounds.x,y:gridBounds.y-bounds.y,width:gridBounds.width,height:gridBounds.height},
-      layoutAttribute:grid.getAttribute(args.product==='LIVE'?'data-live-layout':'data-layout'),
-      productionSelectorMatches:args.product==='LIVE'?document.querySelectorAll(liveSelector).length:document.querySelectorAll('.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="'+args.layout+'"]').length,
+      layoutAttribute:grid.getAttribute(isLive?'data-live-layout':'data-layout'),
+      productionSelectorMatches:isLive?document.querySelectorAll(liveSelector).length:document.querySelectorAll('.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout="'+args.layout+'"]').length,
+      audioOverlays:isAudioLive?{scene:relativeBox(audioScene),heading:relativeBox(heading)}:null,
       columns:computed.gridTemplateColumns.trim().split(/\s+/).length,
       rows:rowTracks.length-(hasDedicatedHeadingTrack?1:0),
       totalGridRows:rowTracks.length,
@@ -138,6 +151,20 @@ function verify(result,definition,viewport,state){
   const visible=result.seats.filter(seat=>seat.visible);
   assert.equal(visible.length,definition.visible,label+' stage panel count matches its source-crop arrangement');
   visible.forEach(seat=>assertInside(result,seat,label));
+  if(result.product==='Audio LIVE'){
+    const {scene,heading}=result.audioOverlays||{};
+    const intersects=(a,b)=>!!a&&!!b&&a.x<b.x+b.w-1&&a.x+a.w>b.x+1&&a.y<b.y+b.h-1&&a.y+a.h>b.y+1;
+    assert.ok(scene?.visible&&heading?.visible,label+' keeps the LIVE AUDIO pill and seat-count label visible');
+    assert.ok(!intersects(scene,heading),label+' keeps the two top labels in separate positions');
+    for(const seat of visible){
+      assert.ok(!intersects(seat,scene),label+' seat '+seat.index+' is below the LIVE AUDIO pill');
+      assert.ok(!intersects(seat,heading),label+' seat '+seat.index+' is below the seat-count label');
+    }
+    const panelsToCompare=definition.id==='fluid-panel'?visible.filter(seat=>seat.index>0):visible;
+    for(let i=0;i<panelsToCompare.length;i++)for(let j=i+1;j<panelsToCompare.length;j++){
+      assert.ok(!intersects(panelsToCompare[i],panelsToCompare[j]),label+' guest panels '+panelsToCompare[i].index+' and '+panelsToCompare[j].index+' do not overlap');
+    }
+  }
   const get=index=>visible.find(seat=>seat.index===index);
   if(definition.id==='full-screen'){
     const host=get(0);
@@ -228,7 +255,7 @@ async function compareCrop(browser,product,definition,viewport,png){
 const browser=await chromium.launch({headless:true});
 try{
   for(const viewport of viewports){
-    for(const product of ['LIVE','MeetWave']){
+    for(const product of ['LIVE','Audio LIVE','MeetWave']){
       const page=await buildPage(browser,product,viewport,'occupied');
       const signatures=new Set();
       const productResults=[];
@@ -239,7 +266,7 @@ try{
         report.occupiedSeatChecks.push(summary);
         signatures.add(signature(result));
         productResults.push(result);
-        const selector=product==='LIVE'?'#live-video-stage':'#mw-screen-stage';
+        const selector=product==='MeetWave'?'#mw-screen-stage':'#live-video-stage';
         const png=await page.locator(selector).screenshot();
         await compareCrop(browser,product,definition,viewport,png);
       }
@@ -444,7 +471,8 @@ try{
 
   report.result='passed';
   report.summary={
-    layouts:9,products:2,viewports:3,
+    layouts:9,products:3,viewports:3,
+    AudioLiveSeatChecks:report.occupiedSeatChecks.filter(row=>row.product==='Audio LIVE').length,
     cropComparisons:report.screenshots.length,
     occupiedSeatChecks:report.occupiedSeatChecks.length,
     MeetWaveEmptySeatChecks:report.emptySeatChecks.length,
