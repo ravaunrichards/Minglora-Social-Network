@@ -598,7 +598,20 @@ try {
   ];
   await bulkIdentityForm.locator('[name="items"]').fill(JSON.stringify(bulkIdentityRows));
   await bulkIdentityForm.locator('button[type="submit"]').click();
+  try {
   await page.getByText(/Bulk identity batch .*1 created; 0 reused; 1 failed\./).waitFor({ state:'visible' });
+  } catch (error) {
+    const diagnostics = {
+      identityBatchRequestCount: identityBatchRequests.length,
+      identityBatchRequests,
+      identityBatches,
+      visibleAlerts: await page.locator('.ai-network-alert').allTextContents(),
+      visiblePageText: (await page.locator('#main-content').innerText()).slice(-6000)
+    };
+    console.error('[AI Network batch import diagnostic]', JSON.stringify(diagnostics));
+    await page.screenshot({ path:path.join(artifactsDir,'ai-network-batch-import-debug.png'), fullPage:true });
+    throw error;
+  }
   assert.equal(identityBatchRequests.length, 1, 'A bulk identity import should create one durable batch request.');
   assert.equal(identityBatchRequests[0].items.length, 2);
   assert.ok(identityBatchRequests[0].batch_idempotency_key.length >= 8, 'The overall batch must have its own stable idempotency key.');
