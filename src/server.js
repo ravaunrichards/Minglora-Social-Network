@@ -59,6 +59,7 @@ const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
+let openAIProviderHealthState = null;
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
 const activeAIBotChatOwners = new Set();
@@ -1561,6 +1562,28 @@ async function route(req, res) {
       }
       ensureAICollections(db);
       const providerStatus = getAIProviderStatus();
+      if (openAIProviderHealthState) {
+        const health = openAIProviderHealthState;
+        const connected = health.connected === true;
+        const healthStatus = health.healthStatus || (connected ? 'healthy' : 'unknown');
+        providerStatus.connected = connected;
+        providerStatus.providerHealth = {
+          providerId: health.providerId || 'openai',
+          status: health.status || 'unknown',
+          connected,
+          healthStatus,
+          model: health.model || null,
+          httpStatus: health.httpStatus || null,
+          checkedAt: health.checkedAt || null,
+          note: health.note || ''
+        };
+        const openAIEntry = (providerStatus.providerCatalogue || []).find(entry => entry.providerId === 'openai');
+        if (openAIEntry) {
+          openAIEntry.connected = connected;
+          openAIEntry.healthStatus = healthStatus;
+          openAIEntry.lastCheckedAt = health.checkedAt || null;
+        }
+      }
       const providerReady = providerStatus.manualDraftsAvailable === true;
       const verifyManualProviderAccess = async () => {
         if (!providerStatus.manualDraftsAvailable) {
@@ -1570,6 +1593,7 @@ async function route(req, res) {
           );
         }
         const health = await probeOpenAIProvider();
+        openAIProviderHealthState = health;
         if (!health.connected) {
           throw Object.assign(
             new Error('OpenAI provider check failed (' + health.status + '): ' + health.note),
@@ -2693,6 +2717,7 @@ async function route(req, res) {
           );
         }
         const health = await probeOpenAIProvider();
+        openAIProviderHealthState = health;
         return json(res, 200, health);
       }
 
@@ -10674,6 +10699,7 @@ server.listen(PORT,'0.0.0.0',async()=>{
     aiExecutionEnabled: Boolean(aiReadiness.executionEnabled)
   }));
   void probeOpenAIProvider().then(providerHealth => {
+    openAIProviderHealthState = providerHealth;
     console.info('[Minglora AI provider verification]', JSON.stringify({
       provider: providerHealth.providerId,
       status: providerHealth.status,
