@@ -715,7 +715,7 @@ export function recordLiveGiftForLeagues(db, details) {
         } else if (effect.type === "boosters" && [2, 3].includes(senderRank)) {
           multiplier = Math.max(multiplier, 2);
           triggeredEffects.push("boosters");
-        } else if (Number(effect.multiplier) > 1 && !["magic_mist", "stun_hammer"].includes(effect.type)) {
+        } else if (Number(effect.multiplier) > 1 && !["magic_mist", "stun_hammer", "boosting_glove", "boosters"].includes(effect.type)) {
           multiplier = Math.max(multiplier, Number(effect.multiplier));
           triggeredEffects.push(effect.type);
         }
