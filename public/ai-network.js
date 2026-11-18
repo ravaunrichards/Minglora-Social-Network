@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -390,18 +390,38 @@
       '<p class="ai-network-note">Paste a JSON array of full owner-managed profile snapshots. Each item requires identity_id, name, profile, languages and locations. A full snapshot replaces the listed profile fields; omitted profile text fields may be cleared. Records are updated only when they belong to your signed-in Minglora account. Failed rows are reported separately.</p>' +
       '<label>Profile update batch JSON<textarea name="items" required rows="8" maxlength="300000" spellcheck="false" placeholder=\'[{"identity_id":"existing-ai-identity-uuid","name":{"first_name":"Ava","middle_name":"","last_name":"Morgan","display_name":"Ava Morgan","username":"ava_morgan"},"profile":{"gender":"female","profile_visibility":"public","bio":"Updated biography","introduction":"","time_zone":"America/Jamaica"},"languages":[{"language_tag":"en","language_name":"English","proficiency":"fluent","is_primary":true}],"locations":[]}]\'></textarea></label>' +
       '<button class="secondary" type="submit">Update selected AI profiles</button></form>';
+    const batchHistory = list(state.identityBatches).length
+      ? '<section class="ai-network-batch-history" aria-label="Recent AI identity imports"><h3>Recent identity imports</h3>' +
+        list(state.identityBatches).map(batch => {
+          const failures = list(batch.failed_rows);
+          const failed = Number(batch.failed_count || failures.length || 0);
+          const summary = number(batch.created_count || 0) + ' created · ' + number(batch.reused_count || 0) +
+            ' reused · ' + number(failed) + ' failed';
+          const rows = failures.length
+            ? '<ul>' + failures.slice(0, 5).map(row =>
+                '<li>Row ' + number(row.row_index) + ' [' + esc(row.idempotency_key || '') + ']: ' +
+                esc(row.error || 'Retry required.') + '</li>'
+              ).join('') + '</ul>'
+            : '';
+          return '<article class="ai-network-batch-row"><div><strong>' + esc(batch.status || 'unknown') +
+            '</strong><span>' + esc(summary) + '</span><small>' + esc(date(batch.created_at)) + ' · ' +
+            esc(batch.batch_id || '') + '</small></div>' +
+            (failed > 0 ? '<button type="button" class="secondary" data-ai-action="identity-batch-retry" data-batch-id="' +
+              esc(batch.batch_id) + '">Retry ' + number(failed) + ' failed row(s)</button>' : '') + rows + '</article>';
+        }).join('') + '</section>'
+      : '<p class="ai-network-note">No identity import batches have been recorded yet. Failed rows from future imports will remain available here for safe retry after refresh.</p>';
     const bulkForm = '<form class="ai-network-form" data-ai-form="identity-bulk">' +
       '<div class="ai-network-form-title">Bulk import AI identities (1–100 per batch)</div>' +
-      '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Every item gets its own record; failed rows are reported and can be retried with the same idempotency key. ' +
+      '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Give every row its own stable idempotency_key. The import has a separate batch key, saves failed row data privately in Supabase, and lets you retry only failures after refresh. Successful row payloads are cleared from the retry store. ' +
       (state.adminAccess ? 'Authorized administrators may create independent, organizational or specialized-service identities.' : 'Member batches may contain independent AI identities only.') + '</p>' +
       '<label>Identity batch JSON<textarea name="items" required rows="8" maxlength="180000" spellcheck="false" placeholder=\'[{"population":"independent","category_key":"ai_friends","idempotency_key":"import-row-000001","name":{"first_name":"Ava","last_name":"Morgan","username":"ava_morgan_01"},"profile":{"gender":"female"}}]\'></textarea></label>' +
-      '<button class="primary" type="submit" ' + (!categories.length ? 'disabled' : '') + '>Import identity batch</button>' +
+      '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Import identity batch</button>' +
       '</form>';
     return card('AI Identity & Profile Registry', 'RELATIONAL IDENTITY FOUNDATION',
       '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
       warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
       (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
-      '</strong></div></div>' + searchForm + pagination + renderAIIdentityRows(registry) + pagination + form + bulkForm + bulkProfileForm, 'ai-network-span-2');
+      '</strong></div></div>' + searchForm + pagination + renderAIIdentityRows(registry) + pagination + form + bulkForm + batchHistory + bulkProfileForm, 'ai-network-span-2');
   }
 
   async function loadAIIdentityRegistry() {
@@ -420,6 +440,14 @@
       state.identityRegistryOffset = Math.max(0, Number(registry?.offset || 0));
       state.identityCategories = list(categoryResult.categories);
       try {
+        const batchResult = await request('/identities/batches?limit=12');
+        state.identityBatches = list(batchResult?.batches);
+        state.identityBatchError = '';
+      } catch (batchError) {
+        state.identityBatches = [];
+        state.identityBatchError = batchError.message || 'Identity import history is unavailable.';
+      }
+      try {
         const adminCategoryResult = await request('/categories/admin');
         state.categoryAdmin = list(adminCategoryResult.categories);
         state.adminAccess = true;
@@ -430,6 +458,8 @@
     } catch (error) {
       state.identityRegistry = null;
       state.identityCategories = [];
+      state.identityBatches = [];
+      state.identityBatchError = '';
       state.categoryAdmin = null;
       state.adminAccess = false;
       state.identityError = error.message || 'Relational AI identity service is unavailable.';
@@ -1890,6 +1920,17 @@
       if (items.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
         throw new Error('Every bulk identity row must be a JSON object.');
       }
+      const rowKeys = items.map(item => String(item.idempotency_key || '').trim());
+      if (rowKeys.some(key => key.length < 8 || key.length > 160) ||
+          new Set(rowKeys).size !== rowKeys.length) {
+        throw new Error('Every identity row needs a unique idempotency_key between 8 and 160 characters.');
+      }
+      if (!window.crypto?.randomUUID) {
+        throw new Error('This browser cannot generate the safe batch idempotency key required for import.');
+      }
+      form.dataset.batchIdempotencyKey = form.dataset.batchIdempotencyKey || window.crypto.randomUUID();
+      payload.batch_idempotency_key = form.dataset.batchIdempotencyKey;
+      payload.source = 'ai_network_admin_center';
       if (!state.adminAccess && items.some(item => String(item.population || 'independent').trim().toLowerCase() !== 'independent')) {
         throw new Error('Only authorized Minglora administrators may create organizational or specialized-service AI identities.');
       }
@@ -2398,7 +2439,7 @@
             : kind === 'identity'
       ? 'AI identity record saved in Minglora Supabase.'
       : kind === 'identity-bulk'
-        ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'
+        ? 'Bulk identity batch ' + String(result.batch_id || '') + ': ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'
         : kind === 'identity-profile-bulk'
           ? 'Bulk AI profile update: ' + number(result.succeeded_count) + ' succeeded; ' + number(result.failed_count) + ' failed.'
           : kind === 'provider-assignment-bulk'
@@ -2428,11 +2469,15 @@
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
                                       : 'Saved successfully.';
-    const batchFailures = ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
+    const batchFailures = kind === 'identity-bulk'
+      ? list(result.failed_rows)
+      : ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
     if (batchFailures.length) {
-      const summaries = batchFailures.slice(0, 5).map(item =>
-        String(item.identity_id || 'Record') + ': ' + String(item.error || 'Update failed.')
-      );
+      const summaries = batchFailures.slice(0, 5).map(item => {
+        const rowIndex = Number(item.row_index || item.index);
+        const label = item.identity_id || (Number.isInteger(rowIndex) && rowIndex > 0 ? 'Row ' + rowIndex : 'Record');
+        return String(label) + ': ' + String(item.error || 'Update failed.');
+      });
       const remaining = batchFailures.length > summaries.length ? ' · ' + (batchFailures.length - summaries.length) + ' more failure(s).' : '';
       message += ' ' + summaries.join(' · ') + remaining;
     }
@@ -2503,6 +2548,25 @@
         await request('/identities/' + encodeURIComponent(id) + '/status', {
           method:'PATCH', body:{ status, reason }
         });
+      }
+      else if (action === 'identity-batch-retry') {
+        const batchId = String(button.dataset.batchId || '');
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(batchId)) {
+          throw new Error('Choose a valid AI identity batch to retry.');
+        }
+        const batch = state.identityBatches.find(item => item.batch_id === batchId);
+        const failedCount = Number(batch?.failed_count || 0);
+        if (!failedCount) throw new Error('This import has no failed rows remaining.');
+        if (!window.confirm('Retry ' + failedCount + ' failed AI identity row(s)? Existing row idempotency keys will prevent duplicate identities.')) return;
+        const result = await request('/identities/batches/' + encodeURIComponent(batchId) + '/retry', { method:'POST', body:{} });
+        const message = 'AI identity batch retry: ' + number(result.created_count || 0) + ' created, ' +
+          number(result.reused_count || 0) + ' reused, ' + number(result.failed_count || 0) + ' still failed.';
+        await refresh(message);
+        if (Number(result.failed_count || 0)) {
+          setNotice(message, 'warning');
+          paintSnapshot();
+        }
+        return;
       }
       else if (action === 'identity-bulk-status') {
         const identityIds = [...document.querySelectorAll('[data-ai-identity-select]:checked')].map(input => input.value);
