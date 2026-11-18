@@ -2769,7 +2769,7 @@
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
       await refresh(action === 'emergency-pause' ? 'Bot and schedule controls paused. Durable queue workers remain disabled.' :
         action === 'emergency-resume' ? 'Owner controls resumed after a live OpenAI model check. Bots remain paused until enabled individually; autonomous workers remain off.' :
-        action === 'identity-status' ? 'AI identity lifecycle status updated and audited.'
+        action === 'identity-status' ? 'AI identity lifecycle status updated and audited.' :
         action === 'identity-page' ? 'AI identity registry page changed.' :
         action === 'identity-search-clear' ? 'AI identity registry search cleared.' : 'AI Network updated.');
     } catch (error) {
