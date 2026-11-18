@@ -13,6 +13,7 @@ const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const fit = read('public/live-room-fit.css');
 const guestLayouts = read('public/live-tiktok-compact.css');
 const audioGuardrails = read('public/live-interface-guardrails.css');
+const audioVisualMatrix = read('tests/e2e/layout-separation-visual.mjs');
 const index = read('public/index.html');
 const serviceWorker = read('public/sw.js');
 
@@ -120,8 +121,8 @@ test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and servi
   assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
   assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-mobile-grid-height-1')"));
-  assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-1'));
-  assert.ok(serviceWorker.includes("'/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-1'"));
+  assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'));
+  assert.ok(serviceWorker.includes("'/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'"));
   assert.doesNotMatch(fit,/data-live-guest-layout=/);
 });
 
@@ -147,9 +148,14 @@ test('Audio LIVE uses all nine reference grids without covering seat panels', ()
   assert.ok(audioContract.includes('#live-guest-layout.live-guest-layout{\n  position:relative!important;grid-column:1!important;grid-row:1!important;'),
     'Audio LIVE guest panels must occupy the single full-stage row, not the retired row 2');
   const safeAudioScene=audioGuardrails.slice(audioGuardrails.lastIndexOf('/* Audio LIVE seat visibility:'));
+  assert.match(safeAudioScene,/\.live-video-column\{[\s\S]*?grid-template-rows:48px minmax\(0,1fr\) 54px!important/);
+  assert.match(safeAudioScene,/\.live-video-column>\.live-stage-topbar\{[\s\S]*?position:relative!important/);
+  assert.match(safeAudioScene,/\.live-video-column #live-video-stage\.live-audio-stage\{[\s\S]*?grid-row:2!important/);
   assert.match(safeAudioScene,/\.live-audio-scene\{[\s\S]*?display:none!important/);
   assert.match(safeAudioScene,/#live-player-shell #live-video-stage\.live-audio-stage #live-guest-layout>\.live-guest-layout-heading\{[\s\S]*?width:1px!important;[\s\S]*?height:1px!important;[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app,/stage\?\.insertAdjacentHTML\("beforebegin",liveStageHud\)/);
+  assert.match(audioVisualMatrix,/products:\['LIVE','AUDIO LIVE','MeetWave'\]/);
+  assert.match(audioVisualMatrix,/audioHeaderGap/);
   assert.match(audioContract,/#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app, /class='live-guest-layout audio-guest-layout'/);
   assert.match(app, /function renderLiveGuestLayout\(/);
