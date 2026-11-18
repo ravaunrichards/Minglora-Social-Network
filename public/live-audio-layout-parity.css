@@ -3,20 +3,18 @@
    The decorative orb and duplicate speaker strip no longer consume stage height;
    each participant tile already carries its microphone/speaking state. */
 body:has(#live-player-shell) #live-video-stage.live-audio-stage{
-  position:relative!important;display:grid!important;
-  grid-template-columns:minmax(0,1fr)!important;
-  grid-template-rows:minmax(0,1fr)!important;
-  align-items:stretch!important;justify-items:stretch!important;
-  box-sizing:border-box!important;width:100%!important;height:100%!important;
-  min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;
-  aspect-ratio:auto!important;margin:0!important;padding:0!important;gap:0!important;overflow:hidden!important;
+  position:relative!important;display:block!important;flex:1 1 auto!important;
+  box-sizing:border-box!important;width:100%!important;height:auto!important;
+  min-width:0!important;min-height:clamp(320px,58vh,620px)!important;
+  max-width:none!important;max-height:none!important;aspect-ratio:auto!important;
+  margin:0!important;padding:0!important;overflow:hidden!important;
 }
 body:has(#live-player-shell) #live-video-stage.live-audio-stage>.live-audio-scene,
 body:has(#live-player-shell) #live-video-stage.live-audio-stage>#live-speaker-list{
   display:none!important;
 }
 body:has(#live-player-shell) #live-video-stage.live-audio-stage>#live-guest-layout.audio-guest-layout{
-  position:relative!important;display:grid!important;grid-column:1!important;grid-row:1!important;
+  position:absolute!important;inset:0!important;z-index:2!important;display:grid!important;
   grid-template-columns:minmax(0,1fr)!important;grid-template-rows:22px minmax(0,1fr)!important;
   grid-auto-flow:row dense!important;grid-auto-rows:minmax(0,1fr)!important;
   align-content:stretch!important;align-items:stretch!important;justify-items:stretch!important;
