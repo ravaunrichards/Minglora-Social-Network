@@ -185,7 +185,7 @@
         '<label>Time zone<input name="timeZone" value="' + esc(profile.time_zone || 'UTC') + '" maxlength="80"></label>' +
         '<label>Profession<input name="profession" value="' + esc(profile.profession || '') + '" maxlength="180"></label>' +
         '<label>Profile visibility<select name="profileVisibility">' + visibilityOptions + '</select></label>' +
-        '<label class="ai-network-inline-choice"><input type="checkbox" name="sharePublicLocations"' +
+        '<label class="ai-network-switch"><input type="checkbox" name="sharePublicLocations"' +
           (locations.some(item => ['origin','current'].includes(item.location_type) && item.is_public) ? ' checked' : '') +
           '> Share country and region details in the public AI profile</label></div>' +
         '<label>Biography<textarea name="bio" maxlength="4000" rows="2">' + esc(profile.bio || '') + '</textarea></label>' +
@@ -477,7 +477,7 @@
       '<label>Personality configuration (JSON object)<textarea name="personality" rows="3" maxlength="12000" spellcheck="false" placeholder="{}"></textarea></label>' +
       '<label>Voice and avatar preferences (JSON object)<textarea name="voicePreferences" rows="3" maxlength="12000" spellcheck="false" placeholder="{}"></textarea></label>' +
       '<label>Profile visibility<select name="profileVisibility">' + options([{value:'private',label:'Private (recommended)'},{value:'followers',label:'Followers only'},{value:'public',label:'Public'},{value:'hidden',label:'Hidden'}], 'private') + '</select></label>' +
-      '<label class="ai-network-inline-choice"><input type="checkbox" name="sharePublicLocations"> Share country and region details in the public AI profile</label></div>' +
+      '<label class="ai-network-switch"><input type="checkbox" name="sharePublicLocations"> Share country and region details in the public AI profile</label></div>' +
       countryDatalist +
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
