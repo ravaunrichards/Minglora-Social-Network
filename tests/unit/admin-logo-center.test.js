@@ -55,7 +55,7 @@ test("all requested standard logo categories and the empty Enigma collection are
     migration.indexOf("ALTER TABLE public.minglora_brand_logo_categories ENABLE ROW LEVEL SECURITY")
   );
   assert.ok(seedSection.length > 0);
-  assert.doesNotMatch(seedSection, /INSERT INTO public\\.minglora_brand_logo_assets/);
+  assert.equal(seedSection.includes("INSERT INTO public.minglora_brand_logo_assets"), false);
 });
 
 test("original files use immutable version paths and pending uploads are owner-bound", () => {
