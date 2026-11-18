@@ -10,7 +10,7 @@ const globalNotificationCss = fs.readFileSync(new URL('../../public/admin-approv
 
 test('Admin Centre exposes the protected Approval Center route without duplicate route-bound alerts', () => {
   assert.match(adminCentre, /key:'approvals',title:'Approval Center'/);
-  assert.match(adminCentre, /data-admin-route="approvals"/);
+  assert.match(adminCentre, /link\.dataset\.adminRoute = definition\.key/);
   assert.match(adminCentre, /initializeAdminApprovalCenter\(panel\)/);
   assert.doesNotMatch(adminCentre, /id="admin-approval-notification"/);
   assert.doesNotMatch(adminCentre, /id="admin-approval-toast"/);
@@ -45,5 +45,5 @@ test('Approval queue refreshes continuously while shared fixed notifications rem
 
 test('Admin Centre cache keys force browsers to load the new approval UI assets', () => {
   assert.match(adminHtml, /admin-centre\.css\?v=20261117-approval-center-1/);
-  assert.match(adminHtml, /admin-centre\.js\?v=20261117-admin-approval-center-1/);
+  assert.match(adminHtml, /admin-centre\.js\?v=20261118-admin-global-approval-alerts-1/);
 });
