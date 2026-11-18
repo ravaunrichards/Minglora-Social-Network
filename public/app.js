@@ -2111,10 +2111,12 @@ function renderLiveCohostRoster(participants){
     const name=String(item.user?.display_name||item.user?.username||"Minglora creator");
     const status=item.status==="connected"?"LIVE on Co-host":item.status==="accepted"?"Accepted · connecting":item.status==="requested"?"Requesting to join":"Invitation pending";
     const host=String(activeLiveCohostSession?.host_user_id||"")===String(state.user?.id||"");
-    const controls=(item.status==="requested"||item.status==="invited")&&host
-      ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-accept='"+esc(item.user_id)+"'>Accept</button><button type='button' data-cohost-reject='"+esc(item.user_id)+"'>Decline</button></span>"
-      :["accepted","connected"].includes(item.status)&&host&&item.role!=="host"
-        ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-remove='"+esc(item.user_id)+"'>Remove</button></span>":"";
+    const controls=item.status==="requested"&&host
+      ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-accept='"+esc(item.user_id)+"'>Accept request</button><button type='button' data-cohost-reject='"+esc(item.user_id)+"'>Decline</button></span>"
+      :item.status==="invited"&&host
+        ?"<span class='live-cohost-row-actions'><span class='live-cohost-roster-state'>Invitation sent</span><button type='button' data-cohost-reject='"+esc(item.user_id)+"'>Cancel invite</button></span>"
+        :["accepted","connected"].includes(item.status)&&host&&item.role!=="host"
+          ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-remove='"+esc(item.user_id)+"'>Remove</button></span>":"";
     return "<div class='live-cohost-roster-row'><span class='live-cohost-roster-name'>"+esc(name)+"</span><span class='live-cohost-roster-state'>"+esc(status)+"</span>"+controls+"</div>";
   }).join("");
   root.querySelectorAll("[data-cohost-accept],[data-cohost-reject],[data-cohost-remove]").forEach(button=>button.addEventListener("click",async()=>{
