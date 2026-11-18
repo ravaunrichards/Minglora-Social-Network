@@ -720,6 +720,30 @@ try {
     has: page.getByRole('heading', { name: 'Corporate Governance & Workforce' })
   });
   await organizationCard.scrollIntoViewIfNeeded();
+  const organizationDiagnostics = await page.evaluate(() => {
+    const matches = [...document.querySelectorAll('strong')].filter(node => node.textContent.trim() === 'Minglora HR Acceptance Fixture');
+    return {
+      pageTitle: document.querySelector('.ai-network-page h1')?.textContent || '',
+      adminAccessUpdated: document.querySelector('.ai-network-hero-status')?.textContent || '',
+      organizationRows: document.querySelectorAll('.ai-network-organization-row').length,
+      matches: matches.map(node => {
+        const chain = [];
+        let current = node;
+        for (let level = 0; current && level < 7; level += 1, current = current.parentElement) {
+          const style = getComputedStyle(current);
+          const rect = current.getBoundingClientRect();
+          chain.push({
+            tag: current.tagName, className: String(current.className || ''),
+            hidden: current.hidden, ariaHidden: current.getAttribute('aria-hidden'),
+            display: style.display, visibility: style.visibility, opacity: style.opacity,
+            width: rect.width, height: rect.height
+          });
+        }
+        return chain;
+      })
+    };
+  });
+  console.error('[AI HR organization diagnostics]', JSON.stringify(organizationDiagnostics));
   await page.getByText('Minglora HR Acceptance Fixture', { exact: true }).waitFor({ state: 'visible' });
   const caseForm = page.locator('form[data-ai-form="disciplinary-case"]');
   await caseForm.locator('[name="employmentId"]').selectOption(fixtureEmploymentId);
