@@ -176,8 +176,8 @@ function verify(result,definition,viewport,state){
     const host=get(0),first=get(1),second=get(2);
     assert.ok(host.w>=result.stage.width*.88&&host.h>=result.stage.height*.88,label+' keeps one dominant panel; host='+JSON.stringify(host)+' stage='+JSON.stringify(result.stage));
     assert.ok(first&&second&&first.x>result.stage.width*.68&&second.x>result.stage.width*.68,label+' places two compact panels at the lower right');
-    assert.ok(Math.abs(first.x-second.x)<3&&Math.abs(first.y-second.y)>first.h*.7,label+' stacks the compact panels vertically');
-    const stackGap=first.y-(second.y+second.h);
+    assert.ok(Math.abs(first.x-second.x)<3&&first.y<second.y&&Math.abs(first.y-second.y)>first.h*.7,label+' keeps Guest 1 above Guest 2 in the lower-right stack');
+    const stackGap=second.y-(first.y+first.h);
     assert.ok(stackGap>=3&&stackGap<=10,label+' keeps the two lower-right thumbnails close together; gap='+stackGap);
   }
   if(definition.id==='fluid-grid'){
