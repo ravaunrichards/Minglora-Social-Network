@@ -12,6 +12,8 @@ const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const fit = read('public/live-room-fit.css');
 const guestLayouts = read('public/live-tiktok-compact.css');
+const index = read('public/index.html');
+const serviceWorker = read('public/sw.js');
 
 test('Audio LIVE shows connected microphone publishers even when nobody is actively speaking', () => {
   assert.match(app, /function participantHasLiveAudio\(/);
@@ -109,6 +111,14 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
   assert.doesNotMatch(app, /class='live-player-controls'><button id='live-mic-toggle'/);
 });
 
+
+test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
+  assert.ok(index.includes('/app.js?v=20261117-audio-only-mic-guest-seats-1'));
+  assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
+  assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
+  assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
+  assert.doesNotMatch(fit,/data-live-guest-layout=/);
+});
 
 test('Audio LIVE follows the Video LIVE panel grid without collapsing or clipping the speaker roster', () => {
   assert.match(fit, /\.live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:42px minmax\(0,1fr\) 40px!important/);
