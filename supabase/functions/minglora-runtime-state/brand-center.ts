@@ -31,7 +31,7 @@ const LOCATIONS = new Set([
 ]);
 const BRAND_ACTIONS = new Set([
   "list","create_category","update_category","create_collection","update_collection",
-  "update_logo","archive_logo","restore_logo","restore_logo_version","favorite_toggle",
+  "update_logo","archive_logo","restore_logo","restore_logo_version","duplicate_logo","duplicate_asset","favorite_toggle",
   "request_publish","decide_approval","publish","rollback","schedule_logo","cancel_schedule",
   "update_identity","archive_asset","restore_asset","request_asset_publish","publish_asset"
 ]);
@@ -202,9 +202,12 @@ async function brandList(admin: any, actor: string) {
     admin.from("brand_logo_activity_logs").select("*").order("created_at",{ascending:false}).limit(100),
     admin.from("brand_identity_settings").select("*").order("setting_key"),
     admin.from("brand_deployment_history").select("*").order("created_at",{ascending:false}).limit(100),
-    admin.from("brand_approval_records").select("*").order("created_at",{ascending:false}).limit(100)
+    admin.from("brand_approval_records").select("*").order("created_at",{ascending:false}).limit(100),
+    admin.from("minglora_admin_role_definitions").select("role_key,display_name,description,assignable").order("display_name"),
+    admin.from("minglora_admin_permission_catalog").select("permission_key,display_name,description,risk_level").like("permission_key","brand:%").order("permission_key"),
+    admin.from("minglora_admin_role_permissions").select("role_key,permission_key").like("permission_key","brand:%").order("role_key")
   ]);
-  const labels = ["logos","logoVersions","assets","assetVersions","categories","collections","assignments","favorites","schedules","activity","identity","deployments","approvals"];
+  const labels = ["logos","logoVersions","assets","assetVersions","categories","collections","assignments","favorites","schedules","activity","identity","deployments","approvals","roles","brandPermissions","roleBrandPermissions"];
   for (let index=0; index<queries.length; index++) {
     if (queries[index].error) return {error:queries[index].error};
   }
@@ -422,6 +425,36 @@ async function brandCommand(admin: any, input: Record<string,unknown>) {
     return {ok:true,logo:result.data};
   }
 
+  if (action==="duplicate_logo") {
+    if (!isUuid(id)) return {error:{message:"Choose a valid logo to duplicate."}};
+    const source=await admin.from("brand_logos").select("*").eq("id",id).maybeSingle();
+    if (source.error||!source.data) return {error:{message:"The original logo could not be found."}};
+    const inserted=await admin.from("brand_logos").insert({
+      name:cleanText(payload.name||("Copy of "+source.data.name),120),description:source.data.description,
+      category_id:source.data.category_id,collection_id:source.data.collection_id,status:"draft",
+      tags:source.data.tags||[],metadata:source.data.metadata||{},created_by:actor,updated_by:actor
+    }).select("*").single();
+    if (inserted.error||!inserted.data) return {error:{message:"A duplicate logo record could not be created."}};
+    const versions=await admin.from("brand_logo_versions").select("*").eq("logo_id",id).order("version_number");
+    if (versions.error) return {error:{message:"The source logo versions could not be read."}};
+    for (const old of versions.data||[]) {
+      const newPath=actor+"/logos/"+crypto.randomUUID()+"."+fileExtension(old.original_file_name);
+      const copied=await admin.storage.from(BUCKET).copy(old.storage_path,newPath);
+      if (copied.error) return {error:{message:"A source logo version could not be copied. The duplicate remains a draft and the source is unchanged."}};
+      const version=await admin.from("brand_logo_versions").insert({
+        logo_id:inserted.data.id,version_number:old.version_number,storage_path:newPath,
+        original_file_name:old.original_file_name,mime_type:old.mime_type,byte_size:old.byte_size,
+        width:old.width,height:old.height,sha256:old.sha256,version_kind:"derived",
+        change_note:"Copied from logo "+id,created_by:actor
+      });
+      if (version.error) return {error:{message:"A copied version could not be registered; the original remains unchanged."}};
+    }
+    const latest=await admin.from("brand_logo_versions").select("id").eq("logo_id",inserted.data.id).order("version_number",{ascending:false}).limit(1).maybeSingle();
+    if (latest.data) await admin.from("brand_logos").update({active_version_id:latest.data.id}).eq("id",inserted.data.id);
+    await log("logo.duplicated","logo",inserted.data.id,{sourceLogoId:id});
+    return {ok:true,logo:inserted.data};
+  }
+
   if (action==="archive_logo" || action==="restore_logo") {
     if (!isUuid(id)) return {error:{message:"Choose a valid logo."}};
     if (action==="archive_logo") {
@@ -444,6 +477,36 @@ async function brandCommand(admin: any, input: Record<string,unknown>) {
     if (result.error||!result.data) return {error:{message:"The previous version could not be restored."}};
     await log("logo.version_restored","logo",id,{versionId});
     return {ok:true,logo:result.data};
+  }
+
+  if (action==="duplicate_asset") {
+    if (!isUuid(id)) return {error:{message:"Choose a valid brand asset to duplicate."}};
+    const source=await admin.from("brand_asset_library").select("*").eq("id",id).maybeSingle();
+    if (source.error||!source.data) return {error:{message:"The original brand asset could not be found."}};
+    const inserted=await admin.from("brand_asset_library").insert({
+      name:cleanText(payload.name||("Copy of "+source.data.name),120),description:source.data.description,
+      asset_type:source.data.asset_type,category_id:source.data.category_id,collection_id:source.data.collection_id,
+      status:"draft",tags:source.data.tags||[],metadata:source.data.metadata||{},created_by:actor,updated_by:actor
+    }).select("*").single();
+    if (inserted.error||!inserted.data) return {error:{message:"A duplicate asset record could not be created."}};
+    const versions=await admin.from("brand_asset_versions").select("*").eq("asset_id",id).order("version_number");
+    if (versions.error) return {error:{message:"The source asset versions could not be read."}};
+    for (const old of versions.data||[]) {
+      const newPath=actor+"/assets/"+crypto.randomUUID()+"."+fileExtension(old.original_file_name);
+      const copied=await admin.storage.from(BUCKET).copy(old.storage_path,newPath);
+      if (copied.error) return {error:{message:"A source asset version could not be copied. The source is unchanged."}};
+      const version=await admin.from("brand_asset_versions").insert({
+        asset_id:inserted.data.id,version_number:old.version_number,storage_path:newPath,
+        original_file_name:old.original_file_name,mime_type:old.mime_type,byte_size:old.byte_size,
+        width:old.width,height:old.height,sha256:old.sha256,version_kind:"derived",
+        change_note:"Copied from asset "+id,created_by:actor
+      });
+      if (version.error) return {error:{message:"A copied asset version could not be registered; the source is unchanged."}};
+    }
+    const latest=await admin.from("brand_asset_versions").select("id").eq("asset_id",inserted.data.id).order("version_number",{ascending:false}).limit(1).maybeSingle();
+    if (latest.data) await admin.from("brand_asset_library").update({active_version_id:latest.data.id}).eq("id",inserted.data.id);
+    await log("asset.duplicated","asset",inserted.data.id,{sourceAssetId:id});
+    return {ok:true,asset:inserted.data};
   }
 
   if (action==="archive_asset" || action==="restore_asset") {
