@@ -37,7 +37,7 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.doesNotMatch(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
   assert.match(compact, /\.live-fullscreen-chat-slot\{[\s\S]*flex-direction:column!important/);
   assert.match(liveGuardrails, /\.live-panel-end-button\{[\s\S]*display:inline-flex!important/);
-  assert.match(roomMarkup, /liveToolsDrawer/);
+  assert.match(app, /const liveToolsDrawer=/);
 });
 
 test('Co-host Match, guest and gift controls open one accessible drawer and rewards have no permanent shortcut', () => {
