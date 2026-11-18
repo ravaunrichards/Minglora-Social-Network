@@ -1,7 +1,23 @@
+import fs from "node:fs";
+
 export const SOUND_STUDIO_THEMES = Object.freeze([
   {key:"classic",label:"Classic"},{key:"modern",label:"Modern"},{key:"premium",label:"Premium"},
   {key:"minimal",label:"Minimal"},{key:"digital",label:"Digital"},{key:"cinematic",label:"Cinematic"}
 ]);
+const record=value=>value&&typeof value==="object"&&!Array.isArray(value);
+const approvedRecord=item=>item&&item.acceptanceStatus==="approved"&&item.authenticRecording===true&&
+  item.commercialUseAllowed===true&&item.redistributionAllowed===true&&/^[a-f0-9]{64}$/i.test(String(item.sha256||""));
+function readApprovedManifest(){
+  try{return JSON.parse(fs.readFileSync(new URL("../../../public/assets/sound-studio/manifest.json",import.meta.url),"utf8"));}
+  catch{return {};}
+}
+const approvedManifest=readApprovedManifest();
+const voiceIds=new Set((approvedManifest.voiceRingtones||[]).filter(approvedRecord).map(item=>item.id));
+const videoIds=new Set((approvedManifest.videoRingtones||[]).filter(approvedRecord).map(item=>item.id));
+const notificationIds=new Set((approvedManifest.notifications||[]).filter(approvedRecord).map(item=>item.id));
+const builtinIds=new Set([...voiceIds,...videoIds,...notificationIds]);
+const first=set=>set.values().next().value||null;
+
 export const SOUND_STUDIO_CATEGORIES = Object.freeze([
   ["private_messages","Private messages"],["group_messages","Group messages"],["new_followers","New followers"],
   ["new_friends","New friends"],["voice_messages","Voice messages"],["replies","Replies"],["reactions","Reactions"],
@@ -10,16 +26,11 @@ export const SOUND_STUDIO_CATEGORIES = Object.freeze([
   ["meeting_invitations","Meeting invitations"],["meeting_reminders","Meeting reminders"],["gifts_received","Gifts received"],
   ["coins_received","Coins received"],["payments_transactions","Payments and transactions"],["marketplace_orders","Marketplace orders"],
   ["security_alerts","Security alerts"],["login_alerts","Login alerts"],["system_notifications","System notifications"]
-].map(([key,label],index)=>Object.freeze({key,label,defaultSoundId:"notification-"+String(index%10+1).padStart(2,"0")})));
-const voiceId=n=>"voice-"+String(n).padStart(2,"0"),videoId=n=>"video-"+String(n).padStart(2,"0"),notificationId=n=>"notification-"+String(n).padStart(2,"0");
-const voiceIds=new Set(Array.from({length:30},(_,i)=>voiceId(i+1)));
-const videoIds=new Set(Array.from({length:30},(_,i)=>videoId(i+1)));
-const notificationIds=new Set(Array.from({length:60},(_,i)=>notificationId(i+1)));
-const builtinIds=new Set([...voiceIds,...videoIds,...notificationIds]);
-const record=value=>value&&typeof value==="object"&&!Array.isArray(value);
+].map(([key,label])=>Object.freeze({key,label,defaultSoundId:first(notificationIds)})));
+
 export function defaultSoundStudioPreferences(){
-  return {theme:"classic",voiceCall:{soundId:"voice-01",enabled:true},videoCall:{soundId:"video-01",enabled:true},
-    notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map((category,index)=>[category.key,{soundId:notificationId(index%10+1),enabled:true}])),
+  return {theme:"classic",voiceCall:{soundId:first(voiceIds),enabled:true},videoCall:{soundId:first(videoIds),enabled:true},
+    notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map(category=>[category.key,{soundId:category.defaultSoundId,enabled:true}])),
     favorites:[],customSounds:[]};
 }
 export function normalizeSoundStudioPreferences(user,mediaAssets=[]){
@@ -43,13 +54,18 @@ export function normalizeSoundStudioPreferences(user,mediaAssets=[]){
     customs.push({id:"custom:"+legacy.id,assetId:legacy.id,title:String(legacy.originalName||"Previous custom ringtone").slice(0,100),mimeType:legacy.mimeType,durationMs:Number(legacy.durationMs||0)});
     if(!source)base.voiceCall.soundId="custom:"+legacy.id;changed=true;
   }
-  base.customSounds=customs;const customIds=new Set(customs.map(item=>item.id)),validCall=(id,group)=>customIds.has(id)||(group==="voice"?voiceIds:videoIds).has(id),validNotification=id=>customIds.has(id)||notificationIds.has(id),valid=id=>builtinIds.has(id)||customIds.has(id);
-  if(!validCall(base.voiceCall.soundId,"voice")){base.voiceCall.soundId="voice-01";changed=true;}
-  if(!validCall(base.videoCall.soundId,"video")){base.videoCall.soundId="video-01";changed=true;}
+  base.customSounds=customs;
+  const customIds=new Set(customs.map(item=>item.id));
+  const validVoice=id=>voiceIds.has(id)||customIds.has(id);
+  const validVideo=id=>videoIds.has(id)||customIds.has(id);
+  const validNotification=id=>notificationIds.has(id)||customIds.has(id);
+  const valid=id=>builtinIds.has(id)||customIds.has(id);
+  if(!validVoice(base.voiceCall.soundId)){if(base.voiceCall.soundId!==first(voiceIds))changed=true;base.voiceCall.soundId=first(voiceIds);}
+  if(!validVideo(base.videoCall.soundId)){if(base.videoCall.soundId!==first(videoIds))changed=true;base.videoCall.soundId=first(videoIds);}
   for(const call of ["voiceCall","videoCall"])if(typeof base[call].enabled!=="boolean"){base[call].enabled=true;changed=true;}
   for(const category of SOUND_STUDIO_CATEGORIES){
     const item=base.notifications[category.key];
-    if(!validNotification(item.soundId)){item.soundId=category.defaultSoundId;changed=true;}
+    if(!validNotification(item.soundId)){if(item.soundId!==category.defaultSoundId)changed=true;item.soundId=category.defaultSoundId;}
     if(typeof item.enabled!=="boolean"){item.enabled=true;changed=true;}
   }
   const favorites=base.favorites.filter(valid).slice(0,150);if(favorites.length!==base.favorites.length)changed=true;base.favorites=favorites;
@@ -59,9 +75,11 @@ export function normalizeSoundStudioPreferences(user,mediaAssets=[]){
 export function buildSoundThemePreset(theme,current=defaultSoundStudioPreferences()){
   const themeIndex=SOUND_STUDIO_THEMES.findIndex(item=>item.key===theme);
   if(themeIndex<0)return {valid:false,error:"Choose one of Minglora's six sound themes."};
-  const next={...current,theme,voiceCall:{...(current.voiceCall||{}),soundId:voiceId(themeIndex*5+1)},
-    videoCall:{...(current.videoCall||{}),soundId:videoId(themeIndex*5+1)},notifications:{...(current.notifications||{})}};
-  for(let i=0;i<SOUND_STUDIO_CATEGORIES.length;i++){const category=SOUND_STUDIO_CATEGORIES[i];next.notifications[category.key]={...(current.notifications?.[category.key]||{}),soundId:notificationId(themeIndex*10+(i%10)+1)};}
+  const voice=first(voiceIds),video=first(videoIds),notification=first(notificationIds);
+  if(!voice||!video||!notification)return {valid:false,error:"Theme presets are unavailable until authentic recordings are approved and installed."};
+  const next={...current,theme,voiceCall:{...(current.voiceCall||{}),soundId:voice},
+    videoCall:{...(current.videoCall||{}),soundId:video},notifications:{...(current.notifications||{})}};
+  for(const category of SOUND_STUDIO_CATEGORIES)next.notifications[category.key]={...(current.notifications?.[category.key]||{}),soundId:notification};
   return {valid:true,settings:next};
 }
 export function validateSoundStudioPatch(current,patch,customIds=[]){
@@ -77,7 +95,7 @@ export function validateSoundStudioPatch(current,patch,customIds=[]){
     if(key==="voiceCall"||key==="videoCall"){
       if(!record(value)||Object.keys(value).some(field=>!["soundId","enabled"].includes(field)))return {valid:false,error:"Call sound settings are invalid."};
       const library=key==="voiceCall"?voiceIds:videoIds;
-      if(Object.hasOwn(value,"soundId")){if(typeof value.soundId!=="string"||(!library.has(value.soundId)&&!customIds.includes(value.soundId)))return {valid:false,error:"Choose a sound from the correct call library."};next[key].soundId=value.soundId;}
+      if(Object.hasOwn(value,"soundId")){if(value.soundId!==null&&(typeof value.soundId!=="string"||(!library.has(value.soundId)&&!customIds.includes(value.soundId))))return {valid:false,error:"Choose an approved authentic recording or a private custom sound for this call type."};next[key].soundId=value.soundId;}
       if(Object.hasOwn(value,"enabled")){if(typeof value.enabled!=="boolean")return {valid:false,error:"Call sound enablement must be true or false."};next[key].enabled=value.enabled;}
       continue;
     }
@@ -85,7 +103,7 @@ export function validateSoundStudioPatch(current,patch,customIds=[]){
       if(!record(value))return {valid:false,error:"Notification sound assignments are invalid."};
       for(const [categoryKey,assignment] of Object.entries(value)){
         if(!SOUND_STUDIO_CATEGORIES.some(c=>c.key===categoryKey)||!record(assignment)||Object.keys(assignment).some(field=>!["soundId","enabled"].includes(field)))return {valid:false,error:"An unsupported notification category was supplied."};
-        if(Object.hasOwn(assignment,"soundId")){if(typeof assignment.soundId!=="string"||(!notificationIds.has(assignment.soundId)&&!customIds.includes(assignment.soundId)))return {valid:false,error:"Choose a sound from the notification library."};next.notifications[categoryKey]={...next.notifications[categoryKey],soundId:assignment.soundId};}
+        if(Object.hasOwn(assignment,"soundId")){if(assignment.soundId!==null&&(typeof assignment.soundId!=="string"||(!notificationIds.has(assignment.soundId)&&!customIds.includes(assignment.soundId))))return {valid:false,error:"Choose an approved authentic recording or a private custom sound for this notification."};next.notifications[categoryKey]={...next.notifications[categoryKey],soundId:assignment.soundId};}
         if(Object.hasOwn(assignment,"enabled")){if(typeof assignment.enabled!=="boolean")return {valid:false,error:"Notification sound enablement must be true or false."};next.notifications[categoryKey]={...next.notifications[categoryKey],enabled:assignment.enabled};}
       }
       continue;
