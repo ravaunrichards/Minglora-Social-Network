@@ -802,13 +802,26 @@ try {
         identityEditorVisible: Boolean(document.querySelector('form[data-ai-form="identity-edit"]')),
         discoveryVisible: Boolean(document.querySelector('form[data-ai-form="discovery"]')),
         corporateGovernanceVisible: Boolean(document.querySelector('.ai-network-organization-row')),
-        disciplinaryCaseVisible: Boolean(document.querySelector('form[data-ai-form="disciplinary-case"]'))
+        disciplinaryCaseVisible: Boolean(document.querySelector('form[data-ai-form="disciplinary-case"]')),
+        overflowingElements: [...document.querySelectorAll('.ai-network-page *')].filter(element => {
+          const rect = element.getBoundingClientRect();
+          const boundary = root?.getBoundingClientRect();
+          return boundary && (rect.right > boundary.right + 2 || rect.left < boundary.left - 2 || element.scrollWidth > element.clientWidth + 2);
+        }).slice(0, 20).map(element => ({
+          tag: element.tagName,
+          className: String(element.className || '').slice(0, 100),
+          text: String(element.textContent || '').trim().slice(0, 80),
+          width: Math.round(element.getBoundingClientRect().width),
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth
+        }))
       };
     });
+    const geometrySummary = JSON.stringify(geometry);
     assert.ok(geometry.rootWidth > 0, viewport.name + ': AI Network workspace must render.');
-    assert.ok(geometry.rootScrollWidth <= geometry.rootClientWidth + 2, viewport.name + ': AI workspace must not overflow horizontally.');
-    assert.ok(geometry.mainScrollWidth <= geometry.mainClientWidth + 2, viewport.name + ': main content must not overflow horizontally.');
-    assert.ok(geometry.documentScrollWidth <= geometry.viewportWidth + 2, viewport.name + ': viewport must not overflow horizontally.');
+    assert.ok(geometry.rootScrollWidth <= geometry.rootClientWidth + 2, viewport.name + ': AI workspace must not overflow horizontally. ' + geometrySummary);
+    assert.ok(geometry.mainScrollWidth <= geometry.mainClientWidth + 2, viewport.name + ': main content must not overflow horizontally. ' + geometrySummary);
+    assert.ok(geometry.documentScrollWidth <= geometry.viewportWidth + 2, viewport.name + ': viewport must not overflow horizontally. ' + geometrySummary);
     assert.ok(geometry.identityEditorVisible && geometry.discoveryVisible, viewport.name + ': identity and discovery controls must remain available.');
     assert.ok(geometry.corporateGovernanceVisible && geometry.disciplinaryCaseVisible, viewport.name + ': corporate HR controls must remain available.');
     await page.screenshot({
