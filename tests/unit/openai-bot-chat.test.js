@@ -57,6 +57,17 @@ test('bot chat rejects missing credentials/model, mismatched identity and wrong 
   assert.equal(calls, 0);
 });
 
+test('an assigned model never falls back to the legacy generic provider key', async () => {
+  let calls = 0;
+  await assert.rejects(generateOpenAIBotReply({
+    bot, identity, message: 'Use my saved AI model assignment.',
+    model: 'gpt-assigned-model',
+    env: { MINGLORA_AI_PROVIDER: 'openai', MINGLORA_AI_API_KEY: 'legacy-global-key' },
+    fetchImpl: async () => { calls += 1; }
+  }), error => error.code === 'missing_credentials');
+  assert.equal(calls, 0);
+});
+
 test('a flagged user message never reaches the Responses API', async () => {
   const urls = [];
   await assert.rejects(generateOpenAIBotReply({
