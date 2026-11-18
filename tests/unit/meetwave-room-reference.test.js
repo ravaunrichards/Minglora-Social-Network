@@ -259,8 +259,10 @@ test('MeetWave stage heading owns a dedicated row and cannot cover the host or g
 test('MeetWave Fluid Panel guest seats clear the host right border and bottom ribbon', () => {
   const clearance=css.slice(css.lastIndexOf('/* MeetWave Fluid Panel guest seat clearance'));
   assert.match(clearance,/right:clamp\(42px,7vw,54px\)!important/);
-  assert.match(clearance,/nth-child\(3\)\{[\s\S]*?bottom:clamp\(88px,11vw,104px\)!important/);
-  assert.match(clearance,/nth-child\(4\)\{[\s\S]*?bottom:calc\(clamp\(88px,11vw,104px\)/);
+  assert.match(clearance,/nth-child\(3\)\{[\s\S]*?bottom:clamp\(64px,6vw,72px\)!important/);
+  assert.match(clearance,/nth-child\(4\)\{[\s\S]*?bottom:calc\(clamp\(64px,6vw,72px\)/);
+  assert.match(clearance,/clamp\(44px,15vw,120px\) \+ 9px/);
+  assert.match(clearance,/@media\(max-width:780px\)[\s\S]*?clamp\(44px,15vw,116px\)/);
 });
 
 test('MeetWave Side by Side matches two top seats and eight equally arranged lower invitation seats', () => {
