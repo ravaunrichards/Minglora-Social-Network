@@ -67,7 +67,7 @@
     const view=make("div","brand-view");
     root.append(top,status,tabs,view);panel.append(root);
 
-    const state={data:null,tab:"dashboard",query:"",uploadAssetId:"",busy:false};
+    const state={data:null,tab:"dashboard",query:"",uploadAssetId:"",studioSourceId:"",mockupAssetId:"",editorImage:null,editorBlob:null,busy:false};
     const say=(text,error)=>{
       status.textContent=text||"";
       status.classList.toggle("is-error",!!error);
@@ -92,6 +92,10 @@
     const cats=()=> (state.data?.categories||[]).map(x=>({value:x.id,label:x.name}));
     const cols=()=> (state.data?.collections||[]).map(x=>({value:x.id,label:x.name}));
     const approved=()=> (state.data?.assets||[]).filter(x=>["approved","active"].includes(x.status)&&x.approved_version_id&&x.approved_version_id===x.current_version_id).map(x=>({value:x.id,label:x.title}));
+    const imageAssets=()=> (state.data?.assets||[]).filter(x=>String(x.mime_type||"").startsWith("image/")&&x.previewUrl&&x.status!=="deleted");
+    const loadEditorImage=async asset=>new Promise((resolve,reject)=>{
+      const image=new Image();image.crossOrigin="anonymous";image.onload=()=>resolve(image);image.onerror=()=>reject(new Error("The selected logo preview could not be loaded."));image.src=asset.previewUrl;
+    });
     const title=(heading,sub)=>{
       const h=make("div","brand-section-heading");h.append(make("h3","",heading),make("p","",sub));return h;
     };
@@ -178,6 +182,10 @@
         const actions=make("div","brand-asset-actions");
         actions.append(button(a.is_favorite?"★ Saved":"☆ Favorite",()=>run("favorite_toggle",{assetId:a.id},"Favorite updated."),"quiet"));
         actions.append(button("New version",()=>{state.uploadAssetId=a.id;setTab("upload");say("Choose a new source file. The existing logo version will remain preserved.");},"quiet"));
+        if(String(a.mime_type||"").startsWith("image/")){
+          actions.append(button("Design",()=>{state.studioSourceId=a.id;state.editorImage=null;state.editorBlob=null;setTab("design");},"quiet"));
+          actions.append(button("Mockup",()=>{state.mockupAssetId=a.id;setTab("mockups");},"quiet"));
+        }
         if(a.current_version_id&&a.approved_version_id!==a.current_version_id)actions.append(button("Approve current version",()=>run("asset_approve",{assetId:a.id},"Current logo version approved."),"primary"));
         if(a.status==="archived")actions.append(button("Restore",()=>run("asset_status",{assetId:a.id,status:"draft"},"Logo restored as a draft."),"quiet"));
         else if(a.status!=="deleted")actions.append(button("Archive",()=>run("asset_status",{assetId:a.id,status:"archived"},"Logo archived and retained."),"quiet"));
@@ -255,6 +263,171 @@
       });
       view.append(form);
       view.append(make("p","brand-note","Formats: SVG, PNG/APNG, JPEG, WebP, GIF, ICO, Lottie JSON, MP4 and WebM. Maximum 50 MB per file. SVG content is checked for active markup before preview."));
+    }
+
+    async function renderDesign(){
+      view.append(title("Logo Design Studio","Crop, resize, rotate and change the canvas background. Each export becomes a separate new asset; the source logo and approved versions stay untouched."));
+      const sources=imageAssets();
+      if(!sources.length){view.append(empty("No image logos to edit","Upload a verified image logo first. Video assets and animation files remain available in the library but are not raster-edited here."));return;}
+      const controls=make("div","brand-editor-controls");
+      const source=select("Choose source logo",sources.map(a=>({value:a.id,label:a.title+" · v"+(a.version_count||1)})));
+      source.value=state.studioSourceId||sources[0].id;
+      state.studioSourceId=source.value;
+      const sourceAsset=sources.find(a=>a.id===state.studioSourceId)||sources[0];
+      const cropX=field("number","Crop left (%)","0");cropX.min="0";cropX.max="99";cropX.step="1";
+      const cropY=field("number","Crop top (%)","0");cropY.min="0";cropY.max="99";cropY.step="1";
+      const cropW=field("number","Crop width (%)","100");cropW.min="1";cropW.max="100";cropW.step="1";
+      const cropH=field("number","Crop height (%)","100");cropH.min="1";cropH.max="100";cropH.step="1";
+      const width=field("number","Output width (px)","1200");width.min="1";width.max="4096";
+      const height=field("number","Output height (px)","1200");height.min="1";height.max="4096";
+      const rotation=select("Rotation",[{value:"0",label:"0°"},{value:"90",label:"90°"},{value:"180",label:"180°"},{value:"270",label:"270°"}]);
+      const background=field("color","Canvas background","#ffffff");
+      const transparent=field("checkbox");transparent.checked=true;
+      const transparentLabel=label("Keep transparent background",transparent);
+      const outputName=field("text","New logo title",sourceAsset.title+" — Edited");outputName.maxLength=120;
+      const sourceSelect=label("Source logo",source);
+      sourceSelect.classList.add("brand-field-wide");
+      controls.append(sourceSelect,label("Crop left %",cropX),label("Crop top %",cropY),
+        label("Crop width %",cropW),label("Crop height %",cropH),
+        label("Output width",width),label("Output height",height),
+        label("Rotate",rotation),label("Background",background),
+        transparentLabel,label("Save as a new logo",outputName));
+      const work=make("div","brand-editor-preview");
+      const canvas=make("canvas","brand-editor-canvas");
+      canvas.setAttribute("aria-label","Edited logo preview");
+      const placeholder=empty("Preview not rendered","Choose your crop and output options, then render the preview.");
+      work.append(canvas,placeholder);
+      const controlsRow=make("div","brand-editor-actions");
+      const previewButton=button("Render preview",async()=>{
+        try{
+          previewButton.disabled=true;
+          const asset=imageAssets().find(a=>a.id===source.value);
+          if(!asset)throw new Error("Select an available logo asset.");
+          if(!state.editorImage||state.studioSourceId!==asset.id){
+            state.studioSourceId=asset.id;
+            state.editorImage=await loadEditorImage(asset);
+          }
+          const image=state.editorImage;
+          const left=Math.max(0,Math.min(99,Number(cropX.value)||0));
+          const top=Math.max(0,Math.min(99,Number(cropY.value)||0));
+          const cropWidth=Math.max(1,Math.min(100-left,Number(cropW.value)||100));
+          const cropHeight=Math.max(1,Math.min(100-top,Number(cropH.value)||100));
+          const sourceX=Math.round(image.naturalWidth*left/100);
+          const sourceY=Math.round(image.naturalHeight*top/100);
+          const sourceWidth=Math.max(1,Math.round(image.naturalWidth*cropWidth/100));
+          const sourceHeight=Math.max(1,Math.round(image.naturalHeight*cropHeight/100));
+          const outputWidth=Math.max(1,Math.min(4096,Math.round(Number(width.value)||1200)));
+          const outputHeight=Math.max(1,Math.min(4096,Math.round(Number(height.value)||1200)));
+          width.value=String(outputWidth);height.value=String(outputHeight);
+          const cropped=document.createElement("canvas");
+          cropped.width=outputWidth;cropped.height=outputHeight;
+          const cropContext=cropped.getContext("2d");
+          if(!cropContext)throw new Error("Canvas editing is not available in this browser.");
+          cropContext.drawImage(image,sourceX,sourceY,sourceWidth,sourceHeight,0,0,outputWidth,outputHeight);
+          const angle=(Number(rotation.value)||0)*Math.PI/180;
+          const swap=Math.abs(Number(rotation.value))%180===90;
+          const result=document.createElement("canvas");
+          result.width=swap?outputHeight:outputWidth;
+          result.height=swap?outputWidth:outputHeight;
+          const context=result.getContext("2d");
+          if(!context)throw new Error("Canvas editing is not available in this browser.");
+          if(!transparent.checked){context.fillStyle=background.value;context.fillRect(0,0,result.width,result.height);}
+          context.translate(result.width/2,result.height/2);
+          context.rotate(angle);
+          context.drawImage(cropped,-outputWidth/2,-outputHeight/2);
+          const blob=await new Promise(resolve=>result.toBlob(resolve,"image/png"));
+          if(!blob)throw new Error("The edited preview could not be exported.");
+          state.editorBlob=blob;
+          canvas.width=result.width;canvas.height=result.height;
+          const display=canvas.getContext("2d");
+          display.clearRect(0,0,canvas.width,canvas.height);
+          display.drawImage(result,0,0);
+          placeholder.remove();
+          say("Preview rendered. Save it as a new asset to preserve the original.");
+        }catch(error){say(error.message||"Could not render this logo.",true);}
+        finally{previewButton.disabled=false;}
+      },"primary");
+      const saveButton=button("Save as new logo",async()=>{
+        if(!state.editorBlob){say("Render a preview before saving the edited logo.",true);return;}
+        if(!outputName.value.trim()){say("Enter a title for the new logo.",true);return;}
+        saveButton.disabled=true;
+        try{
+          const asset=imageAssets().find(a=>a.id===source.value);
+          if(!asset)throw new Error("The source logo is no longer available.");
+          const file=new File([state.editorBlob],outputName.value.trim().replace(/[^\w.-]+/g,"-")+".png",{type:"image/png"});
+          const prepare=await fetch("/api/admin/logo-center/upload/prepare",{
+            method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","Accept":"application/json"},
+            body:JSON.stringify({title:outputName.value.trim(),fileName:file.name,mimeType:file.type,byteSize:file.size,
+              categoryId:asset.category_id||"",collectionId:asset.collection_id||"",
+              description:"Edited derivative of "+asset.title+". Original asset "+asset.id+" remains preserved.",
+              changeNote:"Created as a new asset in Logo Design Studio; source original not overwritten."})
+          });
+          const prepared=await prepare.json().catch(()=>({}));
+          if(!prepare.ok)throw new Error(prepared.error||"Could not prepare the edited logo upload.");
+          const uploaded=await fetch(prepared.signedUrl,{
+            method:"POST",headers:{"apikey":prepared.apiKey,"Content-Type":file.type,"x-upsert":"false","cache-control":"3600"},body:file
+          });
+          if(!uploaded.ok){const e=await uploaded.json().catch(()=>({}));throw new Error(e.message||e.error||"Private Storage rejected the edited logo.");}
+          const complete=await fetch("/api/admin/logo-center/upload/complete",{
+            method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","Accept":"application/json"},
+            body:JSON.stringify({assetId:prepared.assetId,versionId:prepared.versionId,width:canvas.width,height:canvas.height})
+          });
+          const saved=await complete.json().catch(()=>({}));
+          if(!complete.ok)throw new Error(saved.error||"The edited logo could not be verified.");
+          state.data=await api("/admin/logo-center");state.tab="library";state.editorBlob=null;render();
+          say("Edited derivative saved as a separate draft logo. The source and approved original were not changed.");
+        }catch(error){say(error.message||"The edited logo could not be saved.",true);}
+        finally{saveButton.disabled=false;}
+      },"primary");
+      source.addEventListener("change",async()=>{
+        state.studioSourceId=source.value;state.editorImage=null;state.editorBlob=null;
+        const item=sources.find(a=>a.id===source.value);
+        if(item)outputName.value=item.title+" — Edited";
+        say("Source changed. Render a new preview before saving.");
+      });
+      controlsRow.append(previewButton,saveButton);
+      view.append(controls,controlsRow,work);
+      if(state.editorImage&&state.studioSourceId===sourceAsset.id){source.dispatchEvent(new Event("change"));}
+    }
+
+    function renderMockups(){
+      view.append(title("Logo Mockup Studio","Inspect the selected logo against realistic web, phone, tablet, profile and live-stream preview surfaces. These previews do not publish or modify the source asset."));
+      const sources=imageAssets();
+      if(!sources.length){view.append(empty("No image logos to preview","Upload an image logo to preview its appearance in different placements."));return;}
+      const picker=select("Choose a logo",sources.map(a=>({value:a.id,label:a.title})));
+      picker.value=state.mockupAssetId||sources[0].id;
+      state.mockupAssetId=picker.value;
+      const source=sources.find(a=>a.id===picker.value)||sources[0];
+      const info=make("p","brand-note","Previewing: "+source.title+" · "+(source.width||"—")+" × "+(source.height||"—")+" px · "+statusLabel(source.status));
+      picker.addEventListener("change",()=>{state.mockupAssetId=picker.value;render();});
+      view.append(label("Logo asset",picker),info);
+      const grid=make("div","brand-mockup-grid");
+      const mockups=[
+        ["phone","Smartphone","Phone app header and profile"],
+        ["tablet","Tablet","Tablet application header"],
+        ["desktop","Desktop","Website header"],
+        ["profile","Social profile","Avatar and cover layout"],
+        ["live","LIVE streaming","Live header and watermark"],
+        ["dark","Dark background","Logo contrast on dark surfaces"]
+      ];
+      mockups.forEach(([kind,name,desc])=>{
+        const card=make("article","brand-mockup-card");
+        card.append(make("strong","",""+name),make("small","",desc));
+        const frame=make("div","brand-device-frame brand-device-"+kind);
+        if(kind==="profile"){
+          const cover=make("div","brand-profile-cover");
+          const avatar=make("div","brand-profile-avatar");
+          const img=make("img");img.src=source.previewUrl;img.alt=source.title;avatar.append(img);
+          frame.append(cover,avatar);
+        }else{
+          const top=make("div","brand-device-top");
+          top.append(make("span","","Minglora"));
+          const img=make("img");img.src=source.previewUrl;img.alt=source.title;img.loading="lazy";
+          frame.append(top,img);
+        }
+        card.append(frame);grid.append(card);
+      });
+      view.append(grid);
     }
 
     function renderCollections(){
@@ -367,6 +540,8 @@
       else if(state.tab==="collections")renderCollections();
       else if(state.tab==="placements")renderPlacements();
       else if(state.tab==="identity")renderIdentity();
+      else if(state.tab==="design")renderDesign();
+      else if(state.tab==="mockups")renderMockups();
       else if(state.tab==="scheduling")renderScheduling();
       else if(state.tab==="activity")renderActivity();
     }
