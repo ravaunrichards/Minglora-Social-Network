@@ -1,0 +1,86 @@
+/* Minglora creator-to-creator Co-host LIVE stage. This layer is scoped
+   to the secondary Co-host room; Multi-guest guest-seat layouts are unchanged. */
+#live-cohost-stage,#live-cohost-audio-root{display:none}
+#live-video-stage.has-live-cohost #live-guest-layout,
+#live-video-stage.has-live-cohost .live-audio-scene,
+#live-video-stage.has-live-cohost #live-speaker-list,
+#live-video-stage.has-live-cohost #live-screen-share-stage{display:none!important}
+#live-video-stage.has-live-cohost #live-cohost-stage{
+  position:absolute;inset:5px;z-index:8;display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:8px;min-width:0;min-height:0;overflow:hidden;
+  padding:0;background:transparent;
+}
+#live-video-stage.has-live-cohost #live-cohost-audio-root{
+  position:absolute;left:-9999px;top:auto;display:block;width:1px;height:1px;overflow:hidden;
+}
+.live-cohost-tile{
+  position:relative;display:block;min-width:0;min-height:0;width:100%;height:100%;
+  padding:0;overflow:hidden;border:1px solid rgba(255,255,255,.16);
+  border-radius:14px;background:linear-gradient(145deg,#202c45,#080d16);
+  color:#fff;text-align:left;box-shadow:0 5px 18px rgba(0,0,0,.22);
+}
+.live-cohost-tile.is-focused{outline:3px solid #f5a623;outline-offset:-3px}
+.live-cohost-media{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.live-cohost-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#080d16}
+.live-cohost-avatar{
+  position:absolute;left:50%;top:44%;display:grid;place-items:center;
+  width:clamp(48px,10vw,90px);height:clamp(48px,10vw,90px);
+  transform:translate(-50%,-50%);overflow:hidden;border-radius:50%;
+  background:linear-gradient(145deg,#4676ba,#172b4c);
+  color:#fff;font-size:clamp(22px,5vw,42px);font-weight:800;
+  box-shadow:0 5px 24px rgba(0,0,0,.3);
+}
+.live-cohost-avatar img{width:100%;height:100%;object-fit:cover}
+.live-cohost-name{
+  position:absolute;left:9px;right:9px;bottom:9px;z-index:2;
+  display:block;max-width:calc(100% - 18px);padding:6px 10px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  border:1px solid rgba(255,255,255,.16);border-radius:999px;
+  background:rgba(4,9,17,.74);color:#fff;font-size:12px;font-weight:750;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+#live-cohost-stage[data-count="1"] .live-cohost-tile{grid-column:1/-1;grid-row:1/-1}
+#live-cohost-stage[data-count="2"] .live-cohost-tile:nth-child(1){grid-column:1;grid-row:1/-1}
+#live-cohost-stage[data-count="2"] .live-cohost-tile:nth-child(2){grid-column:2;grid-row:1/-1}
+#live-cohost-stage[data-count="3"] .live-cohost-tile:nth-child(3){grid-column:1/-1;grid-row:2}
+#live-cohost-stage[data-count="4"] .live-cohost-tile{grid-column:auto;grid-row:auto}
+.live-cohost-panel{display:grid;gap:12px}
+.live-cohost-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.live-cohost-heading>div{display:grid;gap:4px;min-width:0}
+.live-cohost-heading strong{font-size:15px}
+.live-cohost-heading small,.live-cohost-form small,.live-cohost-note{color:var(--muted,#9ba9bd);font-size:12px;line-height:1.45}
+.live-cohost-live-badge{flex:0 0 auto;padding:5px 8px;border:1px solid rgba(32,174,112,.34);border-radius:999px;color:#35c58b;font-size:9px;font-weight:800;letter-spacing:.04em}
+.live-cohost-form{display:grid;gap:9px}
+.live-cohost-form[hidden]{display:none!important}
+.live-cohost-form label{font-size:12px;font-weight:700}
+.live-cohost-form input{min-width:0;width:100%}
+.live-cohost-invite-row{display:flex;gap:7px;min-width:0}
+.live-cohost-invite-row input{flex:1 1 auto}
+.live-cohost-invite-row button{flex:0 0 auto}
+.live-cohost-status{font-size:12px;color:var(--muted,#9ba9bd)}
+.live-cohost-roster,.live-cohost-invitations{display:grid;gap:8px}
+.live-cohost-roster-row,.live-cohost-invitation-row{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  padding:10px;border:1px solid var(--border,#26354b);border-radius:12px;
+  background:rgba(127,145,170,.07)
+}
+.live-cohost-roster-name{font-size:13px;font-weight:750}
+.live-cohost-roster-state{font-size:11px;color:var(--muted,#9ba9bd)}
+.live-cohost-row-actions,.live-cohost-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.live-cohost-row-actions button,.live-cohost-actions button{min-height:34px;padding:6px 10px;font-size:11px}
+.live-cohost-actions[hidden]{display:none}
+.live-cohost-invitations>strong{font-size:13px}
+@media(max-width:600px){
+  #live-video-stage.has-live-cohost #live-cohost-stage{inset:4px;gap:5px}
+  .live-cohost-tile{border-radius:10px}
+  .live-cohost-name{left:5px;right:5px;bottom:5px;max-width:calc(100% - 10px);padding:5px 7px;font-size:10px}
+  .live-cohost-invite-row{flex-wrap:wrap}
+  .live-cohost-invite-row button{width:100%}
+}
+@media(min-width:760px){
+  #live-video-stage.has-live-cohost #live-cohost-stage{inset:12px;gap:12px}
+  .live-cohost-tile{border-radius:18px}
+  .live-cohost-name{left:12px;right:12px;bottom:12px;padding:8px 12px;font-size:14px}
+}
