@@ -129,7 +129,8 @@ test('Audio LIVE uses the full stage for the same nine reference grids; metadata
   assert.ok(referenceStart>=0&&referenceEnd>referenceStart&&audioStart>referenceEnd);
   const videoReference=guestLayouts.slice(referenceStart,referenceEnd)
     .replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage');
-  const audioContract=guestLayouts.slice(audioStart);
+  const audioSafetyStart=guestLayouts.indexOf('/* AUDIO LIVE reference clearance',audioStart);
+  const audioContract=guestLayouts.slice(audioStart,audioSafetyStart>audioStart?audioSafetyStart:undefined);
   const layoutRules=(source,layout)=>[...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .map(match=>({
       selector:match[1].trim().replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage'),
