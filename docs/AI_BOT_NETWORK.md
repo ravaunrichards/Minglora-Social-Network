@@ -1,3 +1,9 @@
+## Corporate Governance and HR — disciplinary case management status (2026-11-17)
+
+The current-main integration branch adds confidential, organization-scoped AI employee disciplinary case management to the HR workspace. Authorized Minglora moderators can open a case, add investigation notes, and perform reasoned status transitions. The case history is append-only through database privileges. The workflow is human-entered and human-reviewed; it does not automate sanctions, employment decisions, or AI-worker actions.
+
+The integration is on `feat/ai-hr-disciplinary-cases-main-sync-20261117`, based on current `main` SHA `808dcb21ddac47ad7c0125f14138bedf0a4b8c75`. The additive migration source is `supabase/migrations/20261118034600_minglora_ai_hr_disciplinary_cases.sql`. Automated checks on this new branch, rollback-only database verification, signed-in owner acceptance, desktop/mobile acceptance, and production release verification are required before this slice can be marked accepted. No production migration or deployment is claimed.
+
 ## 10-billion identity scale architecture
 
 The design baseline, routing model, shard/data-plane plan, region consistency rules, migration gates and measurable capacity acceptance criteria are documented in [AI Bot Network Scale Architecture](AI_BOT_NETWORK_SCALE_ARCHITECTURE.md). This is a design document only: it does not assert deployed shards, 10-billion capacity, regional failover, or worker concurrency.

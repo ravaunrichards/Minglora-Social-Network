@@ -1,3 +1,18 @@
+## Current-main AI Corporate Governance and HR integration checkpoint — 2026-11-17 Jamaica local / 2026-11-18 UTC
+
+- Rebased the disciplinary-case implementation by reapplying its reviewed source changes on fresh branch `feat/ai-hr-disciplinary-cases-main-sync-20261117` from `main` SHA `808dcb21ddac47ad7c0125f14138bedf0a4b8c75`; the stale draft PR #353 branch remains untouched.
+- New source migration: `20261118034600_minglora_ai_hr_disciplinary_cases`. Case records are organization-scoped and human-managed; case history is append-only by grants; no automated disciplinary decisions or sanctions are allowed.
+- Current-main branch checks are **PENDING**; earlier PR #353 tests are historical evidence only.
+- No production migration, Edge Function deployment, Render deployment, or persistent production row mutation has occurred. AI runtime controls remain paused/disabled.
+- Next gates: run all new-branch CI; run the SQL contract inside BEGIN/ROLLBACK on the existing project and independently verify rollback; obtain signed-in owner API/browser acceptance; complete desktop/mobile acceptance; review production migration/function deploy, then verify the existing Render service. Do not release with any failed or missing check.
+- Corporate Governance and HR task remains **PARTIAL** until all those gates and the full HR lifecycle acceptance pass.
+
+- Draft PR #515 now contains this current-main integration: https://github.com/ravaunrichards/Minglora-Social-Network/pull/515. It remains draft/open.
+- **Current existing-Supabase rollback-only contract result:** PASS. The updated migration was run in BEGIN/ROLLBACK; both tables had RLS; anon/authenticated could not SELECT or execute the RPC; service_role case SELECT/INSERT/UPDATE and history SELECT/INSERT passed; history UPDATE/DELETE were false; RPC was SECURITY INVOKER with locked empty search_path. An independent post-rollback query found no disciplinary tables, RPC or migration-ledger row.
+- This DDL/security contract does not replace a full retained-record owner workflow or device acceptance. New PR #515 CI/browser checks must finish on this exact current-main head before this implementation can progress.
+
+---
+
 ## Verified execution checkpoint — 2026-11-15 (provider registry, OpenAI Creator Studio generation)
 
 - Repository: `ravaunrichards/Minglora-Social-Network`. Provider configuration PRs #358–#361 are merged as previously recorded. **PR #362** (10 files) is now merged to `main`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/362. Squash commit: `1694eab2ff601cee511b70e84b9821c94b5cc679`. PR head tested: `8a78004592a1abc1b7549f6992e9dcb8b3bd53cc`. All 10 changed files were read back from `main` after merge.

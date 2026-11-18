@@ -1,3 +1,14 @@
+## Owner authorization and current HR integration — 2026-11-18
+
+- The platform owner approved continued implementation, testing and release preparation through the Minglora in-chat Owner Acceptance Center. This authorizes the release workflow to proceed; it does not waive signed-in owner/MFA and device acceptance, passing automated checks, provider readiness, or runtime security gates.
+- Confidential AI HR disciplinary-case work remains in draft PR #515 on `feat/ai-hr-disciplinary-cases-main-sync-20261117`. The implementation adds organization-scoped confidential case records, append-only case history, administrator-gated API/Edge Function commands, and HR workspace controls for case creation, notes and status transitions. Investigations, findings and sanctions remain human-managed.
+- The additive migration `20261118034600_minglora_ai_hr_disciplinary_cases` passed the existing-project rollback-only SQL/RLS/grant contract. The transaction was rolled back; no production disciplinary tables, RPC, migration ledger entry or case data were retained.
+- Current branch head before latest-main reconciliation: `b848615e8a3290b11536b177b63adeb22db7d963`. The branch was two commits behind `main` and reported a dirty merge; reconcile the PR against the current main tree before further release work.
+- Automated CI and Minglora AI Network checks passed on the prior tested head. Browser acceptance failed the compact 320px phone no-overflow assertion (AI workspace grid expanded beyond its available width). The mobile CSS and diagnostic assertions have since been updated; the corrected browser test must run and pass before the PR is marked ready or merged.
+- No PR #515 production migration or Edge Function deployment was performed; no new Render deployment was started from this PR. Runtime controls stay `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Do not enable AI workers without verified provider credentials, health, worker identity and operational capacity.
+
+---
+
 ## Production acceptance checkpoint — 2026-11-18 (owner RBAC repair)
 
 - Owner-controlled administrator RBAC repair PR #516 is merged to `main` as `70519e0d0333dc5fcf23e838aa8680e1bdf77fcb`. The original source migration had an invalid dollar-quote delimiter on the append-only audit trigger; the merged fix corrects it and adds a regression test.
