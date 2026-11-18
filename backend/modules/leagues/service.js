@@ -208,7 +208,7 @@ const ensureCollections = db => {
   }
   db.creatorLeagueDailySettlements = uniqueRecords(db.creatorLeagueDailySettlements, item => item.dayKey);
   db.creatorLeaguePowerupUses = uniqueRecords(db.creatorLeaguePowerupUses, item =>
-    item.id || item.inventoryCardId || (item.userId && item.powerupId && item.dayKey ? [item.userId, item.powerupId, item.dayKey].join(":") : null)
+    item.inventoryCardId || (item.userId && item.powerupId && item.dayKey ? [item.userId, item.powerupId, item.dayKey].join(":") : null)
   );
   db.creatorLeaguePowerupInventory = uniqueRecords(db.creatorLeaguePowerupInventory, item => item.id);
   db.creatorLeagueEvents = uniqueRecords(db.creatorLeagueEvents, item => item.id);
