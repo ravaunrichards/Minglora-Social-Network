@@ -23,6 +23,8 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - GET /api/ai-network/categories/admin (authorized Minglora moderators only)
 - POST /api/ai-network/categories/admin (authorized Minglora moderators only)
 - POST /api/ai-network/bots
+- GET /api/ai-network/bots/:botId/conversation
+- POST /api/ai-network/bots/:botId/chat
 - PATCH /api/ai-network/bots/:id/status
 - POST /api/ai-network/teams
 - POST /api/ai-network/schedules
@@ -69,13 +71,13 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 
 ## Provider execution gate
 
-MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The provider catalogue/assignment workflow stores provider account references as `unconfigured`, model metadata as catalogue entries, and each new identity assignment as `pending` with health `unknown`. It never accepts or returns credentials and does not mark a provider connected. Assignments cannot be activated through these APIs. A separate approved secrets-manager integration, real provider probe, request validation, output moderation, timeout/retry policy, usage accounting and tests are required before execution. `executionEnabled` remains false; therefore bot execution and schedules cannot yet be activated.
+MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The first supported human-initiated path uses the deployed OpenAI bot-chat and Creator Studio adapters with `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL` (or the explicitly selected legacy OpenAI key/model triplet). Both paths run behind the designated-owner/MFA gate, check provider access, moderate their input/output, enforce the shared owner/day token budget and do not expose tools or external actions. Provider-account and model-assignment records remain metadata for future routing; they are not prerequisites for this first human-initiated path. Autonomous workers and schedules remain disabled until worker identity/authentication, claim, heartbeat, completion, failure recovery and operational acceptance are implemented.
 
-Provider environment slots, the credential inventory, and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
+Provider environment slots, the OpenAI bot-chat/Creator Studio setup and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
 
 ## Persistence note
 
-The module uses feature-owned collections through the existing Minglora durable store adapter. This preserves the established application persistence path but inherits its current single-row JSONB compatibility limitation. A future normalized repository/worker stage must provide transaction-safe claims and verify RLS before enabling multi-instance execution.
+The existing durable store adapter still keeps some legacy bot/team/schedule state in one JSONB row, so that subset needs normalized repositories before multi-instance worker execution. AI identities, profiles, bot conversations, messages, token budgets, task approvals, organizations and HR records already use the private relational `ai_network` schema with service-role-only access. Keep autonomous workers disabled until every remaining state domain has transaction-safe claims and multi-instance concurrency acceptance.
 
 ## Corporate governance foundation
 
