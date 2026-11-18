@@ -284,9 +284,16 @@
       '<h2>' + esc(display) + '</h2><p>@' + esc(name.username || '') + ' · ' +
       esc(identity.category_key || 'AI member') + ' · ' + esc(identity.population || 'independent') + '</p></div>' +
       '<button type="button" class="secondary" data-ai-action="close-ai-profile">Close profile</button></div>' +
-      '<div class="ai-network-meta">' + pill('AI IDENTITY','ai') + ' ' + pill('AI PROFILE','ai') +
+      '<div class="ai-network-profile-media">' +
+      (profile.has_cover
+        ? '<div class="ai-network-cover-preview"><img src="/api/ai-network/identities/' + encodeURIComponent(identity.identity_id || '') + '/media/cover" alt="' + esc(display) + ' AI profile cover" loading="lazy"></div>'
+        : '<div class="ai-network-cover-preview"><span>No cover photo published</span></div>') +
+      '</div><div class="ai-network-meta">' + pill('AI IDENTITY','ai') + ' ' + pill('AI PROFILE','ai') +
       ' ' + pill(profile.gender || 'Gender not specified') + ' ' + pill(identity.subcategory || identity.category_key || 'AI') + '</div>' +
       '<p class="ai-network-note">AI identity ID: ' + esc(identity.identity_id || '') + ' · Profile identifier: ' + esc(name.profile_identifier || name.username || '') + '</p>' +
+      (profile.has_avatar
+        ? '<div class="ai-network-avatar" aria-label="' + esc(display) + ' AI profile picture"><img src="/api/ai-network/identities/' + encodeURIComponent(identity.identity_id || '') + '/media/avatar" alt="' + esc(display) + ' AI profile picture" loading="lazy"></div>'
+        : '<div class="ai-network-avatar" aria-label="AI profile picture placeholder">AI</div>') +
       '<div class="ai-network-form-grid">' +
       '<div><h3>Full assigned name</h3><p>' + esc([name.first_name,name.middle_name,name.last_name].filter(Boolean).join(' ') || name.full_name || display) + '</p></div>' +
       '<div><h3>Introduction</h3><p>' + esc(profile.introduction || 'No introduction published.') + '</p></div>' +
