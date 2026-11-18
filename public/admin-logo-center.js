@@ -152,7 +152,7 @@
 
     function renderDashboard(){
       const d=state.data||{},s=d.stats||{};
-      view.append(title("Brand operations overview","Current counts from Minglora's private brand records."));
+      view.append(title("Overview · Brand operations","Current counts from Minglora's private brand records."));
       const grid=make("div","brand-stats-grid");
       grid.append(stat("Total logos",Number(s.total||0).toLocaleString(),"Uploaded assets"),
         stat("Approved / active",Number(s.approved||0)+Number(s.active||0),"Eligible versions"),
