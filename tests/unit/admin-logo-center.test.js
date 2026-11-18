@@ -118,7 +118,7 @@ test("Admin Centre links the Logo Center only after the existing owner access ga
 test("the working Logo Center UI supports library, uploads, classification, approval, placement and identity", () => {
   for (const value of [
     "Overview","Logo Library","Upload","Collections & Categories","Placements",
-    "Brand Identity","Scheduling","Activity & History",
+    "Brand Identity","Design Studio","Mockup Studio","Scheduling","Activity & History",
     "upload/prepare","upload/complete","asset_approve","assignment_set",
     "assignment_publish","assignment_rollback","identity_update","schedule_create","schedule_cancel"
   ]) assert.ok(ui.includes(value), "missing UI workflow " + value);
@@ -126,6 +126,11 @@ test("the working Logo Center UI supports library, uploads, classification, appr
   assert.match(ui, /No demo assets|No uploaded logos yet/);
   assert.match(ui, /New version/);
   assert.match(ui, /approved_version_id===x\.current_version_id/);
+  assert.match(ui, /crop left|Crop left/i);
+  assert.match(ui, /toBlob\(resolve,"image\/png"\)/);
+  assert.match(ui, /Save as new logo/);
+  assert.match(ui, /brand-mockup-grid/);
+  assert.match(ui, /Smartphone/);
 });
 
 test("brand manifest only applies published secure image URLs and leaves existing branding intact on errors", () => {
