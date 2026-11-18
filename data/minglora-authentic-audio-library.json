@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "title": "Minglora Authentic Audio Library",
+  "acceptancePolicy": "strict-authentic-recordings-only",
+  "assets": [],
+  "requiredMetadata": [
+    "originalFilename",
+    "originalDownloadPage",
+    "sourceName",
+    "fileFormat",
+    "recordingDescription",
+    "licenseName",
+    "licenseUrl",
+    "attributionRequired",
+    "attributionText",
+    "commercialUseAllowed",
+    "redistributionAllowed",
+    "downloadDate",
+    "sha256",
+    "assetPath",
+    "recordingMethod",
+    "authenticityVerified",
+    "authenticityReviewNotes",
+    "playbackTested",
+    "playbackTestedAt",
+    "callType",
+    "category",
+    "durationMs"
+  ],
+  "status": {
+    "approved": 0,
+    "pendingReview": 0,
+    "rejected": 0
+  },
+  "notes": "Empty by design. A catalog URL or an unverified download is not an installed or approved recording."
+}
