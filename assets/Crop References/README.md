@@ -48,27 +48,27 @@ These are full range/reference-sheet artwork. Keep them separate from the six mi
 
 **Canonical source folder:** `Daily Ranking Badge/`
 
-The folder contains **eight unique PNG reference crops**. The six numbered frames are assigned to existing runtime slots:
+The folder contains **eight unique PNG reference crops**, and all eight now have defined runtime roles. The original uploaded PNGs remain unchanged and are served from one canonical route each.
 
-**Daily podium placement frames**
-- `Screenshot_20261112_021224_TikTok(1).png` — first place
-- `Screenshot_20261112_021224_TikTok(2).png` — second place
-- `Screenshot_20261112_021309_TikTok(1).png` — third place
+**Daily member Rankings podium**
+- `Screenshot_20261112_021224_TikTok(1).png` — first-place podium frame
+- `Screenshot_20261112_021224_TikTok(2).png` — second-place podium frame
+- `Screenshot_20261112_021309_TikTok(1).png` — third-place podium frame
 
-**Daily Top Gifters avatar frames**
-- `Screenshot_20261112_021309_TikTok(2).png` — first place
-- `Screenshot_20261112_021333_TikTok(1).png` — second place
-- `Screenshot_20261112_021343_TikTok(1).png` — third place
+**Daily LIVE Top Gifters podium avatars**
+- `Screenshot_20261112_021309_TikTok(2).png` — first-place avatar frame
+- `Screenshot_20261112_021333_TikTok(1).png` — second-place avatar frame
+- `Screenshot_20261112_021343_TikTok(1).png` — third-place avatar frame
 
-**Additional unnumbered source references — retained, not assigned to a rank**
-- `Screenshot_20261112_021355_TikTok(1).png` — blue/white flame frame
-- `Screenshot_20261112_021407_TikTok(1).png` — blue/white flame frame
+**Daily Top 4–20 avatar rank frames**
+- `Screenshot_20261112_021355_TikTok(1).png` — blue/silver flame frame for ranks **4–10**
+- `Screenshot_20261112_021407_TikTok(1).png` — blue/white flame frame for ranks **11–20**
 
-The two unnumbered frames are preserved in the canonical source folder and included in the duplicate-content audit. They are deliberately **not** mapped to a podium position, ranking tier, Top Gifters slot or runtime cache entry until their intended use is established. Do not infer a rank or create duplicate copies.
+The flame frames are used on the standalone member Rankings list, the daily LIVE ranking board, daily Top Gifters, and current daily-rank member profiles. The rank number and Top 10 / Top 20 label remain readable beside or with the frame; the source artwork is not altered, recolored, stretched, or duplicated. Ranks 21–100 retain the standard numbered list treatment.
 
-**Application routes:** `/assets/daily-ranking-badges/place-1.png` through `place-3.png`, plus `/assets/daily-ranking-badges/top-gifters-place-1.png` through `top-gifters-place-3.png`.
+**Application routes:** `/assets/daily-ranking-badges/place-1.png` through `place-3.png`; `/assets/daily-ranking-badges/top-gifters-place-1.png` through `top-gifters-place-3.png`; `/assets/daily-ranking-badges/place-4-10.png`; and `/assets/daily-ranking-badges/place-11-20.png`.
 
-The first three routes serve the daily podium frames; the latter three serve the daily Top Gifters avatar frames. The ranking data and period filters remain driven by confirmed LIVE gifts.
+The first three routes serve the member Rankings podium; the next three serve the daily Top Gifters podium avatars; the final two routes serve the Top 4–10 and Top 11–20 flame frames. Ranking scores and Today / This week / This month / All time periods remain driven by confirmed LIVE gifts.
 
 ## 4. LIVE Guest Layout References
 

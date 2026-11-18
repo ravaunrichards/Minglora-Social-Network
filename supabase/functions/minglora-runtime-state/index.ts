@@ -1043,6 +1043,10 @@ Deno.serve(async (req: Request) => {
             "key": "creatorLeaguePowerupUses"
           },
           {
+            "label": "Creator League power-up inventory",
+            "key": "creatorLeaguePowerupInventory"
+          },
+          {
             "label": "Creator League events",
             "key": "creatorLeagueEvents"
           },

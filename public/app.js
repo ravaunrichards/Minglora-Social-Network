@@ -2135,7 +2135,7 @@ function liveMatchStatusLabel(match){
   if(match.status==='pending')return 'Invitation pending';
   return String(match.status||'Match').replace(/_/g,' ');
 }
-function renderLiveMatches(matches){
+function renderLiveMatches(matches,session){
   const root=$('#live-match-list');if(!root)return;
   const items=Array.isArray(matches)?matches:[];
   if(!items.length){root.innerHTML="<div class='live-match-empty'><strong>No League Matches yet</strong><small>Challenge another creator who is currently broadcasting.</small></div>";return;}
@@ -2143,24 +2143,57 @@ function renderLiveMatches(matches){
     const challenger=match.challenger?.name||'Challenger',opponent=match.opponent?.name||'Opponent';
     const active=match.status==='live',pending=match.status==='pending';
     const score=match.scores||{challenger:0,opponent:0};
+    const challengerHidden=match.scoreVisibility?.challenger===false;
+    const opponentHidden=match.scoreVisibility?.opponent===false;
     const challengerPoints=Number(score.challenger||0),opponentPoints=Number(score.opponent||0);
     const total=Math.max(1,challengerPoints+opponentPoints);
     const mine=[match.challengerId,match.opponentId].includes(state.user?.id);
+    const mySide=match.challengerId===state.user?.id?'challenger':match.opponentId===state.user?.id?'opponent':'';
+    const viewerSide=match.challengerSessionId===session?.id?'challenger':match.opponentSessionId===session?.id?'opponent':'';
+    const panelSide=mine?mySide:viewerSide;
     const acceptedByMe=match.opponentId===state.user?.id&&pending;
     const alreadySupported=(match.supporters||[]).some(item=>item.userId===state.user?.id);
-    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+challengerPoints.toLocaleString()+"</b><small>Challenger</small></div>";
-    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+opponentPoints.toLocaleString()+"</b><small>Opponent</small></div>";
-    const bar="<div class='live-match-scorebar'><i style='width:"+Math.round(challengerPoints/total*100)+"%'></i></div>";
+    const leftSide="<div class='live-match-side'><strong>"+esc(challenger)+"</strong><b>"+(challengerHidden?"Hidden by Magic Mist":challengerPoints.toLocaleString())+"</b><small>Challenger</small></div>";
+    const rightSide="<div class='live-match-side'><strong>"+esc(opponent)+"</strong><b>"+(opponentHidden?"Hidden by Magic Mist":opponentPoints.toLocaleString())+"</b><small>Opponent</small></div>";
+    const barWidth=challengerHidden||opponentHidden?50:Math.round(challengerPoints/total*100);
+    const bar="<div class='live-match-scorebar"+(challengerHidden||opponentHidden?" is-mist-hidden":"")+"'><i style='width:"+barWidth+"%'></i></div>";
     const accept=acceptedByMe?"<button type='button' data-live-match-action='accept' data-match-id='"+esc(match.id)+"'>Accept challenge</button>":"";
     const support=active&&!mine?"<div class='live-match-support'>"+(alreadySupported?"<small>You have supported this match.</small>":"<button type='button' data-live-match-action='support-challenger' data-match-id='"+esc(match.id)+"'>Support "+esc(challenger)+"</button><button type='button' data-live-match-action='support-opponent' data-match-id='"+esc(match.id)+"'>Support "+esc(opponent)+"</button>")+"</div>":"";
-    const powerups=active&&mine?"<div class='live-match-powerups'><button type='button' data-live-match-action='powerup' data-powerup-id='shield' data-match-id='"+esc(match.id)+"'>Shield</button><button type='button' data-live-match-action='powerup' data-powerup-id='score_multiplier' data-match-id='"+esc(match.id)+"'>Double score</button><button type='button' data-live-match-action='powerup' data-powerup-id='time_boost' data-match-id='"+esc(match.id)+"'>Time Boost</button></div>":"";
-    return "<article class='live-match-card' data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
+    const cards=Array.isArray(match.availablePowerups)?match.availablePowerups:[];
+    const powerups=active&&!mine&&viewerSide?(cards.length
+      ? "<section class='live-match-powerups' aria-label='Your creator-linked Match Power-Up Backpack'><div class='live-match-powerups-heading'><strong>YOUR POWER-UP BACKPACK</strong><small>Cards for "+esc(session?.host?.name||session?.title||"this creator")+"</small></div>"+cards.map(card=>{
+          const timeLimit=card.powerupId==='time_maker'&&Number(match.timeMakerUses||0)>=3;
+          const speedLimit=card.powerupId==='speed_challenge'&&Boolean(match.speedChallenge);
+          const disabled=timeLimit||speedLimit;
+          const status= timeLimit?'3 shared uses reached':speedLimit?'Already used in this match':'Ready to use';
+          const icon={
+            boosting_glove:'powerup-glove',magic_mist:'powerup-mist',stun_hammer:'powerup-hammer',
+            time_maker:'powerup-time-maker',boosters:'powerup-boosters',speed_challenge:'powerup-speed'
+          }[card.powerupId];
+          const art=icon?"<svg class='league-powerup-svg-icon' viewBox='0 0 128 128' aria-hidden='true' focusable='false'><use href='/assets/league/league-emblems.svg?v=20261116-original-league-svg-assets-1#"+icon+"'></use></svg>":"";
+          const expiry=card.expiresAt?'Expires '+new Date(card.expiresAt).toLocaleDateString():'';
+          return "<button type='button' class='live-match-powerup-card' data-live-match-action='powerup' data-inventory-card-id='"+esc(card.inventoryCardId)+"' data-match-id='"+esc(match.id)+"' data-broadcast-id='"+esc(session.id)+"'"+(disabled?' disabled':'')+" aria-label='"+esc(card.name+' — '+status+' — '+expiry)+"'><span class='live-match-powerup-icon'>"+art+"</span><strong>"+esc(card.name)+"</strong><small>"+esc(card.description||'Use this card to support the creator')+"</small><span class='live-match-powerup-state'>"+status+"</span><small class='live-match-powerup-expiry'>"+esc(expiry)+"</small></button>";
+        }).join("")+"</section>"
+      : "<div class='live-match-backpack-empty'><strong>YOUR POWER-UP BACKPACK</strong><span>No cards for this creator yet. The winning side's top three Gift contributors can earn a random Power-Up card.</span></div>"):"";
+    const effects=(match.matchEffects||[]).map(effect=>{
+      if(effect.type==='stun_hammer'&&effect.targetSide===panelSide){
+        const impacts=Math.max(0,Number(effect.impactCount||0));
+        return "<span class='live-match-effect live-match-effect--hammer'>🔨 STUN HAMMER · "+impacts+" GIFT IMPACT"+(impacts===1?'':'S')+"</span>";
+      }
+      if(effect.type==='magic_mist'&&effect.side===panelSide)return "<span class='live-match-effect live-match-effect--mist'>☁ MAGIC MIST ACTIVE · OPPONENT SCORE HIDDEN</span>";
+      if(effect.type==='boosting_glove'&&effect.side===panelSide)return "<span class='live-match-effect live-match-effect--glove'>🥊 BOOSTING GLOVE · 30% CHANCE · 5×</span>";
+      if(effect.type==='boosters'&&effect.side===panelSide)return "<span class='live-match-effect live-match-effect--boosters'>2× BOOSTERS · NO. 2 &amp; NO. 3 GIFTERS</span>";
+      return "";
+    }).join("")+(challengerHidden||opponentHidden?"<span class='live-match-effect live-match-effect--mist'>☁ MAGIC MIST · SCORE HIDDEN</span>":"")+(Number(match.timeMakerUses||0)>0?"<span class='live-match-effect'>⏱ TIME MAKER · +"+(Number(match.timeMakerUses||0)*10)+" SEC</span>":"")+(match.speedChallenge&&new Date(match.speedChallenge.expiresAt).getTime()>Date.now()?"<span class='live-match-effect live-match-effect--speed'>🚀 SPEED CHALLENGE · 2× · 52 SEC</span>":"");
+    const stunEffect=(match.matchEffects||[]).find(effect=>effect.type==='stun_hammer'&&effect.targetSide===panelSide);
+    const impactLevel=stunEffect?Math.min(3,Math.max(1,Number(stunEffect.impactCount||0)+1)):0;
+    return "<article class='live-match-card"+(impactLevel?" live-match-card--stunned":"")+"'"+(impactLevel?" data-hammer-impact='"+impactLevel+"'":"")+" data-match-status='"+esc(match.status)+"'><div class='live-match-card-head'><strong>Creator League</strong><span>"+esc(liveMatchStatusLabel(match))+"</span></div><div class='live-match-score'>"+leftSide+"<em>VS</em>"+rightSide+"</div>"+bar+"<div class='live-match-card-effects'>"+effects+"</div><div class='live-match-card-foot'><small>"+(active?'Ends '+new Date(match.endsAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):pending?'Expires '+new Date(match.expiresAt||Date.now()).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'Match '+esc(match.status||''))+"</small>"+accept+"</div>"+support+powerups+"</article>";
   }).join('');
 }
 async function refreshLiveMatchPanel(session,role){
   if(liveMatchRefreshBusy||!session?.id||!$('#live-match-list'))return;
   liveMatchRefreshBusy=true;
-  try{const data=await api('/leagues/matches');if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[]);}
+  try{const data=await api('/leagues/matches?broadcastId='+encodeURIComponent(session.id));if(activeLiveSession?.id!==session.id)return;renderLiveMatches(data.matches||[],session);}
   catch(error){const root=$('#live-match-list');if(root&&!root.children.length)root.innerHTML="<p class='muted'>Creator League could not be loaded: "+esc(error.message)+"</p>";}
   finally{liveMatchRefreshBusy=false;}
 }
@@ -2194,9 +2227,9 @@ async function setupLiveMatchPanel(session,role){
     const button=event.target?.closest?.('[data-live-match-action]');if(!button)return;
     const action=button.dataset.liveMatchAction,matchId=String(button.dataset.matchId||'');
     const routeAction=action==='accept'?'accept':action==='support-challenger'||action==='support-opponent'?'support':'powerups';
-    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{powerupId:button.dataset.powerupId}:{};
+    const payload={broadcastId:session.id,...(routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{inventoryCardId:button.dataset.inventoryCardId}:{})};
     button.disabled=true;
-    try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'League Match power-up activated.');await refreshLiveMatchPanel(session,role);}
+    try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'Power-Up card activated for this creator.');await refreshLiveMatchPanel(session,role);}
     catch(error){toast(error.message||'The League Match action could not be completed.');}
     finally{button.disabled=false;}
   });
@@ -2374,7 +2407,7 @@ async function loadLiveDiscoveryBoard(tab,sessions){
         if(session)openLiveRoom(session,session.hostId===state.user?.id?'host':'viewer').catch(error=>toast(error.message));
       }));
     }else if(tab==='daily'){
-      const data=await api('/live/rankings/daily');
+      const data=await api('/live/rankings/top-gifters?period=daily');
       const items=Array.isArray(data.leaderboard)?data.leaderboard.filter(item=>{
         const position=Number(item.position||0);
         return position>=1&&position<=100;
@@ -2397,8 +2430,9 @@ async function loadLiveDiscoveryBoard(tab,sessions){
         const position=Number(item.position||0);
         const member=item.user||{};
         const award=position>=4&&position<=10?'top-ten':position>=11&&position<=20?'top-twenty':'';
+        const frame=award?(award==='top-ten'?'place-4-10':'place-11-20'):'';
         const avatarMarkup=award
-          ? "<span class='live-ranking-avatar-wrap'><img src='"+avatar(member)+"' alt='' loading='lazy'><span class='live-ranking-medal live-ranking-medal--"+award+"' aria-label='Rank "+position+"'>"+position+"</span></span>"
+          ? "<span class='live-ranking-position'>#"+position+"</span><span class='live-ranking-avatar-frame'><img class='live-ranking-avatar-frame-art' src='/assets/daily-ranking-badges/"+frame+".png' alt='' loading='lazy' decoding='async'><img class='live-ranking-avatar-image' src='"+avatar(member)+"' alt='' loading='lazy'></span>"
           : "<span class='live-ranking-position'>#"+position+"</span><img src='"+avatar(member)+"' alt='' loading='lazy'>";
         const bandMarkup=award
           ? "<span class='live-ranking-band live-ranking-band--"+award+"'>"+(award==='top-ten'?'TOP 10':'TOP 20')+"</span>"
@@ -2408,7 +2442,7 @@ async function loadLiveDiscoveryBoard(tab,sessions){
           "<span><small>@"+esc(member.username||'member')+"</small><strong>"+esc(member.name||member.username||'Minglora member')+liveGifterBadgeMarkup(member,"compact")+"</strong>"+bandMarkup+"</span>"+
           "<b>"+liveCompactCount(item.points||0)+" pts</b></button>";
       }).join('');
-      root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Top 100 · Confirmed Coins sent today · "+esc(data.dayKey||'today')+"</small></div>"+
+      root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Top 100 · Unique, confirmed LIVE Coins · "+esc(data.timeZone||'America/Jamaica')+"</small></div>"+
         (items.length?(podiumMarkup?"<div class='live-daily-podium-stage' aria-label='First, second and third place podium'>"+podiumMarkup+"</div>":"")+remainingMarkup:"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
       root.querySelectorAll('[data-live-ranking-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.liveRankingProfile)));
     }else{
@@ -6188,6 +6222,39 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='verified'){await openProfileVerificationManager();return;}
   if(action==='verification-review'){await openProfileVerificationReviewDesk();return;}
 }
+const profileDailyRankingBadgeCache={expiresAt:0,byUser:new Map(),pending:null};
+async function applyProfileDailyRankingBadge(userId){
+  const id=String(userId||'').trim();
+  if(!id)return;
+  const host=[...document.querySelectorAll('[data-profile-ranking-user]')].find(node=>node.dataset.profileRankingUser===id);
+  if(!host)return;
+  if(profileDailyRankingBadgeCache.expiresAt<=Date.now()){
+    if(!profileDailyRankingBadgeCache.pending){
+      profileDailyRankingBadgeCache.pending=api('/live/rankings/top-gifters?period=daily').then(data=>{
+        const entries=Array.isArray(data.leaderboard)?data.leaderboard:[];
+        profileDailyRankingBadgeCache.byUser=new Map(entries.map(item=>{
+          const position=Number(item.position||item.rank||0);
+          const member=item.user||{};
+          return [String(member.id||item.userId||''),{position}];
+        }).filter(([memberId,value])=>memberId&&value.position>=1&&value.position<=20));
+        profileDailyRankingBadgeCache.expiresAt=Date.now()+60_000;
+      }).catch(()=>{
+        profileDailyRankingBadgeCache.byUser.clear();
+        profileDailyRankingBadgeCache.expiresAt=Date.now()+10_000;
+      }).finally(()=>{profileDailyRankingBadgeCache.pending=null;});
+    }
+    await profileDailyRankingBadgeCache.pending;
+  }
+  const ranked=profileDailyRankingBadgeCache.byUser.get(id);
+  if(!ranked||ranked.position>20)return;
+  const position=ranked.position;
+  const frame=position<=3?'place-'+position:position<=10?'place-4-10':'place-11-20';
+  const label=position<=3?'No. '+position:position<=10?'No. '+position+' · TOP 10':'No. '+position+' · TOP 20';
+  host.innerHTML="<img class='profile-ranking-frame-art' src='/assets/daily-ranking-badges/"+frame+".png' alt='' loading='lazy' decoding='async'><span class='profile-ranking-rank-label'>"+label+"</span>";
+  host.hidden=false;
+  host.setAttribute('aria-hidden','false');
+  host.setAttribute('aria-label','Daily LIVE ranking position '+position);
+}
 function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   startCreatorLeagueProfileRefresh(u.id);
@@ -6217,7 +6284,8 @@ function renderProfile(data){
     : '';
   const requestedTab=state.profileTab||profileStyleNavigation(u.profileStyle)[0]?.[0]||'posts';
   const tab=requestedTab;
-  setContent('<div class="minglora-profile-page" data-profile-style="'+normalizeProfileStyle(u.profileStyle)+'" data-profile-screen-layout="'+normalizeProfileScreenLayout(u.profileScreenLayout)+'"><section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+''+'<div class="profile-info'+(profileThoughtMarkup?' profile-info--with-thought':'')+'">'+(profileThoughtMarkup?'<div class="profile-thought-slot">'+profileThoughtMarkup+'</div>':'')+'<div class="profile-avatar-edit-wrap"><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span></h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>'+(isAdminProfile?'<div class="profile-admin-identity" aria-label="Administrator identity"><span class="profile-admin-identity-mark profile-admin-identity-mark--owner" title="Platform owner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 3 5-6 5 6 4-3-2 11H5L3 8Z"></path><path d="M6 21h12"></path></svg><small>Owner</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--security" title="Protected administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.2 8.5 8 11 4.8-2.5 8-6 8-11V5l-8-3Z"></path><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg><small>Protected</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--control" title="Platform administration"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M8 9h8M8 13h5M8 17h3"></path></svg><small>Admin</small></span></div>':'')+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+profileMetricsMarkup(data,u.profileStyle)+'</div>'+(isMe?'<section class="profile-people-panel" id="profile-people-panel" hidden aria-label="People you may know"><div class="profile-people-heading"><div><h2>People you may know</h2><p>Discover Minglora members and connect with them</p></div><button type="button" class="text-button" data-profile-people-more>View more</button></div><div class="profile-people-carousel"><button type="button" class="profile-people-scroll profile-people-scroll--left" data-profile-people-scroll="-1" aria-label="Scroll recommendations left">‹</button><div class="profile-people-track" id="profile-people-track"><p class="profile-people-placeholder">Open this panel to load recommendations.</p></div><button type="button" class="profile-people-scroll profile-people-scroll--right" data-profile-people-scroll="1" aria-label="Scroll recommendations right">›</button></div></section>':'')+profileStyleExtrasMarkup+'<nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+profileStyleNavigation(u.profileStyle).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="create-post" aria-label="Create a post"><span aria-hidden="true">✎</span><span>Create post</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="style-library"><span aria-hidden="true">◈</span><span>Profile Style Library</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div></div>');
+  setContent('<div class="minglora-profile-page" data-profile-style="'+normalizeProfileStyle(u.profileStyle)+'" data-profile-screen-layout="'+normalizeProfileScreenLayout(u.profileScreenLayout)+'"><section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+''+'<div class="profile-info'+(profileThoughtMarkup?' profile-info--with-thought':'')+'">'+(profileThoughtMarkup?'<div class="profile-thought-slot">'+profileThoughtMarkup+'</div>':'')+'<div class="profile-avatar-edit-wrap"><span class="profile-ranking-frame-host" data-profile-ranking-user="'+esc(u.id)+'" hidden aria-hidden="true"></span><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span></h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>'+(isAdminProfile?'<div class="profile-admin-identity" aria-label="Administrator identity"><span class="profile-admin-identity-mark profile-admin-identity-mark--owner" title="Platform owner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 3 5-6 5 6 4-3-2 11H5L3 8Z"></path><path d="M6 21h12"></path></svg><small>Owner</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--security" title="Protected administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.2 8.5 8 11 4.8-2.5 8-6 8-11V5l-8-3Z"></path><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg><small>Protected</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--control" title="Platform administration"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M8 9h8M8 13h5M8 17h3"></path></svg><small>Admin</small></span></div>':'')+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+profileMetricsMarkup(data,u.profileStyle)+'</div>'+(isMe?'<section class="profile-people-panel" id="profile-people-panel" hidden aria-label="People you may know"><div class="profile-people-heading"><div><h2>People you may know</h2><p>Discover Minglora members and connect with them</p></div><button type="button" class="text-button" data-profile-people-more>View more</button></div><div class="profile-people-carousel"><button type="button" class="profile-people-scroll profile-people-scroll--left" data-profile-people-scroll="-1" aria-label="Scroll recommendations left">‹</button><div class="profile-people-track" id="profile-people-track"><p class="profile-people-placeholder">Open this panel to load recommendations.</p></div><button type="button" class="profile-people-scroll profile-people-scroll--right" data-profile-people-scroll="1" aria-label="Scroll recommendations right">›</button></div></section>':'')+profileStyleExtrasMarkup+'<nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+profileStyleNavigation(u.profileStyle).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="create-post" aria-label="Create a post"><span aria-hidden="true">✎</span><span>Create post</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="style-library"><span aria-hidden="true">◈</span><span>Profile Style Library</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div></div>');
+  void applyProfileDailyRankingBadge(u.id);
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     persistCurrentView();

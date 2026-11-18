@@ -43,7 +43,7 @@ test("LIVE viewer, guest-speaker, room-directory and gifter-leaderboard identiti
   assert.match(app, /live-room-host-name/);
   assert.match(app, /live-weekly-title-row/);
   assert.match(app, /live-top-gifter-person/);
-  const dailyRankingStart = app.indexOf("const data=await api('/live/rankings/daily')");
+  const dailyRankingStart = app.indexOf("const data=await api('/live/rankings/top-gifters?period=daily')");
   const dailyRankingEnd = app.indexOf("root.querySelectorAll('[data-live-ranking-profile]')", dailyRankingStart);
   const dailyRanking = app.slice(dailyRankingStart, dailyRankingEnd);
   assert.match(dailyRanking, /const member=item\.user\|\|\{\}/);
