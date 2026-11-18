@@ -114,3 +114,13 @@ test('AI task approval push notifications offer a review action that opens the o
   assert.match(worker,/aiTaskId/);
   assert.match(app,/type==='ai_task_approval'\?'Minglora AI approval required'/);
 });
+
+
+test('AI task approval notifications resolve after approve, reject or cancel',()=>{
+  assert.match(server,/function resolveAINetworkTaskApprovalNotification\(userId,taskId,decision\)/);
+  assert.match(server,/item\.aiTaskDecision=decision/);
+  assert.match(server,/resolveAINetworkTaskApprovalNotification\(user\.id,taskId,input\.status\)/);
+  assert.match(server,/resolveAINetworkTaskApprovalNotification\(user\.id,taskId,'cancelled'\)/);
+  assert.match(app,/item\.type==='ai_task_approval'&&item\.aiTaskDecision/);
+  assert.match(app,/Approval recorded/);
+});
