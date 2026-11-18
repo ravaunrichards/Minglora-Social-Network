@@ -39,7 +39,8 @@ const report={
   hostHeaderChecks:[],
   occupiedSeatChecks:[],
   emptySeatChecks:[],
-  geometryComparisons:[],\n  audioGeometryComparisons:[],
+  geometryComparisons:[],
+  audioGeometryComparisons:[],
   notes:['Every seat remains in the DOM; each reference determines which stage panels are visible.','Side by Side preserves the reference 4-column, 3-row structure; the ninth participant fills nine of its ten depicted cells because current capacity is one host plus eight guests.']
 };
 function seatMarkup(product,state){
