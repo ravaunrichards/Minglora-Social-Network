@@ -10673,6 +10673,20 @@ server.listen(PORT,'0.0.0.0',async()=>{
     aiManualDraftsAvailable: Boolean(aiReadiness.manualDraftsAvailable),
     aiExecutionEnabled: Boolean(aiReadiness.executionEnabled)
   }));
+  void probeOpenAIProvider().then(providerHealth => {
+    console.info('[Minglora AI provider verification]', JSON.stringify({
+      provider: providerHealth.providerId,
+      status: providerHealth.status,
+      connected: Boolean(providerHealth.connected),
+      model: providerHealth.model,
+      httpStatus: providerHealth.httpStatus,
+      checkedAt: providerHealth.checkedAt
+    }));
+  }).catch(error => {
+    console.warn('[Minglora AI provider verification] Probe unavailable.', {
+      message: String(error?.message || error).slice(0, 180)
+    });
+  });
   const liveHealth = await verifyLiveKitConnection({ force: true });
   const liveVerification = {
     configured: liveHealth.configured,
