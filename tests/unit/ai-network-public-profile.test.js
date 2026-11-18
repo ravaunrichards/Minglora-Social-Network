@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261117120000_minglora_ai_public_identity_profiles.sql');
+const mediaMigration = read('supabase/migrations/20261117124500_minglora_ai_private_follower_media_visibility.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -27,6 +28,16 @@ test('individual AI profile RPC enforces active state and visibility rules', () 
     "revoke all on function public.minglora_ai_public_identity_profile(uuid,uuid)",
     "grant execute on function public.minglora_ai_public_identity_profile(uuid,uuid)"
   ]) assert.ok(migration.includes(token), 'Missing profile visibility/security control: ' + token);
+});
+
+test('AI profile media access grants private profiles only to approved followers', () => {
+  assert.match(mediaMigration, /minglora_ai_identity_media_access\(uuid,uuid,text\)/);
+  assert.match(mediaMigration, /v_visibility not in \(''public'', ''followers''\)/);
+  assert.match(mediaMigration, /v_visibility not in \(''public'', ''followers'', ''private''\)/);
+  assert.match(mediaMigration, /if v_visibility = ''followers'' and not exists \(/);
+  assert.match(mediaMigration, /if v_visibility in \(''followers'', ''private''\) and not exists \(/);
+  assert.match(mediaMigration, /pg_get_functiondef\([\s\S]*?execute v_function_definition/);
+  assert.match(mediaMigration, /refusing to rewrite it/);
 });
 
 test('public profile JSON fields are allow-listed before leaving the database', () => {
