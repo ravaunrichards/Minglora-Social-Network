@@ -53,7 +53,7 @@ test('AI Network script and styles are precached with matching asset versions', 
   assert.ok(html.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
   assert.ok(sw.includes('/minglora-menu.js?v=20261115-ai-admin-only-1'));
   assert.ok(sw.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
-  assert.match(cacheName, /^minglora-shell-v\d+-self-updating-1$/);
+  assert.match(cacheName, /^minglora-shell-v\d+-(?:self-updating-1|admin-centre-brand-crop-1)$/);
 });
 
 test('OpenAI manual draft status is not shown as a persistent readiness message', () => {
