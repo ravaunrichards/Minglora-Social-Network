@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.minglora_brand_logo_assets (
     CHECK (storage_bucket = 'minglora-brand-assets'),
   storage_path text NOT NULL UNIQUE,
   current_version_id uuid,
+  approved_version_id uuid,
   status text NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft','approved','active','archived','deleted')),
   created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
@@ -421,10 +422,11 @@ BEGIN
       'versions',coalesce((
         SELECT jsonb_agg(to_jsonb(v) ORDER BY v.created_at DESC)
         FROM (
-          SELECT id,asset_id,version_number,original_name,mime_type,file_format,byte_size,
-            width,height,duration_ms,storage_bucket,storage_path,change_note,uploaded_by,created_at
-          FROM public.minglora_brand_logo_versions
-          ORDER BY created_at DESC LIMIT 250
+          SELECT v.id,v.asset_id,v.version_number,v.original_name,v.mime_type,v.file_format,v.byte_size,
+            v.width,v.height,v.duration_ms,v.storage_bucket,v.storage_path,v.change_note,v.uploaded_by,v.created_at,
+            (SELECT a.approved_version_id=v.id FROM public.minglora_brand_logo_assets a WHERE a.id=v.asset_id) AS is_approved
+          FROM public.minglora_brand_logo_versions v
+          ORDER BY v.created_at DESC LIMIT 250
         ) v
       ),'[]'::jsonb),
       'assignments',coalesce((SELECT jsonb_agg(to_jsonb(a) ORDER BY a.placement_key)
@@ -624,7 +626,7 @@ BEGIN
     VALUES(v_asset_id,v_version_id,'approved',left(coalesce(v_payload->>'notes',''),1000),v_actor);
     INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id)
     VALUES(v_actor,'asset.approved','logo',v_asset_id);
-    RETURN jsonb_build_object('ok',true,'status','approved','versionId',v_version_id);
+    RETURN jsonb_build_object('ok',true,'status',(SELECT status FROM public.minglora_brand_logo_assets WHERE id=v_asset_id),'versionId',v_version_id);
   ELSIF v_action='assignment_set' THEN
     v_placement := lower(btrim(coalesce(v_payload->>'placementKey','')));
     v_asset_id := nullif(v_payload->>'assetId','')::uuid;
