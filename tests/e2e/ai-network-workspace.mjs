@@ -803,18 +803,33 @@ try {
         discoveryVisible: Boolean(document.querySelector('form[data-ai-form="discovery"]')),
         corporateGovernanceVisible: Boolean(document.querySelector('.ai-network-organization-row')),
         disciplinaryCaseVisible: Boolean(document.querySelector('form[data-ai-form="disciplinary-case"]')),
-        overflowingElements: [...document.querySelectorAll('.ai-network-page *')].filter(element => {
+        gridChildren: [...(root?.querySelectorAll('.ai-network-grid > *') || [])].map(element => {
+          const rect = element.getBoundingClientRect();
+          return {
+            tag: element.tagName, className: String(element.className || '').slice(0, 120),
+            width: Math.round(rect.width), right: Math.round(rect.right),
+            scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+            text: String(element.textContent || '').trim().slice(0, 120)
+          };
+        }),
+        overflowingElements: [...document.querySelectorAll('.ai-network-page *')].map(element => {
           const rect = element.getBoundingClientRect();
           const boundary = root?.getBoundingClientRect();
-          return boundary && (rect.right > boundary.right + 2 || rect.left < boundary.left - 2 || element.scrollWidth > element.clientWidth + 2);
-        }).slice(0, 20).map(element => ({
-          tag: element.tagName,
-          className: String(element.className || '').slice(0, 100),
-          text: String(element.textContent || '').trim().slice(0, 80),
-          width: Math.round(element.getBoundingClientRect().width),
-          scrollWidth: element.scrollWidth,
-          clientWidth: element.clientWidth
-        }))
+          const style = getComputedStyle(element);
+          return {
+            tag: element.tagName, className: String(element.className || '').slice(0, 120),
+            text: String(element.textContent || '').trim().slice(0, 100),
+            width: Math.round(rect.width), right: Math.round(rect.right),
+            scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+            excess: element.scrollWidth - element.clientWidth,
+            rightOverflow: boundary ? rect.right - boundary.right : 0,
+            leftOverflow: boundary ? boundary.left - rect.left : 0,
+            minWidth: style.minWidth, gridColumns: style.gridTemplateColumns,
+            parentClass: String(element.parentElement?.className || '').slice(0, 120)
+          };
+        }).filter(item => item.rightOverflow > 2 || item.leftOverflow > 2 || item.excess > 2)
+          .sort((a,b) => Math.max(b.rightOverflow,b.leftOverflow,b.excess) - Math.max(a.rightOverflow,a.leftOverflow,a.excess))
+          .slice(0, 40)
       };
     });
     const geometrySummary = JSON.stringify(geometry);
