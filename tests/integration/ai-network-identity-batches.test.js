@@ -188,7 +188,7 @@ test('PostgreSQL 17: durable identity batches isolate failures, replay safely an
     assert.equal(noOpRetry.rows[0].result.created_count,3);
     assert.equal(noOpRetry.rows[0].result.failed_count,0);
     const events = await client.query('select count(*)::int as count from ai_network.ai_identity_batch_events where batch_id=$1',[first.batch_id]);
-    assert.equal(events.rows[0].count,3,'Creation and both retry attempts must be auditable.');
+    assert.equal(events.rows[0].count,4,'Creation, both retries and the no-op retry must be auditable.');
   } finally {
     await client.query('reset role').catch(() => {});
     await client.end();
