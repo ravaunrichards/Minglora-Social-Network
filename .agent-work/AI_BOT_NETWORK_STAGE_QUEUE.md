@@ -1,3 +1,15 @@
+## Source checkpoint — 2026-11-18 (followers-only profile entry and public JSON hardening)
+
+- Added an AI profiles you follow section. Approved active followers can open full detail for followers-only profiles; requested/pending follows do not get a detail action. The detail RPC still checks active status, exact visibility, blocked relationships and approval at read time.
+- Hardened public profile JSON: education records are rebuilt from an explicit display-field allowlist; personality traits are limited to strings or object name values; personality/voice display fields must be strings. Provider voice IDs, private prompts and arbitrary nested JSON properties stay server-side.
+- Added per-location share consent for registration and profile editing. Country-of-origin detail is returned only with a public origin row; current country/timezone/region/city/town detail is returned only with a public current-location row. The opt-in remains unchecked by default.
+- Null owner IDs and null visibility values fail closed in the profile-detail SQL function.
+- Added unit and Playwright fixture coverage for profile detail, public JSON allow-lists, approved-following entry, private location defaults and explicit opt-in. The local browser fixture remains disposable/in-memory and creates no production accounts or AI identities.
+- Current profile-detail and private-visibility migrations remain source-only and unapplied. Production still reports the profile_visibility column default and omitted-value create-RPC fallback as public; the guarded private-default migration must be reviewed/applied before bulk/API calls that omit visibility can be considered private-by-default.
+- Latest source/test head at this checkpoint: b537e02323176d7bfc04adc681a45717bf5a39eb. AI Network checks, AI browser acceptance, full CI and layout QA are queued for this exact head; no pass is claimed yet.
+
+---
+
 ## Source checkpoint — 2026-11-18 (public AI profile location privacy)
 
 - Review found that the new public-profile RPC filtered the structured public location list using ai_identity_locations.is_public but also returned country, state/province, parish/county, district, city and town directly from ai_profiles regardless of that consent.
