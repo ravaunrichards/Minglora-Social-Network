@@ -50,7 +50,12 @@ test('Fluid Grid keeps its tall-left/two-right crop and Fixed Grid stays 3x3 on 
   assert.ok(fix.includes('data-live-layout="fixed-grid"]{'));
   assert.ok(fix.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
   assert.ok(fix.includes('grid-template-rows:repeat(3,minmax(0,1fr))!important'));
-  const phoneLayouts = fix.slice(fix.lastIndexOf('@media(max-width:900px)'));
+  const audioParityStart=fix.indexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
+  assert.ok(audioParityStart>0, 'video layout checks stop before the Audio LIVE-only parity rules');
+  const videoLayouts=fix.slice(0,audioParityStart);
+  const phoneStart=videoLayouts.lastIndexOf('@media(max-width:900px)');
+  const phoneLayouts=videoLayouts.slice(phoneStart);
+  assert.ok(phoneLayouts.includes('#live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]'));
   assert.ok(phoneLayouts.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
   assert.ok(phoneLayouts.includes('grid-template-rows:repeat(3,minmax(0,1fr))!important'));
   assert.ok(phoneLayouts.includes('grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important'));

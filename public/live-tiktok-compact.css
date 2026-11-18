@@ -1209,7 +1209,8 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layo
    All participant nodes stay mounted; each crop determines which seat panels
    are shown on the stage and their exact row/column arrangement. */
 body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.live-guest-layout{
-  position:relative!important;display:grid!important;box-sizing:border-box!important;
+  position:relative!important;grid-column:1!important;grid-row:1!important;
+  display:grid!important;box-sizing:border-box!important;
   width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
   max-width:100%!important;max-height:100%!important;
   align-content:stretch!important;align-items:stretch!important;justify-items:stretch!important;
@@ -1342,4 +1343,21 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layo
 
 
 /* END FINAL AUDIO LIVE REFERENCE PARITY */
+
+/* Audio LIVE mobile viewport fit.
+   Keep the full reference guest grid above the floating controls. The final
+   parity grid uses a full-height desktop stage; on phones the earlier
+   absolute stage inset reserves the bottom control dock, so height must stay
+   auto and fill only the inset area. This selector cannot affect video LIVE. */
+@media(max-width:900px){
+  body:has(#live-player-shell) .live-video-column #live-video-stage.live-audio-stage{
+    position:absolute!important;
+    inset:0 0 60px!important;
+    width:auto!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+  }
+}
+
 

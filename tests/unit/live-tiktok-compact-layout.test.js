@@ -77,8 +77,19 @@ test('Audio-only LIVE gives the reference guest grid the full stage and overlays
   }
 });
 
-test('Mobile audio-only LIVE reserves space above the bottom control dock', () => {
-  assert.match(compact, /\.live-video-column #live-video-stage\.live-audio-stage\{[\s\S]*?inset:0 0 60px/);
+test('Mobile audio-only LIVE keeps the final reference grid inside the area above the control dock', () => {
+  const parityStart=compact.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
+  const parity=compact.slice(parityStart);
+  const mobileStart=parity.lastIndexOf('@media(max-width:900px)');
+  assert.ok(parityStart>=0 && mobileStart>0, 'mobile Audio LIVE fit override follows the final reference grid');
+  const mobile=parity.slice(mobileStart);
+  assert.ok(mobile.includes('#live-video-stage.live-audio-stage{'));
+  assert.ok(mobile.includes('position:absolute!important;'));
+  assert.ok(mobile.includes('inset:0 0 60px!important;'));
+  assert.ok(mobile.includes('width:auto!important;'));
+  assert.ok(mobile.includes('height:auto!important;'));
+  assert.ok(!mobile.includes('height:100%'));
+  assert.ok(!mobile.includes('#live-video-stage:not(.live-audio-stage)'));
 });
 
 
