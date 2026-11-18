@@ -5395,7 +5395,7 @@ async function route(req, res) {
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
         const previous = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id);
         if (previous && ['requested', 'accepted'].includes(previous.status)) return json(res, 200, { request: previous });
-        const guestSeatLimit = session.liveLayout === 'side-by-side' ? 9 : 8;
+        const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const autoAccepted = session.liveSettings?.autoAcceptRequests === true;
         if (autoAccepted) {
           const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)).length;
