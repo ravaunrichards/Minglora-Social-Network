@@ -88,6 +88,7 @@ test('discovery opens a full individual AI profile and supports safe close', () 
   assert.match(ui, /ai-network-discovery-following/);
   assert.match(ui, /data-source="following"/);
   assert.match(ui, /Waiting for profile-owner approval/);
+  assert.match(ui, /Private and hidden AI profiles remain owner-only/);
   assert.match(ui, /name="sharePublicLocations"/);
   assert.match(ui, /is_public:sharePublicLocations/);
   assert.match(ui, /\/media\/avatar/);
