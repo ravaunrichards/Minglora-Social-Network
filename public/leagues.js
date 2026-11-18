@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "momentum_boost", selectedMatchId: "", rankingPeriod: "weekly", rankingClass: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
+  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "boosting_glove", selectedMatchId: "", rankingPeriod: "weekly", rankingClass: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
   let refreshController = null;
   let refreshInFlight = false;
   let viewGeneration = 0;
@@ -15,7 +15,7 @@
     const safeSymbol = String(symbol || "").replace(/[^a-z0-9-]/gi, "");
     if (!safeSymbol) return "";
     const accessibility = label ? " role='img' aria-label='" + esc(label) + "'" : " aria-hidden='true'";
-    return "<svg class='league-asset-icon " + esc(className || "") + "' viewBox='0 0 128 128'" + accessibility + " focusable='false'><use href='/assets/league/league-emblems.svg?v=20261116-original-league-svg-assets-1#" + safeSymbol + "'></use></svg>";
+    return "<svg class='league-asset-icon " + esc(className || "") + "' viewBox='0 0 128 128'" + accessibility + " focusable='false'><use href='/assets/league/league-emblems.svg?v=20261118-match-powerups-reference-1#" + safeSymbol + "'></use></svg>";
   }
   const leagueReferenceAssetNames = new Set([
     'Screenshot_20261112_020335_TikTok(1).jpg',
@@ -49,46 +49,55 @@
     return (state.overview?.activeMatches || []).find(item => item.id === state.selectedMatchId) || null;
   }
   function powerupRestriction(power, match) {
-    if (!power || !match) return "Choose a live match to activate this power-up.";
-    if (match.status !== "live") return "This match is not live.";
-    const viewer = state.overview?.viewerId;
-    const side = match.challengerId === viewer ? "challenger" : match.opponentId === viewer ? "opponent" : "";
-    if (!side) return "Only match participants can activate power-ups.";
-    if (power.usedToday) return "This power-up has already been used today.";
-    if (power.id === "shield" && (match.activeEffects || []).some(effect =>
-      effect.type === "shield" && effect.side === side && new Date(effect.expiresAt).getTime() > Date.now()
-    )) return "Your Shield is already active.";
-    if (power.id === "time_boost" && match.timerMode === "fixed") return "Time Boost is unavailable in fixed-timer matches.";
-    return "";
+    if (!power) return "Choose a Power-Up card to see its effect.";
+    if (power.id === "time_maker" && Number(match?.timeMakerUses || 0) >= 3) return "The three shared Time Maker uses are already spent in this match.";
+    if (power.id === "speed_challenge" && match?.speedChallenge) return "Speed Challenge has already been used in this match.";
+    return "Earn this card as a top Gift contributor on a winning side, then use it while watching that same creator LIVE.";
   }
   function powerupDurationLabel(power) {
+    if (power?.id === "time_maker") return "+10 seconds per card";
+    if (power?.id === "speed_challenge") return "52-second bonus round";
     const seconds = Math.max(0, Math.round(Number(power?.durationMs || 0) / 1000));
-    return seconds ? seconds + " second" + (seconds === 1 ? "" : "s") : "Match-limited duration";
+    return seconds ? seconds + " seconds" : "Match-only effect";
+  }
+  function powerupUsageLabel(power, match) {
+    if (power?.id === "time_maker") {
+      const remaining = Math.max(0, 3 - Number(match?.timeMakerUses || 0));
+      return match ? remaining + " of 3 shared match uses left" : "Three uses shared across both sides";
+    }
+    if (power?.id === "speed_challenge") return match?.speedChallenge ? "Already used in this match" : "One round per match";
+    return "Earned card · creator-linked · expires in 5 days";
   }
   function powerupStudioMarkup(overview) {
     const powerups = Array.isArray(overview.powerups) ? overview.powerups : [];
     if (!powerups.some(item => item.id === state.selectedPowerupId)) state.selectedPowerupId = powerups[0]?.id || "";
     const selected = powerups.find(item => item.id === state.selectedPowerupId) || powerups[0] || null;
-    const cards = powerups.map(power => {
+    const icons = {boosting_glove:"powerup-glove",magic_mist:"powerup-mist",stun_hammer:"powerup-hammer",time_maker:"powerup-time-maker",boosters:"powerup-boosters",speed_challenge:"powerup-speed"};
+    const cards = powerups.map((power,index) => {
       const active = power.id === selected?.id;
-      return "<button type='button' class='league-powerup-info-card" + (active ? " is-selected" : "") +
-        "' data-powerup-select='" + esc(power.id) + "' aria-pressed='" + active + "'>" +
-        "<span class='league-powerup-card-symbol' aria-hidden='true'>" + ({"momentum_boost":leagueAssetIcon("powerup-momentum","league-powerup-svg-icon"),"score_multiplier":leagueAssetIcon("powerup-multiplier","league-powerup-svg-icon"),"shield":leagueAssetIcon("powerup-shield","league-powerup-svg-icon"),"time_boost":leagueAssetIcon("powerup-time","league-powerup-svg-icon")}[power.id] || esc(power.symbol)) + "</span>" +
-        "<strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p>" +
-        "<small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small>" +
-        "<span class='league-powerup-card-action'>" + (active ? "Selected" : "Select power-up") + "</span></button>";
+      const rule = power.id === "boosting_glove" ? "30% chance · 5× points" : power.id === "magic_mist" ? "Hide your creator score" : power.id === "stun_hammer" ? "Hammer the opposing panel" : power.id === "time_maker" ? "+10s · three shared uses" : power.id === "boosters" ? "No. 2 & No. 3 · 2×" : "Both sides · 2× · 52s";
+      return "<button type='button' class='league-powerup-info-card"+(active?" is-selected":"")+"' data-powerup-select='"+esc(power.id)+"' aria-pressed='"+active+"'>" +
+        "<span class='league-powerup-card-index'>"+(index+1)+"</span><span class='league-powerup-card-art' aria-hidden='true'>"+leagueAssetIcon(icons[power.id],"league-powerup-svg-icon")+"</span>" +
+        "<strong>"+esc(power.name)+"</strong><small class='league-powerup-card-rule'>"+esc(rule)+"</small><span class='league-powerup-card-action'>"+(active?"Selected":"View details")+"</span></button>";
+    }).join("");
+    const inventory = Array.isArray(overview.powerupInventory) ? overview.powerupInventory : [];
+    const inventoryCards = inventory.map(card => {
+      const expiry = card.expiresAt ? new Date(card.expiresAt).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "Five-day expiry";
+      return "<article class='league-backpack-card'><span class='league-backpack-art' aria-hidden='true'>"+leagueAssetIcon(icons[card.powerupId],"league-powerup-svg-icon")+"</span>" +
+        "<div class='league-backpack-copy'><strong>"+esc(card.powerup?.name||String(card.powerupId||"Power-Up").replace(/_/g," "))+"</strong>" +
+        "<small>For "+esc(card.creator?.name||"Minglora creator")+" · Top "+Number(card.rank||0)+" Gift contributor</small><small>Expires "+esc(expiry)+"</small></div><span class='league-backpack-ready'>READY</span></article>";
     }).join("");
     return "<section class='card league-powerup-info' id='league-powerup-panel' aria-labelledby='league-powerup-heading'>" +
-      "<div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2 id='league-powerup-heading'>Match Power-Ups</h2>" +
-      "<p>Select a power-up and activate it during your live match. These temporary effects never multiply Creator League points or official class standings.</p></div></div>" +
-      "<div class='league-powerup-info-grid' aria-label='Available Match Power-Ups'>" + cards + "</div>" +
-      "<div class='league-powerup-selected-details'>" +
-      "<h3 id='league-powerup-selected-title'>" + esc(selected?.name || "Choose a power-up") + "</h3>" +
-      "<p id='league-powerup-selected-description'>" + esc(selected?.description || "Select one of the available Match Power-Ups.") + "</p>" +
-      "<div class='league-powerup-selected-meta'><span id='league-powerup-selected-duration'>" + (selected ? esc(powerupDurationLabel(selected)) : "—") + "</span>" +
-      "<span id='league-powerup-selected-usage'>" + (selected?.usedToday ? "Used today" : "One free use per UTC day") + "</span></div>" +
-      "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Choose a power-up from one of your live matches to prepare an activation.</p>" +
-      "<button type='button' class='primary league-powerup-activate' id='league-powerup-activate' hidden disabled>Activate for this match</button></div></section>";
+      "<div class='league-section-heading'><div><span class='league-eyebrow'>MINGLORA MATCH POWER-UP DECK</span><h2 id='league-powerup-heading'>LIVE Match Power-Ups</h2>" +
+      "<p>Six collectible effects inspired by your supplied references. The winning side top three Gift contributors each earn a random card for that creator. Every card is bound to that creator and expires after five days.</p></div></div>" +
+      "<div class='league-powerup-info-grid' aria-label='Six Match Power-Up cards'>"+cards+"</div>" +
+      "<div class='league-powerup-selected-details'><h3 id='league-powerup-selected-title'>"+esc(selected?.name||"Choose a Power-Up card")+"</h3>" +
+      "<p id='league-powerup-selected-description'>"+esc(selected?.description||"Select one of the six collectible Power-Ups.")+"</p>" +
+      "<div class='league-powerup-selected-meta'><span id='league-powerup-selected-duration'>"+(selected?esc(powerupDurationLabel(selected)):"—")+"</span><span id='league-powerup-selected-usage'>"+esc(powerupUsageLabel(selected))+"</span></div>" +
+      "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Earn a card through a winning LIVE match, then use it from your Backpack while watching the linked creator.</p></div>" +
+      "<section class='league-powerup-backpack' aria-labelledby='league-powerup-backpack-heading'><div class='league-powerup-backpack-head'><div><span class='league-eyebrow'>VIEWER INVENTORY</span><h3 id='league-powerup-backpack-heading'>My Power-Up Backpack</h3></div><span class='league-backpack-count'>"+inventory.length+" READY</span></div>" +
+      (inventoryCards ? "<div class='league-powerup-backpack-grid'>"+inventoryCards+"</div>" : "<div class='league-powerup-backpack-empty'><strong>Your Backpack is waiting for its first card.</strong><p>Finish in the winning side top three Gift contributors. A random Power-Up card will be added here for that creator and remain available for five days.</p></div>") +
+      "</section></section>";
   }
   function updatePowerupSelection() {
     const power = currentPowerup();
@@ -97,58 +106,23 @@
     const duration = $("#league-powerup-selected-duration");
     const usage = $("#league-powerup-selected-usage");
     const availability = $("#league-powerup-availability");
-    const activate = $("#league-powerup-activate");
     if (!power) {
-      if (title) title.textContent = "No power-ups available";
-      if (description) description.textContent = "No Match Power-Ups are currently available.";
-      if (availability) availability.textContent = "No Match Power-Ups are currently available.";
-      if (activate) { activate.hidden = true; activate.disabled = true; }
+      if (title) title.textContent = "No Power-Up cards available";
+      if (description) description.textContent = "The six reference-based Match Power-Ups will appear here.";
+      if (availability) availability.textContent = "Earn cards from the top three Gift contributors on the winning side.";
       return;
     }
     if (title) title.textContent = power.name;
     if (description) description.textContent = power.description;
     if (duration) duration.textContent = powerupDurationLabel(power);
-    if (usage) usage.textContent = power.usedToday ? "Used today" : "One free use per UTC day";
     const match = selectedPowerupMatch();
-    const reason = powerupRestriction(power, match);
-    if (activate) {
-      activate.hidden = !match;
-      activate.disabled = !match || Boolean(reason);
-      activate.textContent = reason || "Activate for this match";
-      activate.dataset.matchId = match?.id || "";
-      activate.dataset.powerupId = power.id;
-    }
-    if (availability) availability.textContent = match
-      ? (reason || "Ready to activate in the selected live match.")
-      : "Select a power-up from one of your live matches to prepare an activation.";
+    if (usage) usage.textContent = powerupUsageLabel(power, match);
+    if (availability) availability.textContent = powerupRestriction(power, match);
     document.querySelectorAll("[data-powerup-select]").forEach(button => {
       const active = button.dataset.powerupSelect === power.id;
       button.classList.toggle("is-selected", active);
       button.setAttribute("aria-pressed", String(active));
     });
-  }
-  async function activateSelectedPowerup(button) {
-    const power = currentPowerup();
-    const match = selectedPowerupMatch();
-    const reason = powerupRestriction(power, match);
-    const status = $("#league-powerup-availability");
-    if (reason) {
-      if (status) status.textContent = reason;
-      return;
-    }
-    button.disabled = true;
-    if (status) status.textContent = "Activating " + power.name + " for this match…";
-    try {
-      await request("/leagues/matches/" + encodeURIComponent(match.id) + "/powerups", {
-        method: "POST", body: JSON.stringify({ powerupId: power.id })
-      });
-      toast("Match power-up activated.");
-      await render();
-    } catch (error) {
-      if (status) status.textContent = error.message;
-      toast(error.message);
-      button.disabled = false;
-    }
   }
   async function request(path, options = {}) {
     let response;
@@ -408,31 +382,28 @@
     const isOpponent = match.opponentId === viewer;
     const isParticipant = isChallenger || isOpponent;
     const alreadySupported = (match.supporters || []).some(item => item.userId === viewer);
+    const challengerHidden = match.scoreVisibility?.challenger === false;
+    const opponentHidden = match.scoreVisibility?.opponent === false;
     const challengerScore = Number(match.scores?.challenger || 0);
     const opponentScore = Number(match.scores?.opponent || 0);
+    const challengerDisplay = challengerHidden ? "Hidden by Magic Mist" : challengerScore.toLocaleString();
+    const opponentDisplay = opponentHidden ? "Hidden by Magic Mist" : opponentScore.toLocaleString();
     const challengerName = match.challenger?.name || "Creator";
     const opponentName = match.opponent?.name || "Creator";
     let controls = "";
     if (match.status === "pending" && isOpponent) {
       controls = "<button class='primary league-action' data-match-accept='" + esc(match.id) + "'>Accept match</button>";
     } else if (match.status === "live" && isParticipant) {
-      const side = isChallenger ? "challenger" : "opponent";
-      const powers = (overview.powerups || []).map(power => {
-        const unavailableShield = power.id === "shield" &&
-          (match.activeEffects || []).some(effect => effect.type === "shield" && effect.side === side && new Date(effect.expiresAt).getTime() > Date.now());
-        const fixedTimer = power.id === "time_boost" && match.timerMode === "fixed";
-        const restriction = power.usedToday ? "Used today" : unavailableShield ? "Shield active" : fixedTimer ? "Unavailable · fixed timer" : "Available once daily";
-        return "<button type='button' class='league-powerup-btn' data-match-powerup-select='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' aria-label='Select " + esc(power.name) + " for this match'>" +
-          "<span aria-hidden='true'>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + restriction + "</small></button>";
-      }).join("");
-      controls = "<div class='league-powerup-grid'>" + powers + "</div>";
+      const remainingTimeMaker = Math.max(0, 3 - Number(match.timeMakerUses || 0));
+      const speedChallengeState = match.speedChallenge ? "Speed Challenge already used" : "Speed Challenge available to eligible Backpack cards";
+      controls = "<div class='league-match-powerup-note'><strong>VIEWER POWER-UPS</strong><span>Fans earn creator-linked cards and activate them from their Backpack while watching your LIVE match. Creators cannot spend viewer cards on themselves.</span><small>"+remainingTimeMaker+" of 3 shared Time Maker uses left · "+speedChallengeState+"</small></div>";
     } else if (match.status === "live" && !isParticipant) {
       controls = "<div class='league-support-actions'><button type='button' class='league-action' data-match-support='challenger' data-match-id='" + esc(match.id) + "' " + (alreadySupported ? "disabled" : "") + ">Support " + esc(challengerName) + " +3</button><button type='button' class='league-action' data-match-support='opponent' data-match-id='" + esc(match.id) + "' " + (alreadySupported ? "disabled" : "") + ">Support " + esc(opponentName) + " +3</button></div>" + (alreadySupported ? "<small class='league-muted'>Your support has already been counted for this match.</small>" : "");
     }
     const result = match.status === "completed"
       ? "<span class='league-match-result'>" + (match.result === "draw" ? "Draw" : (match.winnerId === viewer ? "You won" : match.winnerId ? "Match completed" : "Completed")) + "</span>"
       : "<span class='league-live-label'>" + (match.status === "live" ? "● LIVE MATCH" : "Awaiting acceptance") + "</span>";
-    return "<article class='league-match-card' data-league-match='" + esc(match.id) + "'><div class='league-match-head'><div><span class='league-eyebrow'>MINGLORA LEAGUE MATCH</span><h3>" + esc(match.status === "live" ? "Live creator battle" : "Creator challenge") + "</h3></div>" + result + "</div><div class='league-scoreboard'><div class='league-side'>" + image(match.challenger) + "<strong>" + esc(challengerName) + "</strong><small>Challenger</small><b>" + challengerScore.toLocaleString() + "</b></div><span class='league-score-divider'>VS</span><div class='league-side'>" + image(match.opponent) + "<strong>" + esc(opponentName) + "</strong><small>Opponent</small><b>" + opponentScore.toLocaleString() + "</b></div></div><div class='league-match-meta'><span>" + (match.giftMode === "specific" ? "Selected Gift scoring" : "All LIVE Gifts score") + "</span>" + (match.status === "live" ? "<span>Ends " + new Date(match.endsAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + "</span>" : "") + "</div>" + controls + "</article>";
+    return "<article class='league-match-card' data-league-match='" + esc(match.id) + "'><div class='league-match-head'><div><span class='league-eyebrow'>MINGLORA LEAGUE MATCH</span><h3>" + esc(match.status === "live" ? "Live creator battle" : "Creator challenge") + "</h3></div>" + result + "</div><div class='league-scoreboard'><div class='league-side'>" + image(match.challenger) + "<strong>" + esc(challengerName) + "</strong><small>Challenger</small><b>" + challengerDisplay + "</b></div><span class='league-score-divider'>VS</span><div class='league-side'>" + image(match.opponent) + "<strong>" + esc(opponentName) + "</strong><small>Opponent</small><b>" + opponentDisplay + "</b></div></div><div class='league-match-meta'><span>" + (match.giftMode === "specific" ? "Selected Gift scoring" : "All LIVE Gifts score") + "</span>" + (match.status === "live" ? "<span>Ends " + new Date(match.endsAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) + "</span>" : "") + "</div>" + controls + "</article>";
   }
   function challengeMarkup(overview, sessions) {
     const own = sessions.filter(item => item.hostId === overview.viewerId);
