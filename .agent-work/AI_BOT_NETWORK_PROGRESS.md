@@ -9,6 +9,10 @@
 - **HR acceptance remains PARTIAL.** Required: new-head CI green, rollback-only database contract on current schema, signed-in owner/API/browser acceptance with real owner-controlled org/employee records, desktop/mobile acceptance, migration/function release verification, and existing Render service verification. Keep AI workers paused.
 - Existing 20 department templates, 20 position templates and zero production organizations/employees are unchanged. No synthetic HR or AI records were retained.
 
+- Draft PR #515 now contains this current-main integration: https://github.com/ravaunrichards/Minglora-Social-Network/pull/515. It remains draft/open.
+- **Current existing-Supabase rollback-only contract result:** PASS. The updated migration was run in BEGIN/ROLLBACK; both tables had RLS; anon/authenticated could not SELECT or execute the RPC; service_role case SELECT/INSERT/UPDATE and history SELECT/INSERT passed; history UPDATE/DELETE were false; RPC was SECURITY INVOKER with locked empty search_path. An independent post-rollback query found no disciplinary tables, RPC or migration-ledger row.
+- This DDL/security contract does not replace a full retained-record owner workflow or device acceptance. New PR #515 CI/browser checks must finish on this exact current-main head before this implementation can progress.
+
 ---
 
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
