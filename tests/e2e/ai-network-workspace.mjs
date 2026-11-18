@@ -626,6 +626,19 @@ try {
   assert.equal(identityBatches[0].failed_count, 0, 'A successful retry clears only the failed rows.');
   assert.equal(identityBatches[0].status, 'completed');
 
+  const firstBatchKey = identityBatchRequests[0].batch_idempotency_key;
+  const secondBatchRows = [{
+    population:'independent', category_key:'ai_friends', idempotency_key:'browser-batch-row-0003',
+    name:{first_name:'Ava',last_name:'Morgan',username:'second_import'},
+    profile:{gender:'female',profile_visibility:'private'}, languages:[], locations:[]
+  }];
+  await bulkIdentityForm.locator('[name="items"]').fill(JSON.stringify(secondBatchRows));
+  await bulkIdentityForm.locator('button[type="submit"]').click();
+  await page.getByText(/Bulk identity batch .*1 created; 0 reused; 0 failed\\./).waitFor({ state:'visible' });
+  assert.equal(identityBatchRequests.length, 2, 'The same import form must support a second distinct batch.');
+  assert.notEqual(identityBatchRequests[1].batch_idempotency_key, firstBatchKey, 'Every new batch must use a fresh batch idempotency key.');
+  assert.equal(identityBatchRequests[1].items[0].idempotency_key, 'browser-batch-row-0003');
+
   const identitySearchForm = page.locator('form[data-ai-form="identity-search"]');
   await identitySearchForm.locator('[name="search"]').fill('Ari');
   await identitySearchForm.locator('button[type="submit"]').click();
