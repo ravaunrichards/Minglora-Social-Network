@@ -17,9 +17,10 @@ test('Minglora LIVE Full Screen separates video host-only rendering from audio r
   assert.match(app, /isLiveMedia&&\(publication\?\.track\|\|publication\?\.isSubscribed===true\)/);
   assert.match(app, /if\(role==="guest"&&local&&hasGuestStageMedia\(local\)\)guests\.push\(local\)/);
   assert.match(app, /root\.classList\.toggle\("has-active-guests",fullScreenHostOnly&&guests\.length>0\)/);
-  assert.match(app, /const guestSeatLimit=activeLiveScreenLayout==='side-by-side'\?9:8/);
+  assert.match(app, /const guestSeatLimit=audioOnly&&activeLiveScreenLayout==='side-by-side'\?9:8/);
   assert.match(app, /guests\.slice\(0,guestSeatLimit\)/);
   assert.match(app, /if\(!fullScreenHostOnly\)while\(specs\.length<guestSeatLimit\+1\)/);
+  assert.match(app, /if\(!audioOnly&&activeLiveScreenLayout==='side-by-side'\)specs\.push/);
   assert.match(app, /if\(fullScreenHostOnly\)root\.replaceChildren\(\.\.\.nodes\)/);
   assert.match(app, /data-open-guest-panel/);
   assert.match(app, /#live-guests-toggle/);
