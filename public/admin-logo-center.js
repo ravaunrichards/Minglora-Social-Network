@@ -666,7 +666,7 @@
       view.append(panelWrap);
     }
     function renderActivity(){
-      view.append(title("Activity & history","Recent actions from the Logo Center, including upload preparation, versions, approvals and publication."));
+      view.append(title("Activity & History","Recent actions from the Logo Center, including upload preparation, versions, approvals and publication."));
       const panelWrap=make("div","brand-panel");
       (state.data?.activity||[]).forEach(item=>{
         const row=make("div","brand-list-row");
