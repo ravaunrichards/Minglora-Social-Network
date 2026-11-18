@@ -228,11 +228,10 @@ test('Side by Side preserves all ten supplied positions while Spotlight starts w
 
 
 test('Fluid Panel guest overlays stay clear of the host stage right and bottom borders',()=>{
-  const safeZone=tiktok.slice(tiktok.lastIndexOf('/* Fluid Panel guest safe zone'));
-  assert.match(safeZone,/right:clamp\(20px,3vw,30px\)!important/);
-  assert.match(safeZone,/bottom:clamp\(18px,2\.5vw,22px\)!important/);
-  assert.match(safeZone,/right:clamp\(32px,3\.5vw,48px\)!important/);
-  assert.match(safeZone,/bottom:clamp\(24px,2\.5vw,34px\)!important/);
-  assert.ok(safeZone.includes('clamp(4px,1vw,8px)'), 'guest thumbnails retain their compact vertical gap');
+  const safeZone=tiktok.slice(tiktok.lastIndexOf('/* FINAL Fluid Panel safe-zone'));
+  assert.match(safeZone,/right:clamp\(18px,2\.4vw,32px\)!important/);
+  assert.match(safeZone,/bottom:clamp\(88px,8vw,104px\)!important/);
+  assert.match(safeZone,/nth-child\(4\)\{[\s\S]*?bottom:calc\(clamp\(88px,8vw,104px\) \+ clamp\(44px,15vw,120px\) \+ 8px\)!important/);
+  assert.ok(safeZone.includes('left:auto!important')&&safeZone.includes('top:auto!important'));
   assert.doesNotMatch(safeZone,/right:2px!important|bottom:2px!important/);
 });

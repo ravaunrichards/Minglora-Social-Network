@@ -52,7 +52,7 @@ test("Rankings handles empty, failure, period-switch and route-cancellation stat
  assert.ok(page.includes("data-ranking-retry")&&page.includes("AbortController"));
  assert.ok(page.includes("data-ranking-period")&&page.includes('cache:"no-store"'));
  assert.ok(page.includes("function onNavigateAway()"));
- assert.ok(worker.includes("minglora-shell-v355-self-updating-1"));
+ assert.ok(worker.includes("minglora-shell-v356-self-updating-1"));
  assert.ok(worker.includes("/rankings.css?v=20261117-avatar-rankings-sync-1"));
  assert.ok(worker.includes("/rankings.js?v=20261117-avatar-rankings-sync-1"));
 });
@@ -77,5 +77,5 @@ test("Ranking badge art remains visible around a compact centered member photo o
  assert.ok(leagueCss.includes("object-fit:contain;object-position:center"));
  assert.ok(leagueCss.includes("width:36%;height:36%;box-sizing:border-box"));
  assert.ok(html.includes("styles.css?v=20261117-avatar-rankings-sync-1"));
- assert.ok(html.includes("app.js?v=20261117-live-host-header-reference-1"));
+ assert.ok(html.includes("app.js?v=20261117-audio-only-mic-guest-seats-1"));
 });
