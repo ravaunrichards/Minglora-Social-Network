@@ -148,3 +148,19 @@ test('task workspace shows actual queue state and only offers authorized human c
     'approval policy comes from the selected AI identity'
   ]) assert.ok(ui.includes(token), 'Missing durable task workspace behavior: ' + token);
 });
+
+
+test('Owner task requests requiring approval create a deduplicated account-owned notification', () => {
+  assert.match(server,/function notifyAINetworkTaskApproval\(user,task\)/);
+  assert.match(server,/task\?\.status!=='pending_approval'/);
+  assert.match(server,/task\?\.requires_approval!==true/);
+  assert.match(server,/item\.type==='ai_task_approval'&&item\.aiTaskId===taskId/);
+  assert.match(server,/notificationCreated\)await saveStore\(\)/);
+  assert.match(server,/if\(prefs\.inApp\|\|mandatoryApproval\)/);
+  assert.match(server,/n\.type==='ai_task_approval'\)\)\.map/);
+});
+
+test('AI task approval notification actions use the MFA-protected task decision endpoint', () => {
+  assert.match(server,/if \(parts\[0\] === 'tasks' && parts\.length === 3 && method === 'PATCH' && parts\[2\] === 'approval'\)/);
+  assert.match(ui,/data-ai-form="task-approval"/);
+});
