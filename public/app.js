@@ -1941,10 +1941,13 @@ function attachLiveCohostTrack(track,participant,local=false,publication=null){
   if(!tile||!media)return;
   const audioRoot=$("#live-cohost-audio-root");
   if(String(track?.kind||publication?.kind||"").toLowerCase()==="audio"){
-    const audio=document.createElement("audio");audio.autoplay=true;audio.playsInline=true;audio.muted=Boolean(local);
-    audio.dataset.cohostIdentity=identity;
-    track.attach(audio);
-    audioRoot?.append(audio);
+    ensureLiveCohostTile(identity,participant);
+    if(!local){
+      const audio=document.createElement("audio");audio.autoplay=true;audio.playsInline=true;audio.muted=false;
+      audio.dataset.cohostIdentity=identity;
+      track.attach(audio);
+      audioRoot?.append(audio);
+    }
   }else{
     const video=document.createElement("video");video.autoplay=true;video.playsInline=true;video.muted=true;
     video.className="live-cohost-video";video.dataset.cohostIdentity=identity;
@@ -2022,7 +2025,6 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
   activeLiveCohostMainRoom=mainRoom;
   activeLiveCohostSession={...cohostSession,participants};
   renderLiveCohostRoster(participants);
-  const profileParticipant=identity=>({identity,name:liveCohostProfile(identity)?.display_name||liveCohostProfile(identity)?.username||identity});
   room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attachLiveCohostTrack(track,participant,false,publication));
   room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>{element.closest?.(".live-cohost-tile")?.remove();element.remove();}));
   room.on(client.RoomEvent.ParticipantConnected,participant=>{ensureLiveCohostTile(participant.identity,participant);updateLiveCohostStageCount();});
@@ -2033,7 +2035,8 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
   });
   stage.classList.add("has-live-cohost");
   $("#live-audio-root")?.querySelectorAll("audio").forEach(element=>{element.muted=true;});
-  await room.connect(issued.liveKit.url,issued.liveKit.token);
+  try{
+    await room.connect(issued.liveKit.url,issued.liveKit.token);
   if(issued.liveKit.role==="host"||issued.liveKit.role==="cohost"){
     await syncLiveCohostLocalTracks(mainRoom,room,client);
     if(client.RoomEvent.LocalTrackPublished)mainRoom.on(client.RoomEvent.LocalTrackPublished,()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180));
@@ -2049,8 +2052,12 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
   }
   for(const participant of room.remoteParticipants?.values?.()||[])ensureLiveCohostTile(participant.identity,participant);
   const local=room.localParticipant;
-  if(local?.identity)ensureLiveCohostTile(local.identity,{name:state.user?.name||"You"});
+  if((issued.liveKit.role==="host"||issued.liveKit.role==="cohost")&&local?.identity)ensureLiveCohostTile(local.identity,{name:state.user?.name||"You"});
   updateLiveCohostStageCount();
+  }catch(error){
+    await stopLiveCohostLocal();
+    throw error;
+  }
 }
 function renderLiveCohostRoster(participants){
   const root=$("#live-cohost-roster");if(!root)return;
