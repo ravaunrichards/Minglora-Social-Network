@@ -6,13 +6,14 @@ const js = fs.readFileSync(new URL('../../public/admin-centre.js', import.meta.u
 const css = fs.readFileSync(new URL('../../public/admin-centre.css', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../../public/admin-centre.html', import.meta.url), 'utf8');
 
-test('Admin Centre exposes nine clearly named navigation departments', () => {
+test('Admin Centre exposes clearly named navigation departments including Brand Identity', () => {
   const groupOrder = js.match(/const groupOrder = \[([^\]]+)\]/);
   assert.ok(groupOrder, 'navigation department list must exist');
   const groups = [...groupOrder[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
   assert.deepEqual(groups, [
     'Dashboard',
     'AI Operations',
+    'Brand Identity',
     'Profile & Community',
     'User Management',
     'Creator Finance',
@@ -25,7 +26,7 @@ test('Admin Centre exposes nine clearly named navigation departments', () => {
 
 test('existing administrative workspaces receive independent page routes', () => {
   for (const key of [
-    'overview','company-finance','internal-operations','platform-overview','profile-verification',
+    'overview','logo-center','company-finance','internal-operations','platform-overview','profile-verification',
     'users','audit-log','gift-earnings','campaign-wallet','member-promotions',
     'marketing-budget','platform-payouts','creator-withdrawals',
     'promotional-tracking','live-pro','moderation','support','security'
@@ -33,6 +34,7 @@ test('existing administrative workspaces receive independent page routes', () =>
     assert.match(js, new RegExp("key:'" + key + "'"));
   }
   assert.match(js, /dataset\.adminPageView = definition\.key/);
+  assert.match(js, /key:'logo-center'.*selector:'#admin-logo-center'/);
   assert.match(js, /url\.searchParams\.set\('page',key\)/);
 });
 

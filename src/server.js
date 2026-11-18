@@ -24,6 +24,7 @@ import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { createOAuthFlowCookie, readOAuthFlowCookie as parseOAuthFlowCookie, clearOAuthFlowCookie as buildClearOAuthFlowCookie } from './oauth-flow-state.js';
 import { createSupabaseOAuthAuthorization } from './oauth-authorization.js';
 import { createMingloraAuthRouteState, buildMingloraAuthRoutePatch } from './auth-redirect-routes.js';
+import { handleAdminLogoCenterApi } from './admin-logo-center-api.js';
 import { buildSupabaseProviderCredentialPatch } from './auth-provider-credentials.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
@@ -3961,6 +3962,11 @@ async function route(req, res) {
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
+      if (await handleAdminLogoCenterApi({
+        method,path:p,url,input,user,req,res,json,isSameOriginApiWrite,
+        isDesignatedCreatorHubAdmin,isModerator,hasActiveReviewerSession,
+        AUTH_PROVIDER,isSupabasePersistence,requestSupabaseState
+      })) return;
       requireAuth(user);
       if(p==='/api/menstrual-health'||p.startsWith('/api/menstrual-health/')){
         if(!isFemaleMenstrualHealthAccount(user))return json(res,403,{error:'Menstrual Health is available only to female accounts.'});

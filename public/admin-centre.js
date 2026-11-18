@@ -188,6 +188,7 @@
 
     const pageDefinitions = [
       {key:'overview',title:'Overview',group:'Dashboard',description:'A clear starting point with shortcuts to every available administration workspace.'},
+      {key:'logo-center',title:'Logo Center & Brand Identity',group:'Brand Identity',description:'Manage official logos, collections, immutable versions, application placements and brand guidelines.',selector:'#admin-logo-center'},
       {key:'ai-bot-centre',title:'AI Bot Centre',group:'AI Operations',description:'Open the protected Minglora AI Bot Network workspace for bot identities, teams, provider status, memory, task controls and safeguards.',selector:'#admin-ai-bot-centre'},
       {key:'approvals',title:'Approval Center',group:'Administration',description:'Review verified administrator approval requests with audited approve and reject actions.',selector:'#admin-approval-center'},
       {key:'company-finance',title:'Company finance & service management',group:'Finance & Operations',description:'Manage operating providers, subscriptions, budgets, invoices and expenses without mixing creator or seller balances.',selector:'#admin-finance-control'},
@@ -222,7 +223,7 @@
       return Boolean(resolveTarget(definition));
     });
     const pageByKey = new Map(availablePages.map(definition => [definition.key, definition]));
-    const groupOrder = ['Dashboard','AI Operations','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Finance & Operations','Administration'];
+    const groupOrder = ['Dashboard','AI Operations','Brand Identity','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Finance & Operations','Administration'];
 
     const workspace = document.createElement('div');
     workspace.className = 'admin-centre-workspace';
@@ -1231,6 +1232,7 @@
     root.replaceChildren(panel);
     if (unlocked) window.MingloraAdminFinance?.mount(panel, adminCentreApi);
     if (unlocked) window.MingloraAdminRbac?.mount(panel, adminCentreApi);
+    if (unlocked) window.MingloraAdminLogoCenter?.mount(panel, adminCentreApi);
     root.dataset.adminCentreReady = 'true';
     if (unlocked) initializeInternalActivityFeed(panel);
 
