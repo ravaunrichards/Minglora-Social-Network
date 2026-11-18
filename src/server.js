@@ -24,6 +24,7 @@ import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { createOAuthFlowCookie, readOAuthFlowCookie as parseOAuthFlowCookie, clearOAuthFlowCookie as buildClearOAuthFlowCookie } from './oauth-flow-state.js';
 import { createSupabaseOAuthAuthorization } from './oauth-authorization.js';
 import { createMingloraAuthRouteState, buildMingloraAuthRoutePatch } from './auth-redirect-routes.js';
+import { handleAdminLogoCenterApi } from './admin-logo-center-api.js';
 import { buildSupabaseProviderCredentialPatch } from './auth-provider-credentials.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
@@ -4357,6 +4358,12 @@ async function route(req, res) {
         });
         return json(res,200,result);
       }
+
+      if (await handleAdminLogoCenterApi({
+        method,path:p,url,input,user,req,res,json,isSameOriginApiWrite,
+        isDesignatedCreatorHubAdmin,isModerator,hasActiveReviewerSession,
+        AUTH_PROVIDER,isSupabasePersistence,requestSupabaseState
+      })) return;
 
       if(method==='GET'&&p==='/api/admin/access'){
         const designatedCreatorHubAdmin = isDesignatedCreatorHubAdmin(user);
