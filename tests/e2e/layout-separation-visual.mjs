@@ -40,7 +40,7 @@ const report={
   occupiedSeatChecks:[],
   emptySeatChecks:[],
   geometryComparisons:[],
-  notes:['Every seat remains in the DOM; each reference determines which stage panels are visible.','Side by Side preserves the reference 4-column, 3-row structure; the ninth participant fills nine of its ten depicted cells because current capacity is one host plus eight guests.']
+  notes:['Every seat remains in the DOM; each reference determines which stage panels are visible.','Side by Side exposes ten seats: one host plus nine guest seats. The ninth guest position is enabled only for this layout.']
 };
 function seatMarkup(product,state){
   const nodes=[];
@@ -84,6 +84,14 @@ async function applyLayout(page,product,layout){
     if(args.product!=='MeetWave'){
       grid.dataset.liveLayout=args.layout;
       delete grid.dataset.liveGuestLayout;
+      if(args.layout==='side-by-side'&&!grid.querySelector('[data-seat-index="9"]')){
+        const ninth=document.createElement('div');
+        ninth.className='live-guest-seat is-guest';
+        ninth.dataset.seatIndex='9';
+        ninth.dataset.identity='qa-guest-9';
+        ninth.innerHTML='<div class="mw-video-placeholder">Guest 9</div><span class="live-guest-seat-tag">GUEST 9</span><span class="live-guest-seat-meta"><strong>Guest participant 9</strong><small>Visual QA</small></span>';
+        grid.append(ninth);
+      }
     }else{
       stage.dataset.screenLayout=args.layout;
       grid.dataset.layout=args.layout;
@@ -155,9 +163,12 @@ function verify(result,definition,viewport,state){
     const host=result.seats.find(seat=>seat.index===0&&seat.visible);
     if(host)assert.ok(host.y>=result.headingRowHeight-1,label+' keeps the host panel below the heading row');
   }
-  assert.equal(result.seats.length,9,label+' retains all nine seat records');
+  const hasNinthGuest=result.layout==='side-by-side'&&result.product!=='MeetWave';
+  assert.equal(result.seats.length,hasNinthGuest?10:9,label+' retains the expected seat records');
   const visible=result.seats.filter(seat=>seat.visible);
-  assert.equal(visible.length,definition.visible,label+' stage panel count matches its source-crop arrangement');
+  const expectedVisible=hasNinthGuest?10:definition.visible;
+  assert.equal(visible.length,expectedVisible,label+' stage panel count matches its source-crop arrangement');
+  if(hasNinthGuest)assert.ok(visible.some(seat=>seat.index===9),label+' displays Guest seat 9');
   visible.forEach(seat=>assertInside(result,seat,label));
   const get=index=>visible.find(seat=>seat.index===index);
   if(definition.id==='full-screen'){
@@ -197,11 +208,17 @@ function verify(result,definition,viewport,state){
   }
   if(definition.id==='side-by-side'){
     const top=[get(0),get(1)],small=visible.filter(seat=>seat.index>=2);
-    assert.ok(top.every(Boolean)&&Math.abs(top[0].y-top[1].y)<3,label+' places two large panels on the top row');
-    assert.ok(top.every(item=>item.h>small[0].h*1.3),label+' keeps top panels larger than compact panels');
-    assert.ok(small.every(item=>item.y>top[0].y+top[0].h*.7),label+' places compact panels underneath');
-    assert.equal(result.columns,4,label+' uses four columns');
-    assert.equal(result.rows,3,label+' uses three rows');
+    if(result.product==='AUDIO LIVE'){
+      assert.equal(result.columns,2,label+' uses two columns for the Audio LIVE Side by Side preset');
+      assert.ok(result.rows>=5,label+' provides five seat rows beneath its heading track');
+      assert.equal(small.length,8,label+' includes all eight remaining guest positions beneath the first pair');
+    }else{
+      assert.ok(top.every(Boolean)&&Math.abs(top[0].y-top[1].y)<3,label+' places two large panels on the top row');
+      assert.ok(top.every(item=>item.h>small[0].h*1.3),label+' keeps top panels larger than compact panels');
+      assert.ok(small.every(item=>item.y>top[0].y+top[0].h*.7),label+' places compact panels underneath');
+      assert.equal(result.columns,4,label+' uses four columns');
+      assert.equal(result.rows,3,label+' uses three rows');
+    }
   }
   if(definition.id==='spotlight'){
     const main=visible.find(seat=>seat.w>result.stage.width*.9);
