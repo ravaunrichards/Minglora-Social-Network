@@ -42,7 +42,7 @@ test('global approval notifier does not make approval decisions or bypass server
 });
 
 test('site-wide notification assets are included in the new offline shell cache', () => {
-  assert.match(worker, /^const CACHE_NAME='minglora-shell-v359-tiktok-ranking-frames-20261118';$/m);
+  assert.match(worker, /^const CACHE_NAME='minglora-shell-v359-self-updating-1';$/m);
   assert.match(worker, /admin-approval-notifications\.css\?v=20261118-admin-global-approvals-357/);
   assert.match(worker, /admin-approval-notifications\.js\?v=20261118-admin-global-approvals-357/);
   assert.match(styles, /#minglora-admin-approval-alerts/);
