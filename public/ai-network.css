@@ -163,3 +163,32 @@
 .ai-network-organization-row>.ai-network-list-main{flex:1 1 280px;min-width:min(100%,280px)}
 .ai-network-organization-row>.ai-network-organization-actions{flex:0 1 auto;min-width:0;max-width:100%}
 .ai-network-organization-row>.ai-network-hr-workspace{flex:1 0 100%;min-width:0}
+
+/* Keep the corporate HR workspace bounded by the available phone width. */
+@media(max-width:560px){
+  .ai-network-organization-row,
+  .ai-network-organization-row>.ai-network-list-main,
+  .ai-network-organization-row>.ai-network-organization-actions,
+  .ai-network-organization-row>.ai-network-hr-workspace{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-organization-row{flex-direction:column}
+  .ai-network-organization-actions{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch}
+  .ai-network-organization-actions form,
+  .ai-network-organization-actions button{width:100%;min-width:0;max-width:100%}
+  .ai-network-hr-workspace,
+  .ai-network-hr-workspace>*,
+  .ai-network-hr-workspace .ai-network-form,
+  .ai-network-hr-workspace .ai-network-inline-form{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .ai-network-hr-workspace .ai-network-inline-form label{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+}
