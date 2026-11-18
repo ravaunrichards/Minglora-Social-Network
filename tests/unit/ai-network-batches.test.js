@@ -69,6 +69,6 @@ test('identity bulk UI requires unique row keys and exposes persisted failed-row
   assert.match(ui, /request\('\/identities\/batches\?limit=12'\)/);
   assert.match(ui, /data-ai-action="identity-batch-retry"/);
   assert.ok(ui.includes("/identities/batches/' + encodeURIComponent(batchId) + '/retry"));
-  assert.match(ui, /Failed row data privately in Supabase/);
+  assert.match(ui, /saves failed row data privately in Supabase/);
   assert.match(ui, /Successful row payloads are cleared from the retry store/);
 });
