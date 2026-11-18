@@ -118,8 +118,8 @@ test("Admin Centre links the Logo Center only after the existing owner access ga
 
 test("the working Logo Center UI supports library, uploads, classification, approval, placement and identity", () => {
   for (const value of [
-    "Overview","Logo Library","Upload","Collections & Categories","Placements",
-    "Brand Identity","Logo Design Studio","Logo Editing Studio","Logo Mockup Studio","Logo Scheduling",
+    "Overview","Logo Center Dashboard","Logo Library","Logo Upload Manager","Logo Collections","Logo Categories",
+    "Logo Placement Manager","Brand Identity Center","Logo Design Studio","Logo Editing Studio","Logo Mockup Studio","Logo Scheduling",
     "Logo Version History","Brand Backup & Recovery","Brand Security & Permissions","Brand Analytics",
     "Brand Settings","Complete Logo Library","Duplicate","Edit title, description, category and collection",
     "Download metadata recovery snapshot","Activity & History",
