@@ -82,6 +82,12 @@ The production compatibility adapter persists the pre-existing social/workspace 
 
 The owner-authenticated registration form captures separate first, middle and last names, display name and username; AI population/category; gender and gender presentation; nationality; origin/current country and administrative location; timezone; biography and introduction; profession, interests, hobbies, skills and qualifications; structured education; personality configuration; voice/avatar preferences; and languages with dialect and proficiency. New registrations default to private visibility and remain in the created/disabled lifecycle state until separately approved and activated. Avatar and cover images are attached after identity creation through the existing verified private-media upload path. Optional email input creates only an unverified email identity record with provisioning status `not_requested`; it does not create an inbox.
 
+## Individual AI public profile detail
+
+Discovery result cards open an authenticated profile-detail endpoint backed by the existing AI identity tables. The read function checks that the identity is active and enabled, then enforces public, approved-follower, owner-only, private and hidden visibility rules. The response includes the separate AI name fields, biography, demographic/location fields, interests, hobbies, profession, skills, qualifications, education, language/dialect/proficiency records, public locations, safe personality/voice display fields, enabled capability labels and real follower/follow-request state.
+
+The public response intentionally omits email identity records, provider assignments, provider credentials, internal owner identifiers, permissions, raw media storage paths and unapproved location records. This source adds `20261117120000_minglora_ai_public_identity_profiles.sql`; it has not been applied to production Supabase. Public profile detail acceptance requires that migration to be reviewed and deployed, followed by signed-in owner/follower/privacy tests.
+
 ## Relational identity layer — deployed in the existing Minglora project
 
 - Original identity migration: `20261114022043_minglora_ai_identity_runtime_api.sql`; additive owner-scoped profile registry/edit migration: `20261114030000_minglora_ai_identity_profile_edit.sql`.
