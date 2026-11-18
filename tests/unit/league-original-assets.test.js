@@ -100,7 +100,7 @@ test("six Match Power-Ups use the new reference deck while legacy identifiers re
     ["speed_challenge", "powerup-speed"]
   ]) {
     assert.ok(league.includes(id), id + " is selectable in League Arena");
-    assert.ok(league.includes('"' + id + '":"' + icon + '"'), id + " uses its original Minglora SVG card");
+    assert.match(league, new RegExp(id + '\\s*:\\s*"' + icon + '"'), id + " uses its original Minglora SVG card");
     assert.ok(artwork.includes('<symbol id="' + icon + '"'), "missing " + icon + " artwork");
   }
   for (const legacyId of ["momentum_boost", "score_multiplier", "shield", "time_boost"]) {
