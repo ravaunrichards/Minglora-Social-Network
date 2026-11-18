@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261117120000_minglora_ai_public_identity_profiles.sql');
 const mediaMigration = read('supabase/migrations/20261117124500_minglora_ai_private_follower_media_visibility.sql');
+const baseMediaMigration = read('supabase/migrations/20261115010000_minglora_ai_identity_media_visibility.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -19,8 +20,8 @@ test('individual AI profile RPC enforces active state and visibility rules', () 
     "coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers')",
     "v_identity.status <> 'active'",
     "v_identity.enabled is not true",
-    "v_profile.profile_visibility in ('followers', 'private') and not v_is_following",
-    "coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers', 'private')",
+    "v_profile.profile_visibility = 'followers' and not v_is_following",
+    "coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers')",
     "f.follow_status = 'active'",
     "public.user_blocks b",
     "b.blocker_id = p_actor_user_id",
@@ -30,14 +31,15 @@ test('individual AI profile RPC enforces active state and visibility rules', () 
   ]) assert.ok(migration.includes(token), 'Missing profile visibility/security control: ' + token);
 });
 
-test('AI profile media access grants private profiles only to approved followers', () => {
-  assert.match(mediaMigration, /minglora_ai_identity_media_access\(uuid,uuid,text\)/);
-  assert.match(mediaMigration, /v_visibility not in \(''public'', ''followers''\)/);
-  assert.match(mediaMigration, /v_visibility not in \(''public'', ''followers'', ''private''\)/);
-  assert.match(mediaMigration, /if v_visibility = ''followers'' and not exists \(/);
-  assert.match(mediaMigration, /if v_visibility in \(''followers'', ''private''\) and not exists \(/);
-  assert.match(mediaMigration, /pg_get_functiondef\([\s\S]*?execute v_function_definition/);
-  assert.match(mediaMigration, /refusing to rewrite it/);
+test('AI profile media access keeps private profiles owner-only', () => {
+  assert.match(mediaMigration, /v_visibility not in \\(''public'', ''followers''\\)/);
+  assert.match(mediaMigration, /v_visibility = ''followers'' and not exists/);
+  assert.doesNotMatch(mediaMigration, /v_visibility not in \\(''public'', ''followers'', ''private''\\)/);
+  assert.doesNotMatch(mediaMigration, /v_visibility in \\(''followers'', ''private''\\)/);
+  assert.match(mediaMigration, /pg_get_functiondef/);
+  assert.match(mediaMigration, /refusing an unverified media privacy state/);
+  assert.match(baseMediaMigration, /v_visibility not in \\('public', 'followers'\\)/);
+  assert.match(baseMediaMigration, /if v_visibility = 'followers' and not exists \\(/);
 });
 
 test('public profile JSON fields are allow-listed before leaving the database', () => {
@@ -106,4 +108,10 @@ test('profile-level location fields require explicit per-location public sharing
   for (const field of ['current_country','time_zone','state_province','parish_county','district','city','town']) {
     assert.ok(migration.includes("'" + field + "', case when v_current_location_public then"), 'Private current-location field was not consent-gated: ' + field);
   }
+});
+
+test('private AI profiles are not opened to followers by profile-detail reads', () => {
+  assert.ok(migration.includes("v_profile.profile_visibility = 'followers' and not v_is_following"));
+  assert.ok(migration.includes("coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers')"));
+  assert.doesNotMatch(migration, /profile_visibility in \\('followers', 'private'\\)/);
 });
