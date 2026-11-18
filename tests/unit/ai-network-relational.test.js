@@ -9,6 +9,7 @@ const read = path => readFileSync(resolve(root, path), 'utf8');
 
 const migration = read('supabase/migrations/20261114022043_minglora_ai_identity_runtime_api.sql');
 const memoryMigration = read('supabase/migrations/20261114120000_minglora_ai_identity_memory.sql');
+const privateVisibilityMigration = read('supabase/migrations/20261117123000_minglora_ai_identity_private_visibility_defaults.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -199,4 +200,15 @@ test('AI identity gateway bounds payload size and rejects secret-shaped fields',
   assert.match(handler, /encode\(serializedPayload\)\.byteLength\s*>\s*200000/);
   assert.match(handler, /access\[_-\]\?token\|password\|secret\|authorization\|cookie\|credential/);
   assert.match(handler, /cannot contain credentials or secrets/);
+});
+
+
+test('new AI identities default to private at database and RPC layers', () => {
+  assert.match(privateVisibilityMigration, /alter table ai_network\\.ai_profiles[\\s\\S]*alter column profile_visibility set default 'private'/i);
+  assert.match(privateVisibilityMigration, /pg_get_functiondef\\([\\s\\S]*minglora_ai_identity_command/);
+  assert.match(privateVisibilityMigration, /v_old_default[\\s\\S]*else ''public'' end/);
+  assert.match(privateVisibilityMigration, /v_new_default[\\s\\S]*else ''private'' end/);
+  assert.match(privateVisibilityMigration, /if v_old_count = 1 then[\\s\\S]*execute replace\\(v_function_definition, v_old_default, v_new_default\\)/);
+  assert.match(privateVisibilityMigration, /elsif v_old_count = 0 and strpos\\(v_function_definition, v_new_default\\) > 0/);
+  assert.match(privateVisibilityMigration, /refusing to rewrite it/);
 });
