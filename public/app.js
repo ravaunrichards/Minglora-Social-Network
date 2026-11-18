@@ -2041,6 +2041,11 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
       const kind=String(publication?.kind||publication?.track?.kind||"").toLowerCase();
       if(["audio","video"].includes(kind))window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180);
     });
+    for(const eventName of ["TrackMuted","TrackUnmuted","TrackRestarted"]){
+      const event=client.RoomEvent?.[eventName];
+      if(event)mainRoom.on(event,()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Media state sync failed.",error?.message||error)),180));
+    }
+
   }
   for(const participant of room.remoteParticipants?.values?.()||[])ensureLiveCohostTile(participant.identity,participant);
   const local=room.localParticipant;
@@ -3413,6 +3418,7 @@ activeLivePinnedComment=null;
     }
     updatePresence();
     refreshSpeakerRoster();
+    setupLiveCohostPanel(session,role,room,client);
     await syncLiveParticipantPresence(session);
     if(role==='host')startLiveViewerRefresh(session);
     if(role==='viewer'){
