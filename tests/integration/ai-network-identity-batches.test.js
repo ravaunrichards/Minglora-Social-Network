@@ -52,6 +52,7 @@ test('PostgreSQL 17: durable identity batches isolate failures, replay safely an
       values ('batch-row-fail-0001') on conflict do nothing;
       grant usage on schema public,ai_network to service_role;
       grant select,insert,update on public.profiles,public.ai_identity_batch_test_failures,ai_network.ai_identities to service_role;
+      grant delete on public.ai_identity_batch_test_failures to service_role;
       create or replace function public.minglora_ai_identity_command(
         p_action text,p_actor_user_id uuid,p_payload jsonb
       ) returns jsonb language plpgsql security invoker set search_path='' as $$
