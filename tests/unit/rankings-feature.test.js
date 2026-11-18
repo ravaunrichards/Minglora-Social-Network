@@ -52,7 +52,7 @@ test("Rankings handles empty, failure, period-switch and route-cancellation stat
  assert.ok(page.includes("data-ranking-retry")&&page.includes("AbortController"));
  assert.ok(page.includes("data-ranking-period")&&page.includes('cache:"no-store"'));
  assert.ok(page.includes("function onNavigateAway()"));
- assert.ok(worker.includes("minglora-shell-v356-admin-approval-center-1"));
+ assert.ok(worker.includes("minglora-shell-v356-self-updating-1"));
  assert.ok(worker.includes("/rankings.css?v=20261117-avatar-rankings-sync-1"));
  assert.ok(worker.includes("/rankings.js?v=20261117-avatar-rankings-sync-1"));
 });
