@@ -1,15 +1,18 @@
 # Minglora Master Progress
 
-## Current checkpoint
+> Current source of truth: [.agent-work/EXECUTION_RECOVERY_CHECKPOINT_20261118.md](EXECUTION_RECOVERY_CHECKPOINT_20261118.md). Historical checkpoint details below this notice are snapshots from earlier dates and must not override the current verified checkpoint.
 
-- Repository: ravaunrichards/Minglora-Social-Network
-- Scope: Minglora Social Network only
-- Main branch checkpoint: eff2087e1c72fbea12ab03d70d32c5fa316a30b6 (Gifter badge vector-quality fix merged).ntegration merged).
-- Main tree: b6a894cebb66d08d5f25c577b921cb7ebaf2743d
-- Latest post-merge CI: https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43638100531 — completed successfully.
-- Admin Finance audit-history PR: #333, merged 2026-11-14 at 20:33:14 UTC; merge commit 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd.
-- PR #333 CI: all three jobs passed; separate repository layout QA run 43637977566 also passed. That layout QA was not a finance-specific visual test.
-- Profile badge PR: #224, merged 2026-11-11; merge commit 8a496d54df8daca5f543e9571c494e9d4354a158.
+## Current checkpoint — 2026-11-18
+- Main commit: `e03c8b615ddaaba774558b952524181756c6a27e`.
+- Logo Center completion PR #526 merged; current-head pre-merge checks 9/9 passed and post-merge main CI 4/4 passed.
+- Supabase migration `20261118160000_minglora_logo_center_completion` applied (ledger version `20261118175938`).
+- `minglora-runtime-state` Edge Function ACTIVE version 139.
+- Render service `minglora-social-network-temp` is LIVE on commit `e03c8b615ddaaba774558b952524181756c6a27e`; deployment `dep-dbuufkjm8hqs738kug90` succeeded at 2026-11-18T18:03:28Z.
+- Supabase durable persistence and LiveKit reported ready/connected in the new Render instance.
+- Do not claim Logo Center owner/MFA browser acceptance is complete; it remains an explicit operational gate.
+- Do not use any older commit, Edge Function version, Render workspace/service claim or blocker statement below as current without rechecking live sources.
+
+## Historical checkpoint (preserved; not current)
 
 ## Overall completion
 
