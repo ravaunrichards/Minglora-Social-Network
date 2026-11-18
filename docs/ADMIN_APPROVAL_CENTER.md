@@ -16,7 +16,7 @@ The UI does not fabricate request cards, seed sample approvals, read the task pa
 - An AI high-impact approval record is a human decision only. The existing service explicitly records `executionStatus: not_executed`; it does not execute the underlying action.
 - Approving an AI task does not bypass the independent runtime, worker, provider, budget or permission gates.
 - No worker was activated by this feature. The production worker controls are independently maintained in the paused/disabled state.
-- The notification surface is in-app and refreshes while the Admin Centre is open. It does not claim OS push, email, SMS or background delivery.
+- The Admin Centre has its own pending-count banner and approval toast. The main Minglora app also runs a site-wide in-app notifier, polling the same owner/MFA-protected AI approval and task APIs every 30 seconds. New requests display a pop-up alert and a persistent pending-count pill linking directly to the Approval Center. It does not claim OS push, email, SMS or background delivery.
 - No production approval or test record is inserted by the UI or this implementation.
 
 ## Scope boundary
@@ -25,7 +25,7 @@ This first release connects the approval sources that already have real, callabl
 
 ## Operational verification
 
-Automated source tests validate the protected page entry, source endpoints, decision endpoints, no-demo-data rule, refresh behavior and responsive notification style. Production acceptance still requires a signed-in designated-owner session with current MFA and an end-to-end browser review of an actual request. The current production database was read-only checked during implementation and contained zero pending AI action approvals and zero pending AI task approvals, so no real decision was made.
+Automated source tests validate the protected page entry, source endpoints, decision endpoints, no-demo-data rule, refresh behavior, responsive notification style, global app entry point and service-worker precache. Production acceptance still requires a signed-in designated-owner session with current MFA and an end-to-end browser review of an actual request. The current production database was read-only checked during implementation and contained zero pending AI action approvals and zero pending AI task approvals, so no real decision was made.
 
 ## Mainline integration
 
