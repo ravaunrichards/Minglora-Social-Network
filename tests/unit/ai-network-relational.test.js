@@ -199,3 +199,14 @@ test('AI identity creation collects and validates complete individual profile fi
   assert.match(ui, /parseProfileJson\('personality', '\{\}', 'object'\)/);
   assert.match(ui, /parseProfileJson\('voicePreferences', '\{\}', 'object'\)/);
 });
+
+test('new AI identity profiles default to private at database and RPC layers', () => {
+  const migration = read('supabase/migrations/20261118120000_minglora_ai_identity_private_visibility_defaults.sql');
+  assert.match(migration, /alter table ai_network\\.ai_profiles[\\s\\S]*alter column profile_visibility set default 'private'/i);
+  assert.match(migration, /pg_get_functiondef\\([\\s\\S]*minglora_ai_identity_command/);
+  assert.match(migration, /v_old_default[\\s\\S]*else ''public'' end/);
+  assert.match(migration, /v_new_default[\\s\\S]*then v_profile->>''profile_visibility'' else ''private'' end/);
+  assert.match(migration, /if v_old_count = 1 then[\\s\\S]*execute replace\\(v_function_definition, v_old_default, v_new_default\\)/);
+  assert.match(migration, /elsif v_old_count = 0 and strpos\\(v_function_definition, v_new_default\\) > 0/);
+  assert.match(migration, /refusing to rewrite it/);
+});
