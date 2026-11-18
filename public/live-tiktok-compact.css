@@ -1240,9 +1240,9 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layo
 body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout>.live-guest-seat .live-guest-seat-tag{font-size:clamp(6px,.62vw,8px)!important;line-height:1!important}
 
 /* 1. FULL SCREEN — exactly one full-height participant panel. */
-body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="full-screen"]{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
-body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1!important}
-body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="full-screen"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){display:none!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="full-screen"]{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout.audio-guest-layout[data-live-layout="full-screen"]>:is(.live-guest-seat.is-guest,.live-guest-seat.empty,.mw-empty-seat){display:none!important}
 
 /* 2. FLUID PANEL — one dominant panel and exactly two lower-right guest panels. */
 body:has(#live-player-shell) #live-video-stage.live-audio-stage #live-guest-layout[data-live-layout="fluid-panel"]{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
