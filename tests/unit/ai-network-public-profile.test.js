@@ -113,5 +113,5 @@ test('profile-level location fields require explicit per-location public sharing
 test('private AI profiles are not opened to followers by profile-detail reads', () => {
   assert.ok(migration.includes("v_profile.profile_visibility = 'followers' and not v_is_following"));
   assert.ok(migration.includes("coalesce(v_profile.profile_visibility, 'hidden') not in ('public', 'followers')"));
-  assert.doesNotMatch(migration, /profile_visibility in \\('followers', 'private'\\)/);
-});
+  assert.ok(!migration.includes("profile_visibility in ('followers', 'private')"));
+});;
