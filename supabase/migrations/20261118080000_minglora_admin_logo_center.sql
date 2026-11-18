@@ -7,7 +7,7 @@ VALUES (
   'minglora-brand-assets',
   false,
   52428800,
-  ARRAY['image/svg+xml','image/png','image/jpeg','image/webp','image/gif',
+  ARRAY['image/svg+xml','image/png','image/apng','image/jpeg','image/webp','image/gif',
         'image/vnd.microsoft.icon','image/x-icon','application/json',
         'video/mp4','video/webm']::text[]
 )
@@ -450,7 +450,7 @@ BEGIN
     v_category_id := nullif(v_payload->>'categoryId','')::uuid;
     v_collection_id := nullif(v_payload->>'collectionId','')::uuid;
     IF v_title='' OR v_name='' OR v_mime NOT IN (
-      'image/svg+xml','image/png','image/jpeg','image/webp','image/gif',
+      'image/svg+xml','image/png','image/apng','image/jpeg','image/webp','image/gif',
       'image/vnd.microsoft.icon','image/x-icon','application/json','video/mp4','video/webm'
     ) OR v_size IS NULL OR v_size<1 OR v_size>52428800 THEN
       RAISE EXCEPTION 'Choose a supported logo file up to 50 MB and enter a title.' USING ERRCODE='22023';
