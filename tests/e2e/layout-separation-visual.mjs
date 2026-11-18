@@ -99,6 +99,20 @@ async function applyLayout(page,product,layout){
       grid.dataset.layout=args.layout;
       delete stage.dataset.guestLayout;
       delete grid.dataset.guestLayout;
+      const sideBySideExtra=grid.querySelector('[data-side-by-side-extra]');
+      if(args.layout==='side-by-side'&&!sideBySideExtra){
+        const ninth=document.createElement('button');
+        ninth.type='button';
+        ninth.className='mw-video-tile live-guest-seat empty mw-empty-seat';
+        ninth.dataset.seatIndex='9';
+        ninth.dataset.identity='qa-guest-9';
+        ninth.dataset.sideBySideExtra='true';
+        ninth.setAttribute('aria-label','Invite a guest to seat 9');
+        ninth.innerHTML='<span class="live-guest-seat-plus" aria-hidden="true">+</span><strong>Guest seat 9</strong><small>Tap to invite</small>';
+        grid.append(ninth);
+      }else if(args.layout!=='side-by-side'){
+        sideBySideExtra?.remove();
+      }
     }
     if(args.layout==='spotlight'){
       const selected=grid.querySelector('[data-seat-index="3"]');
@@ -165,12 +179,12 @@ function verify(result,definition,viewport,state){
     const host=result.seats.find(seat=>seat.index===0&&seat.visible);
     if(host)assert.ok(host.y>=result.headingRowHeight-1,label+' keeps the host panel below the heading row');
   }
-  const hasNinthGuest=result.layout==='side-by-side'&&result.product!=='MeetWave';
-  assert.equal(result.seats.length,hasNinthGuest?10:9,label+' retains the expected seat records');
+  const hasSideBySideExtraSeat=result.layout==='side-by-side';
+  assert.equal(result.seats.length,hasSideBySideExtraSeat?10:9,label+' retains the expected seat records');
   const visible=result.seats.filter(seat=>seat.visible);
-  const expectedVisible=hasNinthGuest?10:definition.visible;
+  const expectedVisible=hasSideBySideExtraSeat?10:definition.visible;
   assert.equal(visible.length,expectedVisible,label+' stage panel count matches its source-crop arrangement');
-  if(hasNinthGuest)assert.ok(visible.some(seat=>seat.index===9),label+' displays Guest seat 9');
+  if(hasSideBySideExtraSeat)assert.ok(visible.some(seat=>seat.index===9),label+' displays the Side by Side extra guest seat 9');
   visible.forEach(seat=>assertInside(result,seat,label));
   const get=index=>visible.find(seat=>seat.index===index);
   if(definition.id==='full-screen'){
