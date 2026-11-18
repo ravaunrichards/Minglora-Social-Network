@@ -184,7 +184,10 @@
         '<label>Town<input name="town" value="' + esc(profile.town || '') + '" maxlength="120"></label>' +
         '<label>Time zone<input name="timeZone" value="' + esc(profile.time_zone || 'UTC') + '" maxlength="80"></label>' +
         '<label>Profession<input name="profession" value="' + esc(profile.profession || '') + '" maxlength="180"></label>' +
-        '<label>Profile visibility<select name="profileVisibility">' + visibilityOptions + '</select></label></div>' +
+        '<label>Profile visibility<select name="profileVisibility">' + visibilityOptions + '</select></label>' +
+        '<label class="ai-network-inline-choice"><input type="checkbox" name="sharePublicLocations"' +
+          (locations.some(item => ['origin','current'].includes(item.location_type) && item.is_public) ? ' checked' : '') +
+          '> Share country and region details in the public AI profile</label></div>' +
         '<label>Biography<textarea name="bio" maxlength="4000" rows="2">' + esc(profile.bio || '') + '</textarea></label>' +
         '<label>Introduction<textarea name="introduction" maxlength="2000" rows="2">' + esc(profile.introduction || '') + '</textarea></label>' +
         '<div class="ai-network-form-grid">' +
@@ -473,7 +476,8 @@
       '<label>Education records (JSON array)<textarea name="education" rows="3" maxlength="12000" spellcheck="false" placeholder="[]"></textarea></label>' +
       '<label>Personality configuration (JSON object)<textarea name="personality" rows="3" maxlength="12000" spellcheck="false" placeholder="{}"></textarea></label>' +
       '<label>Voice and avatar preferences (JSON object)<textarea name="voicePreferences" rows="3" maxlength="12000" spellcheck="false" placeholder="{}"></textarea></label>' +
-      '<label>Profile visibility<select name="profileVisibility">' + options([{value:'private',label:'Private (recommended)'},{value:'followers',label:'Followers only'},{value:'public',label:'Public'},{value:'hidden',label:'Hidden'}], 'private') + '</select></label></div>' +
+      '<label>Profile visibility<select name="profileVisibility">' + options([{value:'private',label:'Private (recommended)'},{value:'followers',label:'Followers only'},{value:'public',label:'Public'},{value:'hidden',label:'Hidden'}], 'private') + '</select></label>' +
+      '<label class="ai-network-inline-choice"><input type="checkbox" name="sharePublicLocations"> Share country and region details in the public AI profile</label></div>' +
       countryDatalist +
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
@@ -1842,6 +1846,7 @@
         voice_preferences:parseJson('voicePreferences','{}','object')
       };
       payload.languages = languages;
+      const sharePublicLocations = form.querySelector('[name="sharePublicLocations"]')?.checked === true;
       payload.locations = parseJson('existingLocations','[]','array').filter(item => !['origin','current'].includes(item.location_type));
       const avatarFile = form.querySelector('[name="avatarFile"]')?.files?.[0] || null;
       const coverFile = form.querySelector('[name="coverFile"]')?.files?.[0] || null;
@@ -1852,13 +1857,14 @@
       }
       identityIdForMedia = identityId;
       if (countryOfOrigin) payload.locations.push({
-        location_type:'origin', country_code:countryOfOrigin, country_name:countryLabel(countryOfOrigin), is_public:false
+        location_type:'origin', country_code:countryOfOrigin, country_name:countryLabel(countryOfOrigin),
+        is_public:sharePublicLocations
       });
       if (currentCountry) payload.locations.push({
         location_type:'current', country_code:currentCountry, country_name:countryLabel(currentCountry),
         state_province:value('stateProvince'), parish_county:value('parishCounty'),
         district:value('district'), city:value('city'), town:value('town'),
-        time_zone:value('timeZone') || 'UTC', is_public:false
+        time_zone:value('timeZone') || 'UTC', is_public:sharePublicLocations
       });
       path = '/identities/' + encodeURIComponent(identityId);
     } else if (kind === 'identity-profile-bulk') {
@@ -1994,11 +2000,13 @@
       if (primaryLanguageCount > 1) throw new Error('Choose only one primary AI language.');
       if (structuredLanguages.length && primaryLanguageCount === 0) structuredLanguages[0].is_primary = true;
       payload.languages = structuredLanguages;
+      const sharePublicLocations = form.querySelector('[name="sharePublicLocations"]')?.checked === true;
       payload.locations = [];
       if (countryOfOrigin) payload.locations.push({
         location_type: 'origin',
         country_code: countryOfOrigin,
-        country_name: countryLabel(countryOfOrigin)
+        country_name: countryLabel(countryOfOrigin),
+        is_public: sharePublicLocations
       });
       if (currentCountry) payload.locations.push({
         location_type: 'current',
@@ -2010,7 +2018,7 @@
         city: value('city'),
         town: value('town'),
         time_zone: value('timeZone') || 'UTC',
-        is_public: false
+        is_public: sharePublicLocations
       });
       if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
     } else if (kind === 'task-create') {
