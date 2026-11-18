@@ -162,9 +162,9 @@ test('email HTML escaping prevents markup injection in rendered plain text', () 
 
 test('provisioning reuses the identity placeholder email row instead of creating a duplicate address', () => {
   const migration = read('supabase/migrations/20261118170000_minglora_ai_email_provisioning.sql');
-  assert.match(migration, /coalesce\\(e\\.email_provider,''\\)=''[\\s\\S]*?e\\.provisioning_status='not_requested'[\\s\\S]*?lower\\(e\\.email_address\\) like '%@ai\\.minglora\\.invalid'[\\s\\S]*?for update/i);
-  assert.match(migration, /update ai_network\\.ai_emails[\\s\\S]*?set email_address=v_address[\\s\\S]*?mailbox_enabled=true[\\s\\S]*?returning \\* into v_email/i);
-  assert.match(migration, /else\\s+insert into ai_network\\.ai_emails/i);
+  assert.match(migration, /coalesce\(e\.email_provider,''\)=''[\s\S]*?e\.provisioning_status='not_requested'[\s\S]*?lower\(e\.email_address\) like '%@ai\.minglora\.invalid'[\s\S]*?for update/i);
+  assert.match(migration, /update ai_network\.ai_emails[\s\S]*?set email_address=v_address[\s\S]*?mailbox_enabled=true[\s\S]*?returning \* into v_email/i);
+  assert.match(migration, /else\s+insert into ai_network\.ai_emails/i);
 });
 
 test('outbound email preparation uses conflict-safe idempotency for concurrent retries', () => {
