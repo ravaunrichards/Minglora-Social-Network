@@ -5770,7 +5770,7 @@ async function route(req, res) {
       if (method === 'POST' && liveCohostAcceptMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveCohostAcceptMatch[1] && item.status === 'live');
         if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE invitation is not available.' });
-        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowGuestRequests === false || session.liveSettings?.allowCoHost === false) {
+        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowCoHost === false) {
           return json(res, 403, { error: 'The host has disabled Co-host invitations for this LIVE.' });
         }
         const request = (db.liveSpeakerRequests || []).find(item =>
