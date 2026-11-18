@@ -2227,7 +2227,7 @@ async function setupLiveMatchPanel(session,role){
     const button=event.target?.closest?.('[data-live-match-action]');if(!button)return;
     const action=button.dataset.liveMatchAction,matchId=String(button.dataset.matchId||'');
     const routeAction=action==='accept'?'accept':action==='support-challenger'||action==='support-opponent'?'support':'powerups';
-    const payload=routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{inventoryCardId:button.dataset.inventoryCardId,broadcastId:session.id}:{};
+    const payload={broadcastId:session.id,...(routeAction==='support'?{side:action==='support-challenger'?'challenger':'opponent'}:routeAction==='powerups'?{inventoryCardId:button.dataset.inventoryCardId}:{})};
     button.disabled=true;
     try{await api('/leagues/matches/'+encodeURIComponent(matchId)+'/'+routeAction,{method:'POST',body:JSON.stringify(payload)});toast(action==='accept'?'League Match accepted.':action.startsWith('support')?'Your support was counted.':'Power-Up card activated for this creator.');await refreshLiveMatchPanel(session,role);}
     catch(error){toast(error.message||'The League Match action could not be completed.');}
