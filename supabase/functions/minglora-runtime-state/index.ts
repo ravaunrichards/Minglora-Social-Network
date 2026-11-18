@@ -3257,6 +3257,35 @@ Deno.serve(async (req: Request) => {
       status:"left",left_at:endedAt
     }).eq("broadcast_id",broadcastId).in("status",["requested","invited","accepted","connected"]);
     if(participantError)return json(503,{error:"The broadcast ended, but participant presence could not be finalized."});
+    // Retire any Co-host invitation or membership bound to the broadcast that just
+    // ended. If its owner ends their broadcast, end the whole shared stage; otherwise
+    // remove only that creator from the shared stage. Other creators' broadcasts stay live.
+    const {data:cohostRows,error:cohostLookupError}=await admin.from("live_cohost_participants")
+      .select("session_id,user_id,role,status")
+      .eq("broadcast_id",broadcastId).in("status",["invited","requested","accepted","connected"]);
+    if(cohostLookupError)return json(503,{error:"The broadcast ended, but Co-host membership could not be reconciled."});
+    for(const row of cohostRows||[]){
+      const {data:cohostSession,error:cohostSessionError}=await admin.from("live_cohost_sessions")
+        .select("id,host_user_id,status").eq("id",row.session_id).maybeSingle();
+      if(cohostSessionError)return json(503,{error:"The broadcast ended, but its Co-host session could not be checked."});
+      if(!cohostSession||cohostSession.status!=="active")continue;
+      if(row.role==="host"&&cohostSession.host_user_id===hostId){
+        const {error:endError}=await admin.from("live_cohost_sessions").update({
+          status:"ended",ended_at:endedAt
+        }).eq("id",row.session_id).eq("status","active");
+        if(endError)return json(503,{error:"The broadcast ended, but its Co-host stage could not be ended."});
+        const {error:closeMembersError}=await admin.from("live_cohost_participants").update({
+          status:"left",left_at:endedAt
+        }).eq("session_id",row.session_id).in("status",["invited","requested","accepted","connected"]);
+        if(closeMembersError)return json(503,{error:"The broadcast ended, but Co-host members could not be finalized."});
+      }else{
+        const {error:leaveError}=await admin.from("live_cohost_participants").update({
+          status:"left",left_at:endedAt
+        }).eq("session_id",row.session_id).eq("user_id",hostId)
+          .in("status",["invited","requested","accepted","connected"]);
+        if(leaveError)return json(503,{error:"The broadcast ended, but this creator could not leave Co-host."});
+      }
+    }
     return json(200, { broadcast: data || { id: broadcastId, status: "ended" } });
   }
 
@@ -3281,10 +3310,8 @@ Deno.serve(async (req: Request) => {
     // The same relational row stores speaker-request and participant status.
     if(role==="viewer"&&existing?.role==="guest"&&existing.status==="requested")
       return json(200,{participant:existing,requestPending:true});
-    // An invited co-host must first enter as a viewer. Preserve the invitation
-    // until they accept, then the normal guest-token reconnect promotes them.
-    if(role==="viewer"&&existing?.role==="guest"&&existing.status==="invited")
-      return json(200,{participant:existing,invitationPending:true});
+    // Multi-guest viewer requests stay in this broadcast's viewer/guest lifecycle.
+    // Creator Co-host invitations are stored separately in live_cohost_participants.
     if(role==="viewer"&&existing?.role==="guest"&&["accepted","connected"].includes(existing.status))
       return json(409,{error:"Your speaker request is approved. Rejoin with the speaker-stage token."});
     const connectedAt=new Date().toISOString();
