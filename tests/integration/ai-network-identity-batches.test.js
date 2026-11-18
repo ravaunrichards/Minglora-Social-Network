@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { Client } from 'pg';
 
 const migrationSql = readFileSync(
-  new URL('../../supabase/migrations/20261118063000_minglora_ai_durable_identity_batches.sql', import.meta.url),
+  new URL('../../supabase/migrations/20261118075901_minglora_ai_durable_identity_batches.sql', import.meta.url),
   'utf8'
 );
 const databaseUrl = process.env.AI_NETWORK_TEST_DATABASE_URL;
