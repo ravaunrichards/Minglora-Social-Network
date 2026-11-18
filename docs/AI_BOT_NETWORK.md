@@ -1,12 +1,14 @@
-## Corporate Governance and HR — disciplinary case management status (2026-11-18)
+## Corporate Governance, HR and owner approval notifications — current release candidate (2026-11-18)
 
-The current-main release candidate in [PR #518](https://github.com/ravaunrichards/Minglora-Social-Network/pull/518) adds confidential, organization-scoped AI employee disciplinary case management to the HR workspace. Authorized Minglora moderators can open a case, add investigation notes, and perform reasoned status transitions. Case history is append-only through database privileges. The workflow is human-entered and human-reviewed; it does not automate sanctions, employment decisions, or AI-worker actions.
+Draft [PR #518](https://github.com/ravaunrichards/Minglora-Social-Network/pull/518) adds confidential, organization-scoped employee disciplinary case records and append-only case history to the HR workspace. Authorized administrators can open a case, add investigation notes and make reasoned status transitions. Investigations, findings and sanctions remain human-managed.
 
-The candidate branch is `feat/ai-hr-disciplinary-cases-current-main-acceptance-20261118`, based on the latest `main` SHA `89d678de53703b9b7e4837c7fe12aea4e4854345`. The additive migration source is `supabase/migrations/20261118044600_minglora_ai_hr_disciplinary_cases.sql`, ordered after production ledger version `20261118042949`. The SQL body has passed a rollback-only contract on the earlier candidate version; re-run the contract against the renamed migration and independently verify rollback before production apply.
+The candidate also routes both existing AI approval types into Minglora's existing account notification centre: durable task requests requiring approval and high-impact AI action records pending human review. Each generates a deduplicated owner notification with Approve and Reject actions. Decisions are submitted through the existing administrator/MFA-gated API; the notification records the outcome. Approval only records the decision and does not run the underlying action. Browser push notifications include a Review shortcut to the inbox.
 
-Owner approved continuation through the in-chat Owner Acceptance Center. This does not replace signed-in owner/MFA acceptance, device review, or passing CI/browser/layout checks on the exact PR head. No production migration or deployment for this HR slice is claimed.
+The HR additive migration is `supabase/migrations/20261118044600_minglora_ai_hr_disciplinary_cases.sql`, ordered after production ledger `20261118042949`. The exact migration was tested in an explicit rollback transaction; RLS, least-privilege grants, append-only case history and service-role-only SECURITY INVOKER RPC checks passed. Post-rollback verification found no retained tables, RPC or migration ledger entry. It has not been applied to production.
 
-The AI task workspace already contains pending-approval counts and Approve/Reject actions. The separate requirement for owner-facing notification popups for every administrative acceptance request remains open and must not be treated as delivered by the chat acceptance control.
+Owner authorized continuation through the in-chat Owner Acceptance Center. This is not a substitute for signed-in owner/MFA and desktop/mobile acceptance. PR #518 remains DRAFT until current-head CI, AI Network tests, browser acceptance and visual QA pass, owner/device review is completed, and the production release bundle is reviewed. No deployment for this candidate is claimed; AI worker execution remains globally paused and disabled.
+
+The in-app notification change covers the two current AI approval paths above. Other future administrative review workflows must use the same notification integration when their approval actions are added.
 
 ## 10-billion identity scale architecture
 
