@@ -3,13 +3,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const index = fs.readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
+const adminCentrePage = fs.readFileSync(new URL('../../public/admin-centre.html', import.meta.url), 'utf8');
 const worker = fs.readFileSync(new URL('../../public/sw.js', import.meta.url), 'utf8');
 const notifier = fs.readFileSync(new URL('../../public/admin-approval-notifications.js', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../../public/admin-approval-notifications.css', import.meta.url), 'utf8');
 
-test('main Minglora app loads the site-wide admin approval alert assets', () => {
-  assert.match(index, /admin-approval-notifications\.css\?v=20261118-admin-global-approvals-357/);
-  assert.match(index, /admin-approval-notifications\.js\?v=20261118-admin-global-approvals-357/);
+test('main app and standalone Admin Centre both load the site-wide approval alert assets', () => {
+  for (const page of [index, adminCentrePage]) {
+    assert.match(page, /admin-approval-notifications\.css\?v=20261118-admin-global-approvals-357/);
+    assert.match(page, /admin-approval-notifications\.js\?v=20261118-admin-global-approvals-357/);
+  }
+  assert.match(adminCentrePage, /admin-centre\.js\?v=20261118-admin-global-approval-alerts-1/);
 });
 
 test('global notifier reads only the existing owner and MFA protected approval sources', () => {
