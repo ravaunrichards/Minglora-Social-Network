@@ -39,16 +39,27 @@
     const name = escapeHtml(user.name || user.username || "Minglora member");
     const username = escapeHtml(user.username || "member");
     const userId = escapeHtml(user.id || item.userId || "");
-    const isTopTen = place >= 4 && place <= 10, isTopTwenty = place >= 11 && place <= 20;
+    const isTopThree = place >= 1 && place <= 3;
+    const isTopTen = place >= 4 && place <= 10;
+    const isTopTwenty = place >= 11 && place <= 20;
     const award = isTopTen ? "top-ten" : isTopTwenty ? "top-twenty" : "";
-    const rank = award
-      ? "<span class='ranking-position ranking-position--" + award + "' aria-label='Rank " + place + "'>" + place + "</span>"
-      : "<span class='ranking-position' aria-label='Rank " + place + "'>#" + place + "</span>";
-    const band = isTopTen ? "<span class='ranking-band ranking-band--top-ten'>TOP 10</span>"
+    const rank = isTopThree
+      ? "<span class='ranking-position ranking-position--place-" + place + "' aria-label='Rank " + place + "'>" + place + "</span>"
+      : award
+        ? "<span class='ranking-position ranking-position--" + award + "' aria-label='Rank " + place + "'>" + place + "</span>"
+        : "<span class='ranking-position' aria-label='Rank " + place + "'>#" + place + "</span>";
+    const band = isTopThree
+      ? "<span class='ranking-member-rank-pill ranking-member-rank-pill--place-" + place + "'>No. " + place + "</span>"
+      : isTopTen ? "<span class='ranking-band ranking-band--top-ten'>TOP 10</span>"
       : isTopTwenty ? "<span class='ranking-band ranking-band--top-twenty'>TOP 20</span>" : "";
-    return "<button type='button' class='ranking-row" + (award ? " ranking-row--" + award : "") +
+    const avatar = award
+      ? "<span class='ranking-row-avatar-frame ranking-row-avatar-frame--" + award + "'>" +
+        "<img class='ranking-row-avatar-frame-art' src='/assets/daily-ranking-badges/place-" + (isTopTen ? "4-10" : "11-20") + ".png' alt='' loading='lazy' decoding='async'>" +
+        avatarMarkup(user,"ranking-row-avatar ranking-row-avatar--framed") + "</span>"
+      : avatarMarkup(user,"ranking-row-avatar");
+    return "<button type='button' class='ranking-row" + (isTopThree ? " ranking-row--top-three" : award ? " ranking-row--" + award : "") +
       "' data-ranking-profile='" + userId + "' aria-label='Open " + name + " profile, rank " + place + "'>" +
-      rank + avatarMarkup(user,"ranking-row-avatar") +
+      rank + avatar +
       "<span class='ranking-row-person'><strong>" + name + "</strong><small>@" + username + "</small>" + band + "</span>" +
       "<span class='ranking-row-score'><strong>" + number(item.points ?? item.coinsSent) +
       "</strong><small>Coins sent</small></span></button>";
