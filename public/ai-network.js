@@ -76,7 +76,7 @@
       (bot.status === 'active'
         ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause</button>'
         : bot.status !== 'archived'
-          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" disabled title="Autonomous execution remains disabled">Activate</button>'
+          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Enables owner-initiated, moderated use only; autonomous workers remain off">Enable for owner use</button>'
           : '') +
       (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
       '</div></article>'
@@ -1593,13 +1593,13 @@
     return '<div class="ai-network-command-grid"><div><span>Provider</span><strong>' + esc(provider.provider || 'Not configured') + '</strong></div>' +
       '<div><span>Model</span><strong>' + esc(provider.model || '—') + '</strong></div>' +
       '<div><span>Global state</span><strong>' + esc(settings.globalPaused ? 'Paused' : 'Enabled') + '</strong></div>' +
-      '<div><span>Execution</span><strong>Disabled until provider adapter is verified</strong></div></div>' +
+      '<div><span>Autonomous workers</span><strong>Disabled · separate runtime required</strong></div></div>' +
       '<div class="ai-network-provider"><div><strong>Provider readiness</strong>' +
       (provider.manualDraftsAvailable ? '' : (provider.note ? '<p>' + esc(provider.note) + '</p>' : '')) + '</div>' +
-      pill(provider.configured ? 'Configured · execution disabled' : 'Not configured', provider.configured ? 'warning' : 'neutral') + '</div>' +
-      '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Emergency pause all AI work</button>' +
-      '<button type="button" class="secondary" data-ai-action="emergency-resume" disabled title="Provider execution is not verified">Resume network</button></div>' +
-      '<p class="ai-network-note">Human approval and AI identity disclosure are mandatory and cannot be disabled. Emergency pause preserves history.</p>';
+      pill(provider.manualDraftsAvailable ? 'Owner-initiated adapter configured' : 'Provider not ready', provider.manualDraftsAvailable ? 'success' : 'neutral') + '</div>' +
+      '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Emergency pause bot and schedule controls</button>' +
+      '<button type="button" class="secondary" data-ai-action="emergency-resume">Resume owner controls</button></div>' +
+      '<p class="ai-network-note">Resume performs a fresh OpenAI model-access check before reopening owner-controlled actions. Bots remain paused until enabled individually. Durable queue workers and autonomous schedules remain disabled; human approval and AI identity disclosure are mandatory.</p>';
   }
 
   function renderAICentreReadiness(snapshot) {
@@ -2767,8 +2767,9 @@
       else if (action === 'delegation-status') await request('/delegations/' + encodeURIComponent(id), { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by authorized Minglora platform administrator.' } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
-      await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' :
-        action === 'identity-status' ? 'AI identity lifecycle status updated and audited.' :
+      await refresh(action === 'emergency-pause' ? 'Bot and schedule controls paused. Durable queue workers remain disabled.' :
+        action === 'emergency-resume' ? 'Owner controls resumed after a live OpenAI model check. Bots remain paused until enabled individually; autonomous workers remain off.' :
+        action === 'identity-status' ? 'AI identity lifecycle status updated and audited.'
         action === 'identity-page' ? 'AI identity registry page changed.' :
         action === 'identity-search-clear' ? 'AI identity registry search cleared.' : 'AI Network updated.');
     } catch (error) {
