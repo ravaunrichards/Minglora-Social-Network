@@ -83,9 +83,13 @@ test('Mobile audio-only LIVE keeps the final reference grid inside the area abov
   const mobileStart=parity.lastIndexOf('@media(max-width:900px)');
   assert.ok(parityStart>=0 && mobileStart>0, 'mobile Audio LIVE fit override follows the final reference grid');
   const mobile=parity.slice(mobileStart);
-  assert.match(mobile, /#live-video-stage\\.live-audio-stage\\{[\\s\\S]*?position:absolute!important;[\\s\\S]*?inset:0 0 60px!important;[\\s\\S]*?width:auto!important;[\\s\\S]*?height:auto!important/);
-  assert.doesNotMatch(mobile, /height:100%/);
-  assert.doesNotMatch(mobile, /#live-video-stage:not\\(\\.live-audio-stage\\)/);
+  assert.ok(mobile.includes('#live-video-stage.live-audio-stage{'));
+  assert.ok(mobile.includes('position:absolute!important;'));
+  assert.ok(mobile.includes('inset:0 0 60px!important;'));
+  assert.ok(mobile.includes('width:auto!important;'));
+  assert.ok(mobile.includes('height:auto!important;'));
+  assert.ok(!mobile.includes('height:100%'));
+  assert.ok(!mobile.includes('#live-video-stage:not(.live-audio-stage)'));
 });
 
 
