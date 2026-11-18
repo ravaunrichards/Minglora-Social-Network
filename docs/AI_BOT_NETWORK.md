@@ -1,8 +1,12 @@
-## Corporate Governance and HR — disciplinary case management status (2026-11-17)
+## Corporate Governance and HR — disciplinary case management status (2026-11-18)
 
-The current-main integration branch adds confidential, organization-scoped AI employee disciplinary case management to the HR workspace. Authorized Minglora moderators can open a case, add investigation notes, and perform reasoned status transitions. The case history is append-only through database privileges. The workflow is human-entered and human-reviewed; it does not automate sanctions, employment decisions, or AI-worker actions.
+The current-main release candidate in [PR #518](https://github.com/ravaunrichards/Minglora-Social-Network/pull/518) adds confidential, organization-scoped AI employee disciplinary case management to the HR workspace. Authorized Minglora moderators can open a case, add investigation notes, and perform reasoned status transitions. Case history is append-only through database privileges. The workflow is human-entered and human-reviewed; it does not automate sanctions, employment decisions, or AI-worker actions.
 
-The integration is on `feat/ai-hr-disciplinary-cases-main-sync-20261117`, based on current `main` SHA `808dcb21ddac47ad7c0125f14138bedf0a4b8c75`. The additive migration source is `supabase/migrations/20261118044600_minglora_ai_hr_disciplinary_cases.sql`. Automated checks on this new branch, rollback-only database verification, signed-in owner acceptance, desktop/mobile acceptance, and production release verification are required before this slice can be marked accepted. No production migration or deployment is claimed.
+The candidate branch is `feat/ai-hr-disciplinary-cases-current-main-acceptance-20261118`, based on the latest `main` SHA `89d678de53703b9b7e4837c7fe12aea4e4854345`. The additive migration source is `supabase/migrations/20261118044600_minglora_ai_hr_disciplinary_cases.sql`, ordered after production ledger version `20261118042949`. The SQL body has passed a rollback-only contract on the earlier candidate version; re-run the contract against the renamed migration and independently verify rollback before production apply.
+
+Owner approved continuation through the in-chat Owner Acceptance Center. This does not replace signed-in owner/MFA acceptance, device review, or passing CI/browser/layout checks on the exact PR head. No production migration or deployment for this HR slice is claimed.
+
+The AI task workspace already contains pending-approval counts and Approve/Reject actions. The separate requirement for owner-facing notification popups for every administrative acceptance request remains open and must not be treated as delivered by the chat acceptance control.
 
 ## 10-billion identity scale architecture
 

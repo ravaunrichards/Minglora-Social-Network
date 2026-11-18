@@ -1,15 +1,12 @@
-## Current-main AI Corporate Governance and HR integration checkpoint — 2026-11-17 Jamaica local / 2026-11-18 UTC
+## Current owner-authorized Corporate Governance, HR and Supervision release — 2026-11-18
 
-- Rebased the disciplinary-case implementation by reapplying its reviewed source changes on fresh branch `feat/ai-hr-disciplinary-cases-main-sync-20261117` from `main` SHA `808dcb21ddac47ad7c0125f14138bedf0a4b8c75`; the stale draft PR #353 branch remains untouched.
-- New source migration: `20261118044600_minglora_ai_hr_disciplinary_cases`. Case records are organization-scoped and human-managed; case history is append-only by grants; no automated disciplinary decisions or sanctions are allowed.
-- Current-main branch checks are **PENDING**; earlier PR #353 tests are historical evidence only.
-- No production migration, Edge Function deployment, Render deployment, or persistent production row mutation has occurred. AI runtime controls remain paused/disabled.
-- Next gates: run all new-branch CI; run the SQL contract inside BEGIN/ROLLBACK on the existing project and independently verify rollback; obtain signed-in owner API/browser acceptance; complete desktop/mobile acceptance; review production migration/function deploy, then verify the existing Render service. Do not release with any failed or missing check.
-- Corporate Governance and HR task remains **PARTIAL** until all those gates and the full HR lifecycle acceptance pass.
-
-- Draft PR #515 now contains this current-main integration: https://github.com/ravaunrichards/Minglora-Social-Network/pull/515. It remains draft/open.
-- **Current existing-Supabase rollback-only contract result:** PASS. The updated migration was run in BEGIN/ROLLBACK; both tables had RLS; anon/authenticated could not SELECT or execute the RPC; service_role case SELECT/INSERT/UPDATE and history SELECT/INSERT passed; history UPDATE/DELETE were false; RPC was SECURITY INVOKER with locked empty search_path. An independent post-rollback query found no disciplinary tables, RPC or migration-ledger row.
-- This DDL/security contract does not replace a full retained-record owner workflow or device acceptance. New PR #515 CI/browser checks must finish on this exact current-main head before this implementation can progress.
+- Owner approval received in the in-chat Minglora Owner Acceptance Center to continue implementation and verified release preparation. Signed-in owner/MFA and device acceptance remain separate gates.
+- Current candidate: draft PR #518, branch `feat/ai-hr-disciplinary-cases-current-main-acceptance-20261118`, based on latest `main` SHA `89d678de53703b9b7e4837c7fe12aea4e4854345`. PR #515 was closed without merge as superseded.
+- Candidate migration is `20261118044600_minglora_ai_hr_disciplinary_cases`, ordered after the live `20261118042949_minglora_owner_admin_rbac` migration. Run the renamed SQL body inside BEGIN/ROLLBACK and verify no residual objects/ledger row before any production apply.
+- Latest candidate head `83b80034e360d738be7dbbd465c08f7ac91db958`: automated CI, AI Network regression, Chromium browser acceptance and nine-layout visual QA are awaiting fresh results. Earlier browser attempts exposed compact-phone and tablet form overflow; latest CSS changes address those specific widths. Do not mark browser acceptance passed until the exact latest SHA passes.
+- Required after green automated checks: signed-in designated-owner/MFA API acceptance and desktop/mobile review; inspect the admin approval notification requirement (pending approvals must surface as owner notifications with direct approve/reject actions); then coordinated review of migration, Edge Function and existing Render release.
+- No production migration, disciplinary records, Edge Function update or Render deployment for this candidate has been performed. Do not start workers; provider readiness and execution capacity remain unverified.
+- Corporate Governance/HR acceptance remains **PARTIAL** until the full HR lifecycle, owner/device flow and all independent gates pass.
 
 ---
 
