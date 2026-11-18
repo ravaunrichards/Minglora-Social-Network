@@ -228,7 +228,7 @@ BEGIN
     ) VALUES (
       v_new_asset_id,left(coalesce(v_payload->>'title',v_asset.title||' copy'),120),v_asset.description,
       v_asset.category_id,v_asset.collection_id,v_version.original_name,v_version.mime_type,v_version.file_format,
-      v_version.byte_size,v_version.width,v_version.height,v_version.duration_ms,v_path,v_new_version_id,
+      v_version.byte_size,v_version.width,v_version.height,v_version.duration_ms,v_path,NULL,
       'draft',v_actor,v_actor,v_asset.asset_type
     );
     INSERT INTO public.minglora_brand_logo_versions(
@@ -238,6 +238,7 @@ BEGIN
       v_version.byte_size,v_version.width,v_version.height,v_version.duration_ms,v_path,
       'Duplicated from asset '||v_asset_id::text,v_actor
     );
+    UPDATE public.minglora_brand_logo_assets SET current_version_id=v_new_version_id WHERE id=v_new_asset_id;
     INSERT INTO public.minglora_brand_logo_activity_logs(actor_user_id,action,target_type,target_id,details)
       VALUES(v_actor,'asset.duplicated','brand_asset',v_new_asset_id,jsonb_build_object('sourceAssetId',v_asset_id));
     RETURN jsonb_build_object('ok',true,'assetId',v_new_asset_id,'versionId',v_new_version_id);
