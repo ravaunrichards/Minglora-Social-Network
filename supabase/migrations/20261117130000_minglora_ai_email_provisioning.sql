@@ -223,16 +223,45 @@ begin
     if v_username = '' then v_username := 'ai'; end if;
     -- Full UUID suffix provides 128-bit uniqueness at the 10-billion identity design target.
     v_address := left(v_username, 31) || '-' || replace(v_identity_id::text,'-','') || '@' || v_domain;
-    insert into ai_network.ai_emails (
-      identity_id,email_address,email_type,is_primary,verification_status,email_provider,
-      provisioning_status,management_reference,email_status,mailbox_enabled,mailbox_domain,provisioned_at
-    )
-    values (
-      v_identity_id,v_address,'work',
-      not exists(select 1 from ai_network.ai_emails where identity_id=v_identity_id and is_primary),
-      'unverified','resend','provisioned','resend-domain:'||v_domain,'active',true,v_domain,now()
-    )
-    returning * into v_email;
+
+    -- Reuse the identity's reserved .invalid placeholder instead of leaving two
+    -- primary-looking addresses behind after real provider provisioning.
+    select e.* into v_email
+    from ai_network.ai_emails e
+    where e.identity_id=v_identity_id
+      and coalesce(e.email_provider,'')=''
+      and e.provisioning_status='not_requested'
+      and lower(e.email_address) like '%@ai.minglora.invalid'
+    order by e.is_primary desc,e.created_at
+    limit 1
+    for update;
+
+    if found then
+      update ai_network.ai_emails
+      set email_address=v_address,
+          email_provider='resend',
+          provisioning_status='provisioned',
+          management_reference='resend-domain:'||v_domain,
+          verification_status='unverified',
+          email_status='active',
+          mailbox_enabled=true,
+          mailbox_domain=v_domain,
+          provisioned_at=now(),
+          updated_at=now()
+      where email_id=v_email.email_id
+      returning * into v_email;
+    else
+      insert into ai_network.ai_emails (
+        identity_id,email_address,email_type,is_primary,verification_status,email_provider,
+        provisioning_status,management_reference,email_status,mailbox_enabled,mailbox_domain,provisioned_at
+      )
+      values (
+        v_identity_id,v_address,'work',
+        not exists(select 1 from ai_network.ai_emails where identity_id=v_identity_id and is_primary),
+        'unverified','resend','provisioned','resend-domain:'||v_domain,'active',true,v_domain,now()
+      )
+      returning * into v_email;
+    end if;
 
     insert into ai_network.ai_identity_audit_logs (
       identity_id,actor_type,actor_user_id,action,metadata
