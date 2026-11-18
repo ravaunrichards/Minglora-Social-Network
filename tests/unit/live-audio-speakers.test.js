@@ -115,17 +115,25 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
   assert.ok(index.includes('/app.js?v=20261117-audio-only-mic-guest-seats-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261117-audio-reference-grid-parity-1'));
   assert.ok(serviceWorker.includes("'/app.js?v=20261117-audio-only-mic-guest-seats-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
+  assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261117-audio-reference-grid-parity-1')"));
   assert.doesNotMatch(fit,/data-live-guest-layout=/);
 });
 
-test('Audio LIVE follows the Video LIVE panel grid without collapsing or clipping the speaker roster', () => {
-  assert.match(fit, /\.live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:42px minmax\(0,1fr\) 40px!important/);
-  assert.match(fit, /\.live-audio-stage \.audio-guest-layout\{[\s\S]*?grid-row:2!important/);
-  assert.match(fit, /\.live-audio-stage #live-speaker-list\{[\s\S]*?grid-row:3!important/);
-  assert.match(fit, /overflow-x:auto!important/);
-  assert.match(fit, /min-height:0!important/);
+test('Audio LIVE uses the full stage for the same nine reference grids; metadata stays overlaid', () => {
+  const referenceStart=guestLayouts.indexOf('/* FINAL NINE GUEST LAYOUTS');
+  const referenceEnd=guestLayouts.indexOf("/* Responsive fit scales tile proportions without changing a crop's row/column count.",referenceStart);
+  const audioStart=guestLayouts.lastIndexOf('/* FINAL AUDIO LIVE REFERENCE PARITY');
+  assert.ok(referenceStart>=0&&referenceEnd>referenceStart&&audioStart>referenceEnd);
+  const videoReference=guestLayouts.slice(referenceStart,referenceEnd)
+    .replaceAll('#live-video-stage:not(.live-audio-stage)','#live-video-stage.live-audio-stage');
+  const audioContract=guestLayouts.slice(audioStart);
+  assert.ok(audioContract.includes(videoReference),'Audio LIVE must use the exact same reference geometry as Video LIVE');
+  assert.match(audioContract,/#live-video-stage\.live-audio-stage\{[\s\S]*?grid-template-rows:minmax\(0,1fr\)!important/);
+  assert.match(audioContract,/\.live-audio-scene\{[\s\S]*?position:absolute!important/);
+  assert.match(audioContract,/#live-speaker-list\{[\s\S]*?clip-path:inset\(50%\)!important/);
   assert.match(app, /class='live-guest-layout audio-guest-layout'/);
   assert.match(app, /function renderLiveGuestLayout\(/);
   assert.match(app, /function renderLiveSpeakerRoster\(/);
