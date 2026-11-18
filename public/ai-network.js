@@ -2498,6 +2498,7 @@
     try {
       await submit(form);
     } catch (error) {
+      console.error('[Minglora AI Network submission failure]', error?.stack || error);
       state.error = error.message;
       paintSnapshot();
     } finally {
