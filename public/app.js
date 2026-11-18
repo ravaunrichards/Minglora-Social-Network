@@ -1277,6 +1277,7 @@ let activeLiveCohostRoom=null;
 let activeLiveCohostSession=null;
 let activeLiveCohostMainRoom=null;
 let activeLiveCohostClonedTracks=[];
+let activeLiveCohostMainHandlers=[];
 let liveCohostRefreshTimer=null;
 let liveCohostRefreshBusy=false;
 let activeLiveSession=null;
@@ -1997,6 +1998,8 @@ async function stopLiveCohostLocal(){
   const room=activeLiveCohostRoom;
   activeLiveCohostRoom=null;
   activeLiveCohostMainRoom=null;
+  for(const binding of activeLiveCohostMainHandlers){try{binding.room?.off?.(binding.event,binding.handler);}catch{}}
+  activeLiveCohostMainHandlers=[];
   if(room){try{await room.disconnect();}catch(error){console.warn("[Minglora Co-host] Secondary room disconnect failed.",error?.message||error);}}
   for(const item of activeLiveCohostClonedTracks){try{item.clone?.stop?.();}catch{}}
   activeLiveCohostClonedTracks=[];
@@ -2039,14 +2042,26 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
     await room.connect(issued.liveKit.url,issued.liveKit.token);
   if(issued.liveKit.role==="host"||issued.liveKit.role==="cohost"){
     await syncLiveCohostLocalTracks(mainRoom,room,client);
-    if(client.RoomEvent.LocalTrackPublished)mainRoom.on(client.RoomEvent.LocalTrackPublished,()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180));
-    if(client.RoomEvent.LocalTrackUnpublished)mainRoom.on(client.RoomEvent.LocalTrackUnpublished,publication=>{
-      const kind=String(publication?.kind||publication?.track?.kind||"").toLowerCase();
-      if(["audio","video"].includes(kind))window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180);
-    });
+    if(client.RoomEvent.LocalTrackPublished){
+      const handler=()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180);
+      mainRoom.on(client.RoomEvent.LocalTrackPublished,handler);
+      activeLiveCohostMainHandlers.push({room:mainRoom,event:client.RoomEvent.LocalTrackPublished,handler});
+    }
+    if(client.RoomEvent.LocalTrackUnpublished){
+      const handler=publication=>{
+        const kind=String(publication?.kind||publication?.track?.kind||"").toLowerCase();
+        if(["audio","video"].includes(kind))window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180);
+      };
+      mainRoom.on(client.RoomEvent.LocalTrackUnpublished,handler);
+      activeLiveCohostMainHandlers.push({room:mainRoom,event:client.RoomEvent.LocalTrackUnpublished,handler});
+    }
     for(const eventName of ["TrackMuted","TrackUnmuted","TrackRestarted"]){
       const event=client.RoomEvent?.[eventName];
-      if(event)mainRoom.on(event,()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Media state sync failed.",error?.message||error)),180));
+      if(event){
+        const handler=()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Media state sync failed.",error?.message||error)),180);
+        mainRoom.on(event,handler);
+        activeLiveCohostMainHandlers.push({room:mainRoom,event,handler});
+      }
     }
 
   }
@@ -2059,14 +2074,15 @@ async function connectLiveCohostStage(cohostSession,participants,mainRoom,client
     throw error;
   }
 }
-function renderLiveCohostMatch(match,participants,role){
+function renderLiveCohostMatch(match,participants,role,hasSession){
   const status=$("#live-cohost-match-status"),roster=$("#live-cohost-match-roster"),actions=$("#live-cohost-match-actions");
   const startButtons=$("#live-cohost-match-panel")?.querySelectorAll("[data-cohost-match-start]");
   const active=match?.status==="active";
   if(status)status.textContent=active
     ?(match.mode==="team"?"TEAM MATCH ACTIVE":"SOLO MATCH ACTIVE")+" · started "+(match.started_at?new Date(match.started_at).toLocaleTimeString():"")
-    :match?.status==="ended"?"Last Co-host match ended. Start another match when ready.":"No Co-host match is active.";
-  if(startButtons)startButtons.forEach(button=>{button.hidden=Boolean(active)||role!=="host";button.disabled=Boolean(active);});
+    :match?.status==="ended"?"Last Co-host match ended. Start another match when ready."
+    :hasSession?"No Co-host match is active.":"Start a Co-host stage to enable matches.";
+  if(startButtons)startButtons.forEach(button=>{button.hidden=!hasSession||Boolean(active)||role!=="host";button.disabled=!hasSession||Boolean(active);});
   if(roster){
     const rows=Array.isArray(participants)?participants:[];
     roster.innerHTML=rows.map(item=>{
@@ -2142,7 +2158,7 @@ async function refreshLiveCohostPanel(session,role,mainRoom,client){
     if(cohostSession&&cohostSession.status==="active"){
       matchData=await api("/live/cohost/sessions/"+encodeURIComponent(cohostSession.id)+"/match");
     }
-    renderLiveCohostMatch(matchData.match,matchData.participants,role);
+    renderLiveCohostMatch(matchData.match,matchData.participants,role,Boolean(cohostSession));
     if(cohostSession&&cohostSession.status==="active"){
       renderLiveCohostRoster(participants);
       if(!activeLiveCohostRoom||activeLiveCohostSession?.id!==cohostSession.id)
