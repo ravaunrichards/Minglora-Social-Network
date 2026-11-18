@@ -147,3 +147,10 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - Do not mark a stage complete from a screen, folder or static example alone.
 - Preserve all completed work and do not silently remove queue items.
 - Do not invent user counts, service connections, prices, invoices, payments, deployments or activity.
+ 
+### MS-ADMIN-APPROVAL-CENTER-11 — Central administrator approval notifications
+- Objective: show genuine pending administrative decisions in one protected inbox with an in-app notification count and explicit Approve/Reject actions.
+- First connected sources: owner/MFA-protected AI high-impact approvals and relational AI task approvals.
+- Safety: preserve existing decision endpoints, audit records, owner/MFA checks, reason requirements for task approvals, and independent worker/provider execution gates; do not seed demo requests or execute work on approval.
+- Acceptance: live owner-session smoke test for real request discovery, Approve and Reject, audit result, polling, mobile layout and no-duplicate decisions. External push/email delivery and additional department producers remain separate work.
+- Status: IMPLEMENTED IN BRANCH — automated CI and production owner-session acceptance pending.
