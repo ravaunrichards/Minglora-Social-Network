@@ -149,6 +149,7 @@ begin
       'nationality', v_profile.nationality,
       'country_of_origin', v_profile.country_of_origin,
       'current_country', v_profile.current_country,
+      'time_zone', v_profile.time_zone,
       'state_province', v_profile.state_province,
       'parish_county', v_profile.parish_county,
       'district', v_profile.district,
