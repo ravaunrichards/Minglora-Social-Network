@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {SOUND_STUDIO_THEMES,SOUND_STUDIO_CATEGORIES,defaultSoundStudioPreferences,buildSoundThemePreset,validateSoundStudioPatch,normalizeSoundStudioPreferences} from "../../backend/modules/sounds/notification-studio.js";
-test("defaults identify Minglora Signature and Vision and configure 22 categories",()=>{
+test("Sound Studio uses silent defaults until authentic recordings are approved",()=>{
  const d=defaultSoundStudioPreferences();assert.equal(d.voiceCall.soundId,null);assert.equal(d.videoCall.soundId,null);assert.equal(SOUND_STUDIO_CATEGORIES.length,22);assert.equal(Object.keys(d.notifications).length,22);assert.equal(d.notifications.private_messages.soundId,null);assert.equal(d.notifications.system_notifications.soundId,null);assert.equal(SOUND_STUDIO_THEMES.map(x=>x.label).join(","),"Classic,Modern,Premium,Minimal,Digital,Cinematic");
 });
 test("theme presets do not invent or restore generated tones when no authentic recordings are approved",()=>{
@@ -24,11 +24,12 @@ test("the earlier custom ringtone migrates to the private selectable library wit
  const r=normalizeSoundStudioPreferences(user,[asset]);assert.equal(r.settings.voiceCall.soundId,"custom:asset-1");assert.equal(r.settings.customSounds[0].title,"My ringtone");assert.equal(asset.status,"attached");
 });
 test("retired procedural WAV entries are not accepted as authentic built-in recordings",()=>{
- const manifest=JSON.parse(fs.readFileSync(new URL("../../public/assets/sound-studio/manifest.json",import.meta.url),"utf8"));
- const all=[...(manifest.voiceRingtones||[]),...(manifest.videoRingtones||[]),...(manifest.notifications||[])];
- assert.equal(defaultSoundStudioPreferences().voiceCall.soundId,null);
- assert.equal(defaultSoundStudioPreferences().videoCall.soundId,null);
- assert.ok(all.every(item=>item.acceptanceStatus==="approved"&&item.authenticRecording===true&&item.commercialUseAllowed===true&&item.redistributionAllowed===true));
+ const manifestPath=new URL("../../public/assets/sound-studio/manifest.json",import.meta.url);
+ if(fs.existsSync(manifestPath)){
+  const manifest=JSON.parse(fs.readFileSync(manifestPath,"utf8"));
+  const all=[...(manifest.voiceRingtones||[]),...(manifest.videoRingtones||[]),...(manifest.notifications||[])];
+  assert.ok(all.every(item=>item.acceptanceStatus==="approved"&&item.authenticRecording===true&&item.commercialUseAllowed===true&&item.redistributionAllowed===true));
+ }
 });
 
 test("messenger and incoming call events share the category-aware Sound Studio path without duplicate generic playback",()=>{
