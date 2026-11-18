@@ -148,7 +148,7 @@ self.addEventListener('push',event=>{
   const actions=type==='call'?[{action:'answer',title:'Answer'},{action:'decline',title:'Decline'}]:
     type==='live'?[{action:'watch',title:'Watch LIVE'}]:
     type==='message'?[{action:'open',title:'Open message'}]:
-    (type==='ai_task_approval'||type==='ai_approval')?[{action:'review',title:'Review approval'}]:[];
+    (type==='ai_task_approval'||type==='ai_approval')?[{action:'approve',title:'Approve'},{action:'reject',title:'Reject'}]:[];
   const isCall=type==='call';
   event.waitUntil(self.registration.showNotification(payload.title||'Minglora', {
     body:payload.body||'You have a new notification.',
@@ -166,10 +166,41 @@ self.addEventListener('push',event=>{
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
   const data=event.notification.data||{};
+  const approvalType=data.type==='ai_task_approval'||data.type==='ai_approval';
+  const openInbox=async()=>{
+    const params=new URLSearchParams({'minglora-push':String(data.type||'notification')});
+    for(const key of ['callId','liveSessionId','actorId','notificationId','aiTaskId','aiApprovalId'])if(data[key])params.set(key,String(data[key]));
+    const target=new URL('/?'+params.toString(),self.location.origin).href;
+    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    const existing=windows.find(client=>client.visibilityState==='visible')||windows[0];
+    if(existing){
+      try{await existing.navigate(target);await existing.focus();return;}catch(error){console.warn('[Minglora push] Could not focus the app window.',error);}
+    }
+    await self.clients.openWindow(target);
+  };
+  if(approvalType&&(event.action==='approve'||event.action==='reject')){
+    event.waitUntil((async()=>{
+      const approved=event.action==='approve';
+      const path=data.type==='ai_task_approval'
+        ?'/api/ai-network/tasks/'+encodeURIComponent(String(data.aiTaskId||''))+'/approval'
+        :'/api/ai-network/approvals/'+encodeURIComponent(String(data.aiApprovalId||''));
+      const payload=data.type==='ai_task_approval'
+        ?{status:approved?'approved':'rejected',reason:(approved?'Approved':'Rejected')+' from Minglora push notification.'}
+        :{decision:approved?'approve':'reject'};
+      try{
+        if((data.type==='ai_task_approval'&&!data.aiTaskId)||(data.type==='ai_approval'&&!data.aiApprovalId))throw new Error('Approval identifier is missing.');
+        const response=await fetch(path,{method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(!response.ok)throw new Error('Minglora did not authorize or record the push approval. HTTP '+response.status);
+      }catch(error){
+        console.warn('[Minglora push] Approval action was not recorded; opening the inbox for review.',error);
+      }
+      await openInbox();
+    })());
+    return;
+  }
   const params=new URLSearchParams({'minglora-push':String(data.type||'notification')});
   for(const key of ['callId','liveSessionId','actorId','notificationId','aiTaskId','aiApprovalId'])if(data[key])params.set(key,String(data[key]));
-  if(event.action==='review'&&(data.type==='ai_task_approval'||data.type==='ai_approval'))params.set('minglora-push','ai_task_approval');
-  else if(event.action==='decline'&&data.callId)params.set('minglora-push','decline-call');
+  if(event.action==='decline'&&data.callId)params.set('minglora-push','decline-call');
   else if(event.action==='answer'&&data.callId)params.set('minglora-push','answer-call');
   const target=new URL('/?'+params.toString(),self.location.origin).href;
   event.waitUntil((async()=>{
@@ -178,13 +209,8 @@ self.addEventListener('notificationclick',event=>{
     if(isCall){
       const existing=windows.find(client=>client.visibilityState==='visible')||windows[0];
       if(existing){
-        try{
-          await existing.navigate(target);
-          await existing.focus();
-          return;
-        }catch(error){
-          console.warn('[Minglora push] Could not bring the incoming call to the existing app window.',error);
-        }
+        try{await existing.navigate(target);await existing.focus();return;}
+        catch(error){console.warn('[Minglora push] Could not bring the incoming call to the existing app window.',error);}
       }
     }
     const exactTarget=windows.find(client=>client.url===target);
