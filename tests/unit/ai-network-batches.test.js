@@ -55,8 +55,13 @@ test('Node routes enforce admin authorization and persistence for batch operatio
   assert.match(server, /const runAIIdentityBatchCommand = async/);
   assert.match(server, /requestSupabaseState\('ai_identity_batch_command'/);
   assert.match(server, /sub === 'identities\/batches'/);
-  assert.match(server, /Only an authorized Minglora administrator can view AI identity import history/);
-  assert.match(server, /Only an authorized Minglora administrator can retry AI identity imports/);
+  const batchListStart = server.indexOf("if (method === 'GET' && sub === 'identities/batches')");
+  const batchRetryStart = server.indexOf("if (method === 'POST' && parts[0] === 'identities' && parts[1] === 'batches'");
+  const batchIdentityGetStart = server.indexOf("if (method === 'GET' && parts[0] === 'identities' && parts.length === 2)", batchRetryStart);
+  assert.ok(batchListStart >= 0 && batchRetryStart > batchListStart && batchIdentityGetStart > batchRetryStart);
+  assert.doesNotMatch(server.slice(batchListStart, batchRetryStart), /isModerator/);
+  assert.doesNotMatch(server.slice(batchRetryStart, batchIdentityGetStart), /isModerator/);
+  assert.match(server, /actorUserId: user\.id,[\s\S]*aiAction: batchAction/);
   assert.match(server, /Only an authorized Minglora platform administrator may bulk-create organizational or specialized-service AI identities/);
   assert.match(server, /runAIIdentityBatchCommand\('create_batch'/);
   assert.match(server, /runAIIdentityBatchCommand\('retry_failed'/);
