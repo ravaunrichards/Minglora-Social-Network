@@ -3355,6 +3355,8 @@ Deno.serve(async (req: Request) => {
   // Independent creator-to-creator Co-host lifecycle. This deliberately never writes
   // to live_participants, which remains the separate Multi-guest/viewer speaker system.
   if (action === "live_cohost_discover") {
+    const currentUserId=String(input.userId||"");
+    if(!validUuid(currentUserId))return json(400,{error:"Invalid Co-host discovery request."});
     const {data:sessions,error:sessionsError}=await admin.from("live_cohost_sessions")
       .select("id,host_user_id,host_broadcast_id,room_ref,status,layout,max_participants,started_at")
       .eq("status","active").order("started_at",{ascending:false}).limit(50);
@@ -3380,7 +3382,8 @@ Deno.serve(async (req: Request) => {
     }).map(item=>({
       ...item,host:profiles.get(item.host_user_id)||null,
       broadcast:broadcasts.get(item.host_broadcast_id)||null,
-      connectedCount:counts.get(item.id)||0
+      connectedCount:counts.get(item.id)||0,
+      myStatus:(participantsResult.data||[]).find(row=>row.session_id===item.id&&row.user_id===currentUserId)?.status||null
     }))});
   }
 
