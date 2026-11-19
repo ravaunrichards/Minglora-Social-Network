@@ -3247,48 +3247,52 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "live_broadcast_end") {
-    const broadcastId = String(input.id || ""), hostId = String(input.hostId || "");
-    if (!validUuid(broadcastId) || !validUuid(hostId)) return json(400, { error: "Invalid LIVE session." });
-    const { data, error } = await admin.from("live_broadcasts").update({
-      status: "ended", ended_at: new Date().toISOString()
-    }).eq("id", broadcastId).eq("host_id", hostId).eq("status", "live")
+    const broadcastId=String(input.id||""),hostId=String(input.hostId||"");
+    if(!validUuid(broadcastId)||!validUuid(hostId))return json(400,{error:"Invalid LIVE session."});
+    const {data,error}=await admin.from("live_broadcasts").update({
+      status:"ended",ended_at:new Date().toISOString()
+    }).eq("id",broadcastId).eq("host_id",hostId).eq("status","live")
       .select("id,status,ended_at").maybeSingle();
-    if (error) return json(503, { error: "Minglora could not close the LIVE session." });
+    if(error)return json(503,{error:"Minglora could not close the LIVE session."});
     const endedAt=data?.ended_at||new Date().toISOString();
+    // Multi-guest speaker rows close only for this broadcast.
     const {error:participantError}=await admin.from("live_participants").update({
       status:"left",left_at:endedAt
     }).eq("broadcast_id",broadcastId).in("status",["requested","invited","accepted","connected"]);
     if(participantError)return json(503,{error:"The broadcast ended, but participant presence could not be finalized."});
-    // Retire any Co-host invitation or membership bound to the broadcast that just
-    // ended. If its owner ends their broadcast, end the whole shared stage; otherwise
-    // remove only that creator from the shared stage. Other creators' broadcasts stay live.
+    // Retire the creator's independent Co-host membership. Ending the host's own
+    // broadcast closes only the shared Co-host room; ending a co-host's broadcast
+    // removes only that creator. Other creators' LIVE broadcasts keep running.
     const {data:cohostRows,error:cohostLookupError}=await admin.from("live_cohost_participants")
-      .select("session_id,user_id,role,status")
+      .select("cohost_session_id,user_id,role,status")
       .eq("broadcast_id",broadcastId).in("status",["invited","requested","accepted","connected"]);
     if(cohostLookupError)return json(503,{error:"The broadcast ended, but Co-host membership could not be reconciled."});
     for(const row of cohostRows||[]){
       const {data:cohostSession,error:cohostSessionError}=await admin.from("live_cohost_sessions")
-        .select("id,host_user_id,status").eq("id",row.session_id).maybeSingle();
+        .select("id,created_by,status").eq("id",row.cohost_session_id).maybeSingle();
       if(cohostSessionError)return json(503,{error:"The broadcast ended, but its Co-host session could not be checked."});
       if(!cohostSession||cohostSession.status!=="active")continue;
-      if(row.role==="host"&&cohostSession.host_user_id===hostId){
+      if(row.role==="host"&&cohostSession.created_by===hostId){
         const {error:endError}=await admin.from("live_cohost_sessions").update({
           status:"ended",ended_at:endedAt
-        }).eq("id",row.session_id).eq("status","active");
+        }).eq("id",row.cohost_session_id).eq("status","active");
         if(endError)return json(503,{error:"The broadcast ended, but its Co-host stage could not be ended."});
         const {error:closeMembersError}=await admin.from("live_cohost_participants").update({
           status:"left",left_at:endedAt
-        }).eq("session_id",row.session_id).in("status",["invited","requested","accepted","connected"]);
+        }).eq("cohost_session_id",row.cohost_session_id)
+          .in("status",["invited","requested","accepted","connected"]);
         if(closeMembersError)return json(503,{error:"The broadcast ended, but Co-host members could not be finalized."});
+        await admin.from("live_cohost_matches").update({status:"ended",ended_at:endedAt})
+          .eq("session_id",row.cohost_session_id).eq("status","active");
       }else{
         const {error:leaveError}=await admin.from("live_cohost_participants").update({
           status:"left",left_at:endedAt
-        }).eq("session_id",row.session_id).eq("user_id",hostId)
+        }).eq("cohost_session_id",row.cohost_session_id).eq("user_id",hostId)
           .in("status",["invited","requested","accepted","connected"]);
         if(leaveError)return json(503,{error:"The broadcast ended, but this creator could not leave Co-host."});
       }
     }
-    return json(200, { broadcast: data || { id: broadcastId, status: "ended" } });
+    return json(200,{broadcast:data||{id:broadcastId,status:"ended"}});
   }
 
   if (action === "live_participant_mark_connected") {
