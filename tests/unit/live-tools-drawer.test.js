@@ -58,7 +58,7 @@ test('Co-host Match, guest and gift controls open one accessible drawer and rewa
 
 test('Guest tools, gifts and rewards share the drawer while TikTok-style chat stays in the right-side panel', () => {
   assert.match(app, /liveToolsNavigation/);
-  assert.match(app, /speakerTools\+rewardTools\+liveGiftTools/);
+  assert.match(app, /liveCohostTools\+speakerTools\+rewardTools\+liveGiftTools/);
   assert.match(app, /id='live-chat-list'/);
   assert.match(app, /id='live-chat-form'/);
   assert.match(app, /live-chat-overlay/);
