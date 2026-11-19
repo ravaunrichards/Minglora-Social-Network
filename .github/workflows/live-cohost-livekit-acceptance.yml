@@ -41,7 +41,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     name: Two creators publish and leave independently
     runs-on: ubuntu-24.04
-    environment: livekit
+    environment: livekit-cohost
     timeout-minutes: 20
     env:
       LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
@@ -58,7 +58,7 @@ jobs:
             fi
           done
           if (("${#missing[@]}" > 0)); then
-            printf '::error title=Missing LiveKit secrets::Add these secrets to repository Settings > Environments > livekit: %s\n' "${missing[*]}"
+            printf '::error title=Missing LiveKit secrets::Add these secrets to repository Settings > Environments > livekit-cohost: %s\\n' "${missing[*]}"
             exit 1
           fi
           echo "All required LiveKit credentials are present. Secret values are not displayed."
