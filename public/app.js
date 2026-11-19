@@ -1879,7 +1879,6 @@ async function refreshLiveSpeakerPanel(session,role,room){
         button.focus();
         toast("The host approved your request. Tap Join Co-host stage to appear in the guest seat.");
       }
-ved your microphone. Join when you're ready.";
       button.onclick=async()=>{
         button.disabled=true;
         try{stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"guest");}
