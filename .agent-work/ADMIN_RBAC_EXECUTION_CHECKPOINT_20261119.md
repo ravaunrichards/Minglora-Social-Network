@@ -2,13 +2,24 @@
 Date: 2026-11-19 UTC
 Scope: Minglora Social Network only.
 
+## Post-merge live verification — 2026-11-19 05:22 UTC
+- Current GitHub `main`: `f9c6e730d5efcfb802373094361cf25242911d62`.
+- PR #539 (Marketplace Manager catalogue) merged at 04:58:58 UTC as `bf158db2385ba641e547e447ed1b0652e26d2fbe`.
+- PR #540 (two test-only LIVE/Rankings assertion corrections) merged at 05:21:36 UTC as `f9c6e730d5efcfb802373094361cf25242911d62`.
+- Post-merge CI run `44464623189` succeeded: 1,411/1,411 tests passed; Supabase Auth provider acceptance, For You navigation and real PostgreSQL shared-budget concurrency all passed.
+- Live Supabase migration ledger includes `20261119045942 / minglora_admin_marketplace_manager_role`. Live catalogue confirms Marketplace Manager is `assignable=false`, with `marketplace:read` and `marketplace:manage`. No staff assignment was created or revoked; one owner staff assignment remains.
+- All 10 inspected Finance/RBAC tables have RLS enabled. `anon` and `authenticated` have no direct table privileges on them; finance and RBAC command RPCs remain executable only by `service_role`. The RBAC audit append-only trigger is enabled.
+- Active task estimate remains **61.5%** over the original eight work items. Route/action inventory remains 46/69 (66.7%); no delegated role-permission routes, recovery-admin control or configurable high-value dual approval have been implemented by these merges.
+- Render deployment after the latest main commit is **not verified**. The connected account lists the Creator Hub Creator Network workspace (`tea-dbphlfk9v7es73bu7amg`) and the saved checkpoint identifies service `srv-dbphq63rjlhs73fviegg`; workspace-specific Render access requires the user's explicit workspace selection. Last historic live deployment evidence is not evidence that the new commit is deployed.
+- The Finance live registers remain empty (0 subscriptions, budgets, invoices, expenses and finance audit events); no demo records, provider payments, subscriptions or service connections were created.
+
 ## Recovery identity
 - Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 - Production branch at inspection: `main`
-- Main commit at inspection: `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`
+- Main commit at latest verification: `f9c6e730d5efcfb802373094361cf25242911d62`
 - Feature branch: `feat/minglora-admin-marketplace-manager-rbac-20261119`
 - Feature head at last verified source commit: `5fdd24b2369777e9b9ac10f09c4a60950d44b751`
-- Draft PR: #539 — https://github.com/ravaunrichards/Minglora-Social-Network/pull/539
+- PR #539 is merged as `bf158db2385ba641e547e447ed1b0652e26d2fbe`; PR #540 is merged as `f9c6e730d5efcfb802373094361cf25242911d62`.
 - Feature branch is synchronized with main: compare reported ahead 6, behind 0; only four intended tracked files differ.
 - The feature branch was synchronized with a two-parent merge commit, with main as first parent and the prior feature head as second parent. No force-push was used.
 
@@ -52,9 +63,9 @@ Equal-weight implementation estimate over those eight original bullets: 61.5%. T
 - Full CI test job: failed because two unrelated tests also fail on current main:
   - `Accepted LIVE speaker requests open the guest panel and require an explicit stage join`
   - `Ranking badge art remains visible around a compact centered member photo on desktop and mobile`
-- Current main CI run `44457780374` independently reproduces those same two failures. They are not caused by PR #539; do not change unrelated LIVE or Rankings behavior as part of this Admin Center task.
+- The two unrelated LIVE/Rankings assertions were corrected in the test-only PR #540. Post-merge CI run `44464623189` passed 1,411/1,411 tests and all four required checks.
 - PR nine-layout visual QA run `44459470769` passed on source-equivalent implementation; latest PR-head run `44459696029` remained in progress at the last inspection.
-- PR #539 remains a draft. Do not merge or apply the new production migration until the required route permission safeguards and acceptance tests are complete.
+- PR #539 is merged and its additive catalogue migration is live. Keep Marketplace Manager non-assignable until the required route permission safeguards and acceptance tests are complete.
 
 ## Next verified actions
 - Complete a full inventory and authorization matrix for every Admin API route/action and relevant RPC.
