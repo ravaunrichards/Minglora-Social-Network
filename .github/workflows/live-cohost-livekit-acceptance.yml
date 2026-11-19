@@ -10,6 +10,11 @@ on:
       - 'tests/e2e/live-cohost-livekit-two-account.mjs'
       - '.github/workflows/live-cohost-livekit-acceptance.yml'
   workflow_dispatch:
+    inputs:
+      livekit_environment:
+        description: Existing GitHub Environment that stores LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET
+        required: true
+        type: environment
 
 permissions:
   contents: read
@@ -19,9 +24,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pull-request-validation:
+    if: github.event_name == 'pull_request'
+    name: Validate LiveKit acceptance runner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the Co-host repair branch
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check real-time acceptance runner syntax
+        run: node --check tests/e2e/live-cohost-livekit-two-account.mjs
+
   two-account-livekit:
+    if: github.event_name == 'workflow_dispatch'
     name: Two creators publish and leave independently
     runs-on: ubuntu-24.04
+    environment: ${{ inputs.livekit_environment }}
     timeout-minutes: 20
     env:
       LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
