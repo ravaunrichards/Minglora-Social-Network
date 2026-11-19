@@ -1,5 +1,16 @@
 # Minglora Execution Recovery Checkpoint — 2026-11-19
 
+## Post-merge live verification — 2026-11-19 05:22 UTC
+- Current GitHub `main`: `f9c6e730d5efcfb802373094361cf25242911d62`.
+- PR #539 (Marketplace Manager catalogue) merged at 04:58:58 UTC as `bf158db2385ba641e547e447ed1b0652e26d2fbe`.
+- PR #540 (two test-only LIVE/Rankings assertion corrections) merged at 05:21:36 UTC as `f9c6e730d5efcfb802373094361cf25242911d62`.
+- Post-merge CI run `44464623189` succeeded: 1,411/1,411 tests passed; Supabase Auth provider acceptance, For You navigation and real PostgreSQL shared-budget concurrency all passed.
+- Live Supabase migration ledger includes `20261119045942 / minglora_admin_marketplace_manager_role`. Live catalogue confirms Marketplace Manager is `assignable=false`, with `marketplace:read` and `marketplace:manage`. No staff assignment was created or revoked; one owner staff assignment remains.
+- All 10 inspected Finance/RBAC tables have RLS enabled. `anon` and `authenticated` have no direct table privileges on them; finance and RBAC command RPCs remain executable only by `service_role`. The RBAC audit append-only trigger is enabled.
+- Active task estimate remains **61.5%** over the original eight work items. Route/action inventory remains 46/69 (66.7%); no delegated role-permission routes, recovery-admin control or configurable high-value dual approval have been implemented by these merges.
+- Render deployment after the latest main commit is **not verified**. The connected account lists the Creator Hub Creator Network workspace (`tea-dbphlfk9v7es73bu7amg`) and the saved checkpoint identifies service `srv-dbphq63rjlhs73fviegg`; workspace-specific Render access requires the user's explicit workspace selection. Last historic live deployment evidence is not evidence that the new commit is deployed.
+- The Finance live registers remain empty (0 subscriptions, budgets, invoices, expenses and finance audit events); no demo records, provider payments, subscriptions or service connections were created.
+
 ## Scope lock
 - Project: Minglora Social Network only.
 - Repository: https://github.com/ravaunrichards/Minglora-Social-Network
@@ -11,12 +22,12 @@
 - Keep the retired consumer-facing Marketplace and Jobs disabled. Admin-only Marketplace controls do not reactivate them.
 
 ## Current live production checkpoint
-- GitHub `main`: `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4` — “Update Audio LIVE test for versioned co-host split bundle”.
-- Render service `minglora-social-network-temp` is LIVE on that commit; latest verified deployment: `dep-dbv7i67trrvc73bd7jg0`.
+- GitHub `main`: `f9c6e730d5efcfb802373094361cf25242911d62` — merged PR #540 test-only assertion alignment.
+- Last historic Render verification was deployment `dep-dbv7i67trrvc73bd7jg0` on earlier commit `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`; current `main` deployment remains unverified pending workspace selection.
 - Supabase project `gzycobgbasnqqhnympkr` is `ACTIVE_HEALTHY`, PostgreSQL 17.
 - `minglora-runtime-state` Edge Function is ACTIVE, version 142.
 - Do not use the 2026-11-18 checkpoint's old main SHA, Edge Function v139 or old Render notes as current.
-- Current main CI run `44457780374` is failing on two unrelated existing tests: “Accepted LIVE speaker requests open the guest panel and require an explicit stage join” and “Ranking badge art remains visible around a compact centered member photo on desktop and mobile”. Do not claim main CI is green.
+- Latest post-merge CI run `44464623189` is green: 1,411/1,411 tests passed, plus Supabase Auth provider acceptance, For You functional navigation and real PostgreSQL shared-budget concurrency.
 
 ## Admin Center workstream — active task
 - Current task: `MS-ADMIN-RBAC-02` — Role-based access control and delegated administrators.
@@ -38,18 +49,18 @@
 ## Current RBAC source branch and PR
 - Branch: `feat/minglora-admin-marketplace-manager-rbac-20261119`
 - The feature branch has received subsequent checkpoint/documentation commits; fetch its current head ref before resuming. Last source/test commit verified: `5fdd24b2369777e9b9ac10f09c4a60950d44b751`.
-- PR #539: https://github.com/ravaunrichards/Minglora-Social-Network/pull/539 (draft; mergeable; not merged).
-- Branch compare at last inspection: ahead 10, behind 0 relative to `main`.
+- PR #539 is merged: https://github.com/ravaunrichards/Minglora-Social-Network/pull/539. PR #540 is merged: https://github.com/ravaunrichards/Minglora-Social-Network/pull/540.
+- Historical feature-branch compare at last inspection: ahead 10, behind 0 relative to then-current `main`.
 - Added migration `supabase/migrations/20261119043000_minglora_admin_marketplace_manager_role.sql`, separate `marketplace:read` / `marketplace:manage` permissions, and a Marketplace Manager role that remains non-assignable until private back-office route permission enforcement is complete.
 - The role does not restore the consumer Marketplace and does not grant payment execution.
 - Existing brand role constraint values remain preserved.
-- No production migration, staff assignment, provider connection, payment, or account change has occurred through this source slice.
+- The Marketplace Manager catalogue migration is applied in production (ledger version `20261119045942`); it did not change staff assignments. No provider connection, payment or account change has occurred through this source slice.
 
 ## Exact-head verification at checkpoint
 - RBAC unit test file has eight cases; all 8 passed on code commit `5fdd24b2369777e9b9ac10f09c4a60950d44b751`. Later commits on the feature branch changed only progress/checkpoint documentation.
 - Latest PR CI on head `fc52261e5830fed04952006fdd9647bb29e8e53c`: Supabase Auth provider acceptance and For You navigation passed; the 8/8 focused RBAC unit cases passed; full test job failed on the same two tests failing on current main.
 - Nine-layout visual QA run `44459696029` was still in progress at last inspection. The earlier QA run `44459470769` passed on the source-equivalent implementation before the later documentation-only checkpoint commits.
-- PR remains draft because the complete role-permission routing work is not done and base CI is currently red. Do not merge solely to bypass the unrelated failing checks.
+- PR #539 is merged, but complete role-permission routing remains open; it must not be treated as permission-enforcement completion.
 
 ## Immediate resume procedure
 1. Re-fetch current `main`, Render live deployment, Supabase project state and Edge Function version before edits.
