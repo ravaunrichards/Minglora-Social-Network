@@ -90,7 +90,7 @@ export function normalizeLiveSettings(value = {}) {
  * contribute microphone audio. Audio-only rooms never receive camera access.
  */
 export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video_audio', liveSettings = {}) {
-  if (!['host', 'guest'].includes(role)) return null;
+  if (!['host', 'guest', 'cohost'].includes(role)) return null;
   const mode = LIVE_MODES.includes(liveMode)
     ? liveMode
     : broadcastType === 'audio_only' ? 'audio_only' : 'video_audio';
@@ -98,7 +98,7 @@ export function getLivePublishSourceNames(liveMode, role, broadcastType = 'video
   if (mode === 'mobile_gaming') {
     return role === 'host' ? ['MICROPHONE', 'SCREEN_SHARE'] : ['MICROPHONE'];
   }
-  return role === 'host'
-    ? ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE']
-    : liveSettings?.guestCamera === false ? ['MICROPHONE'] : ['MICROPHONE', 'CAMERA'];
+  if (role === 'host') return ['MICROPHONE', 'CAMERA', 'SCREEN_SHARE'];
+  if (role === 'cohost') return ['MICROPHONE', 'CAMERA'];
+  return liveSettings?.guestCamera === false ? ['MICROPHONE'] : ['MICROPHONE', 'CAMERA'];
 }
