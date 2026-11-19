@@ -16,8 +16,8 @@ test("Rankings is a dedicated secondary destination separate from Leagues and th
  const end=html.indexOf('id="left-rail-see-toggle"',start),sidebar=html.slice(start,end);
  assert.ok(sidebar.includes('data-view="rankings"'));
  assert.ok(sidebar.includes(">Rankings</span>"));
- assert.ok(html.includes("/rankings.css?v=20261118-tiktok-ranking-frames-1"));
- assert.ok(html.includes("/rankings.js?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(html.includes("/rankings.css?v=20261118-live-multiguest-approval-prompt-1"));
+ assert.ok(html.includes("/rankings.js?v=20261118-live-multiguest-approval-prompt-1"));
  assert.ok(app.includes("view:'rankings'")&&app.includes("state.view==='rankings'"));
  assert.ok(app.includes("window.MingloraRankings?.render()"));
  assert.ok(app.includes("window.MingloraRankings?.onNavigateAway?.()"));
@@ -57,11 +57,11 @@ test("Rankings handles empty, failure, period-switch and route-cancellation stat
  assert.ok(page.includes("data-ranking-period")&&page.includes('cache:"no-store"'));
  assert.ok(page.includes("function onNavigateAway()"));
  assert.ok(worker.includes("minglora-shell-v361-self-updating-1"));
- assert.ok(worker.includes("/rankings.css?v=20261118-tiktok-ranking-frames-1"));
- assert.ok(worker.includes("/rankings.js?v=20261118-tiktok-ranking-frames-1"));
- assert.ok(worker.includes("/assets/daily-ranking-badges/place-4-10.png?v=20261118-tiktok-ranking-frames-1"));
- assert.ok(worker.includes("/assets/daily-ranking-badges/place-11-20.png?v=20261118-tiktok-ranking-frames-1"));
- assert.ok(worker.includes("/rankings.js?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(worker.includes("/rankings.css?v=20261118-live-multiguest-approval-prompt-1"));
+ assert.ok(worker.includes("/rankings.js?v=20261118-live-multiguest-approval-prompt-1"));
+ assert.ok(worker.includes("/assets/daily-ranking-badges/place-4-10.png?v=20261118-live-multiguest-approval-prompt-1"));
+ assert.ok(worker.includes("/assets/daily-ranking-badges/place-11-20.png?v=20261118-live-multiguest-approval-prompt-1"));
+ assert.ok(worker.includes("/rankings.js?v=20261118-live-multiguest-approval-prompt-1"));
 });
 
 
@@ -83,8 +83,8 @@ test("Ranking badge art remains visible around a compact centered member photo o
  assert.ok(styles.includes("width:36%;height:36%;max-width:none;box-sizing:border-box"));
  assert.ok(leagueCss.includes("object-fit:contain;object-position:center"));
  assert.ok(leagueCss.includes("width:36%;height:36%;box-sizing:border-box"));
- assert.ok(html.includes("styles.css?v=20261118-tiktok-ranking-frames-1"));
- assert.ok(html.includes("app.js?v=20261118-tiktok-ranking-frames-1"));
+ assert.ok(html.includes("styles.css?v=20261118-live-multiguest-approval-prompt-1"));
+ assert.ok(html.includes("app.js?v=20261118-live-multiguest-approval-prompt-1"));
 });
 
 
