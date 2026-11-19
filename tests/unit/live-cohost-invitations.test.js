@@ -12,7 +12,7 @@ const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const coreMigration = read('supabase/migrations/20261118235924_minglora_live_cohost_sessions.sql');
 const capacityMigration = read('supabase/migrations/20261119004203_minglora_live_cohost_multi_guest_capacity.sql');
 const rosterMigration = read('supabase/migrations/20261119004301_minglora_live_cohost_roster_rls_consolidation.sql');
-const requestMatchMigration = read('supabase/migrations/20261119010000_minglora_live_cohost_requests_and_matches.sql');
+const requestMatchMigration = read('supabase/migrations/20261119012813_minglora_live_cohost_requests_matches_and_creator_broadcast.sql');
 const cohostCss = read('public/live-cohost.css');
 
 test('Creator Co-host has dedicated tables and RLS separate from viewer guest seats', () => {
