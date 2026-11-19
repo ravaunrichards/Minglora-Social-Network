@@ -56,7 +56,7 @@
       try{
         const data=await api('/admin/rbac');
         const roles=Array.isArray(data.roles)?data.roles:[];
-        const staff=Array.isArray(data.staff)?data.staff:[];
+        const staff=Array.isArray(data.staff)?data.staff.filter(member=>member&&member.active===true):[];
         const audits=Array.isArray(data.audit)?data.audit:[];
         const assignable=roles.filter(role=>role.assignable===true&&role.key!=='super_administrator');
         roleSelect.innerHTML='<option value="">Choose a role</option>'+assignable.map(role=>'<option value="'+escapeHtml(role.key)+'">'+escapeHtml(role.name)+'</option>').join('');
@@ -67,7 +67,7 @@
           return '<article class="admin-rbac-staff-row"><div><strong>'+escapeHtml(member.displayName||member.username||member.email||'Minglora account')+'</strong><p>'+escapeHtml(member.email||'')+' · '+escapeHtml(roleLabel(member.role))+' · '+state+'</p><small>'+escapeHtml((member.permissions||[]).join(' · '))+'</small></div><div class="admin-rbac-row-actions">'+(owner?'<span class="admin-rbac-owner-pill">Protected sole owner</span>':member.active?'<button type="button" class="secondary admin-rbac-revoke" data-email="'+escapeHtml(member.email||'')+'">Revoke access</button>':'<span class="admin-rbac-role-state">Inactive</span>')+'</div></article>';
         }).join(''):'<p>No administrator assignments were returned.</p>';
         auditList.innerHTML=audits.length?audits.map(record=>'<article class="admin-rbac-audit-row"><strong>'+escapeHtml(record.action==='staff.granted'?'Access granted':'Access revoked')+'</strong><p>Target: '+escapeHtml(record.targetUserId)+' · '+escapeHtml(record.reason)+'</p><small>'+escapeHtml(record.createdAt?new Date(record.createdAt).toLocaleString():'Time unavailable')+'</small></article>').join(''):'<p>No permission changes have been recorded.</p>';
-        status.textContent='Permission catalogue loaded. '+staff.length+' administrator record(s). Existing assignments are shown as stored.';
+        status.textContent='Permission catalogue loaded. '+staff.length+' active administrator assignment(s). Inactive records are excluded from the current list.';
       }catch(error){
         status.textContent=error.message||'The administrator permission catalogue is unavailable. Apply the reviewed database migration before enabling this workspace.';
         staffList.innerHTML='<p>Assignments could not be loaded.</p>';
