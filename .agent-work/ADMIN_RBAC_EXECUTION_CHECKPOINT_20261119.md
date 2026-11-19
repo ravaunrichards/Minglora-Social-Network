@@ -28,13 +28,13 @@ The original eight work items from `.agent-work/STAGE_QUEUE.md` are preserved an
 1. Audit every admin route/action: partial, 66.7% (35/35 server route clauses inventoried plus 11/34 Admin-scoped Edge actions traced; 46/69 total identified entries). A complete role-to-route permission matrix and 23 remaining Edge action traces are still required.
 2. Establish canonical permission catalogue: implemented in source (100%). Existing role definitions are retained. The new additive migration creates `marketplace:read` and `marketplace:manage`.
 3. Migrate staff-role data safely: implemented in source (100%). The migration extends the role constraint while preserving existing role values and does not insert/update/deactivate/revoke any existing staff row. Production application of this new migration is pending.
-4. Require MFA for sensitive access: partial (50%). The owner grant/revoke endpoint is MFA-verified and delegated grants are recorded with `mfa_required=true`; all sensitive delegated routes are not yet enforced. The owner management endpoint remains designated-owner/MFA protected and delegated assignments are recorded with `mfa_required=true`. Enforcement across every delegated route remains unimplemented.
+4. Require MFA for sensitive access: partial (50%). The designated-owner grant/revoke endpoint is MFA-verified and delegated assignments are stored with `mfa_required=true`; the required MFA session check is not yet enforced across every delegated route/action.
 5. Implement server-side authorization on every route/RPC: 0% for delegated role-permission enforcement. Existing admin controls remain owner/MFA protected until a route is migrated; no blanket delegated access is implied.
 6. Add assignment, revocation, audit history and recovery-admin controls: 75%. Existing grant, revoke and append-only audit workflows are present; a second recovery-administrator workflow is missing.
 7. Require dual approval for configurable high-value financial actions: 0%.
 8. Keep normal member access separate: 100%. Role grants require an existing profile and email-confirmed Auth user; no normal-member elevation is introduced.
 
-Equal-weight implementation estimate over those eight original bullets: 55.3%. This is not overall Admin Center completion or production acceptance.
+Equal-weight implementation estimate over those eight original bullets: 61.5%. This is not overall Admin Center completion or production acceptance.
 
 ## PR #539 changes
 - Added `supabase/migrations/20261119043000_minglora_admin_marketplace_manager_role.sql`.
