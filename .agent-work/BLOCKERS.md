@@ -1,13 +1,39 @@
 # Minglora Blockers and Verification Limits
 
-> Current verified state: [.agent-work/EXECUTION_RECOVERY_CHECKPOINT_20261118.md](EXECUTION_RECOVERY_CHECKPOINT_20261118.md). The historical snapshot below is preserved for audit only. Statements in that snapshot about Render being absent, Edge Function v129, or the old main SHA are superseded.
+> Current verified state: [.agent-work/EXECUTION_RECOVERY_CHECKPOINT_20261119.md](EXECUTION_RECOVERY_CHECKPOINT_20261119.md). Older checkpoint statements below are preserved for audit but superseded by live verification.
 
-## Active verified blocker / acceptance gate — 2026-11-18
-- No repository, CI or Render build blocker remains for the Logo Center completion slice: PR #526 is merged, its exact-head checks passed 9/9, main CI passed 4/4, and Render deployment `dep-dbuufkjm8hqs738kug90` is LIVE on `e03c8b615ddaaba774558b952524181756c6a27e`.
-- Production Supabase migration `20261118160000_minglora_logo_center_completion` is applied; Edge Function `minglora-runtime-state` is ACTIVE v139.
-- Owner's signed-in MFA browser acceptance of Logo Center workflows has not been performed in this inspection. Do not simulate or bypass that acceptance.
-- Public manifest HTTP smoke test was not completed because the available web fetch could not reach the Render URL. Deployment live/readiness is confirmed by Render's own deployment record and service logs; do not represent the public manifest as separately tested.
-- This checkpoint does not measure overall Minglora completion or imply unrelated workstreams are complete.
+## Active verified blockers / acceptance gates — 2026-11-19
+
+### Admin Center roles and access
+- PR #539 is still a draft. Marketplace Manager exists in source as a non-assignable role with `marketplace:read` and `marketplace:manage`; production migration is not applied.
+- Server-side permission-scoped authorization has not been implemented across every Admin API route/RPC. Existing owner/MFA guards remain in place and must not be weakened.
+- The source scan identified 35 Admin API route clauses in `src/server.js`; all 35 were inventoried and guard-reviewed. Of 34 Admin-scoped Edge action keys, 11 handlers were traced through the server/Edge/DB boundary. The combined audit is 46/69 (66.7%); 23 Edge action traces and the full role-to-route permission matrix remain open.
+- Recovery-admin controls and configurable second-person approval for high-value financial actions are not implemented.
+- Latest RBAC unit coverage: 8/8 passed. The full CI test job still fails only on the same LIVE speaker stage-join and Rankings badge asset-version tests that also fail on current `main`.
+- Nine-layout visual QA for the latest PR head was still running at the last check. Do not claim pass before the workflow reports success.
+
+### Mainline CI
+- Current `main` commit is `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`.
+- Main CI run `44457780374` is failed on:
+  - `Accepted LIVE speaker requests open the guest panel and require an explicit stage join`
+  - `Ranking badge art remains visible around a compact centered member photo on desktop and mobile`
+- The same failures occur on the RBAC PR test job. They are outside this Admin Finance/RBAC source change and must remain visible; do not silently modify unrelated functionality.
+
+### Finance and external providers
+- Finance implementation is merged, but owner/MFA browser acceptance, the Supabase provider probe through the UI and a first private invoice/receipt upload/download remain unverified.
+- Live company finance registers have zero subscriptions, budgets, invoices, expenses and finance audit events. Do not add demo records.
+- Provider directory candidates do not prove accounts are registered or connected. No payment, renewal, subscription purchase or provider account action was performed.
+- No company bank balance, company payment vault or direct company bill-payment integration is verified. Payment actions must remain manual/provider-hosted until verified integrations exist.
+
+### Live deployment and production
+- Render service `minglora-social-network-temp` is LIVE on current main commit `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`; deployment `dep-dbv7i67trrvc73bd7jg0`.
+- Supabase project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY; `minglora-runtime-state` is ACTIVE version 142.
+- No Marketplace Manager production migration or Admin RBAC Edge Function deployment has been performed from PR #539.
+- No authenticated owner browser acceptance was available for this inspection. Do not simulate or bypass MFA or declare browser-only acceptance complete.
+
+## Progress limits
+- Current `MS-ADMIN-RBAC-02` estimate: 61.5% across its eight original work bullets with equal weighting; detailed coverage is in `.agent-work/STAGE_QUEUE.md`.
+- Overall Admin Center and repository-wide completion are NOT MEASURABLE without a complete weighted acceptance inventory. Do not invent global percentages.
 
 ## Historical blocker snapshot (preserved; not current)
 
