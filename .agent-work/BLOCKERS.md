@@ -5,19 +5,16 @@
 ## Active verified blockers / acceptance gates — 2026-11-19
 
 ### Admin Center roles and access
-- PR #539 is still a draft. Marketplace Manager exists in source as a non-assignable role with `marketplace:read` and `marketplace:manage`; production migration is not applied.
-- Server-side permission-scoped authorization has not been implemented across every Admin API route/RPC. Existing owner/MFA guards remain in place and must not be weakened.
-- The source scan identified 35 Admin API route clauses in `src/server.js`; all 35 were inventoried and guard-reviewed. Of 34 Admin-scoped Edge action keys, 11 handlers were traced through the server/Edge/DB boundary. The combined audit is 46/69 (66.7%); 23 Edge action traces and the full role-to-route permission matrix remain open.
+- PR #539 is merged; the Marketplace Manager catalogue migration is applied in production. The live role remains `assignable=false` until every private back-office Marketplace route/action enforces its dedicated permission.
+- Server-side delegated permission-scoped authorization has not been implemented across every Admin API route/RPC. Existing owner/MFA guards remain in place and must not be weakened.
+- The source audit inventory remains 35/35 Admin API route clauses reviewed and 11/34 Admin-scoped Edge actions traced; combined audit 46/69 (66.7%). The remaining 23 action/RPC traces and complete role-to-route permission matrix remain open.
 - Recovery-admin controls and configurable second-person approval for high-value financial actions are not implemented.
-- Latest RBAC unit coverage: 8/8 passed. The full CI test job still fails only on the same LIVE speaker stage-join and Rankings badge asset-version tests that also fail on current `main`.
-- Nine-layout visual QA for the latest PR head was still running at the last check. Do not claim pass before the workflow reports success.
+- Focused RBAC tests passed; post-merge main CI is green with 1,411/1,411 tests and all four checks passed in run 44464623189.
+- The task remains 61.5% across the original eight work bullets; this is not overall Admin Center completion.
 
 ### Mainline CI
-- Current `main` commit is `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`.
-- Main CI run `44457780374` is failed on:
-  - `Accepted LIVE speaker requests open the guest panel and require an explicit stage join`
-  - `Ranking badge art remains visible around a compact centered member photo on desktop and mobile`
-- The same failures occur on the RBAC PR test job. They are outside this Admin Finance/RBAC source change and must remain visible; do not silently modify unrelated functionality.
+- Current `main` commit is `f9c6e730d5efcfb802373094361cf25242911d62`.
+- Post-merge CI run `44464623189` passed all checks: 1,411/1,411 tests, Supabase Auth provider acceptance, For You functional navigation and real PostgreSQL shared-budget concurrency.
 
 ### Finance and external providers
 - Finance implementation is merged, but owner/MFA browser acceptance, the Supabase provider probe through the UI and a first private invoice/receipt upload/download remain unverified.
@@ -26,10 +23,11 @@
 - No company bank balance, company payment vault or direct company bill-payment integration is verified. Payment actions must remain manual/provider-hosted until verified integrations exist.
 
 ### Live deployment and production
-- Render service `minglora-social-network-temp` is LIVE on current main commit `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`; deployment `dep-dbv7i67trrvc73bd7jg0`.
-- Supabase project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY; `minglora-runtime-state` is ACTIVE version 142.
-- No Marketplace Manager production migration or Admin RBAC Edge Function deployment has been performed from PR #539.
-- No authenticated owner browser acceptance was available for this inspection. Do not simulate or bypass MFA or declare browser-only acceptance complete.
+- Supabase project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY; `minglora-runtime-state` was verified ACTIVE version 142.
+- Live migration ledger records `20261119045942 / minglora_admin_marketplace_manager_role`; Marketplace Manager is non-assignable and dedicated permissions exist.
+- All 10 inspected Finance/RBAC tables have RLS enabled; anon/authenticated have no direct privileges on these tables; finance/RBAC RPC access remains service-role only.
+- The last historic Render deployment verified was `dep-dbv7i67trrvc73bd7jg0` on the older main commit `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`. Current main deployment `f9c6e730d5efcfb802373094361cf25242911d62` is not verified because workspace-specific Render operations require the user's explicit workspace selection.
+- No authenticated owner browser acceptance was available. Do not simulate or bypass MFA or declare browser-only acceptance complete.
 
 ## Progress limits
 - Current `MS-ADMIN-RBAC-02` estimate: 61.5% across its eight original work bullets with equal weighting; detailed coverage is in `.agent-work/STAGE_QUEUE.md`.
