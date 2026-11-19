@@ -98,3 +98,20 @@
 .live-cohost-match-actions button{min-height:34px;padding:6px 10px;font-size:11px}
 
 .live-cohost-tile.has-video .live-cohost-avatar{display:none}
+
+.live-cohost-creator-results,.live-cohost-discover-list{display:grid;gap:7px;margin-top:8px}
+.live-cohost-creator-option,.live-cohost-discover-row{
+  display:flex;align-items:center;justify-content:space-between;gap:9px;
+  width:100%;min-width:0;padding:9px 10px;border:1px solid var(--border,#26354b);
+  border-radius:11px;background:rgba(127,145,170,.07);color:inherit;text-align:left
+}
+.live-cohost-creator-option>span:first-child,.live-cohost-discover-host{display:grid;gap:3px;min-width:0}
+.live-cohost-creator-option strong,.live-cohost-discover-host strong{font-size:12px}
+.live-cohost-creator-option small,.live-cohost-discover-host small{font-size:10px;color:var(--muted,#9ba9bd)}
+.live-cohost-creator-option>span:last-child{font-size:11px;font-weight:750;color:var(--accent,#f4a62a)}
+.live-cohost-discover{display:grid;gap:7px;padding:10px 0;border-top:1px solid var(--border,#26354b);border-bottom:1px solid var(--border,#26354b)}
+.live-cohost-discover-heading{display:grid;gap:3px}
+.live-cohost-discover-heading strong{font-size:13px}
+.live-cohost-discover-heading small{font-size:11px;color:var(--muted,#9ba9bd)}
+.live-cohost-discover-row button{flex:0 0 auto;min-height:32px;padding:6px 9px;font-size:10px}
+.live-cohost-discover-row button:disabled{opacity:.7;cursor:default}
