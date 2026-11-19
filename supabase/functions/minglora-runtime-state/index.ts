@@ -3264,8 +3264,8 @@ Deno.serve(async (req: Request) => {
     // broadcast closes only the shared Co-host room; ending a co-host's broadcast
     // removes only that creator. Other creators' LIVE broadcasts keep running.
     const {data:cohostRows,error:cohostLookupError}=await admin.from("live_cohost_participants")
-      .select("cohost_session_id,user_id,role,status")
-      .eq("broadcast_id",broadcastId).in("status",["invited","requested","accepted","connected"]);
+      .select("cohost_session_id,user_id,role,status,broadcast_id,creator_broadcast_id")
+      .eq("creator_broadcast_id",broadcastId).in("status",["invited","requested","accepted","connected"]);
     if(cohostLookupError)return json(503,{error:"The broadcast ended, but Co-host membership could not be reconciled."});
     for(const row of cohostRows||[]){
       const {data:cohostSession,error:cohostSessionError}=await admin.from("live_cohost_sessions")
@@ -3363,7 +3363,11 @@ Deno.serve(async (req: Request) => {
     ...row, host_user_id: row.created_by, host_broadcast_id: row.broadcast_id
   });
   const exposeCohostParticipant = (row: any) => ({
-    ...row, session_id: row.cohost_session_id, joined_at: row.connected_at
+    ...row,
+    session_id: row.cohost_session_id,
+    joined_at: row.connected_at,
+    host_broadcast_id: row.broadcast_id,
+    broadcast_id: row.creator_broadcast_id || row.broadcast_id
   });
 
   if (action === "live_cohost_discover") {
@@ -3429,10 +3433,10 @@ Deno.serve(async (req: Request) => {
     }).select("id,created_by,broadcast_id,room_ref,status,mode,layout,max_participants,started_at,ended_at").single();
     if(error)return fail(error,"Minglora could not create the Co-host session.");
     const {data:participant,error:participantError}=await admin.from("live_cohost_participants").insert({
-      cohost_session_id:sessionId,broadcast_id:broadcastId,user_id:hostId,
+      cohost_session_id:sessionId,broadcast_id:broadcastId,creator_broadcast_id:broadcastId,user_id:hostId,
       role:"host",status:"connected",position:0,invited_by:hostId,
       invited_at:now,accepted_at:now,connected_at:now
-    }).select("id,cohost_session_id,broadcast_id,user_id,role,status,position,accepted_at,connected_at").single();
+    }).select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,position,accepted_at,connected_at").single();
     if(participantError){
       await admin.from("live_cohost_sessions").update({status:"cancelled",ended_at:new Date().toISOString()}).eq("id",sessionId);
       return fail(participantError,"Minglora could not register the Co-host host.");
@@ -3448,7 +3452,7 @@ Deno.serve(async (req: Request) => {
     let resolvedSessionId=sessionId;
     if(!resolvedSessionId){
       const {data:membership,error:membershipError}=await admin.from("live_cohost_participants")
-        .select("cohost_session_id").eq("broadcast_id",broadcastId)
+        .select("cohost_session_id").eq("creator_broadcast_id",broadcastId)
         .in("status",["accepted","connected"]).maybeSingle();
       if(membershipError)return json(503,{error:"Co-host stage lookup failed."});
       if(!membership)return json(200,{session:null,participants:[]});
@@ -3460,12 +3464,12 @@ Deno.serve(async (req: Request) => {
     if(sessionError)return json(503,{error:"Co-host session could not be loaded."});
     if(!session)return json(200,{session:null,participants:[]});
     const {data:rows,error:rowsError}=await admin.from("live_cohost_participants")
-      .select("id,cohost_session_id,broadcast_id,user_id,role,status,invited_by,position,invited_at,accepted_at,connected_at,left_at,created_at")
+      .select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,invited_by,position,invited_at,accepted_at,connected_at,left_at,created_at")
       .eq("cohost_session_id",resolvedSessionId).in("status",cohostActiveStatuses)
       .order("created_at",{ascending:true});
     if(rowsError)return json(503,{error:"Co-host participants could not be loaded."});
     const ids=[...new Set((rows||[]).map((row:any)=>row.user_id))];
-    const broadcastIds=[...new Set((rows||[]).map((row:any)=>row.broadcast_id))];
+    const broadcastIds=[...new Set((rows||[]).map((row:any)=>row.creator_broadcast_id))];
     const [profilesResult,broadcastsResult]=await Promise.all([
       ids.length?admin.from("profiles").select("id,display_name,username,avatar_url").in("id",ids):Promise.resolve({data:[],error:null}),
       broadcastIds.length?admin.from("live_broadcasts").select("id,title,status,host_id").in("id",broadcastIds):Promise.resolve({data:[],error:null})
@@ -3478,7 +3482,7 @@ Deno.serve(async (req: Request) => {
       participants:(rows||[]).map((row:any)=>({
         ...exposeCohostParticipant(row),
         user:profileMap.get(row.user_id)||null,
-        broadcast:broadcastMap.get(row.broadcast_id)||null
+        broadcast:broadcastMap.get(row.creator_broadcast_id)||null
       }))
     });
   }
@@ -3487,7 +3491,7 @@ Deno.serve(async (req: Request) => {
     const userId=String(input.userId||"");
     if(!validUuid(userId))return json(400,{error:"Invalid Co-host invitation lookup."});
     const {data:rows,error}=await admin.from("live_cohost_participants")
-      .select("id,cohost_session_id,user_id,broadcast_id,role,status,invited_by,invited_at,position")
+      .select("id,cohost_session_id,user_id,broadcast_id,creator_broadcast_id,role,status,invited_by,invited_at,position")
       .eq("user_id",userId).in("status",["invited","requested"])
       .order("created_at",{ascending:false}).limit(20);
     if(error)return json(503,{error:"Your Co-host invitations could not be loaded."});
@@ -3549,9 +3553,9 @@ Deno.serve(async (req: Request) => {
     if(position>=maxParticipants)return json(409,{error:"This Co-host stage has no free creator places."});
     const now=new Date().toISOString();
     const {data:participant,error}=await admin.from("live_cohost_participants").insert({
-      cohost_session_id:sessionId,broadcast_id:broadcastId,user_id:userId,role:"cohost",
+      cohost_session_id:sessionId,broadcast_id:session.broadcast_id,creator_broadcast_id:broadcastId,user_id:userId,role:"cohost",
       status:isInvite?"invited":"requested",position,invited_by:isInvite?actorId:null,invited_at:now
-    }).select("id,cohost_session_id,broadcast_id,user_id,role,status,position,invited_by,invited_at").single();
+    }).select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,position,invited_by,invited_at").single();
     if(error)return fail(error,"Minglora could not reserve this Co-host creator place. Refresh the roster and try again.");
     return json(201,{participant:exposeCohostParticipant(participant)});
   }
@@ -3566,7 +3570,7 @@ Deno.serve(async (req: Request) => {
       .select("id,created_by,broadcast_id,status").eq("id",sessionId).maybeSingle();
     if(sessionError||!session||session.status!=="active")return json(404,{error:"Co-host session is not active."});
     const {data:participant,error:participantError}=await admin.from("live_cohost_participants")
-      .select("id,cohost_session_id,broadcast_id,user_id,role,status,accepted_at,connected_at")
+      .select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,accepted_at,connected_at")
       .eq("cohost_session_id",sessionId).eq("user_id",userId).maybeSingle();
     if(participantError||!participant)return json(404,{error:"Co-host participant was not found."});
     const actorIsHost=session.created_by===actorId;
@@ -3577,7 +3581,7 @@ Deno.serve(async (req: Request) => {
       if(!allowed)return json(403,{error:"Only the invited creator or Co-host host can accept this participant."});
       const [hostBroadcastResult,creatorBroadcastResult]=await Promise.all([
         admin.from("live_broadcasts").select("id,host_id,status").eq("id",session.broadcast_id).maybeSingle(),
-        admin.from("live_broadcasts").select("id,host_id,status").eq("id",participant.broadcast_id).maybeSingle()
+        admin.from("live_broadcasts").select("id,host_id,status").eq("id",participant.creator_broadcast_id).maybeSingle()
       ]);
       if(hostBroadcastResult.error||creatorBroadcastResult.error||
          hostBroadcastResult.data?.host_id!==session.created_by||hostBroadcastResult.data?.status!=="live"||
@@ -3601,7 +3605,7 @@ Deno.serve(async (req: Request) => {
     if(decision==="remove")patch.left_at=now;
     const {data,error}=await admin.from("live_cohost_participants").update(patch)
       .eq("cohost_session_id",sessionId).eq("user_id",userId).eq("status",participant.status)
-      .select("id,cohost_session_id,broadcast_id,user_id,role,status,position,accepted_at,connected_at,left_at").maybeSingle();
+      .select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,position,accepted_at,connected_at,left_at").maybeSingle();
     if(error)return fail(error,"Minglora could not update the Co-host participant.");
     if(!data)return json(409,{error:"This Co-host participant changed before the action completed."});
     return json(200,{participant:exposeCohostParticipant(data)});
@@ -3614,18 +3618,18 @@ Deno.serve(async (req: Request) => {
       .select("id,broadcast_id,created_by,status").eq("id",sessionId).maybeSingle();
     if(sessionError||!session||session.status!=="active")return json(404,{error:"Co-host session is not active."});
     const {data:pending,error:pendingError}=await admin.from("live_cohost_participants")
-      .select("id,broadcast_id,status").eq("cohost_session_id",sessionId).eq("user_id",userId).maybeSingle();
+      .select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,position,connected_at").eq("cohost_session_id",sessionId).eq("user_id",userId).maybeSingle();
     if(pendingError||!pending)return json(409,{error:"Accept the Co-host invitation before connecting."});
-    if(pending.status==="connected")return json(200,{participant:pending});
+    if(pending.status==="connected")return json(200,{participant:exposeCohostParticipant(pending)});
     if(pending.status!=="accepted")return json(409,{error:"Accept the Co-host invitation before connecting."});
     const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
-      .select("id,host_id,status").eq("id",pending.broadcast_id).maybeSingle();
+      .select("id,host_id,status").eq("id",pending.creator_broadcast_id).maybeSingle();
     if(broadcastError||!broadcast||broadcast.host_id!==userId||broadcast.status!=="live")
       return json(409,{error:"Your own LIVE broadcast must remain active while Co-host is connected."});
     const {data,error}=await admin.from("live_cohost_participants").update({
       status:"connected",connected_at:new Date().toISOString(),left_at:null
     }).eq("cohost_session_id",sessionId).eq("user_id",userId).eq("status","accepted")
-      .select("id,cohost_session_id,broadcast_id,user_id,role,status,position,connected_at").maybeSingle();
+      .select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,position,connected_at").maybeSingle();
     if(error)return json(503,{error:"Minglora could not confirm the Co-host connection."});
     if(!data)return json(409,{error:"Accept the Co-host invitation before connecting."});
     return json(200,{participant:exposeCohostParticipant(data)});
@@ -3638,7 +3642,7 @@ Deno.serve(async (req: Request) => {
       status:"left",left_at:new Date().toISOString()
     }).eq("cohost_session_id",sessionId).eq("user_id",userId)
       .in("status",cohostActiveStatuses)
-      .select("id,cohost_session_id,broadcast_id,user_id,role,status,position,left_at").maybeSingle();
+      .select("id,cohost_session_id,broadcast_id,creator_broadcast_id,user_id,role,status,position,left_at").maybeSingle();
     if(error)return json(503,{error:"Minglora could not update Co-host presence."});
     return json(200,{participant:data?exposeCohostParticipant(data):null});
   }
