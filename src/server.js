@@ -5741,8 +5741,6 @@ async function route(req, res) {
         if (!target || target.id === user.id || blockedBetween(user.id, target.id)) {
           return json(res, 404, { error: 'Choose an available Minglora member.' });
         }
-        const targetIsHosting = (db.liveSessions || []).some(item => item.status === 'live' && item.hostId === target.id);
-        if (targetIsHosting) return json(res, 409, { error: 'This creator is hosting another LIVE. They must leave that broadcast before accepting a Co-host invitation.' });
         const existing = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === target.id);
         if (existing && ['requested', 'accepted', 'connected', 'invited'].includes(existing.status)) {
           return json(res, 409, { error: 'This member already has an active guest request or invitation.' });
@@ -5777,8 +5775,6 @@ async function route(req, res) {
           item.sessionId === session.id && item.userId === user.id && item.status === 'invited'
         );
         if (!request) return json(res, 404, { error: 'There is no pending Co-host invitation for you.' });
-        const targetIsHosting = (db.liveSessions || []).some(item => item.status === 'live' && item.hostId === user.id);
-        if (targetIsHosting) return json(res, 409, { error: 'Leave your own LIVE broadcast before accepting this Co-host invitation.' });
         let participants;
         try { participants = await listLiveKitParticipants(session.roomName); }
         catch { return json(res, 503, { error: 'Minglora could not verify that you are connected to this LIVE room.' }); }
