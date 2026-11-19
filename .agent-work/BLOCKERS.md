@@ -7,7 +7,7 @@
 ### Admin Center roles and access
 - PR #539 is still a draft. Marketplace Manager exists in source as a non-assignable role with `marketplace:read` and `marketplace:manage`; production migration is not applied.
 - Server-side permission-scoped authorization has not been implemented across every Admin API route/RPC. Existing owner/MFA guards remain in place and must not be weakened.
-- The source scan identified 35 Admin API route clauses in `src/server.js`; six clauses (finance attachments, finance records, RBAC and Admin access) have been inspected. The full route/action permission matrix remains incomplete.
+- The source scan identified 35 Admin API route clauses in `src/server.js`; all 35 were inventoried and guard-reviewed. Of 34 Admin-scoped Edge action keys, 11 handlers were traced through the server/Edge/DB boundary. The combined audit is 46/69 (66.7%); 23 Edge action traces and the full role-to-route permission matrix remain open.
 - Recovery-admin controls and configurable second-person approval for high-value financial actions are not implemented.
 - Latest RBAC unit coverage: 8/8 passed. The full CI test job still fails only on the same LIVE speaker stage-join and Rankings badge asset-version tests that also fail on current `main`.
 - Nine-layout visual QA for the latest PR head was still running at the last check. Do not claim pass before the workflow reports success.
@@ -32,7 +32,7 @@
 - No authenticated owner browser acceptance was available for this inspection. Do not simulate or bypass MFA or declare browser-only acceptance complete.
 
 ## Progress limits
-- Current `MS-ADMIN-RBAC-02` estimate: 55.3% across its eight original work bullets with equal weighting; detailed coverage is in `.agent-work/STAGE_QUEUE.md`.
+- Current `MS-ADMIN-RBAC-02` estimate: 61.5% across its eight original work bullets with equal weighting; detailed coverage is in `.agent-work/STAGE_QUEUE.md`.
 - Overall Admin Center and repository-wide completion are NOT MEASURABLE without a complete weighted acceptance inventory. Do not invent global percentages.
 
 ## Historical blocker snapshot (preserved; not current)
