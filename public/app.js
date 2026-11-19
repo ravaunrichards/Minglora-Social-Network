@@ -1291,6 +1291,7 @@ let liveGiftEventsLastSeenAt='';
 const liveGiftSeenEventIds=new Set();
 let liveSpeakerRefreshTimer=null;
 const liveSpeakerSeenRequestsBySession=new Map();
+let liveSpeakerApprovalPromptedSessionId=null;
 let liveParticipantSyncTimer=null;
 let liveParticipantSyncBusy=false;
 let liveRewardRefreshTimer=null;
@@ -1869,13 +1870,16 @@ async function refreshLiveSpeakerPanel(session,role,room){
           await api(root+"/speaker-request/accept",{method:"POST",body:"{}"});
           toast("Co-host invitation accepted. Joining the stage…");
           stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"guest");
-        }catch(error){toast(error.message||"The Co-host invitation could not be accepted.");button.disabled=false;}
-      };
-      return;
-    }
-    if(request&&request.status==="accepted"){
+        }catch(error){toast(error.message||"The Co-host invitation could not be accepted.");button.disif(request&&request.status==="accepted"){
       button.disabled=false;button.textContent="Join Co-host stage";
-      if(status)status.textContent="The host approved your microphone. Join when you're ready.";
+      if(status)status.textContent="The host approved your request. Tap Join Co-host stage to take your seat. Your microphone and camera are only requested after you join."; 
+      if(liveSpeakerApprovalPromptedSessionId!==session.id){
+        liveSpeakerApprovalPromptedSessionId=session.id;
+        openLiveToolsPanel("#live-speaker-request-panel");
+        button.focus();
+        toast("The host approved your request. Tap Join Co-host stage to appear in the guest seat.");
+      }
+ved your microphone. Join when you're ready.";
       button.onclick=async()=>{
         button.disabled=true;
         try{stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"guest");}
@@ -2732,6 +2736,7 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
+  liveSpeakerApprovalPromptedSessionId=null;
   stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();stopLiveGiftEvents();
   window.MingloraGiftFX?.prime();
   liveGiftEventsLastSeenAt=new Date(Date.now()-10000).toISOString();closeLiveProfilePreview();liveFanClubState=null;liveGiftCatalogue=[];liveGiftScope='all';refreshLiveGiftGrid=null;
@@ -2766,7 +2771,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const speakerTools=role==="host"
     ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Co-host & Multi-Guest stage</strong><small>Manage up to 8 guest seats in Video + Audio and the other Audio Only layouts. Audio Only Side by Side supports 9.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><form id='live-cohost-invite-form' class='live-cohost-invite-form'><label for='live-cohost-invite-username'>Invite a member by username</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit'>Invite Co-host</button></div><small id='live-cohost-invite-status' role='status'>Invited members must join this LIVE before accepting.</small></form><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Turn ON permits requests when Allow guest requests and Allow co-host are also enabled.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
     : role==="viewer"
-      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Co-host Match request</strong><small>Send a request to join this creator’s LIVE stage</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to Co-host</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
+      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Co-host Match request</strong><small>Send a request to join this creator’s LIVE stage</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to Co-host</button><p id='live-speaker-request-status' class='muted' role='status' aria-live='polite'>You are listening as an audience member.</p></section>")
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
   const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel' data-live-tools-panel='rewards'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
