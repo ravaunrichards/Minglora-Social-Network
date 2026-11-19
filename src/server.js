@@ -5718,7 +5718,7 @@ async function route(req, res) {
         const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const autoAccepted = session.liveSettings?.autoAcceptRequests === true;
         if (autoAccepted) {
-          const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)).length;
+          const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && ['invited', 'accepted', 'connected'].includes(item.status)).length;
           if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         }
         await requestSupabaseState('live_speaker_request', { broadcastId: session.id, userId: user.id });
@@ -5787,7 +5787,7 @@ async function route(req, res) {
         }
         const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
-          item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+          item.sessionId === session.id && item.userId !== user.id && ['invited', 'accepted', 'connected'].includes(item.status)
         ).length;
         if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         await requestSupabaseState('live_cohost_invitation_accept', {
@@ -5839,7 +5839,7 @@ async function route(req, res) {
           if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
           const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
           const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
-            item.sessionId === session.id && ['accepted', 'connected'].includes(item.status)
+            item.sessionId === session.id && ['invited', 'accepted', 'connected'].includes(item.status)
           ).length;
           if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         }
@@ -5907,12 +5907,15 @@ async function route(req, res) {
             }
           } catch { subscriberAccess = false; }
         }
-        const canView = session.hostId === user.id || session.visibility === 'public' ||
-          (session.visibility === 'friends' && isFriend(user.id, session.hostId)) || subscriberAccess;
-        if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
         const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
+        const invitedGuest = ['invited', 'accepted', 'connected'].includes(speakerRequest?.status);
+        // An explicit LIVE co-host invitation / host approval grants room access
+        // independently of the broadcast's audience visibility setting.
+        const canView = session.hostId === user.id || invitedGuest || session.visibility === 'public' ||
+          (session.visibility === 'friends' && isFriend(user.id, session.hostId)) || subscriberAccess;
+        if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
         const role = session.hostId === user.id ? 'host' :
           ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
         if (role === 'guest' && session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
