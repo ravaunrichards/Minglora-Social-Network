@@ -5694,7 +5694,7 @@ async function route(req, res) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerRequestsMatch[1] && item.status === 'live');
         if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
         const requests = (db.liveSpeakerRequests || [])
-          .filter(item => item.sessionId === session.id && item.role === 'guest')
+          .filter(item => item.sessionId === session.id && item.role === 'guest' && item.status !== 'invited' && !item.invitedAt)
           .map(item => ({ ...item, user: safeUser(db.users.find(member => member.id === item.userId), user.id) }));
         if (session.liveSettings?.prioritizeGifters === true) requests.sort((a, b) =>
           Number(b.user?.gifterBadge?.level || 0) - Number(a.user?.gifterBadge?.level || 0) ||
@@ -5709,16 +5709,17 @@ async function route(req, res) {
         if (!allowed) return json(res, 404, { error: 'LIVE session not found.' });
         if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
         if (session.liveSettings?.allowGuestRequests === false) return json(res, 403, { error: 'The host is not accepting guest speaker requests right now.' });
-        if (session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled co-host and guest stage requests for this LIVE.' });
         const joined = (db.liveParticipants || []).some(item => item.sessionId === session.id && item.userId === user.id && !item.leftAt);
         if (!joined) return json(res, 409, { error: 'Join the LIVE room before requesting a speaker place.' });
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
-        const previous = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id);
+        const cohostAccess = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id && item.role === 'cohost' && ['invited', 'accepted', 'connected'].includes(item.status));
+        if (cohostAccess) return json(res, 409, { error: 'You already have a separate Co-host invitation or stage role in this LIVE.' });
+        const previous = db.liveSpeakerRequests.find(item => item.sessionId === session.id && item.userId === user.id && item.role === 'guest');
         if (previous && ['requested', 'accepted'].includes(previous.status)) return json(res, 200, { request: previous });
         const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
         const autoAccepted = session.liveSettings?.autoAcceptRequests === true;
         if (autoAccepted) {
-          const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && ['invited', 'accepted', 'connected'].includes(item.status)).length;
+          const activeSpeakers = db.liveSpeakerRequests.filter(item => item.sessionId === session.id && item.role === 'guest' && ['invited', 'accepted', 'connected'].includes(item.status)).length;
           if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         }
         await requestSupabaseState('live_speaker_request', { broadcastId: session.id, userId: user.id });
@@ -5728,13 +5729,19 @@ async function route(req, res) {
         await saveStore();
         return json(res, 201, { request, autoAccepted });
       }
-      const liveCohostInvitationMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/cohost-invitations$/);
+      const liveCohostInvitationMatch = p.match(/^\\/api\\/live\\/sessions\\/([^/]+)\\/cohost-invitations$/);
+      if (method === 'GET' && liveCohostInvitationMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveCohostInvitationMatch[1] && item.status === 'live');
+        if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
+        const invitations = (db.liveSpeakerRequests || [])
+          .filter(item => item.sessionId === session.id && (item.role === 'cohost' || (item.role === 'guest' && (item.status === 'invited' || Boolean(item.invitedAt)))))
+          .map(item => ({ ...item, role: 'cohost', user: safeUser(db.users.find(member => member.id === item.userId), user.id) }));
+        return json(res, 200, { invitations });
+      }
       if (method === 'POST' && liveCohostInvitationMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveCohostInvitationMatch[1] && item.status === 'live');
         if (!session || session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can invite a co-host.' });
-        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowCoHost === false) {
-          return json(res, 403, { error: 'Enable the guest stage and Allow co-host before sending invitations.' });
-        }
+        if (session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled Co-host invitations for this LIVE.' });
         const username = normalizeUsername(input.username || '');
         if (!username) return json(res, 400, { error: 'Enter the co-host member username.' });
         const target = (db.users || []).find(member => normalizeUsername(member.username || '') === username);
@@ -5742,20 +5749,19 @@ async function route(req, res) {
           return json(res, 404, { error: 'Choose an available Minglora member.' });
         }
         const existing = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === target.id);
-        if (existing && ['requested', 'accepted', 'connected', 'invited'].includes(existing.status)) {
-          return json(res, 409, { error: 'This member already has an active guest request or invitation.' });
+        const legacyCohost = existing?.role === 'guest' && (existing.status === 'invited' || Boolean(existing.invitedAt));
+        if (existing && !legacyCohost && existing.role === 'guest' && ['requested', 'accepted', 'connected'].includes(existing.status)) {
+          return json(res, 409, { error: 'This member already has an active Multi-Guest request or seat in this LIVE.' });
         }
-        const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
-        const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
-          item.sessionId === session.id && ['invited', 'accepted', 'connected'].includes(item.status)
-        ).length;
-        if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
+        if (existing && existing.role === 'cohost' && ['invited', 'accepted', 'connected'].includes(existing.status)) {
+          return json(res, 409, { error: 'This creator already has an active Co-host invitation or stage role.' });
+        }
         await requestSupabaseState('live_cohost_invite', {
-          broadcastId: session.id, hostId: user.id, userId: target.id, guestSeatLimit
+          broadcastId: session.id, hostId: user.id, userId: target.id
         });
         const invitedAt = now();
         const invitation = {
-          id: uid(), sessionId: session.id, userId: target.id, role: 'guest', status: 'invited',
+          id: uid(), sessionId: session.id, userId: target.id, role: 'cohost', status: 'invited',
           requestedAt: invitedAt, invitedAt, invitedBy: user.id, acceptedAt: null, connectedAt: null, leftAt: null
         };
         db.liveSpeakerRequests = db.liveSpeakerRequests || [];
@@ -5764,15 +5770,50 @@ async function route(req, res) {
         await saveStore();
         return json(res, 201, { invitation: { ...invitation, user: safeUser(target, user.id) } });
       }
-      const liveCohostAcceptMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request\/accept$/);
+      const liveCohostInvitationStatusMatch = p.match(/^\\/api\\/live\\/sessions\\/([^/]+)\\/cohost-invitation$/);
+      if (method === 'GET' && liveCohostInvitationStatusMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveCohostInvitationStatusMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        const request = (db.liveSpeakerRequests || []).find(item =>
+          item.sessionId === session.id && item.userId === user.id &&
+          (item.role === 'cohost' || (item.role === 'guest' && (item.status === 'invited' || Boolean(item.invitedAt))))
+        );
+        return json(res, 200, { request: request ? { ...request, role: 'cohost' } : null });
+      }
+      const liveCohostInvitationCancelMatch = p.match(/^\\/api\\/live\\/sessions\\/([^/]+)\\/cohost-invitations\\/([^/]+)$/);
+      if (method === 'DELETE' && liveCohostInvitationCancelMatch) {
+        const session = (db.liveSessions || []).find(item => item.id === liveCohostInvitationCancelMatch[1] && item.status === 'live');
+        if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
+        const targetId = liveCohostInvitationCancelMatch[2];
+        const request = (db.liveSpeakerRequests || []).find(item =>
+          item.sessionId === session.id && item.userId === targetId &&
+          (item.role === 'cohost' || (item.role === 'guest' && (item.status === 'invited' || Boolean(item.invitedAt)))) &&
+          ['invited', 'accepted', 'connected'].includes(item.status)
+        );
+        if (!request) return json(res, 404, { error: 'This Co-host invitation or stage role is no longer active.' });
+        if (request.status === 'connected') {
+          try { await removeLiveKitParticipant(session.roomName, targetId); }
+          catch { return json(res, 503, { error: 'Minglora could not remove this Co-host from the LIVE room. Try again.' }); }
+        }
+        await requestSupabaseState('live_participant_mark_left', { broadcastId: session.id, userId: targetId });
+        const leftAt = now();
+        request.role = 'cohost';
+        request.status = 'left';
+        request.leftAt = leftAt;
+        const participant = (db.liveParticipants || []).find(item => item.sessionId === session.id && item.userId === targetId);
+        if (participant) { participant.status = 'left'; participant.leftAt = leftAt; }
+        await saveStore();
+        return json(res, 200, { request, removed: true });
+      }
+      const liveCohostAcceptMatch = p.match(/^\\/api\\/live\\/sessions\\/([^/]+)\\/cohost-invitation\\/accept$/);
       if (method === 'POST' && liveCohostAcceptMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveCohostAcceptMatch[1] && item.status === 'live');
         if (!session || session.hostId === user.id || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE invitation is not available.' });
-        if (session.liveSettings?.guestStageEnabled === false || session.liveSettings?.allowCoHost === false) {
-          return json(res, 403, { error: 'The host has disabled Co-host invitations for this LIVE.' });
-        }
+        if (session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled Co-host invitations for this LIVE.' });
         const request = (db.liveSpeakerRequests || []).find(item =>
-          item.sessionId === session.id && item.userId === user.id && item.status === 'invited'
+          item.sessionId === session.id && item.userId === user.id &&
+          (item.role === 'cohost' || (item.role === 'guest' && (item.status === 'invited' || Boolean(item.invitedAt)))) &&
+          item.status === 'invited'
         );
         if (!request) return json(res, 404, { error: 'There is no pending Co-host invitation for you.' });
         let participants;
@@ -5781,14 +5822,8 @@ async function route(req, res) {
         if (!participants.some(participant => participant.identity === user.id)) {
           return json(res, 409, { error: 'Join this LIVE room first, then accept the Co-host invitation.' });
         }
-        const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
-        const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
-          item.sessionId === session.id && item.userId !== user.id && ['invited', 'accepted', 'connected'].includes(item.status)
-        ).length;
-        if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
-        await requestSupabaseState('live_cohost_invitation_accept', {
-          broadcastId: session.id, userId: user.id, guestSeatLimit
-        });
+        await requestSupabaseState('live_cohost_invitation_accept', { broadcastId: session.id, userId: user.id });
+        request.role = 'cohost';
         request.status = 'accepted';
         request.acceptedAt = now();
         request.reviewedAt = now();
@@ -5796,11 +5831,11 @@ async function route(req, res) {
         notify(session.hostId, user.id, 'live', user.name + ' accepted your Co-host invitation.');
         return json(res, 200, { request });
       }
-      const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
+            const liveSpeakerStatusMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-request$/);
       if (method === 'GET' && liveSpeakerStatusMatch) {
         const session = (db.liveSessions || []).find(item => item.id === liveSpeakerStatusMatch[1] && item.status === 'live');
         if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
-        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === user.id) || null;
+        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === user.id && item.role === 'guest' && !item.invitedAt && item.status !== 'invited') || null;
         return json(res, 200, { request });
       }
       const liveSpeakerDecisionMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/speaker-requests\/([^/]+)$/);
@@ -5809,8 +5844,8 @@ async function route(req, res) {
         if (!session || session.hostId !== user.id) return json(res, 404, { error: 'LIVE host access is required.' });
         const speakerId = liveSpeakerDecisionMatch[2], decision = String(input.decision || '');
         if (speakerId === user.id || !['accept', 'reject', 'remove'].includes(decision)) return json(res, 400, { error: 'Choose a valid speaker stage action.' });
-        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === speakerId &&
-          (decision === 'remove' ? ['accepted', 'connected'].includes(item.status) : decision === 'reject' ? ['requested', 'invited'].includes(item.status) : item.status === 'requested'));
+        const request = (db.liveSpeakerRequests || []).find(item => item.sessionId === session.id && item.userId === speakerId && item.role === 'guest' && !item.invitedAt &&
+          (decision === 'remove' ? ['accepted', 'connected'].includes(item.status) : decision === 'reject' ? item.status === 'requested' : item.status === 'requested'));
         if (!request) return json(res, 404, { error: decision === 'remove' ? 'This member is not an active approved speaker.' : 'This speaker request is no longer pending.' });
         if (decision === 'remove') {
           let removal;
@@ -5835,7 +5870,7 @@ async function route(req, res) {
           if (session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
           const guestSeatLimit = session.broadcastType === 'audio_only' && session.liveLayout === 'side-by-side' ? 9 : 8;
           const activeSpeakers = (db.liveSpeakerRequests || []).filter(item =>
-            item.sessionId === session.id && ['invited', 'accepted', 'connected'].includes(item.status)
+            item.sessionId === session.id && item.role === 'guest' && !item.invitedAt && ['accepted', 'connected'].includes(item.status)
           ).length;
           if (activeSpeakers >= guestSeatLimit) return json(res, 409, { error: 'The ' + guestSeatLimit + ' guest speaker places are full.' });
         }
@@ -5865,15 +5900,22 @@ async function route(req, res) {
             }
           } catch { subscriberAccess = false; }
         }
-        const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
+        const storedStageRecord = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
-        const invitedGuest = ['invited', 'accepted', 'connected'].includes(speakerRequest?.status);
-        const allowed = session.hostId === user.id || invitedGuest || session.visibility === 'public' ||
+        const legacyCohost = storedStageRecord?.role === 'guest' && (storedStageRecord.status === 'invited' || Boolean(storedStageRecord.invitedAt));
+        const cohostRequest = storedStageRecord?.role === 'cohost' || legacyCohost ? storedStageRecord : null;
+        const speakerRequest = storedStageRecord?.role === 'guest' && !legacyCohost ? storedStageRecord : null;
+        const invitedCohost = ['invited', 'accepted', 'connected'].includes(cohostRequest?.status);
+        const invitedGuest = ['accepted', 'connected'].includes(speakerRequest?.status);
+        const allowed = session.hostId === user.id || invitedCohost || invitedGuest || session.visibility === 'public' ||
           (session.visibility === 'friends' && friendAccess) || subscriberAccess;
         if (!allowed) return json(res, 404, { error: 'Live session not found.' });
-        const role = session.hostId === user.id ? 'host' : ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
+        const role = session.hostId === user.id ? 'host' :
+          ['accepted', 'connected'].includes(cohostRequest?.status) ? 'cohost' :
+          ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
         if (role === 'guest' && session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
+        if (role === 'cohost' && session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled Co-host access for this LIVE.' });
         const publishSourceNames = getLivePublishSourceNames(session.liveMode, role, session.broadcastType, session.liveSettings || {});
         const publishSources = publishSourceNames
           ? publishSourceNames.map(source => LIVEKIT_TRACK_SOURCE[source])
@@ -5882,11 +5924,12 @@ async function route(req, res) {
           identity: user.id,
           name: user.name,
           roomName: session.roomName,
-          canPublish: role === 'host' || role === 'guest',
+          canPublish: role === 'host' || role === 'guest' || role === 'cohost',
           canPublishData: true,
           publishSources
         });
-        return json(res, 200, { session, liveKit: { ...liveKit, role } });
+        const liveCohostUserIds = (db.liveSpeakerRequests || []).filter(item => item.sessionId === session.id && (item.role === 'cohost' || (item.role === 'guest' && Boolean(item.invitedAt))) && ['accepted', 'connected'].includes(item.status)).map(item => item.userId);
+        return json(res, 200, { session: { ...session, liveCohostUserIds }, liveKit: { ...liveKit, role } });
       }
       const liveConnectedMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/connected$/);
       if (method === 'POST' && liveConnectedMatch) {
@@ -5903,19 +5946,23 @@ async function route(req, res) {
             }
           } catch { subscriberAccess = false; }
         }
-        const speakerRequest = (db.liveSpeakerRequests || []).find(item =>
+        const storedStageRecord = (db.liveSpeakerRequests || []).find(item =>
           item.sessionId === session.id && item.userId === user.id
         );
-        const invitedGuest = ['invited', 'accepted', 'connected'].includes(speakerRequest?.status);
-        // An explicit LIVE co-host invitation / host approval grants room access
-        // independently of the broadcast's audience visibility setting.
-        const canView = session.hostId === user.id || invitedGuest || session.visibility === 'public' ||
+        const legacyCohost = storedStageRecord?.role === 'guest' && (storedStageRecord.status === 'invited' || Boolean(storedStageRecord.invitedAt));
+        const cohostRequest = storedStageRecord?.role === 'cohost' || legacyCohost ? storedStageRecord : null;
+        const speakerRequest = storedStageRecord?.role === 'guest' && !legacyCohost ? storedStageRecord : null;
+        const invitedCohost = ['invited', 'accepted', 'connected'].includes(cohostRequest?.status);
+        const invitedGuest = ['accepted', 'connected'].includes(speakerRequest?.status);
+        const canView = session.hostId === user.id || invitedCohost || invitedGuest || session.visibility === 'public' ||
           (session.visibility === 'friends' && isFriend(user.id, session.hostId)) || subscriberAccess;
         if (!canView) return json(res, 404, { error: 'LIVE session not found.' });
         const role = session.hostId === user.id ? 'host' :
+          ['accepted', 'connected'].includes(cohostRequest?.status) ? 'cohost' :
           ['accepted', 'connected'].includes(speakerRequest?.status) ? 'guest' : 'viewer';
         if (role === 'guest' && session.liveSettings?.guestStageEnabled === false) return json(res, 403, { error: 'The host has disabled the guest stage for this LIVE.' });
-        if (role === 'guest' && !speakerRequest) return json(res, 403, { error: 'Host approval is required before joining the speaker stage.' });
+        if (role === 'cohost' && session.liveSettings?.allowCoHost === false) return json(res, 403, { error: 'The host has disabled Co-host access for this LIVE.' });
+        if (role === 'guest' && !speakerRequest) return json(res, 403, { error: 'Host approval is required before joining the Multi-Guest stage.' });
         let providerParticipants;
         try {
           providerParticipants = await listLiveKitParticipants(session.roomName);
@@ -5939,6 +5986,8 @@ async function route(req, res) {
         }
         if (role === 'guest' && speakerRequest) {
           speakerRequest.status = 'connected'; speakerRequest.connectedAt = joinedAt;
+        } else if (role === 'cohost' && cohostRequest) {
+          cohostRequest.role = 'cohost'; cohostRequest.status = 'connected'; cohostRequest.connectedAt = joinedAt;
         }
         await saveStore();
         return json(res, 200, {
