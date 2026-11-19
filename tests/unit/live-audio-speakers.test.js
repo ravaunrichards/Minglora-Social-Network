@@ -187,8 +187,8 @@ test('Audio Only LIVE Side by Side alone exposes and enforces a ninth guest seat
   assert.match(renderer,/Guest seat "\+esc\(spec\.seatNumber\)/);
   assert.match(renderer,/guestSeatLimit\+1/);
   assert.match(app,/Manage up to 8 guest seats in Video \+ Audio and the other Audio Only layouts\. Audio Only Side by Side supports 9\./);
-  assert.equal((server.match(/activeSpeakers >= guestSeatLimit/g)||[]).length,4,
-    'requests, invitations, invitation acceptance, and host approvals use the active layout capacity');
+  assert.equal((server.match(/activeSpeakers >= guestSeatLimit/g)||[]).length,2,
+    'only Multi-guest requests and host approvals use the guest-seat layout capacity');
   assert.match(server,/session\.broadcastType === 'audio_only' && session\.liveLayout === 'side-by-side' \? 9 : 8/);
   assert.match(server,/guestSeatLimit: session\.broadcastType === 'audio_only' && session\.liveLayout === 'side-by-side' \? 9 : 8/);
   assert.match(server,/if \(layout !== 'side-by-side'\) \{[\s\S]*?if \(activeSpeakers > 8\)[\s\S]*?Remove one guest from the stage before switching/);
