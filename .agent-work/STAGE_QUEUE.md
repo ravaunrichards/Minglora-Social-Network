@@ -44,8 +44,11 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - Roles: Super Administrator; Finance Administrator; Technical Administrator; Security Administrator; Content Administrator; Creator Manager; Marketplace Manager; Support Administrator; Read-only Auditor.
 - Tasks: audit every admin route/action; establish a canonical permission catalog; migrate staff-role data safely; require MFA for sensitive access; implement server-side authorization on every route/RPC; add assignment, revocation, audit history and recovery-admin controls; require dual approval for configurable high-value financial actions; keep normal member access separate.
 - Acceptance: positive and negative route tests for every role, least-privilege data access, audit coverage, MFA enforcement, recovery and no unauthorized escalation. No role may be assigned to an unverified account.
-- Current evidence: one active owner and one inactive reviewer in minglora_platform_staff; legacy schema permits owner/admin/moderator/reviewer only. Existing Admin Centre remains owner/MFA restricted.
-- Status: READY.
+- Current evidence: the live catalogue contains the original seven assignable business roles, reserved Super Administrator and six separate Brand roles; RBAC grant/revoke is owner/MFA protected. Existing application routes remain owner-restricted until each route/action is migrated to server-side permission checks.
+- Current source slice: branch `feat/minglora-admin-marketplace-manager-rbac-20261119` adds the Marketplace Manager role plus `marketplace:read` and `marketplace:manage` permissions. The role is explicitly non-assignable until every private back-office Marketplace route/action enforces those permissions. The migration preserves all existing staff-role values and does not change any staff assignment or enable the retired consumer-facing Marketplace.
+- Production state: source only; the new migration has not been applied and no staff assignment has been granted or revoked by this slice.
+- Remaining acceptance: exhaustive route/action permission coverage; positive and negative tests for every role; recovery-admin controls; configurable dual approval for high-value financial actions; owner/MFA browser acceptance; production migration and deployment verification.
+- Status: IN PROGRESS — additive Marketplace Manager RBAC source and regression coverage are under review; route-level permission enforcement and production acceptance remain incomplete.
 
 ### MS-ADMIN-BUSINESS-03 — Business and company management
 - Objective: manage verified company identity, documents, legal records, contracts, responsible staff, company assets and important business dates.
