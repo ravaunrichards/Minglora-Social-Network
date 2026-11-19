@@ -101,3 +101,15 @@ test('Co-host supports the planned 2, 3 and 4 creator layouts and separate contr
   assert.match(app, /data-cohost-remove/);
   assert.match(app, /live-cohost-match-end/);
 });
+
+test('Ending a creator LIVE closes only the corresponding Co-host membership or shared stage', () => {
+  const start = edge.indexOf('if (action === "live_broadcast_end")');
+  const end = edge.indexOf('if (action === "live_participant_mark_connected")', start);
+  assert.ok(start >= 0 && end > start);
+  const cleanup = edge.slice(start, end);
+  assert.match(cleanup, /cohost_session_id/);
+  assert.match(cleanup, /created_by/);
+  assert.match(cleanup, /status:"left"/);
+  assert.match(cleanup, /live_cohost_matches/);
+  assert.match(cleanup, /Other creators' LIVE broadcasts keep running/);
+});
