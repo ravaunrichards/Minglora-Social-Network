@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: minglora-live-cohost-livekit-\${{ github.event.pull_request.number || github.ref }}
+  group: minglora-live-cohost-livekit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -24,9 +24,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      LIVEKIT_URL: \${{ secrets.LIVEKIT_URL }}
-      LIVEKIT_API_KEY: \${{ secrets.LIVEKIT_API_KEY }}
-      LIVEKIT_API_SECRET: \${{ secrets.LIVEKIT_API_SECRET }}
+      LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+      LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+      LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
     steps:
       - name: Check out the Co-host repair branch
         uses: actions/checkout@v7
