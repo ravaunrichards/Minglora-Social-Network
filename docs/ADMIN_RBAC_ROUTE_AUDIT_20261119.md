@@ -4,8 +4,8 @@ Scope: existing Minglora Admin APIs and the `minglora-runtime-state` gateway. Th
 
 ## Audit result
 - `src/server.js`: 35 Admin route clauses identified and reviewed for their visible server-side guard.
-- `minglora-runtime-state/index.ts`: 34 Admin-scoped action keys identified. Twelve related action handlers and their server/Edge/DB guard path were reviewed in this pass. Twenty-two action handlers still require complete end-to-end authorization tracing.
-- Combined inventory: 69 route/action entries; 47 reviewed in this initial pass = 68.1%. This is the measured progress for the “audit every admin route/action” work item only; it is not an overall RBAC or Admin Center completion percentage.
+- `minglora-runtime-state/index.ts`: 34 Admin-scoped action keys identified. Eleven related action handlers and their server/Edge/DB guard path were reviewed in this pass. Twenty-three action handlers still require complete end-to-end authorization tracing.
+- Combined inventory: 69 route/action entries; 46 reviewed in this initial pass = 66.7%. This is the measured progress for the “audit every admin route/action” work item only; it is not an overall RBAC or Admin Center completion percentage.
 - Current protection is predominantly designated-owner/MFA. The general business roles in `minglora_admin_role_permissions` are not yet enforced across these routes. Do not interpret a role catalogue entry or assignment as route access.
 - `/api/admin/access` has an existing narrow Brand-role exception using Brand-specific permissions and MFA. That mechanism is not a general role-permission gateway.
 
