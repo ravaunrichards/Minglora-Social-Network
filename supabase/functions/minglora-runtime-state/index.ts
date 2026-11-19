@@ -82,6 +82,7 @@ Deno.serve(async (req: Request) => {
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
+    "live_cohost_discover",
     "live_cohost_session_create", "live_cohost_session_get", "live_cohost_invitations_list",
     "live_cohost_invite", "live_cohost_request", "live_cohost_review",
     "live_cohost_mark_connected", "live_cohost_leave", "live_cohost_end",
@@ -3353,6 +3354,36 @@ Deno.serve(async (req: Request) => {
 
   // Independent creator-to-creator Co-host lifecycle. This deliberately never writes
   // to live_participants, which remains the separate Multi-guest/viewer speaker system.
+  if (action === "live_cohost_discover") {
+    const {data:sessions,error:sessionsError}=await admin.from("live_cohost_sessions")
+      .select("id,host_user_id,host_broadcast_id,room_ref,status,layout,max_participants,started_at")
+      .eq("status","active").order("started_at",{ascending:false}).limit(50);
+    if(sessionsError)return json(503,{error:"Active Co-host stages could not be loaded."});
+    const current=sessions||[];
+    const hostIds=[...new Set(current.map(item=>item.host_user_id))];
+    const broadcastIds=[...new Set(current.map(item=>item.host_broadcast_id))];
+    const sessionIds=current.map(item=>item.id);
+    const [profilesResult,broadcastsResult,participantsResult]=await Promise.all([
+      hostIds.length?admin.from("profiles").select("id,display_name,username,avatar_url").in("id",hostIds):Promise.resolve({data:[],error:null}),
+      broadcastIds.length?admin.from("live_broadcasts").select("id,host_id,title,status,visibility").in("id",broadcastIds):Promise.resolve({data:[],error:null}),
+      sessionIds.length?admin.from("live_cohost_participants").select("session_id,user_id,status").in("session_id",sessionIds).in("status",["accepted","connected"]):Promise.resolve({data:[],error:null})
+    ]);
+    if(profilesResult.error||broadcastsResult.error||participantsResult.error)
+      return json(503,{error:"Active Co-host stage details could not be loaded."});
+    const profiles=new Map((profilesResult.data||[]).map(item=>[item.id,item]));
+    const broadcasts=new Map((broadcastsResult.data||[]).map(item=>[item.id,item]));
+    const counts=new Map();
+    for(const row of participantsResult.data||[])counts.set(row.session_id,(counts.get(row.session_id)||0)+1);
+    return json(200,{stages:current.filter(item=>{
+      const broadcast=broadcasts.get(item.host_broadcast_id);
+      return broadcast&&broadcast.status==="live"&&broadcast.host_id===item.host_user_id;
+    }).map(item=>({
+      ...item,host:profiles.get(item.host_user_id)||null,
+      broadcast:broadcasts.get(item.host_broadcast_id)||null,
+      connectedCount:counts.get(item.id)||0
+    }))});
+  }
+
   if (action === "live_cohost_session_create") {
     const sessionId=String(input.sessionId||""), broadcastId=String(input.broadcastId||"");
     const hostId=String(input.hostId||""), roomRef=String(input.roomRef||"");
