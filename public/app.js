@@ -2137,13 +2137,38 @@ function renderLiveCohostRoster(participants){
     }catch(error){toast(error.message||"Co-host action failed.");button.disabled=false;}
   }));
 }
+function renderLiveCohostDiscovery(stages,role,currentSession){
+  const root=$("#live-cohost-discover-list");if(!root)return;
+  const rows=Array.isArray(stages)?stages.filter(item=>item.status==="active"&&item.host_user_id!==state.user?.id&&item.id!==currentSession?.id):[];
+  if(!rows.length){root.innerHTML="<p class='muted'>No other active creator Co-host stages right now.</p>";return;}
+  const mayRequest=role==="host"&&!currentSession;
+  root.innerHTML=rows.map(item=>{
+    const name=item.host?.display_name||item.host?.username||"LIVE creator";
+    const count=Math.min(4,Number(item.connectedCount||1));
+    const status=item.myStatus==="requested"?"Request pending":["accepted","connected"].includes(item.myStatus)?"Already participating":"";
+    const button=mayRequest
+      ?"<button type='button' data-cohost-request-session='"+esc(item.id)+"' "+(status?"disabled":"")+">"+esc(status||"Request to join")+"</button>"
+      :"<span class='live-cohost-roster-state'>"+esc(status||"LIVE now")+"</span>";
+    return "<div class='live-cohost-discover-row'><div class='live-cohost-discover-host'><strong>"+esc(name)+"</strong><small>"+count+" of 4 creators · "+esc(item.broadcast?.title||"LIVE now")+"</small></div>"+button+"</div>";
+  }).join("");
+  root.querySelectorAll("[data-cohost-request-session]").forEach(button=>button.addEventListener("click",async()=>{
+    const sessionId=button.dataset.cohostRequestSession;
+    button.disabled=true;button.textContent="Sending…";
+    try{
+      await api("/live/cohost/sessions/"+encodeURIComponent(sessionId)+"/requests",{method:"POST",body:"{}"});
+      toast("Your Co-host request was sent. Your own LIVE remains active.");
+      await refreshLiveCohostPanel(activeLiveSession,activeLiveRole,activeLiveRoom,window.LivekitClient);
+    }catch(error){toast(error.message||"Co-host request could not be sent.");button.disabled=false;button.textContent="Request to join";}
+  }));
+}
 async function refreshLiveCohostPanel(session,role,mainRoom,client){
   if(liveCohostRefreshBusy||!session?.id)return;
   liveCohostRefreshBusy=true;
   try{
-    const [stageData,invitationsData]=await Promise.all([
+    const [stageData,invitationsData,discoveryData]=await Promise.all([
       api("/live/cohost/sessions/by-broadcast/"+encodeURIComponent(session.id)),
-      api("/live/cohost/invitations")
+      api("/live/cohost/invitations"),
+      api("/live/cohost/discover").catch(()=>({stages:[]}))
     ]);
     const cohostSession=stageData.session||null,participants=stageData.participants||[];
     const status=$("#live-cohost-status"),startForm=$("#live-cohost-start-form"),inviteForm=$("#live-cohost-invite-form");
@@ -2161,6 +2186,7 @@ async function refreshLiveCohostPanel(session,role,mainRoom,client){
       ?"Co-host stage active · "+Math.min(4,participants.length)+" of 4 creator places"
       :"No Co-host stage is active for this LIVE.";
     activeLiveCohostSession=cohostSession?{...cohostSession,participants}:null;
+    renderLiveCohostDiscovery(discoveryData.stages||[],role,cohostSession);
     let matchData={match:null,participants:[]};
     if(cohostSession&&cohostSession.status==="active"){
       matchData=await api("/live/cohost/sessions/"+encodeURIComponent(cohostSession.id)+"/match");
@@ -2263,6 +2289,29 @@ function setupLiveCohostPanel(session,role,mainRoom,client){
     }catch(error){toast(error.message||"Co-host Match could not be started.");button.disabled=false;}
   }));
   const inviteForm=$("#live-cohost-invite-form");
+  const creatorSearch=$("#live-cohost-invite-username");
+  const creatorResults=$("#live-cohost-creator-results");
+  let creatorSearchTimer=null;
+  const searchCreators=async()=>{
+    if(!creatorSearch||!creatorResults)return;
+    const q=creatorSearch.value.trim();
+    try{
+      const result=await api("/live/cohost/creators?q="+encodeURIComponent(q));
+      const rows=result.creators||[];
+      creatorResults.innerHTML=rows.length
+        ?rows.map(item=>"<button type='button' class='live-cohost-creator-option' data-cohost-invite-creator='"+esc(item.username||"")+"'><span><strong>@"+esc(item.username||"creator")+"</strong><small>"+(item.isFriend?"Friend · ":"")+"LIVE now</small></span><span>Invite</span></button>").join("")
+        :"<p class='muted'>No matching creators are LIVE right now.</p>";
+      creatorResults.querySelectorAll("[data-cohost-invite-creator]").forEach(button=>button.addEventListener("click",()=>{
+        creatorSearch.value=button.dataset.cohostInviteCreator||"";
+        if(inviteForm?.requestSubmit)inviteForm.requestSubmit();
+      }));
+    }catch(error){creatorResults.textContent=error.message||"LIVE creator search is unavailable.";}
+  };
+  creatorSearch?.addEventListener("focus",searchCreators);
+  creatorSearch?.addEventListener("input",()=>{
+    if(creatorSearchTimer)clearTimeout(creatorSearchTimer);
+    creatorSearchTimer=setTimeout(searchCreators,220);
+  });
   inviteForm?.addEventListener("submit",async event=>{
     event.preventDefault();const username=String(inviteForm.elements.username?.value||"").trim();if(!username)return;
     const button=inviteForm.querySelector("button[type='submit']");button.disabled=true;
