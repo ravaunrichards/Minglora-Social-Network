@@ -8,8 +8,8 @@
 - Supabase project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY; `minglora-runtime-state` Edge Function is ACTIVE version 142.
 - Current main CI run `44457780374` is red on two existing tests: LIVE speaker stage-join text and Rankings badge asset-version expectation. Do not claim main CI is green.
 - Company Finance source remains merged and operational acceptance remains pending. Live Finance registers have no subscription, budget, invoice, expense or finance-audit records; no sample records are permitted.
-- Active Admin Center task: `MS-ADMIN-RBAC-02`. Progress estimate is 55.3% across its eight original work bullets (equal weighting); this is not an overall Admin Center or Minglora completion percentage.
-- RBAC PR #539 is draft and mergeable on branch `feat/minglora-admin-marketplace-manager-rbac-20261119`, latest checkpoint head `1c73bc5130f43eec3019a26a0777a8b806ee4b0c`. It adds a reserved, non-assignable Admin-only Marketplace Manager role and two permissions; it does not enable the retired consumer Marketplace.
+- Active Admin Center task: `MS-ADMIN-RBAC-02`. Progress estimate is 61.5% across its eight original work bullets (equal weighting); this is not an overall Admin Center or Minglora completion percentage.
+- RBAC PR #539 is draft and mergeable on branch `feat/minglora-admin-marketplace-manager-rbac-20261119`, latest branch head (re-fetch the branch ref before resuming). It adds a reserved, non-assignable Admin-only Marketplace Manager role and two permissions; it does not enable the retired consumer Marketplace.
 - On the current PR checks, RBAC unit tests 8/8 passed; Supabase Auth and For You navigation passed; full CI remains red on the same two tests failing on `main`. Nine-layout visual QA is pending at the time of checkpoint.
 - Do not apply the new Marketplace role migration, make the role assignable, or deploy this source slice until role-scoped server authorization and required acceptance checks are complete.
 - Repository-wide and overall Admin Center completion remain NOT MEASURABLE from the available weighted acceptance evidence.
