@@ -38,10 +38,12 @@ jobs:
         run: node --check tests/e2e/live-cohost-livekit-two-account.mjs
 
   two-account-livekit:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     name: Two creators publish and leave independently
     runs-on: ubuntu-24.04
-    environment: livekit-cohost
+    environment:
+      name: livekit-cohost
+      deployment: false
     timeout-minutes: 20
     env:
       LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
