@@ -71,6 +71,14 @@ test('Host can invite, accept, decline and remove creators through separate Co-h
   assert.match(app, /data-cohost-remove/);
   assert.match(app, /data-cohost-accept/);
   assert.match(app, /data-cohost-reject/);
+  assert.match(app, /item.status==="requested"&&host/);
+  assert.match(app, /item.status==="invited"&&host/);
+  assert.match(app, /data-cohost-invitation-accept/);
+  assert.match(server, /p==='\/api\/live\/cohost\/creators'/);
+  assert.match(server, /p==='\/api\/live\/cohost\/discover'/);
+  assert.match(edge, /action === "live_cohost_discover"/);
+  assert.match(app, /live-cohost-creator-results/);
+  assert.match(app, /renderLiveCohostDiscovery/);
 });
 
 test('Creators can request to join while already LIVE, and hosts can review the request', () => {
