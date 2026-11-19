@@ -21,8 +21,8 @@
 ## Admin Center workstream — active task
 - Current task: `MS-ADMIN-RBAC-02` — Role-based access control and delegated administrators.
 - Full task detail, original eight work items and evidence-based progress are in `.agent-work/STAGE_QUEUE.md`.
-- Active-task progress estimate: 55.3% across the eight original task bullets with equal weighting. This is not an overall Admin Center or Minglora completion percentage.
-- Six of 35 identified `src/server.js` Admin API route clauses have been inspected (17.1%). Full permission mapping is not complete.
+- Active-task progress estimate: 61.5% across the eight original task bullets with equal weighting. This is not an overall Admin Center or Minglora completion percentage.
+- All 35 identified `src/server.js` Admin API route clauses have been inventoried and guard-reviewed; 11 of 34 Admin-scoped Edge action handlers have been traced through the server/Edge/DB boundary. The combined 69-entry route/action audit is 66.7% complete; remaining action/RPC traces and the role-to-route matrix are open.
 - Canonical role/permission catalogue and safe source migration are implemented; all role-scoped server authorization is not yet enforced.
 - RBAC assignment, revocation and append-only permission audit exist. Recovery-admin control and configurable high-value dual approval are not complete.
 - Sensitive MFA is verified for owner grant/revoke; broad delegated route enforcement is not complete.
