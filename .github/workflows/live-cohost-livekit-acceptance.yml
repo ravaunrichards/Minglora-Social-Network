@@ -58,7 +58,7 @@ jobs:
             fi
           done
           if (("${#missing[@]}" > 0)); then
-            printf '::error title=Missing LiveKit secrets::Add these secrets to repository Settings > Environments > livekit-cohost: %s\\n' "${missing[*]}"
+            printf '::error title=Missing LiveKit secrets::Add these secrets to repository Settings > Environments > livekit-cohost: %s\n' "${missing[*]}"
             exit 1
           fi
           echo "All required LiveKit credentials are present. Secret values are not displayed."
