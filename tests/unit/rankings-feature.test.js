@@ -84,7 +84,7 @@ test("Ranking badge art remains visible around a compact centered member photo o
  assert.ok(leagueCss.includes("object-fit:contain;object-position:center"));
  assert.ok(leagueCss.includes("width:36%;height:36%;box-sizing:border-box"));
  assert.ok(html.includes("styles.css?v=20261118-live-multiguest-approval-prompt-1"));
- assert.ok(html.includes("app.js?v=20261118-live-multiguest-approval-prompt-1"));
+ assert.ok(html.includes("/app.js?v=20261118-live-cohost-panel-separation-1"));
 });
 
 
