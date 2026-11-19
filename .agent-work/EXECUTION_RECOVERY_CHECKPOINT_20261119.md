@@ -37,7 +37,7 @@
 
 ## Current RBAC source branch and PR
 - Branch: `feat/minglora-admin-marketplace-manager-rbac-20261119`
-- Latest branch head: `fc52261e5830fed04952006fdd9647bb29e8e53c`
+- The feature branch has received subsequent checkpoint/documentation commits; fetch its current head ref before resuming. Last source/test commit verified: `5fdd24b2369777e9b9ac10f09c4a60950d44b751`.
 - PR #539: https://github.com/ravaunrichards/Minglora-Social-Network/pull/539 (draft; mergeable; not merged).
 - Branch compare at last inspection: ahead 10, behind 0 relative to `main`.
 - Added migration `supabase/migrations/20261119043000_minglora_admin_marketplace_manager_role.sql`, separate `marketplace:read` / `marketplace:manage` permissions, and a Marketplace Manager role that remains non-assignable until private back-office route permission enforcement is complete.
@@ -47,8 +47,8 @@
 
 ## Exact-head verification at checkpoint
 - RBAC unit test file has eight cases; all 8 passed on code commit `5fdd24b2369777e9b9ac10f09c4a60950d44b751`. Later commits on the feature branch changed only progress/checkpoint documentation.
-- Latest PR CI on head `fc52261e5830fed04952006fdd9647bb29e8e53c`: Supabase Auth provider acceptance passed; For You functional navigation passed; full test job failed on the same two failing tests present on current main.
-- Nine-layout visual QA run `44459696029` was still in progress at checkpoint time; do not claim it passed until the run is complete.
+- Latest PR CI on head `fc52261e5830fed04952006fdd9647bb29e8e53c`: Supabase Auth provider acceptance and For You navigation passed; the 8/8 focused RBAC unit cases passed; full test job failed on the same two tests failing on current main.
+- Nine-layout visual QA run `44459696029` was still in progress at last inspection. The earlier QA run `44459470769` passed on the source-equivalent implementation before the later documentation-only checkpoint commits.
 - PR remains draft because the complete role-permission routing work is not done and base CI is currently red. Do not merge solely to bypass the unrelated failing checks.
 
 ## Immediate resume procedure
