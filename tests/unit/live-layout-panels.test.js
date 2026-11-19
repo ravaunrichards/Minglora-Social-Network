@@ -52,7 +52,7 @@ test('The host layout selection is synchronized to viewers and guests via host-a
 });
 
 test('Host panels switch without removing the chat, guest tools, gifts or moderator tools', () => {
-  for (const panel of ['layouts', 'guests', 'viewers', 'gifts', 'rewards', 'moderators', 'appearance', 'devices']) {
+  for (const panel of ['layouts', 'guests', 'cohost', 'viewers', 'gifts', 'rewards', 'moderators', 'appearance', 'devices']) {
     assert.ok(app.includes("data-live-tools-panel='" + panel + "'"), 'missing ' + panel + ' panel');
   }
   assert.match(app, /function renderLiveViewerPanel\(/);
