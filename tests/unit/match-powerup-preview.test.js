@@ -97,7 +97,7 @@ test('the HTML and service worker request the same versioned Match Power-Up asse
   assert.ok(appAsset && leagueAsset && leagueCss, 'HTML references app, League JS and League CSS');
   for (const asset of [appAsset, leagueAsset, leagueCss]) assert.ok(sw.includes("'" + asset + "'"), asset + ' is cached');
   assert.ok(sw.includes('/assets/league/league-emblems.svg?v=20261116-league-original-reference-assets-1'));
-  assert.match(sw, /CACHE_NAME='minglora-shell-v361-self-updating-1'/);
+  assert.match(sw, /CACHE_NAME='minglora-shell-v362-self-updating-1'/);
 });
 
 test('Backpack and LIVE effects have responsive touch-safe and reduced-motion styles', () => {
