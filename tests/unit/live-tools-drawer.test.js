@@ -13,7 +13,7 @@ const liveGuardrails = read('public/live-interface-guardrails.css');
 
 test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settings drawer', () => {
   assert.match(app, /const rewardTools=!giftsEnabled\?"":.*live-reward-panel/s);
-  assert.match(app, /const liveToolsDrawer=.*liveCohostTools\+liveCohostTools\+speakerTools\+rewardTools\+liveGiftTools/s);
+  assert.match(app, /const liveToolsDrawer=.*liveCohostTools\+speakerTools\+rewardTools\+liveGiftTools/s);
   assert.match(app, /id='live-tools-backdrop' class='live-tools-backdrop hidden'/);
   const roomMarkup = app.slice(app.indexOf('setContent("<section id=\'live-player-shell\' class=\'live-player-shell'), app.indexOf('const room=new client.Room'));
   assert.doesNotMatch(roomMarkup, /live-reaction-bar|live-reaction-buttons|live-community-panel/);
