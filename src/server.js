@@ -5781,7 +5781,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/live/cohost/discover'){
         try{
-          const result=await requestSupabaseState('live_cohost_discover',{});
+          const result=await requestSupabaseState('live_cohost_discover',{userId:user.id});
           const stages=(result.stages||[]).filter(stage=>{
             const broadcast=(db.liveSessions||[]).find(item=>item.id===stage.host_broadcast_id&&item.status==='live');
             if(!broadcast||broadcast.hostId===user.id||blockedBetween(user.id,broadcast.hostId))return false;
