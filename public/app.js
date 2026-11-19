@@ -2812,9 +2812,12 @@ async function openLiveRoom(session,role,issuedLiveKit){
     state.user.gifterBadge=progression.badge||null;
     state.user.newGifterIdentity=progression.newGifterIdentity||null;
   }catch{}
-  const liveKit=issuedLiveKit||(await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"})).liveKit;
+  let joinData=null;
+  if(!issuedLiveKit)joinData=await api("/live/sessions/"+encodeURIComponent(session.id)+"/join",{method:"POST",body:"{}"});
+  const liveKit=issuedLiveKit||joinData?.liveKit;
+  if(joinData?.session)session={...session,...joinData.session};
   // The server-issued token role is authoritative; never trust a caller-supplied guest role.
-  role=liveKit?.role==="host"?"host":liveKit?.role==="guest"?"guest":"viewer";
+  role=liveKit?.role==="host"?"host":liveKit?.role==="cohost"?"cohost":liveKit?.role==="guest"?"guest":"viewer";
   const broadcastType=session.broadcastType==="audio_only"?"audio_only":"video_audio";
   const liveMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(session.liveMode)
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
@@ -2870,7 +2873,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     role==="host"?liveControlButton("live-cohost-toggle","cohost","Invite another creator to co-host this LIVE","Co-host"):"",
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     liveControlButton("live-fullscreen-toggle","fullscreen","Enter room full screen","Expand",{pressed:false}),
-    role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
+    role!=="host"?liveControlButton("live-leave","end",role==="cohost"?"Leave Co-host stage":role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
   ].filter(Boolean).join("");
   const liveGiftTools="<section id='live-gift-panel' class='live-gift-panel "+(giftsEnabled?"is-enabled":"is-disabled")+"' data-live-tools-panel='gifts'><div class='live-gift-heading'><div><strong>"+(role==="host"?"LIVE gift catalogue":"Send a LIVE gift")+"</strong><small>"+(role==="host"?"Viewer preview · sending to your own LIVE is disabled":"Browse, preview and quickly send from the complete Minglora gift collection")+"</small></div><span id='live-wallet-balance'>"+(role==="host"?"VIEWER CATALOGUE":"Loading Coins…")+"</span></div><label class='live-gift-funding-source'>Pay with<select id='live-gift-funding-source'><option value='cash'>Main Coin Wallet</option><option value='admin_promotional'>Promotional Gift Wallet</option></select></label><small class='live-gift-promo-fund-note' id='live-promo-fund-availability'>Checking cash-backed promotional reserve…</small>"+
     (!giftsEnabled?"<p class='live-gift-disabled-note' role='status'>"+(liveSettings.practiceMode?"Gifts are unavailable in Practice Mode.":"The host has turned off gifts for this LIVE.")+" The catalogue remains visible, but gifts cannot be sent.</p>":"")+
@@ -3181,7 +3184,7 @@ activeLivePinnedComment=null;
     if(role==="host"&&canUseCamera){
       await room.localParticipant.enableCameraAndMicrophone();
       for(const publication of room.localParticipant.videoTrackPublications.values())if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
-    }else if(role==="host"||role==="guest"){
+    }else if(role==="host"||role==="guest"||role==="cohost"){
       await room.localParticipant.setMicrophoneEnabled(true);
       let microphonePublished=participantHasLiveAudio(room.localParticipant);
       for(let attempt=0;attempt<5&&!microphonePublished;attempt++){
@@ -3191,7 +3194,7 @@ activeLivePinnedComment=null;
       if(!microphonePublished){
         throw new Error("Minglora connected to the LIVE room, but the microphone track was not published. Check browser microphone permission and try again.");
       }
-      if(role==="guest"&&canUseCamera){
+      if((role==="guest"||role==="cohost")&&canUseCamera){
         await room.localParticipant.setCameraEnabled(true);
         for(const publication of room.localParticipant.videoTrackPublications.values()){
           if(publication.track)attachLiveTrack(publication.track,room.localParticipant,true,publication);
@@ -3231,8 +3234,8 @@ activeLivePinnedComment=null;
     liveFullscreenChangeListener();
     liveScreenShareEnabled=false;
     liveAudioMuted=false;
-    if(micControl)micControl.disabled=!(role==="host"||role==="guest");
-    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest")&&canUseCamera);
+    if(micControl)micControl.disabled=!(role==="host"||role==="guest"||role==="cohost");
+    if(cameraControl)cameraControl.disabled=!((role==="host"||role==="guest"||role==="cohost")&&canUseCamera);
     if(flipCameraControl)flipCameraControl.disabled=!liveCameraEnabled;
     if(screenShareControl&&typeof navigator.mediaDevices?.getDisplayMedia!=="function"){
       screenShareControl.disabled=true;
@@ -3892,7 +3895,8 @@ activeLivePinnedComment=null;
     if(liveSettings.groupChatEnabled!==false){await refreshLiveChat(session.id);liveChatRefreshTimer=setInterval(()=>refreshLiveChat(session.id),5000);}
     startLiveSpeakerRefresh(session,role,room);
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
-    else if(role==="guest")toast(broadcastType==="audio_only"?"You're on stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on stage. Your microphone and camera are connected.");
+    else if(role==="cohost")toast(broadcastType==="audio_only"?"You're co-hosting this Audio LIVE. Your microphone is connected.":"You're co-hosting this LIVE. Your microphone and camera are connected.");
+    else if(role==="guest")toast(broadcastType==="audio_only"?"You're on the Multi-Guest stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on the Multi-Guest stage. Your microphone and camera are connected.");
   }catch(error){
     stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
