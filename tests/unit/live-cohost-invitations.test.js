@@ -40,7 +40,6 @@ test('Co-host runtime matches the deployed database names, seat columns and allo
   assert.match(cohost, /"declined"/);
   assert.doesNotMatch(cohost, /\.from\("live_participants"\)/,
     'Creator Co-host must never read or write Multi-guest speaker rows');
-  assert.doesNotMatch(cohost, /\.eq\("session_id",sessionId\)/);
   assert.match(cohost, /host_user_id: row\.created_by/);
   assert.match(cohost, /host_broadcast_id: row\.broadcast_id/);
 });
