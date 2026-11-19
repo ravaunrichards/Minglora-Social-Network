@@ -1642,9 +1642,9 @@ function attachLiveTrack(track,participant,local,publication){
   if(track.kind==="video"){
     const identity=String(participant?.identity||"local");
     const screenShare=isLiveScreenSharePublication(publication);
-    const layout=$("#live-guest-layout");
-    const seat=Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[]).find(item=>item.dataset.participant===identity);
-    const target=screenShare?$("#live-screen-share-stage"):(seat?.querySelector(".live-guest-seat-media")||(activeLiveScreenLayout==="full-screen"?null:$("#live-video-stage")));
+    const layout=$("#live-guest-layout"),cohostLayout=$("#live-cohost-stage");
+    const seat=[...Array.from(cohostLayout?.querySelectorAll(".live-cohost-seat[data-participant]")||[]),...Array.from(layout?.querySelectorAll(".live-guest-seat[data-participant]")||[])].find(item=>item.dataset.participant===identity);
+    const target=screenShare?$("#live-screen-share-stage"):(seat?.querySelector(".live-cohost-seat-media,.live-guest-seat-media")||(activeLiveScreenLayout==="full-screen"?null:$("#live-video-stage")));
     if(!target)return;
     const tile=document.createElement("div");
     tile.className=screenShare?"live-screen-share-tile":"live-video-tile"+(local?" local":"");
@@ -1795,8 +1795,34 @@ function startLiveGiftEvents(session){
   void refreshLiveGiftEvents(session);
   liveGiftEventsTimer=setInterval(()=>void refreshLiveGiftEvents(session),2200);
 }
+async function refreshLiveCohostPanel(session,role){
+  if(role!=="host")return;
+  const root="/live/sessions/"+encodeURIComponent(session.id),list=$("#live-cohost-invitation-list");if(!list)return;
+  try{
+    const data=await api(root+"/cohost-invitations"),invitations=Array.isArray(data.invitations)?data.invitations:[];
+    session.liveCohostUserIds=invitations.filter(item=>["accepted","connected"].includes(item.status)).map(item=>String(item.userId));
+    list.innerHTML=invitations.length?invitations.map(item=>{
+      const member=item.user||{},name=String(member.name||member.username||"Minglora creator");
+      const labels={invited:"Invitation sent",accepted:"Accepted · joining stage",connected:"Co-host is live",left:"Left Co-host stage",rejected:"Invitation declined"};
+      const active=["invited","accepted","connected"].includes(item.status);
+      return "<article class='live-cohost-invitation-row'><span class='live-cohost-invitation-avatar' aria-hidden='true'>"+esc(name.trim().slice(0,1).toUpperCase()||"M")+"</span><span class='live-cohost-invitation-meta'><strong>"+esc(name)+"</strong><small>@"+esc(member.username||"creator")+" · "+esc(labels[item.status]||String(item.status||"Status unavailable"))+"</small></span>"+(active?"<button type='button' class='text-button' data-live-cohost-remove='"+esc(item.userId)+"'>"+(item.status==="invited"?"Cancel":"Remove")+"</button>":"")+"</article>";
+    }).join(""):"<div class='live-speaker-empty'><strong>No Co-hosts yet</strong><p>Invited creators and active Co-hosts appear here, separately from Multi-Guest.</p></div>";
+    list.querySelectorAll("[data-live-cohost-remove]").forEach(button=>button.addEventListener("click",async()=>{
+      const userId=button.dataset.liveCohostRemove;if(!userId)return;button.disabled=true;
+      try{
+        await api(root+"/cohost-invitations/"+encodeURIComponent(userId),{method:"DELETE"});
+        toast("Co-host invitation or stage access removed.");
+        await refreshLiveCohostPanel(session,role);
+        if(activeLiveRoom&&activeLiveSession?.id===session.id)renderLiveGuestLayout(activeLiveRoom,activeLiveRole,session);
+      }catch(error){toast(error.message||"The Co-host could not be removed.");button.disabled=false;}
+    }));
+    if(activeLiveRoom&&activeLiveSession?.id===session.id)renderLiveGuestLayout(activeLiveRoom,activeLiveRole,session);
+  }catch(error){list.innerHTML="<p class='muted'>Co-host invitations could not be refreshed: "+esc(error.message)+"</p>";}
+}
+
 async function refreshLiveSpeakerPanel(session,role,room){
   const root="/live/sessions/"+encodeURIComponent(session.id);
+  if(role==="host")void refreshLiveCohostPanel(session,role);
   if(role==="host"){
     const list=$("#live-speaker-request-list");if(!list)return;
     try{
@@ -1861,53 +1887,31 @@ async function refreshLiveSpeakerPanel(session,role,room){
   const button=$("#live-request-speaker"),status=$("#live-speaker-request-status");
   const cohostButton=$("#live-request-cohost"),cohostStatus=$("#live-cohost-invitation-status");
   try{
-    const data=await api(root+"/speaker-request"),request=data.request;
-    if(request&&request.status==="invited"){
+    const [cohostData,data]=await Promise.all([api(root+"/cohost-invitation"),api(root+"/speaker-request")]);
+    const cohostRequest=cohostData.request,request=data.request;
+    if(cohostRequest&&["invited","accepted"].includes(cohostRequest.status)){
+      const accepted=cohostRequest.status==="accepted";
       if(cohostButton){
-        cohostButton.hidden=false;
-        cohostButton.disabled=false;
-        cohostButton.textContent="Accept Co-host invitation";
+        cohostButton.hidden=false;cohostButton.disabled=false;
+        cohostButton.textContent=accepted?"Join Co-host stage":"Accept Co-host invitation";
         cohostButton.onclick=async()=>{
           cohostButton.disabled=true;
           try{
-            await api(root+"/speaker-request/accept",{method:"POST",body:"{}"});
-            toast("Co-host invitation accepted. Joining the stage…");
-            stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"guest");
+            if(!accepted)await api(root+"/cohost-invitation/accept",{method:"POST",body:"{}"});
+            toast(accepted?"Joining the Co-host stage…":"Co-host invitation accepted. Joining the stage…");
+            stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"cohost");
           }catch(error){
             if(cohostStatus)cohostStatus.textContent=error.message||"The Co-host invitation could not be accepted.";
-            toast(error.message||"The Co-host invitation could not be accepted.");
-            cohostButton.disabled=false;
+            toast(error.message||"The Co-host invitation could not be accepted.");cohostButton.disabled=false;
           }
         };
       }
-      if(cohostStatus)cohostStatus.textContent="The host invited you to join this LIVE as a Co-host. Accept here; Multi-Guest requests are separate.";
-      if(button){button.disabled=true;button.textContent="Co-host invitation pending";if(status)status.textContent="A direct Co-host invitation is waiting in the Co-host panel.";}
-      if(liveSpeakerApprovalPromptedSessionId!==session.id){
-        liveSpeakerApprovalPromptedSessionId=session.id;
-        openLiveToolsPanel("#live-cohost-panel");
-        cohostButton?.focus();
-        toast("You have a Co-host invitation. Review it in the Co-host panel.");
-      }
-      return;
-    }
-    if(request&&request.status==="accepted"&&request.invitedAt){
-      if(cohostButton){
-        cohostButton.hidden=false;
-        cohostButton.disabled=false;
-        cohostButton.textContent="Join Co-host stage";
-        cohostButton.onclick=async()=>{
-          cohostButton.disabled=true;
-          try{stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"guest");}
-          catch(error){if(cohostStatus)cohostStatus.textContent=error.message||"The Co-host stage could not be joined.";toast(error.message);cohostButton.disabled=false;startLiveSpeakerRefresh(session,"viewer",room);}
-        };
-      }
-      if(cohostStatus)cohostStatus.textContent="Your Co-host invitation is accepted. Join the Co-host stage when ready.";
-      if(button){button.disabled=true;button.textContent="Co-host invitation accepted";if(status)status.textContent="Your direct Co-host invitation is managed separately from guest requests.";}
-      if(liveSpeakerApprovalPromptedSessionId!==session.id){
-        liveSpeakerApprovalPromptedSessionId=session.id;
-        openLiveToolsPanel("#live-cohost-panel");
-        cohostButton?.focus();
-        toast("Your Co-host invitation is accepted. Tap Join Co-host stage.");
+      if(cohostStatus)cohostStatus.textContent=accepted?"Your Co-host invitation is accepted. Join the separate Co-host stage when ready.":"The host invited you to join this LIVE as a Co-host. Accept here; Multi-Guest requests remain separate.";
+      if(button){button.disabled=true;button.textContent=accepted?"Co-host invitation accepted":"Co-host invitation pending";if(status)status.textContent="This creator invitation is separate from Multi-Guest guest-seat requests.";}
+      const promptKey=session.id+":cohost";
+      if(liveSpeakerApprovalPromptedSessionId!==promptKey){
+        liveSpeakerApprovalPromptedSessionId=promptKey;openLiveToolsPanel("#live-cohost-panel");cohostButton?.focus();
+        toast(accepted?"Your Co-host invitation is accepted. Tap Join Co-host stage.":"You have a Co-host invitation. Review it in the Co-host panel.");
       }
       return;
     }
@@ -1917,10 +1921,9 @@ async function refreshLiveSpeakerPanel(session,role,room){
     if(request&&request.status==="accepted"){
       button.disabled=false;button.textContent="Join guest stage";
       if(status)status.textContent="The host approved your guest request. Tap Join guest stage to take your Multi-Guest seat. Your microphone and camera are only requested after you join.";
-      if(liveSpeakerApprovalPromptedSessionId!==session.id){
-        liveSpeakerApprovalPromptedSessionId=session.id;
-        openLiveToolsPanel("#live-speaker-request-panel");
-        button.focus();
+      const promptKey=session.id+":guest";
+      if(liveSpeakerApprovalPromptedSessionId!==promptKey){
+        liveSpeakerApprovalPromptedSessionId=promptKey;openLiveToolsPanel("#live-speaker-request-panel");button.focus();
         toast("The host approved your guest request. Tap Join guest stage to take your Multi-Guest seat.");
       }
       button.onclick=async()=>{
@@ -1944,8 +1947,8 @@ async function refreshLiveSpeakerPanel(session,role,room){
   }
 }
 function startLiveSpeakerRefresh(session,role,room){
-  stopLiveSpeakerRefresh();if(role==="viewer")liveSpeakerApprovalPromptedSessionId=null;void refreshLiveSpeakerPanel(session,role,room);
-  if(role==="host"||role==="viewer")liveSpeakerRefreshTimer=setInterval(()=>void refreshLiveSpeakerPanel(session,role,room),5000);
+  stopLiveSpeakerRefresh();if(role==="viewer")liveSpeakerApprovalPromptedSessionId=null;void refreshLiveSpeakerPanel(session,role,room);if(role==="host")void refreshLiveCohostPanel(session,role);
+  if(role==="host"||role==="viewer")liveSpeakerRefreshTimer=setInterval(()=>{void refreshLiveSpeakerPanel(session,role,room);if(role==="host")void refreshLiveCohostPanel(session,role);},5000);
 }
 function renderLivePinnedComment(comment){
   activeLivePinnedComment=comment?.id?{
@@ -2031,16 +2034,17 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
   const root=$("#live-speaker-list");if(!root||!room)return;
   const speakers=[];
   const local=room.localParticipant;
-  if(role==="host"||role==="guest"){
+  if(role==="host"||role==="guest"||role==="cohost"){
     speakers.push({
       identity:local?.identity||state.user?.id,
       name:local?.name||state.user?.name||"You",
-      label:role==="host"?"You · Host":"You · Guest speaker",
+      label:role==="host"?"You · Host":role==="cohost"?"You · Co-host":"You · Guest speaker",
       connected:participantHasLiveAudio(local),
       speaking:activeSpeakerIds.has(local?.identity), muted:Array.from(local?.audioTrackPublications?.values?.()||[]).some(publication=>publication?.isMuted)
     });
   }
   const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
+  const cohostIds=new Set(Array.isArray(session?.liveCohostUserIds)?session.liveCohostUserIds.map(String):[]);
   for(const person of remotes){
     const isHost=person.identity===session?.hostId;
     const hasAudio=participantHasLiveAudio(person);
@@ -2048,7 +2052,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
     speakers.push({
       identity:person.identity,
       name:person.name||person.identity||"Minglora member",
-      label:isHost?"Host": "Guest speaker",
+      label:isHost?"Host":cohostIds.has(String(person.identity))?"Co-host":"Guest speaker",
       connected:hasAudio,
       speaking:activeSpeakerIds.has(person.identity), muted:Array.from(person.audioTrackPublications?.values?.()||[]).some(publication=>publication?.isMuted)
     });
@@ -2064,7 +2068,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
 }
 
 function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
-  const root=$("#live-guest-layout");if(!root||!room)return;
+  const root=$("#live-guest-layout"),cohostRoot=$("#live-cohost-stage");if(!root||!room)return;
   applyLiveScreenLayout(activeLiveScreenLayout);
   applyLiveGuestLayout(activeLiveGuestLayout);
   const local=room.localParticipant;
@@ -2075,11 +2079,29 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const audioOnly=Boolean(root.closest(".live-audio-stage"));
   const hasGuestStageMedia=audioOnly?participantHasLiveAudio:participantHasLiveStageMedia;
   const fullScreenHostOnly=activeLiveScreenLayout==="full-screen"&&!audioOnly;
-  const guests=[];
-  if(role==="guest"&&local&&hasGuestStageMedia(local))guests.push(local);
+  const cohostIds=new Set(Array.isArray(session?.liveCohostUserIds)?session.liveCohostUserIds.map(String):[]);
+  const cohosts=[],guests=[];
+  if(role==="cohost"&&local&&hasGuestStageMedia(local))cohosts.push(local);
   for(const person of remotes){
     if(person.identity===session?.hostId||!hasGuestStageMedia(person))continue;
-    if(!guests.some(item=>item.identity===person.identity))guests.push(person);
+    if(cohostIds.has(String(person.identity))){
+      if(!cohosts.some(item=>item.identity===person.identity))cohosts.push(person);
+    }else if(!guests.some(item=>item.identity===person.identity))guests.push(person);
+  }
+  if(cohostRoot){
+    const cohostNodes=cohosts.map(person=>{
+      const identity=String(person.identity||""),name=String(person.name||"Minglora co-host");
+      const initial=name.trim().slice(0,1).toUpperCase()||"M";
+      const connected=participantHasLiveAudio(person),speaking=activeSpeakerIds.has(identity);
+      const muted=Array.from(person.audioTrackPublications?.values?.()||[]).some(publication=>publication?.isMuted);
+      const seat=document.createElement("article");
+      seat.className="live-cohost-seat"+(speaking?" is-speaking":"")+(connected?" connected":" connecting");
+      seat.dataset.participant=identity;seat.setAttribute("aria-label",name+" · Co-host");
+      seat.innerHTML="<span class='live-cohost-seat-tag'>CO-HOST</span><span class='live-cohost-seat-avatar' aria-hidden='true'>"+esc(initial)+"</span><span class='live-cohost-seat-meta'><strong>"+esc(name)+"</strong><small>"+(speaking?"Speaking":connected?(muted?"Microphone muted":"Microphone connected"):"Connecting to Co-host stage")+"</small></span>";
+      const media=document.createElement("div");media.className="live-cohost-seat-media";seat.append(media);
+      return seat;
+    });
+    cohostRoot.replaceChildren(...cohostNodes);cohostRoot.hidden=cohostNodes.length===0;
   }
   root.classList.toggle("live-host-only-layout",fullScreenHostOnly);
   root.classList.toggle("has-active-guests",fullScreenHostOnly&&guests.length>0);
@@ -2808,20 +2830,20 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
   activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;liveCameraEnabled=canUseCamera;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
-    ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
-    : "<div id='live-video-stage' class='live-video-stage live-mode-"+liveMode+"'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
+    ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-cohost-stage' class='live-cohost-stage' aria-label='LIVE Co-host stage'></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE Multi-Guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
+    : "<div id='live-video-stage' class='live-video-stage live-mode-"+liveMode+"'><div id='live-cohost-stage' class='live-cohost-stage' aria-label='LIVE Co-host stage'></div><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE Multi-Guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
   const liveEntryBanner=state.user?.gifterBadge?.liveEntranceUnlocked
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
   const speakerTools=role==="host"
-    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Multi-Guest stage</strong><small>Manage up to 8 guest seats in Video + Audio and the other Audio Only layouts. Audio Only Side by Side supports 9.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Turn ON permits requests when Allow guest requests and Allow co-host are also enabled.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
+    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Multi-Guest stage</strong><small>Manage up to 8 guest seats in Video + Audio and the other Audio Only layouts. Audio Only Side by Side supports 9.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block Multi-Guest requests and remove current guest speakers. Co-host invitations are managed separately.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
     : role==="viewer"
-      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Multi-Guest requests</strong><small>Request an audio or video guest seat in this LIVE</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request guest seat</button><p id='live-speaker-request-status' class='muted' role='status' aria-live='polite'>You are listening as an audience member.</p></section>")
+      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Multi-Guest requests</strong><small>Request an audio or video guest seat in this LIVE</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request guest seat</button><p id='live-speaker-request-status' class='muted' role='status' aria-live='polite'>You are listening as an audience member.</p></section>")
       : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
   const liveCohostTools=role==="host"
-    ? "<section id='live-cohost-panel' class='live-tools-card live-cohost-panel' data-live-tools-panel='cohost'><div class='live-panel-title'><strong>Invite a Co-host</strong><small>Invite another Minglora creator to join this LIVE. This creator invitation is separate from Multi-Guest viewer requests and guest seats.</small></div><form id='live-cohost-invite-form' class='live-cohost-invite-form'><label for='live-cohost-invite-username'>Creator username</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter creator username' required><button type='submit'>Send Co-host invite</button></div><small id='live-cohost-invite-status' role='status' aria-live='polite'>The invited creator must open this LIVE and accept before joining.</small></form></section>"
+    ? "<section id='live-cohost-panel' class='live-tools-card live-cohost-panel' data-live-tools-panel='cohost'><div class='live-panel-title'><strong>Invite a Co-host</strong><small>Invite another Minglora creator to join this LIVE as a separate audio/video collaborator. Co-hosts do not use Multi-Guest seats.</small></div><form id='live-cohost-invite-form' class='live-cohost-invite-form'><label for='live-cohost-invite-username'>Creator username</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter creator username' required><button type='submit'>Send Co-host invite</button></div><small id='live-cohost-invite-status' role='status' aria-live='polite'>The invited creator opens this LIVE and accepts from the Co-host panel.</small></form><div id='live-cohost-invitation-list' class='live-cohost-invitation-list'><p class='muted'>Loading Co-host invitations…</p></div></section>"
     : role==="viewer"
-      ? "<section id='live-cohost-panel' class='live-tools-card live-cohost-panel' data-live-tools-panel='cohost'><div class='live-panel-title'><strong>Co-host invitation</strong><small id='live-cohost-invitation-status' role='status' aria-live='polite'>No direct Co-host invitation is waiting.</small></div><button type='button' class='secondary full' id='live-request-cohost' hidden>Accept Co-host invitation</button></section>"
+      ? "<section id='live-cohost-panel' class='live-tools-card live-cohost-panel' data-live-tools-panel='cohost'><div class='live-panel-title'><strong>Co-host invitation</strong><small id='live-cohost-invitation-status' role='status' aria-live='polite'>No direct Co-host invitation is waiting. This is separate from Multi-Guest seat requests.</small></div><button type='button' class='secondary full' id='live-request-cohost' hidden>Accept Co-host invitation</button></section>"
       : "";
   const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel' data-live-tools-panel='rewards'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
@@ -2952,7 +2974,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
         cohostInviteForm.reset();
         if(status)status.textContent="Invitation sent to @"+String(result.invitation?.user?.username||username)+". They must join this LIVE and accept.";
         toast("Co-host invitation sent.");
-        await refreshLiveSpeakerPanel(session,role,room);
+        await refreshLiveCohostPanel(session,role);
       }catch(error){
         if(status)status.textContent=error.message||"The Co-host invitation could not be sent.";
         toast(error.message||"The Co-host invitation could not be sent.");
@@ -3066,7 +3088,7 @@ activeLivePinnedComment=null;
         if(stateLabel)stateLabel.textContent=packet.enabled?'ON':'OFF';
         if(role==='viewer'){
           const panel=$('#live-speaker-request-panel');
-          const canRequest=packet.enabled&&session.liveSettings?.allowGuestRequests!==false&&session.liveSettings?.allowCoHost!==false;
+          const canRequest=packet.enabled&&session.liveSettings?.allowGuestRequests!==false;
           if(panel){
             panel.innerHTML=canRequest
               ?"<div class='live-speaker-panel-heading'><strong>Multi-Guest requests</strong><small>Request an audio or video guest seat in this LIVE</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request guest seat</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p>"
