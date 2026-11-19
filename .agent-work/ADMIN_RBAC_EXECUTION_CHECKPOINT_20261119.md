@@ -25,7 +25,7 @@ Scope: Minglora Social Network only.
 ## MS-ADMIN-RBAC-02 — exact work state
 The original eight work items from `.agent-work/STAGE_QUEUE.md` are preserved and expanded there with statuses and percentages.
 
-1. Audit every admin route/action: in progress, 6/35 identified route clauses examined (17.1%). The 35 matches are the current `src/server.js` Admin API route-clause inventory; a complete route/action permission matrix is still required.
+1. Audit every admin route/action: partial, 66.7% (35/35 server route clauses inventoried plus 11/34 Admin-scoped Edge actions traced; 46/69 total identified entries). A complete role-to-route permission matrix and 23 remaining Edge action traces are still required.
 2. Establish canonical permission catalogue: implemented in source (100%). Existing role definitions are retained. The new additive migration creates `marketplace:read` and `marketplace:manage`.
 3. Migrate staff-role data safely: implemented in source (100%). The migration extends the role constraint while preserving existing role values and does not insert/update/deactivate/revoke any existing staff row. Production application of this new migration is pending.
 4. Require MFA for sensitive access: partial (50%). The owner grant/revoke endpoint is MFA-verified and delegated grants are recorded with `mfa_required=true`; all sensitive delegated routes are not yet enforced. The owner management endpoint remains designated-owner/MFA protected and delegated assignments are recorded with `mfa_required=true`. Enforcement across every delegated route remains unimplemented.
