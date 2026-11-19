@@ -4,6 +4,7 @@ import testRunner from 'node:test';
 
 const read = path => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 const migration = read('../../supabase/migrations/20261117110000_minglora_owner_admin_rbac.sql');
+const marketplaceRoleMigration = read('../../supabase/migrations/20261119043000_minglora_admin_marketplace_manager_role.sql');
 const edge = read('../../supabase/functions/minglora-runtime-state/index.ts');
 const server = read('../../src/server.js');
 const ui = read('../../public/admin-centre-rbac.js');
@@ -70,7 +71,20 @@ testRunner('delegated grants cannot demote any existing owner staff assignment',
   assert.match(grantBranch, /Existing owner staff assignments are protected from delegated-role changes/);
 });
 
-testRunner('removed Marketplace does not appear in the delegated administrator catalogue', () => {
+testRunner('Marketplace Manager is admin-only, audited by RBAC and reserved until route permissions are enforced', () => {
+  // Keep the original migration immutable; the new role is an additive migration.
   assert.doesNotMatch(migration, /marketplace/i);
-  assert.doesNotMatch(docs, /marketplace/i);
+  assert.match(marketplaceRoleMigration, /marketplace_manager/);
+  assert.match(marketplaceRoleMigration, /'Marketplace Manager'[\s\S]*?false/);
+  assert.match(marketplaceRoleMigration, /marketplace:read/);
+  assert.match(marketplaceRoleMigration, /marketplace:manage/);
+  assert.match(marketplaceRoleMigration, /assignable=false/);
+  assert.match(marketplaceRoleMigration, /does not re-enable the retired consumer-facing Marketplace/i);
+  assert.match(marketplaceRoleMigration, /'brand_administrator'[\s\S]*?'brand_read_only'[\s\S]*?'marketplace_manager'/);
+  assert.doesNotMatch(marketplaceRoleMigration, /INSERT INTO public\\.minglora_platform_staff/i);
+  assert.doesNotMatch(marketplaceRoleMigration, /UPDATE\\s+public\\.minglora_platform_staff/i);
+  assert.match(ui, /role\.assignable===true/);
+  assert.match(ui, /Reserved · not assignable/);
+  assert.match(docs, /Marketplace Manager/);
+  assert.match(docs, /does not restore, publish or enable the retired consumer-facing Marketplace/i);
 });
