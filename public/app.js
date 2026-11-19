@@ -1901,7 +1901,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
   }catch(error){if(status)status.textContent=error.message;}
 }
 function startLiveSpeakerRefresh(session,role,room){
-  stopLiveSpeakerRefresh();void refreshLiveSpeakerPanel(session,role,room);
+  stopLiveSpeakerRefresh();if(role==="viewer")liveSpeakerApprovalPromptedSessionId=null;void refreshLiveSpeakerPanel(session,role,room);
   if(role==="host"||role==="viewer")liveSpeakerRefreshTimer=setInterval(()=>void refreshLiveSpeakerPanel(session,role,room),5000);
 }
 function renderLivePinnedComment(comment){
@@ -2739,7 +2739,6 @@ function setupLiveRewardPanel(session,role){
   liveRewardRefreshTimer=setInterval(()=>void refreshLiveRewardPanel(session,role),5000);
 }
 async function openLiveRoom(session,role,issuedLiveKit){
-  liveSpeakerApprovalPromptedSessionId=null;
   stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();stopLiveGiftEvents();
   window.MingloraGiftFX?.prime();
   liveGiftEventsLastSeenAt=new Date(Date.now()-10000).toISOString();closeLiveProfilePreview();liveFanClubState=null;liveGiftCatalogue=[];liveGiftScope='all';refreshLiveGiftGrid=null;
