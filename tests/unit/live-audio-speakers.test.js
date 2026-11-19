@@ -115,10 +115,10 @@ test('Minglora LIVE presents compact accessible icon controls with working room 
 
 
 test('Audio LIVE fixes bust cached app and stylesheet URLs in the page and service worker', () => {
-  assert.ok(index.includes('/app.js?v=20261118-tiktok-ranking-frames-1'));
+  assert.ok(index.includes('/app.js?v=20261118-live-multiguest-approval-prompt-1'));
   assert.ok(index.includes('/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'));
   assert.ok(index.includes('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3'));
-  assert.ok(serviceWorker.includes("'/app.js?v=20261118-tiktok-ranking-frames-1'"));
+  assert.ok(serviceWorker.includes("'/app.js?v=20261118-live-multiguest-approval-prompt-1'"));
   assert.ok(serviceWorker.includes("'/live-room-fit.css?v=20261117-audio-only-nine-guest-layout-1'"));
   assert.ok(serviceWorker.includes("SHELL.push('/live-tiktok-compact.css?v=20261118-audio-live-reference-priority-3')"));
   assert.ok(index.includes('/live-interface-guardrails.css?v=20261117-audio-layout-no-overlap-2'));
@@ -245,4 +245,21 @@ test('All nine Audio LIVE guest presets share the unified layout state and synch
   assert.doesNotMatch(app,/live-guest-layout-options|data-live-guest-layout=/);
   assert.match(app,/topic:"minglora-live-layout"/);
   assert.match(app,/applyLiveScreenLayout\(nextLayout\)/);
+});
+
+test('Accepted LIVE speaker requests open the guest panel and require an explicit stage join', () => {
+  const panelStart=app.indexOf('async function refreshLiveSpeakerPanel(');
+  const panelEnd=app.indexOf('\\nfunction startLiveSpeakerRefresh(',panelStart);
+  const panel=app.slice(panelStart,panelEnd);
+  const acceptedStart=panel.indexOf('if(request&&request.status==="accepted"){');
+  const acceptedEnd=panel.indexOf('button.disabled=Boolean(request&&request.status==="requested")',acceptedStart);
+  const accepted=panel.slice(acceptedStart,acceptedEnd);
+  assert.ok(panelStart>=0&&panelEnd>panelStart&&acceptedStart>=0&&acceptedEnd>acceptedStart);
+  assert.ok(accepted.includes('openLiveToolsPanel("#live-speaker-request-panel")'));
+  assert.ok(accepted.includes('button.focus()'));
+  assert.ok(accepted.includes('Tap Join Co-host stage to take your seat'));
+  assert.ok(accepted.includes('Join Co-host stage'));
+  assert.ok(accepted.includes('openLiveRoom(session,"guest")'));
+  assert.ok(accepted.includes('liveSpeakerApprovalPromptedSessionId!==session.id'));
+  assert.equal(/setMicrophoneEnabled|setCameraEnabled/.test(accepted),false);
 });
