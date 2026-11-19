@@ -75,15 +75,15 @@ testRunner('Marketplace Manager is admin-only, audited by RBAC and reserved unti
   // Keep the original migration immutable; the new role is an additive migration.
   assert.doesNotMatch(migration, /marketplace/i);
   assert.match(marketplaceRoleMigration, /marketplace_manager/);
-  assert.match(marketplaceRoleMigration, /'Marketplace Manager'[\\s\\S]*?false/);
+  assert.match(marketplaceRoleMigration, /'Marketplace Manager'[\s\S]*?false/);
   assert.match(marketplaceRoleMigration, /marketplace:read/);
   assert.match(marketplaceRoleMigration, /marketplace:manage/);
   assert.match(marketplaceRoleMigration, /assignable=false/);
   assert.match(marketplaceRoleMigration, /does not re-enable the retired consumer-facing Marketplace/i);
-  assert.match(marketplaceRoleMigration, /'brand_administrator'[\\s\\S]*?'brand_read_only'[\\s\\S]*?'marketplace_manager'/);
+  assert.match(marketplaceRoleMigration, /'brand_administrator'[\s\S]*?'brand_read_only'[\s\S]*?'marketplace_manager'/);
   assert.doesNotMatch(marketplaceRoleMigration, /INSERT INTO public\\.minglora_platform_staff/i);
   assert.doesNotMatch(marketplaceRoleMigration, /UPDATE\\s+public\\.minglora_platform_staff/i);
-  assert.match(ui, /role\\.assignable===true/);
+  assert.match(ui, /role\.assignable===true/);
   assert.match(ui, /Reserved · not assignable/);
   assert.match(docs, /Marketplace Manager/);
   assert.match(docs, /does not restore, publish or enable the retired consumer-facing Marketplace/i);
