@@ -1,16 +1,18 @@
 # Minglora Master Progress
 
-> Current source of truth: [.agent-work/EXECUTION_RECOVERY_CHECKPOINT_20261118.md](EXECUTION_RECOVERY_CHECKPOINT_20261118.md). Historical checkpoint details below this notice are snapshots from earlier dates and must not override the current verified checkpoint.
+> Current source of truth: [.agent-work/EXECUTION_RECOVERY_CHECKPOINT_20261119.md](EXECUTION_RECOVERY_CHECKPOINT_20261119.md), with the detailed active RBAC slice in [.agent-work/ADMIN_RBAC_EXECUTION_CHECKPOINT_20261119.md](ADMIN_RBAC_EXECUTION_CHECKPOINT_20261119.md). Earlier checkpoint details below are historical snapshots and must not override the latest live state.
 
-## Current checkpoint — 2026-11-18
-- Main commit: `e03c8b615ddaaba774558b952524181756c6a27e`.
-- Logo Center completion PR #526 merged; current-head pre-merge checks 9/9 passed and post-merge main CI 4/4 passed.
-- Supabase migration `20261118160000_minglora_logo_center_completion` applied (ledger version `20261118175938`).
-- `minglora-runtime-state` Edge Function ACTIVE version 139.
-- Render service `minglora-social-network-temp` is LIVE on commit `e03c8b615ddaaba774558b952524181756c6a27e`; deployment `dep-dbuufkjm8hqs738kug90` succeeded at 2026-11-18T18:03:28Z.
-- Supabase durable persistence and LiveKit reported ready/connected in the new Render instance.
-- Do not claim Logo Center owner/MFA browser acceptance is complete; it remains an explicit operational gate.
-- Do not use any older commit, Edge Function version, Render workspace/service claim or blocker statement below as current without rechecking live sources.
+## Current checkpoint — 2026-11-19
+- Current `main`: `8f0a6a4f65955e5b3da0ac03d960b41b8158f4f4`.
+- Render `minglora-social-network-temp` is LIVE on that commit; deployment `dep-dbv7i67trrvc73bd7jg0`.
+- Supabase project `gzycobgbasnqqhnympkr` is ACTIVE_HEALTHY; `minglora-runtime-state` Edge Function is ACTIVE version 142.
+- Current main CI run `44457780374` is red on two existing tests: LIVE speaker stage-join text and Rankings badge asset-version expectation. Do not claim main CI is green.
+- Company Finance source remains merged and operational acceptance remains pending. Live Finance registers have no subscription, budget, invoice, expense or finance-audit records; no sample records are permitted.
+- Active Admin Center task: `MS-ADMIN-RBAC-02`. Progress estimate is 55.3% across its eight original work bullets (equal weighting); this is not an overall Admin Center or Minglora completion percentage.
+- RBAC PR #539 is draft and mergeable on branch `feat/minglora-admin-marketplace-manager-rbac-20261119`, latest checkpoint head `1c73bc5130f43eec3019a26a0777a8b806ee4b0c`. It adds a reserved, non-assignable Admin-only Marketplace Manager role and two permissions; it does not enable the retired consumer Marketplace.
+- On the current PR checks, RBAC unit tests 8/8 passed; Supabase Auth and For You navigation passed; full CI remains red on the same two tests failing on `main`. Nine-layout visual QA is pending at the time of checkpoint.
+- Do not apply the new Marketplace role migration, make the role assignable, or deploy this source slice until role-scoped server authorization and required acceptance checks are complete.
+- Repository-wide and overall Admin Center completion remain NOT MEASURABLE from the available weighted acceptance evidence.
 
 ## Historical checkpoint (preserved; not current)
 
