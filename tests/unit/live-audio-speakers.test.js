@@ -249,7 +249,7 @@ test('All nine Audio LIVE guest presets share the unified layout state and synch
 
 test('Accepted LIVE speaker requests open the guest panel and require an explicit stage join', () => {
   const panelStart=app.indexOf('async function refreshLiveSpeakerPanel(');
-  const panelEnd=app.indexOf('\\nfunction startLiveSpeakerRefresh(',panelStart);
+  const panelEnd=app.indexOf('\nfunction startLiveSpeakerRefresh(',panelStart);
   const panel=app.slice(panelStart,panelEnd);
   const acceptedStart=panel.indexOf('if(request&&request.status==="accepted"){');
   const acceptedEnd=panel.indexOf('button.disabled=Boolean(request&&request.status==="requested")',acceptedStart);
