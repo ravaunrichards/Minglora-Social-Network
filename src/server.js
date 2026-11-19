@@ -5753,6 +5753,45 @@ async function route(req, res) {
           return json(res,200,result);
         }catch(error){return json(res,error.status||503,{error:error.message||'Co-host invitations could not be loaded.'});}
       }
+      if(method==='GET'&&p==='/api/live/cohost/creators'){
+        const query=String(url.searchParams.get('q')||'').trim().toLowerCase().replace(/^@/,'').slice(0,40);
+        const liveByCreator=new Map();
+        for(const live of db.liveSessions||[]){
+          if(live.status!=='live'||!live.hostId||live.hostId===user.id||liveByCreator.has(live.hostId))continue;
+          if(blockedBetween(user.id,live.hostId))continue;
+          const visible=live.visibility==='public'||
+            (live.visibility==='friends'&&isFriend(user.id,live.hostId))||
+            (live.visibility==='subscribers'&&listActiveCreatorSubscriptions(db.creatorSubscriptions,live.hostId).some(item=>item.subscriberId===user.id));
+          if(!visible)continue;
+          const creator=(db.users||[]).find(item=>item.id===live.hostId);
+          if(!creator)continue;
+          const searchable=[creator.username,creator.name,creator.displayName,creator.display_name].filter(Boolean).join(' ').toLowerCase();
+          if(query&&!searchable.includes(query))continue;
+          liveByCreator.set(live.hostId,{creator,live});
+        }
+        const results=[...liveByCreator.values()].sort((a,b)=>{
+          const friendA=isFriend(user.id,a.creator.id)?0:1,friendB=isFriend(user.id,b.creator.id)?0:1;
+          return friendA-friendB||String(a.creator.username||'').localeCompare(String(b.creator.username||''));
+        }).slice(0,25).map(({creator,live})=>({
+          user:safeUser(creator,user.id),username:creator.username||'',
+          liveSessionId:live.id,liveMode:live.liveMode||'video_audio',
+          isFriend:Boolean(isFriend(user.id,creator.id))
+        }));
+        return json(res,200,{creators:results});
+      }
+      if(method==='GET'&&p==='/api/live/cohost/discover'){
+        try{
+          const result=await requestSupabaseState('live_cohost_discover',{});
+          const stages=(result.stages||[]).filter(stage=>{
+            const broadcast=(db.liveSessions||[]).find(item=>item.id===stage.host_broadcast_id&&item.status==='live');
+            if(!broadcast||broadcast.hostId===user.id||blockedBetween(user.id,broadcast.hostId))return false;
+            return broadcast.visibility==='public'||
+              (broadcast.visibility==='friends'&&isFriend(user.id,broadcast.hostId))||
+              (broadcast.visibility==='subscribers'&&listActiveCreatorSubscriptions(db.creatorSubscriptions,broadcast.hostId).some(item=>item.subscriberId===user.id));
+          });
+          return json(res,200,{stages});
+        }catch(error){return json(res,error.status||503,{error:error.message||'Active Co-host stages could not be discovered.'});}
+      }
       const cohostByBroadcastMatch=p.match(/^\/api\/live\/cohost\/sessions\/by-broadcast\/([^/]+)$/);
       if(method==='GET'&&cohostByBroadcastMatch){
         const broadcastId=cohostByBroadcastMatch[1];
