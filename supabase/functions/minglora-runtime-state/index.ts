@@ -3360,7 +3360,7 @@ Deno.serve(async (req: Request) => {
     if(invitationError)return json(503,{error:"Minglora could not verify this co-host invitation."});
     if(!invitation)return json(409,{error:"There is no pending Co-host invitation for this member."});
     const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
-      .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["accepted","connected"]);
+      .eq("broadcast_id",broadcastId).eq("role","guest").neq("user_id",userId).in("status",["invited","accepted","connected"]);
     if(countError)return json(503,{error:"Minglora could not verify the available co-host seats."});
     const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
     if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
@@ -3417,7 +3417,7 @@ Deno.serve(async (req: Request) => {
     if(pendingError||!pending)return json(409,{error:"This speaker request is no longer pending."});
     if(decision==="accept"){
       const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
-        .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["accepted","connected"]);
+        .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["invited","accepted","connected"]);
       if(countError)return json(503,{error:"Minglora could not verify the stage capacity."});
       const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
       if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
