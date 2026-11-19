@@ -34,6 +34,25 @@ test('The invitee enters as a viewer, accepts while connected, then reconnects o
   assert.doesNotMatch(app.slice(hostStart, hostEnd), /room\.disconnect\(|openLiveRoom\(/);
 });
 
+test('Invited and approved co-hosts can confirm presence regardless of LIVE audience visibility', () => {
+  const start = server.indexOf('const liveConnectedMatch = p.match');
+  const end = server.indexOf("liveMatch = p.match(/^\\/api\\/live\\/sessions\\/([^/]+)\\/leave$/)", start);
+  assert.ok(start >= 0 && end > start, 'connected-presence route exists');
+  const route = server.slice(start, end);
+  const requestIndex = route.indexOf('const speakerRequest =');
+  const canViewIndex = route.indexOf('const canView =');
+  assert.ok(requestIndex >= 0 && canViewIndex > requestIndex,
+    'speaker access is loaded before audience visibility is evaluated');
+  assert.match(route, /const invitedGuest = \['invited', 'accepted', 'connected'\]\.includes\(speakerRequest\?\.status\)/);
+  assert.match(route, /const canView = session\.hostId === user\.id \|\| invitedGuest \|\| session\.visibility === 'public'/);
+});
+
+test('Pending co-host invitations reserve seats before new speaker approvals', () => {
+  assert.match(server, /\['invited', 'accepted', 'connected'\]\.includes\(item\.status\)/);
+  assert.match(edge, /\.in\("status",\["invited","accepted","connected"\]\)/);
+  assert.match(edge, /\.neq\("user_id",userId\)\.in\("status",\["invited","accepted","connected"\]\)/);
+});
+
 test('The host invitation endpoint verifies ownership and synchronizes the durable invited participant before saving', () => {
   const start = server.indexOf('const liveCohostInvitationMatch');
   const end = server.indexOf('const liveCohostAcceptMatch', start);
