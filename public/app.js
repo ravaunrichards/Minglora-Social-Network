@@ -1870,7 +1870,11 @@ async function refreshLiveSpeakerPanel(session,role,room){
           await api(root+"/speaker-request/accept",{method:"POST",body:"{}"});
           toast("Co-host invitation accepted. Joining the stage…");
           stopLiveSpeakerRefresh();stopLiveChatRefresh();await room.disconnect();activeLiveRoom=null;await openLiveRoom(session,"guest");
-        }catch(error){toast(error.message||"The Co-host invitation could not be accepted.");button.disif(request&&request.status==="accepted"){
+        }catch(error){toast(error.message||"The Co-host invitation could not be accepted.");button.disabled=false;}
+      };
+      return;
+    }
+    if(request&&request.status==="accepted"){
       button.disabled=false;button.textContent="Join Co-host stage";
       if(status)status.textContent="The host approved your request. Tap Join Co-host stage to take your seat. Your microphone and camera are only requested after you join."; 
       if(liveSpeakerApprovalPromptedSessionId!==session.id){
