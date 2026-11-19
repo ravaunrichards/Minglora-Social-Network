@@ -247,7 +247,7 @@ test('All nine Audio LIVE guest presets share the unified layout state and synch
   assert.match(app,/applyLiveScreenLayout\(nextLayout\)/);
 });
 
-test('Accepted LIVE speaker requests open the guest panel and require an explicit stage join', () => {
+test('Accepted Multi-Guest speaker requests open the guest panel and require an explicit stage join', () => {
   const panelStart=app.indexOf('async function refreshLiveSpeakerPanel(');
   const panelEnd=app.indexOf('\nfunction startLiveSpeakerRefresh(',panelStart);
   const panel=app.slice(panelStart,panelEnd);
@@ -257,8 +257,8 @@ test('Accepted LIVE speaker requests open the guest panel and require an explici
   assert.ok(panelStart>=0&&panelEnd>panelStart&&acceptedStart>=0&&acceptedEnd>acceptedStart);
   assert.ok(accepted.includes('openLiveToolsPanel("#live-speaker-request-panel")'));
   assert.ok(accepted.includes('button.focus()'));
-  assert.ok(accepted.includes('Tap Join Co-host stage to take your seat'));
-  assert.ok(accepted.includes('Join Co-host stage'));
+  assert.ok(accepted.includes('Tap Join guest stage to take your Multi-Guest seat'));
+  assert.ok(accepted.includes('Join guest stage'));
   assert.ok(accepted.includes('openLiveRoom(session,"guest")'));
   assert.ok(accepted.includes('liveSpeakerApprovalPromptedSessionId!==session.id'));
   assert.equal(/setMicrophoneEnabled|setCameraEnabled/.test(accepted),false);
