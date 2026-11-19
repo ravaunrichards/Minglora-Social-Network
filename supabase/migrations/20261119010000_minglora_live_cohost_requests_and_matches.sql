@@ -1,6 +1,45 @@
 -- Co-host creator join requests and independent Solo/Team match records.
 -- This migration never changes the Multi-guest live_participants workflow.
 BEGIN;
+-- Every co-host creator has a separate personal LIVE broadcast.
+-- broadcast_id remains the parent's broadcast to satisfy the session composite FK.
+ALTER TABLE public.live_cohost_participants
+  ADD COLUMN IF NOT EXISTS creator_broadcast_id uuid;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.live_cohost_participants
+    WHERE creator_broadcast_id IS NULL AND role <> 'host'
+  ) THEN
+    RAISE EXCEPTION 'Cannot safely infer creator_broadcast_id for existing co-host members';
+  END IF;
+END $$;
+
+UPDATE public.live_cohost_participants
+SET creator_broadcast_id = broadcast_id
+WHERE creator_broadcast_id IS NULL;
+
+ALTER TABLE public.live_cohost_participants
+  ALTER COLUMN creator_broadcast_id SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'live_cohost_participants_creator_broadcast_fkey'
+      AND conrelid = 'public.live_cohost_participants'::regclass
+  ) THEN
+    ALTER TABLE public.live_cohost_participants
+      ADD CONSTRAINT live_cohost_participants_creator_broadcast_fkey
+      FOREIGN KEY (creator_broadcast_id)
+      REFERENCES public.live_broadcasts(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS live_cohost_participants_creator_broadcast_status_idx
+  ON public.live_cohost_participants(creator_broadcast_id,status);
+
 ALTER TABLE public.live_cohost_participants
   DROP CONSTRAINT IF EXISTS live_cohost_participants_status_check;
 ALTER TABLE public.live_cohost_participants
