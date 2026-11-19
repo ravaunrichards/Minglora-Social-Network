@@ -3260,7 +3260,7 @@ Deno.serve(async (req: Request) => {
 
   if (action === "live_participant_mark_connected") {
     const broadcastId=String(input.broadcastId||""), userId=String(input.userId||""), role=String(input.role||"");
-    if(!validUuid(broadcastId)||!validUuid(userId)||!["host","guest","viewer"].includes(role))
+    if(!validUuid(broadcastId)||!validUuid(userId)||!["host","guest","cohost","viewer"].includes(role))
       return json(400,{error:"Invalid LIVE participant connection."});
     const {data:broadcast,error:broadcastError}=await admin.from("live_broadcasts")
       .select("id,host_id,status").eq("id",broadcastId).maybeSingle();
@@ -3274,17 +3274,23 @@ Deno.serve(async (req: Request) => {
       .select("role,status").eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
     if(existingError)return json(503,{error:"Minglora could not verify the participant's current stage status."});
     if(role==="guest"&&(!existing||existing.role!=="guest"||!["accepted","connected"].includes(existing.status)))
-      return json(403,{error:"Host approval is required before joining the speaker stage."});
+      return json(403,{error:"Host approval is required before joining the Multi-Guest stage."});
+    if(role==="cohost"&&(!existing||!["cohost","guest"].includes(existing.role)||!["accepted","connected"].includes(existing.status)))
+      return json(403,{error:"An accepted direct Co-host invitation is required before joining this stage."});
     // A listener who has a pending hand-raise must keep that request row intact.
     // The same relational row stores speaker-request and participant status.
     if(role==="viewer"&&existing?.role==="guest"&&existing.status==="requested")
       return json(200,{participant:existing,requestPending:true});
-    // An invited co-host must first enter as a viewer. Preserve the invitation
-    // until they accept, then the normal guest-token reconnect promotes them.
+    // Direct Co-host invitations remain pending while the creator previews the LIVE as a viewer.
+    if(role==="viewer"&&existing?.role==="cohost"&&existing.status==="invited")
+      return json(200,{participant:existing,invitationPending:true});
+    // Backward compatibility: older direct invitations were stored with role=guest.
     if(role==="viewer"&&existing?.role==="guest"&&existing.status==="invited")
       return json(200,{participant:existing,invitationPending:true});
+    if(role==="viewer"&&existing?.role==="cohost"&&["accepted","connected"].includes(existing.status))
+      return json(409,{error:"Your Co-host invitation is accepted. Rejoin with the Co-host token."});
     if(role==="viewer"&&existing?.role==="guest"&&["accepted","connected"].includes(existing.status))
-      return json(409,{error:"Your speaker request is approved. Rejoin with the speaker-stage token."});
+      return json(409,{error:"Your Multi-Guest request is approved. Rejoin with the guest-stage token."});
     const connectedAt=new Date().toISOString();
     const {data,error}=await admin.from("live_participants").upsert({
       broadcast_id:broadcastId,user_id:userId,role,status:"connected",joined_at:connectedAt,left_at:null
@@ -3303,8 +3309,10 @@ Deno.serve(async (req: Request) => {
     const {data:existing,error:existingError}=await admin.from("live_participants").select("role,status")
       .eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
     if(existingError)return json(503,{error:"Minglora could not check your current LIVE stage access."});
+    if(existing?.role==="cohost"&&["invited","accepted","connected"].includes(existing.status))
+      return json(409,{error:"You already have a separate Co-host invitation or stage role."});
     if(existing?.role==="guest"&&["accepted","connected"].includes(existing.status))
-      return json(409,{error:"You already have speaker access."});
+      return json(409,{error:"You already have Multi-Guest speaker access."});
     if(existing?.role==="guest"&&existing.status==="requested"){
       const {data:pending,error:pendingError}=await admin.from("live_participants")
         .select("broadcast_id,user_id,role,status,joined_at").eq("broadcast_id",broadcastId).eq("user_id",userId).single();
@@ -3332,15 +3340,13 @@ Deno.serve(async (req: Request) => {
     const {data:existing,error:existingError}=await admin.from("live_participants")
       .select("role,status").eq("broadcast_id",broadcastId).eq("user_id",userId).maybeSingle();
     if(existingError)return json(503,{error:"Minglora could not check the member's existing LIVE stage access."});
-    if(existing?.role==="guest"&&["requested","invited","accepted","connected"].includes(existing.status))
-      return json(409,{error:"This member already has an active guest request or invitation."});
-    const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
-      .eq("broadcast_id",broadcastId).eq("role","guest").in("status",["invited","accepted","connected"]);
-    if(countError)return json(503,{error:"Minglora could not verify the available co-host seats."});
-    const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
-    if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
+    const legacyCohost=existing?.role==="guest"&&existing.status==="invited";
+    if(existing?.role==="cohost"&&["invited","accepted","connected"].includes(existing.status))
+      return json(409,{error:"This creator already has an active Co-host invitation or stage role."});
+    if(existing?.role==="guest"&&!legacyCohost&&["requested","accepted","connected"].includes(existing.status))
+      return json(409,{error:"This member already has an active Multi-Guest request or seat."});
     const {data,error}=await admin.from("live_participants").upsert({
-      broadcast_id:broadcastId,user_id:userId,role:"guest",status:"invited",joined_at:null,left_at:null
+      broadcast_id:broadcastId,user_id:userId,role:"cohost",status:"invited",joined_at:null,left_at:null
     },{onConflict:"broadcast_id,user_id"}).select("broadcast_id,user_id,role,status,joined_at").single();
     if(error)return fail(error,"Minglora could not save the Co-host invitation.");
     return json(201,{invitation:data});
@@ -3356,7 +3362,7 @@ Deno.serve(async (req: Request) => {
       return json(404,{error:"LIVE invitation is not available."});
     const {data:invitation,error:invitationError}=await admin.from("live_participants")
       .select("broadcast_id,user_id,role,status").eq("broadcast_id",broadcastId).eq("user_id",userId)
-      .eq("role","guest").eq("status","invited").maybeSingle();
+      .in("role",["cohost","guest"]).eq("status","invited").maybeSingle();
     if(invitationError)return json(503,{error:"Minglora could not verify this co-host invitation."});
     if(!invitation)return json(409,{error:"There is no pending Co-host invitation for this member."});
     const {count,error:countError}=await admin.from("live_participants").select("user_id",{count:"exact",head:true})
@@ -3364,8 +3370,8 @@ Deno.serve(async (req: Request) => {
     if(countError)return json(503,{error:"Minglora could not verify the available co-host seats."});
     const guestSeatLimit=Number(input.guestSeatLimit)===9?9:8;
     if(Number(count||0)>=guestSeatLimit)return json(409,{error:"The "+guestSeatLimit+" guest speaker places are full."});
-    const {data,error}=await admin.from("live_participants").update({status:"accepted"})
-      .eq("broadcast_id",broadcastId).eq("user_id",userId).eq("role","guest").eq("status","invited")
+    const {data,error}=await admin.from("live_participants").update({role:"cohost",status:"accepted"})
+      .eq("broadcast_id",broadcastId).eq("user_id",userId).in("role",["cohost","guest"]).eq("status","invited")
       .select("broadcast_id,user_id,role,status").maybeSingle();
     if(error)return fail(error,"Minglora could not accept this Co-host invitation.");
     if(!data)return json(409,{error:"This Co-host invitation is no longer pending."});
@@ -3381,7 +3387,7 @@ Deno.serve(async (req: Request) => {
     const {data:rows,error}=await admin.from("live_participants")
       .select("broadcast_id,user_id,role,status,joined_at,left_at")
       .eq("broadcast_id",broadcastId).eq("role","guest")
-      .in("status",["requested","invited","accepted","connected"])
+      .in("status",["requested","accepted","connected"])
       .order("joined_at",{ascending:true});
     if(error)return json(503,{error:"Speaker requests could not be loaded."});
     const ids=(rows||[]).map(row=>row.user_id);
