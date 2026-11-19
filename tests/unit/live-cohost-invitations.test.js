@@ -21,6 +21,8 @@ test('Creator Co-host has dedicated tables and RLS separate from viewer guest se
   assert.match(coreMigration, /created_by uuid NOT NULL/);
   assert.match(coreMigration, /cohost_session_id uuid NOT NULL/);
   assert.match(coreMigration, /connected_at timestamptz/);
+  assert.match(requestMatchMigration, /creator_broadcast_id uuid/);
+  assert.match(requestMatchMigration, /REFERENCES public.live_broadcasts\(id\) ON DELETE CASCADE/);
   assert.match(capacityMigration, /position BETWEEN 1 AND 9/);
   assert.match(capacityMigration, /max_participants <= 10/);
   assert.match(rosterMigration, /ENABLE ROW LEVEL SECURITY/);
@@ -33,7 +35,7 @@ test('Co-host runtime matches the deployed database names, seat columns and allo
   const end = edge.indexOf('if (action === "live_speaker_requests_list")', start);
   assert.ok(start >= 0 && end > start);
   const cohost = edge.slice(start, end);
-  for (const field of ['created_by','broadcast_id','cohost_session_id','connected_at','position']) {
+  for (const field of ['created_by','broadcast_id','cohost_session_id','creator_broadcast_id','connected_at','position']) {
     assert.ok(cohost.includes(field), 'Co-host runtime must use ' + field);
   }
   assert.match(cohost, /"requested"/);
@@ -42,6 +44,9 @@ test('Co-host runtime matches the deployed database names, seat columns and allo
     'Creator Co-host must never read or write Multi-guest speaker rows');
   assert.match(cohost, /host_user_id: row\.created_by/);
   assert.match(cohost, /host_broadcast_id: row\.broadcast_id/);
+  assert.match(cohost, /broadcast_id: row\.creator_broadcast_id \|\| row\.broadcast_id/);
+  assert.match(cohost, /creator_broadcast_id:broadcastId/);
+  assert.match(cohost, /\.eq\("creator_broadcast_id",broadcastId\)/);
 });
 
 test('Join requests and Solo/Team matches have dedicated persisted schema', () => {
