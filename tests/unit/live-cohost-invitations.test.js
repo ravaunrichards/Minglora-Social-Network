@@ -10,6 +10,20 @@ const app = read('public/app.js');
 const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 
+test('Co-host and Multi-Guest use separate, working panels', () => {
+  assert.ok(app.includes('role==="host"?liveControlButton("live-cohost-toggle","cohost","Invite another creator to co-host this LIVE","Co-host"):""'));
+  assert.ok(app.includes('$("#live-cohost-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-cohost-panel"));'));
+  assert.ok(app.includes('$("#live-guests-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));'));
+  const guestsStart=app.indexOf('const speakerTools=');
+  const guestsEnd=app.indexOf('const liveCohostTools=',guestsStart);
+  assert.ok(guestsStart>=0&&guestsEnd>guestsStart);
+  assert.doesNotMatch(app.slice(guestsStart,guestsEnd),/live-cohost-invite-form/);
+  assert.ok(app.slice(guestsEnd,app.indexOf('const rewardTools=',guestsEnd)).includes('id=\'live-cohost-invite-form\''));
+  assert.ok(app.includes("data-live-tools-panel='cohost'"));
+  assert.ok(app.includes("id='live-request-cohost'"));
+  assert.ok(app.includes('openLiveToolsPanel("#live-cohost-panel")'));
+});
+
 test('The host can send a Co-host invitation without leaving or reconnecting their LIVE room', () => {
   const start = app.indexOf('cohostInviteForm?.addEventListener("submit",async event=>{');
   const end = app.indexOf('\n    });\n    const moderatorList', start);
