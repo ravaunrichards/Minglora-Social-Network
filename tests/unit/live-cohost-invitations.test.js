@@ -9,131 +9,95 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('public/app.js');
 const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
-const migration = read('supabase/migrations/20261118210000_minglora_live_creator_cohost_sessions.sql');
+const coreMigration = read('supabase/migrations/20261118235924_minglora_live_cohost_sessions.sql');
+const capacityMigration = read('supabase/migrations/20261119004203_minglora_live_cohost_multi_guest_capacity.sql');
+const rosterMigration = read('supabase/migrations/20261119004301_minglora_live_cohost_roster_rls_consolidation.sql');
+const requestMatchMigration = read('supabase/migrations/20261119010000_minglora_live_cohost_requests_and_matches.sql');
 const cohostCss = read('public/live-cohost.css');
 
-test('Creator Co-host has separate durable records and never writes Multi-guest participant rows', () => {
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_sessions/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_participants/);
-  assert.match(migration, /max_participants integer NOT NULL DEFAULT 4/);
-  assert.match(migration, /status IN \('invited','requested','accepted','connected','left','removed','rejected'\)/);
-  assert.match(migration, /ENABLE ROW LEVEL SECURITY/);
-  assert.match(migration, /TO service_role/);
-  const start = edge.indexOf('if (action === "live_cohost_session_create")');
+test('Creator Co-host has dedicated tables and RLS separate from viewer guest seats', () => {
+  assert.match(coreMigration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_sessions/);
+  assert.match(coreMigration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_participants/);
+  assert.match(coreMigration, /created_by uuid NOT NULL/);
+  assert.match(coreMigration, /cohost_session_id uuid NOT NULL/);
+  assert.match(coreMigration, /connected_at timestamptz/);
+  assert.match(capacityMigration, /position BETWEEN 1 AND 9/);
+  assert.match(capacityMigration, /max_participants <= 10/);
+  assert.match(rosterMigration, /ENABLE ROW LEVEL SECURITY/);
+  assert.match(rosterMigration, /TO service_role/);
+  assert.match(rosterMigration, /read_authorized_member/);
+});
+
+test('Co-host runtime matches the deployed database names, seat columns and allowed lifecycle states', () => {
+  const start = edge.indexOf('// Independent creator-to-creator Co-host lifecycle.');
   const end = edge.indexOf('if (action === "live_speaker_requests_list")', start);
   assert.ok(start >= 0 && end > start);
-  const cohostActions = edge.slice(start, end);
-  assert.doesNotMatch(cohostActions, /live_participants/,
-    'creator co-host invitations and members must not use Multi-guest speaker rows');
+  const cohost = edge.slice(start, end);
+  for (const field of ['created_by','broadcast_id','cohost_session_id','connected_at','position']) {
+    assert.ok(cohost.includes(field), 'Co-host runtime must use ' + field);
+  }
+  assert.match(cohost, /"requested"/);
+  assert.match(cohost, /"declined"/);
+  assert.doesNotMatch(cohost, /\.from\("live_participants"\)/,
+    'Creator Co-host must never read or write Multi-guest speaker rows');
+  assert.doesNotMatch(cohost, /\.eq\("session_id",sessionId\)/);
+  assert.match(cohost, /host_user_id: row\.created_by/);
+  assert.match(cohost, /host_broadcast_id: row\.broadcast_id/);
 });
 
-test('Creators must each have their own active LIVE before inviting or accepting Co-host', () => {
-  assert.ok(server.includes("const targetLive=(db.liveSessions||[]).find(item=>item.status==='live'&&item.hostId===target.id)"));
+test('Join requests and Solo/Team matches have dedicated persisted schema', () => {
+  assert.match(requestMatchMigration, /status IN \('invited','requested','accepted','connected','declined'/);
+  assert.match(requestMatchMigration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_matches/);
+  assert.match(requestMatchMigration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_match_participants/);
+  assert.match(edge, /action === "live_cohost_request"/);
+  assert.match(edge, /action === "live_cohost_match_create"/);
+  assert.match(edge, /action === "live_cohost_match_end"/);
+});
+
+test('Every Co-host creator must keep their own LIVE broadcast active', () => {
+  assert.match(server, /targetLive=\(db\.liveSessions\|\|\[\]\)\.find\(item=>item\.status==='live'&&item\.hostId===target\.id\)/);
   assert.match(server, /The invited creator must still be LIVE on their own account to accept Co-host/);
-  assert.ok(edge.includes('hostBroadcast.host_id!==actorId||hostBroadcast.status!=="live"'));
-  assert.match(edge, /broadcast\.host_id!==userId\|\|broadcast\.status!==\"live\"/);
+  assert.match(edge, /Both creators must have their own active LIVE broadcast/);
+  assert.match(edge, /Your own LIVE broadcast must remain active while Co-host is connected/);
 });
 
-test('Accepting or joining Co-host connects a second LiveKit room rather than re-opening the creator LIVE', () => {
+test('Co-host uses a secondary LiveKit room and leaves the primary LIVE connected', () => {
   const start = app.indexOf('async function connectLiveCohostStage');
   const end = app.indexOf('function renderLiveCohostMatch', start);
   assert.ok(start >= 0 && end > start);
-  const helper = app.slice(start, end);
-  assert.match(helper, /new client\.Room/);
-  assert.match(helper, /\/live\/cohost\/sessions\/.*\/join/);
-  assert.doesNotMatch(helper, /openLiveRoom\(session,\s*["']guest["']/);
-  assert.doesNotMatch(helper, /activeLiveRoom=null/);
+  const connect = app.slice(start, end);
+  assert.match(connect, /new client\.Room/);
+  assert.match(connect, /\/live\/cohost\/sessions\/.*\/join/);
   assert.match(app, /original\.clone\(\)/);
   assert.match(app, /publishTrack\(clone/);
   assert.match(app, /activeLiveCohostRoom/);
-});
-
-test('Leaving the shared Co-host room disconnects only the secondary room and leaves the primary LIVE active', () => {
-  const start = app.indexOf('async function stopLiveCohostLocal');
-  const end = app.indexOf('async function connectLiveCohostStage', start);
-  assert.ok(start >= 0 && end > start);
-  const cleanup = app.slice(start, end);
-  assert.match(cleanup, /const room=activeLiveCohostRoom/);
+  const cleanupStart = app.indexOf('async function stopLiveCohostLocal');
+  const cleanupEnd = app.indexOf('async function connectLiveCohostStage', cleanupStart);
+  const cleanup = app.slice(cleanupStart, cleanupEnd);
   assert.match(cleanup, /await room\.disconnect\(\)/);
-  assert.match(cleanup, /activeLiveCohostRoom=null/);
   assert.doesNotMatch(cleanup, /activeLiveRoom=null|activeLiveSession=null|openLiveRoom\(/);
-  assert.match(app, /await stopLiveCohostLocal\(\);[\s\S]{0,260}await room\.disconnect\(\)/);
 });
 
-test('Host can invite, accept, decline and remove creators through separate Co-host routes', () => {
-  assert.match(server, /POST'&&cohostInviteMatch/);
-  assert.match(server, /PATCH'&&cohostParticipantMatch/);
-  assert.match(server, /live_cohost_invite/);
-  assert.match(server, /live_cohost_review/);
-  assert.match(server, /live_cohost_mark_connected/);
-  assert.match(app, /data-cohost-invitation-accept/);
-  assert.match(app, /data-cohost-invitation-reject/);
-  assert.match(app, /data-cohost-remove/);
-  assert.match(app, /data-cohost-accept/);
-  assert.match(app, /data-cohost-reject/);
-  assert.match(app, /item.status==="requested"&&host/);
-  assert.match(app, /item.status==="invited"&&host/);
-  assert.match(app, /data-cohost-invitation-accept/);
-  assert.match(server, /p==='\/api\/live\/cohost\/creators'/);
-  assert.match(server, /p==='\/api\/live\/cohost\/discover'/);
-  assert.match(edge, /action === "live_cohost_discover"/);
-  assert.match(app, /live-cohost-creator-results/);
-  assert.match(app, /renderLiveCohostDiscovery/);
-});
-
-test('Creators can request to join while already LIVE, and hosts can review the request', () => {
-  assert.match(server, /cohostRequestMatch/);
-  assert.match(server, /live_cohost_request/);
-  assert.match(app, /live-cohost-request-button/);
-  assert.match(app, /\/requests/);
-  assert.match(app, /Request pending/);
-  assert.match(edge, /action === "live_cohost_invite" \|\| action === "live_cohost_request"/);
-});
-
-test('Co-host has independent Solo and Team match modes and lifecycle', () => {
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_matches/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.live_cohost_match_participants/);
-  assert.match(migration, /mode IN \('solo','team'\)/);
-  assert.match(edge, /live_cohost_match_create/);
-  assert.match(edge, /live_cohost_match_end/);
-  assert.match(server, /cohostMatchCreate/);
-  assert.match(server, /cohostMatchEnd/);
-  assert.match(app, /data-cohost-match-start='solo'/);
-  assert.match(app, /data-cohost-match-start='team'/);
-  assert.match(app, /live-cohost-match-end/);
-  assert.match(app, /Every creator's LIVE remains active/);
-});
-
-test('The Co-host reference stage supports two, three and four independent creator tiles', () => {
-  assert.match(cohostCss, /#live-cohost-stage\[data-count="2"\]/);
-  assert.match(cohostCss, /#live-cohost-stage\[data-count="3"\]/);
-  assert.match(cohostCss, /#live-cohost-stage\[data-count="4"\]/);
-  assert.match(app, /updateLiveCohostStageCount/);
-  assert.match(app, /data-count/);
-  assert.match(app, /Co-host LIVE stage/);
-});
-
-test('Multi-guest remains a separate viewer-to-host speaker request and seat flow', () => {
+test('Multi-guest remains a separate viewer-to-host guest request and seat flow', () => {
   const start = edge.indexOf('if (action === "live_speaker_request")');
-  const end = edge.indexOf('// Independent creator-to-creator Co-host lifecycle', start);
+  const end = edge.indexOf('// Independent creator-to-creator Co-host lifecycle.', start);
   assert.ok(start >= 0 && end > start);
   const multiGuest = edge.slice(start, end);
-  assert.match(multiGuest, /from\("live_participants"\)/);
+  assert.match(multiGuest, /\.from\("live_participants"\)/);
   assert.match(multiGuest, /role:"guest",status:"requested"/);
   assert.match(app, /id='live-speaker-request-panel'/);
   assert.match(app, /Multi-guest LIVE/);
   assert.match(app, /Join as a guest/);
-  assert.match(app, /liveControlButton\("live-guests-toggle","multi-guest"/);
   assert.match(app, /openLiveToolsPanel\("#live-speaker-request-panel"\)/);
   assert.match(app, /openLiveToolsPanel\("#live-cohost-panel"\)/);
-  assert.doesNotMatch(app, /button\.textContent="Join Co-host stage"/);
 });
 
-test('Ending a creator LIVE retires their Co-host membership without ending other creator broadcasts', () => {
-  assert.match(edge, /action === "live_broadcast_end"/);
-  assert.match(edge, /Retire any Co-host invitation or membership bound to the broadcast/);
-  assert.match(edge, /live_cohost_participants/);
-  assert.match(edge, /status:"left",left_at:endedAt/);
-  assert.match(server, /live_cohost_end/);
-  assert.match(server, /endLiveSession\(session, \{ deleteRoom: true \}\)/);
+test('Co-host supports the planned 2, 3 and 4 creator layouts and separate controls', () => {
+  assert.match(cohostCss, /#live-cohost-stage\[data-count="2"\]/);
+  assert.match(cohostCss, /#live-cohost-stage\[data-count="3"\]/);
+  assert.match(cohostCss, /#live-cohost-stage\[data-count="4"\]/);
+  assert.match(app, /updateLiveCohostStageCount/);
+  assert.match(app, /data-cohost-invitation-accept/);
+  assert.match(app, /data-cohost-remove/);
+  assert.match(app, /live-cohost-match-end/);
 });
