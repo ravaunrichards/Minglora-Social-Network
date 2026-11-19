@@ -53,6 +53,22 @@ test('Pending co-host invitations reserve seats before new speaker approvals', (
   assert.match(edge, /\.neq\("user_id",userId\)\.in\("status",\["invited","accepted","connected"\]\)/);
 });
 
+test('A member who is hosting another LIVE is still allowed to accept and join as a co-host', () => {
+  const inviteStart = server.indexOf('const liveCohostInvitationMatch');
+  const inviteEnd = server.indexOf('const liveCohostAcceptMatch', inviteStart);
+  const acceptStart = inviteEnd;
+  const acceptEnd = server.indexOf('const liveSpeakerStatusMatch', acceptStart);
+  assert.ok(inviteStart >= 0 && inviteEnd > inviteStart && acceptEnd > acceptStart);
+  const inviteRoute = server.slice(inviteStart, inviteEnd);
+  const acceptRoute = server.slice(acceptStart, acceptEnd);
+  assert.doesNotMatch(inviteRoute, /targetIsHosting|hosting another LIVE/,
+    'a co-host may be invited even when they are currently hosting another LIVE');
+  assert.doesNotMatch(acceptRoute, /targetIsHosting|Leave your own LIVE broadcast/,
+    'a co-host may accept without ending their own LIVE broadcast');
+  assert.match(acceptRoute, /listLiveKitParticipants\(session\.roomName\)/,
+    'the invitee must still be verified inside the target LIVE room');
+});
+
 test('The host invitation endpoint verifies ownership and synchronizes the durable invited participant before saving', () => {
   const start = server.indexOf('const liveCohostInvitationMatch');
   const end = server.indexOf('const liveCohostAcceptMatch', start);
