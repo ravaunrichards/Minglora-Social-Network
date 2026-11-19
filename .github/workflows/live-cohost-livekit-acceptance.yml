@@ -10,11 +10,6 @@ on:
       - 'tests/e2e/live-cohost-livekit-two-account.mjs'
       - '.github/workflows/live-cohost-livekit-acceptance.yml'
   workflow_dispatch:
-    inputs:
-      livekit_environment:
-        description: Existing GitHub Environment that stores LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET
-        required: true
-        type: environment
 
 permissions:
   contents: read
@@ -46,13 +41,27 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     name: Two creators publish and leave independently
     runs-on: ubuntu-24.04
-    environment: ${{ inputs.livekit_environment }}
+    environment: livekit
     timeout-minutes: 20
     env:
       LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
       LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
       LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
     steps:
+      - name: Verify LiveKit credentials before installing browsers
+        shell: bash
+        run: |
+          missing=()
+          for key in LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET; do
+            if [[ -z "${!key:-}" ]]; then
+              missing+=("$key")
+            fi
+          done
+          if (("${#missing[@]}" > 0)); then
+            printf '::error title=Missing LiveKit secrets::Add these secrets to repository Settings > Environments > livekit: %s\n' "${missing[*]}"
+            exit 1
+          fi
+          echo "All required LiveKit credentials are present. Secret values are not displayed."
       - name: Check out the Co-host repair branch
         uses: actions/checkout@v7
       - name: Set up Node.js 24
