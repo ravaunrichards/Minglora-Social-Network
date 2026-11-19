@@ -46,14 +46,14 @@ Equal-weight implementation estimate over those eight original bullets: 61.5%. T
 - No production staff assignments, Marketplace transactions, orders, payments, seller balances or financial records were changed.
 
 ## Verification evidence
-- RBAC unit tests: 8/8 passed on PR head `5fdd24b2369777e9b9ac10f09c4a60950d44b751`.
+- RBAC unit tests: 8/8 passed on PR head `fc52261e5830fed04952006fdd9647bb29e8e53c`.
 - Supabase Auth provider acceptance: passed.
 - For You functional navigation: passed.
 - Full CI test job: failed because two unrelated tests also fail on current main:
   - `Accepted LIVE speaker requests open the guest panel and require an explicit stage join`
   - `Ranking badge art remains visible around a compact centered member photo on desktop and mobile`
 - Current main CI run `44457780374` independently reproduces those same two failures. They are not caused by PR #539; do not change unrelated LIVE or Rankings behavior as part of this Admin Center task.
-- PR nine-layout visual QA run `44458855939` was still in progress at checkpoint time.
+- PR nine-layout visual QA run `44459470769` passed on source-equivalent implementation; latest PR-head run `44459696029` remained in progress at the last inspection.
 - PR #539 remains a draft. Do not merge or apply the new production migration until the required route permission safeguards and acceptance tests are complete.
 
 ## Next verified actions
