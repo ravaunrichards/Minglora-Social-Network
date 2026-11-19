@@ -37,12 +37,15 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.doesNotMatch(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
   assert.match(compact, /\.live-fullscreen-chat-slot\{[\s\S]*flex-direction:column!important/);
   assert.match(liveGuardrails, /\.live-panel-end-button\{[\s\S]*display:inline-flex!important/);
-  assert.match(roomMarkup, /liveToolsDrawer/);
+  assert.match(app, /const liveToolsDrawer=/);
 });
 
 test('Co-host Match, guest and gift controls open one accessible drawer and rewards have no permanent shortcut', () => {
-  assert.match(app, /liveControlButton\("live-cohost-toggle","cohost","Open Co-host Match requests"/);
-  assert.match(app, /\$\("#live-cohost-toggle"\)\?\.addEventListener\("click",\(\)=>openLiveToolsPanel\("#live-speaker-request-panel"\)\)/);
+  assert.match(app, /liveControlButton\("live-cohost-toggle","cohost","Open creator Co-host stage"/);
+  assert.match(app, /\$\("#live-cohost-toggle"\)\?\.addEventListener\("click",\(\)=>openLiveToolsPanel\("#live-cohost-panel"\)\)/);
+  assert.match(app, /\$\("#live-guests-toggle"\)\?\.addEventListener\("click",\(\)=>openLiveToolsPanel\("#live-speaker-request-panel"\)\)/);
+  assert.match(app, /cohostTools\+speakerTools\+rewardTools/);
+  assert.match(app, /id='live-cohost-panel'/);
   assert.match(app, /let activeLiveToolsTrigger=null/);
   assert.match(app, /activeLiveToolsTrigger\?\.setAttribute\("aria-expanded","true"\)/);
   assert.match(app, /if\(trigger\?\.isConnected\)trigger\.focus\(\)/);

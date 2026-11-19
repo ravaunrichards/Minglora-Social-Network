@@ -1,0 +1,91 @@
+name: Minglora two-account LiveKit Co-host acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/modules/live/livekit.js'
+      - 'public/app.js'
+      - 'public/index.html'
+      - 'tests/e2e/live-cohost-livekit-two-account.mjs'
+      - '.github/workflows/live-cohost-livekit-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: minglora-live-cohost-livekit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pull-request-validation:
+    if: github.event_name == 'pull_request'
+    name: Validate LiveKit acceptance runner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the Co-host repair branch
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check real-time acceptance runner syntax
+        run: node --check tests/e2e/live-cohost-livekit-two-account.mjs
+
+  two-account-livekit:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    name: Two creators publish and leave independently
+    runs-on: ubuntu-24.04
+    environment:
+      name: livekit-cohost
+      deployment: false
+    timeout-minutes: 20
+    env:
+      LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+      LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+      LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+    steps:
+      - name: Verify LiveKit credentials before installing browsers
+        shell: bash
+        run: |
+          missing=()
+          for key in LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET; do
+            if [[ -z "${!key:-}" ]]; then
+              missing+=("$key")
+            fi
+          done
+          if (("${#missing[@]}" > 0)); then
+            printf '::error title=Missing LiveKit secrets::Add these secrets to repository Settings > Environments > livekit-cohost: %s\n' "${missing[*]}"
+            exit 1
+          fi
+          echo "All required LiveKit credentials are present. Secret values are not displayed."
+      - name: Check out the Co-host repair branch
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install browser LiveKit SDK and Playwright runner
+        run: npm install --no-save --package-lock=false livekit-client@2.19.2 playwright@1.56.0
+      - name: Install Chromium with media device support
+        run: npx playwright install --with-deps chromium
+      - name: Check the real-time acceptance runner syntax
+        run: node --check tests/e2e/live-cohost-livekit-two-account.mjs
+      - name: Run two independent creators through real LiveKit rooms
+        run: node tests/e2e/live-cohost-livekit-two-account.mjs
+      - name: Upload two-account LiveKit acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-two-account-livekit-cohost-acceptance
+          path: artifacts/live-cohost-livekit/
+          if-no-files-found: warn
+          retention-days: 14

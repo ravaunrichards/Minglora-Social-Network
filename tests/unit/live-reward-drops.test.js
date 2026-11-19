@@ -69,7 +69,7 @@ test("LIVE room exposes reward setup, viewer entry and claim controls on the sam
   assert.match(app, /Join Goody Bag/);
   assert.match(app, /Open & claim/);
   assert.match(app, /setupLiveRewardPanel\(session,role\)/);
-  assert.match(app, /liveControlButton\("live-cohost-toggle","cohost","Open Co-host Match requests"/);
+  assert.match(app, /liveControlButton\("live-cohost-toggle","cohost","Open creator Co-host stage"/);
   assert.match(app, /data-live-tools-target='#live-reward-panel'/);
   assert.match(app, /liveRewardWalletFetchedAt/);
   assert.match(styles, /\.live-reward-panel/);

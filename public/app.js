@@ -1273,6 +1273,13 @@ document.addEventListener('visibilitychange',refreshMingloraCallAvailability);
 window.addEventListener('online',refreshMingloraCallAvailability);
 window.addEventListener('pageshow',refreshMingloraCallAvailability);
 let activeLiveRoom=null;
+let activeLiveCohostRoom=null;
+let activeLiveCohostSession=null;
+let activeLiveCohostMainRoom=null;
+let activeLiveCohostClonedTracks=[];
+let activeLiveCohostMainHandlers=[];
+let liveCohostRefreshTimer=null;
+let liveCohostRefreshBusy=false;
 let activeLiveSession=null;
 let activeLiveRole=null;
 let activeLivePinnedComment=null;
@@ -1874,7 +1881,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
       return;
     }
     if(request&&request.status==="accepted"){
-      button.disabled=false;button.textContent="Join Co-host stage";
+      button.disabled=false;button.textContent="Join guest stage";
       if(status)status.textContent="The host approved your microphone. Join when you're ready.";
       button.onclick=async()=>{
         button.disabled=true;
@@ -1888,7 +1895,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
     if(status)status.textContent=request?.status==="requested"?"Waiting for the host to review your request.":request?.status==="rejected"?"Your last request was declined. You can ask again.":"You are listening as an audience member.";
     button.onclick=async()=>{
       button.disabled=true;
-      try{await api(root+"/speaker-requests",{method:"POST",body:"{}"});button.textContent="Request sent";if(status)status.textContent="Waiting for the host to review your request.";toast("Your request to speak was sent.");}
+      try{await api(root+"/speaker-requests",{method:"POST",body:"{}"});button.textContent="Request sent";if(status)status.textContent="Waiting for the host to review your request.";toast("Your Multi-guest request was sent.");}
       catch(error){toast(error.message);button.disabled=false;}
     };
   }catch(error){if(status)status.textContent=error.message;}
@@ -1896,6 +1903,433 @@ async function refreshLiveSpeakerPanel(session,role,room){
 function startLiveSpeakerRefresh(session,role,room){
   stopLiveSpeakerRefresh();void refreshLiveSpeakerPanel(session,role,room);
   if(role==="host"||role==="viewer")liveSpeakerRefreshTimer=setInterval(()=>void refreshLiveSpeakerPanel(session,role,room),5000);
+}
+
+function liveCohostProfile(userId){
+  return (activeLiveCohostSession?.participants||[]).find(item=>String(item.user_id)===String(userId))?.user||null;
+}
+function ensureLiveCohostTile(identity,participant){
+  const root=$("#live-cohost-stage");if(!root)return null;
+  let tile=Array.from(root.querySelectorAll(".live-cohost-tile")).find(node=>node.dataset.cohostIdentity===String(identity));
+  if(tile)return tile;
+  const profile=liveCohostProfile(identity);
+  const name=String(profile?.display_name||participant?.name||profile?.username||identity||"Minglora creator");
+  tile=document.createElement("button");
+  tile.type="button";tile.className="live-cohost-tile";tile.dataset.cohostIdentity=String(identity);
+  tile.setAttribute("aria-label","Focus "+name+"'s Co-host stream");
+  const media=document.createElement("div");media.className="live-cohost-media";
+  const avatarNode=document.createElement("div");avatarNode.className="live-cohost-avatar";
+  if(profile?.avatar_url){const image=document.createElement("img");image.src=String(profile.avatar_url);image.alt="";image.loading="lazy";avatarNode.append(image);}
+  else avatarNode.textContent=name.trim().slice(0,1).toUpperCase()||"M";
+  const label=document.createElement("span");label.className="live-cohost-name";label.textContent=name;
+  tile.append(media,avatarNode,label);
+  tile.addEventListener("click",()=>{
+    root.querySelectorAll(".live-cohost-tile.is-focused").forEach(item=>item.classList.remove("is-focused"));
+    tile.classList.add("is-focused");
+  });
+  root.append(tile);
+  return tile;
+}
+function updateLiveCohostStageCount(){
+  const root=$("#live-cohost-stage");if(!root)return;
+  const count=Math.max(1,Math.min(4,root.querySelectorAll(".live-cohost-tile").length));
+  root.dataset.count=String(count);
+}
+function attachLiveCohostTrack(track,participant,local=false,publication=null){
+  const identity=String(participant?.identity||state.user?.id||"creator");
+  const tile=ensureLiveCohostTile(identity,participant);
+  const media=tile?.querySelector(".live-cohost-media");
+  if(!tile||!media)return;
+  const audioRoot=$("#live-cohost-audio-root");
+  if(String(track?.kind||publication?.kind||"").toLowerCase()==="audio"){
+    ensureLiveCohostTile(identity,participant);
+    if(!local){
+      const audio=document.createElement("audio");audio.autoplay=true;audio.playsInline=true;audio.muted=false;
+      audio.dataset.cohostIdentity=identity;
+      track.attach(audio);
+      audioRoot?.append(audio);
+    }
+  }else{
+    const video=document.createElement("video");video.autoplay=true;video.playsInline=true;video.muted=true;
+    video.className="live-cohost-video";video.dataset.cohostIdentity=identity;
+    track.attach(video);
+    tile.classList.add("has-video");
+    media.replaceChildren(video);
+  }
+  updateLiveCohostStageCount();
+}
+async function syncLiveCohostLocalTracks(mainRoom,cohostRoom,client){
+  if(!cohostRoom||activeLiveCohostRoom!==cohostRoom||!cohostRoom.localParticipant?.publishTrack)return;
+  for(const item of activeLiveCohostClonedTracks){
+    try{if(item.publication?.track)await cohostRoom.localParticipant.unpublishTrack(item.publication.track);}
+    catch(error){console.warn("[Minglora Co-host] Could not replace a cloned source track.",error?.message||error);}
+    try{item.clone?.stop?.();}catch{}
+  }
+  activeLiveCohostClonedTracks=[];
+  const participant=mainRoom?.localParticipant;
+  if(!participant)return;
+  const publications=[
+    ...(participant.audioTrackPublications?.values?.()||[]),
+    ...(participant.videoTrackPublications?.values?.()||[])
+  ];
+  const wanted=[{kind:"audio",source:client.Track?.Source?.Microphone},{kind:"video",source:client.Track?.Source?.Camera}];
+  for(const descriptor of wanted){
+    if(!descriptor.source)continue;
+    const publication=publications.find(item=>String(item.track?.kind||item.kind||"").toLowerCase()===descriptor.kind&&item.track?.mediaStreamTrack?.readyState==="live");
+    const original=publication?.track?.mediaStreamTrack;
+    if(!original||typeof original.clone!=="function")continue;
+    const clone=original.clone();clone.enabled=original.enabled;
+    try{
+      const published=await cohostRoom.localParticipant.publishTrack(clone,{name:"minglora-cohost-"+descriptor.kind,source:descriptor.source});
+      activeLiveCohostClonedTracks.push({clone,publication:published,kind:descriptor.kind});
+      if(descriptor.kind==="video"&&published?.track){
+        const localParticipant={identity:state.user?.id||"creator",name:state.user?.name||state.user?.username||"You"};
+        attachLiveCohostTrack(published.track,localParticipant,true,published);
+      }else ensureLiveCohostTile(state.user?.id||"creator",{name:state.user?.name||"You"});
+    }catch(error){
+      clone.stop?.();
+      console.error("[Minglora Co-host] A cloned "+descriptor.kind+" track could not be published.",error?.message||error);
+      throw error;
+    }
+  }
+}
+async function stopLiveCohostLocal(){
+  if(liveCohostRefreshTimer){clearInterval(liveCohostRefreshTimer);liveCohostRefreshTimer=null;}
+  liveCohostRefreshBusy=false;
+  const room=activeLiveCohostRoom;
+  activeLiveCohostRoom=null;
+  activeLiveCohostMainRoom=null;
+  for(const binding of activeLiveCohostMainHandlers){try{binding.room?.off?.(binding.event,binding.handler);}catch{}}
+  activeLiveCohostMainHandlers=[];
+  if(room){try{await room.disconnect();}catch(error){console.warn("[Minglora Co-host] Secondary room disconnect failed.",error?.message||error);}}
+  for(const item of activeLiveCohostClonedTracks){try{item.clone?.stop?.();}catch{}}
+  activeLiveCohostClonedTracks=[];
+  activeLiveCohostSession=null;
+  $("#live-video-stage")?.classList.remove("has-live-cohost");
+  $("#live-cohost-stage")?.replaceChildren();
+  $("#live-cohost-audio-root")?.replaceChildren();
+  $("#live-cohost-stage")?.setAttribute("data-count","1");
+  $("#live-audio-root")?.querySelectorAll("audio").forEach(element=>{element.muted=false;});
+}
+async function connectLiveCohostStage(cohostSession,participants,mainRoom,client){
+  if(!cohostSession?.id||!cohostSession.room_ref)return;
+  if(activeLiveCohostRoom&&activeLiveCohostSession?.id===cohostSession.id){
+    activeLiveCohostSession={...cohostSession,participants};
+    renderLiveCohostRoster(participants);
+    return;
+  }
+  await stopLiveCohostLocal();
+  const stage=$("#live-video-stage"),root=$("#live-cohost-stage");
+  if(!stage||!root)return;
+  const issued=await api("/live/cohost/sessions/"+encodeURIComponent(cohostSession.id)+"/join",{
+    method:"POST",body:JSON.stringify({broadcastId:activeLiveSession?.id||""})
+  });
+  const room=new client.Room({adaptiveStream:true,dynacast:true});
+  activeLiveCohostRoom=room;
+  activeLiveCohostMainRoom=mainRoom;
+  activeLiveCohostSession={...cohostSession,participants};
+  renderLiveCohostRoster(participants);
+  room.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>attachLiveCohostTrack(track,participant,false,publication));
+  room.on(client.RoomEvent.TrackUnsubscribed,track=>track.detach().forEach(element=>{
+    const tile=element.closest?.(".live-cohost-tile");
+    if(String(element.tagName||"").toLowerCase()==="video")tile?.classList.remove("has-video");
+    element.remove();
+  }));
+  room.on(client.RoomEvent.ParticipantConnected,participant=>{ensureLiveCohostTile(participant.identity,participant);updateLiveCohostStageCount();});
+  room.on(client.RoomEvent.ParticipantDisconnected,participant=>{
+    root.querySelectorAll(".live-cohost-tile").forEach(tile=>{if(tile.dataset.cohostIdentity===String(participant.identity))tile.remove();});
+    $("#live-cohost-audio-root")?.querySelectorAll("audio").forEach(audio=>{if(audio.dataset.cohostIdentity===String(participant.identity))audio.remove();});
+    updateLiveCohostStageCount();
+  });
+  stage.classList.add("has-live-cohost");
+  $("#live-audio-root")?.querySelectorAll("audio").forEach(element=>{element.muted=true;});
+  try{
+    await room.connect(issued.liveKit.url,issued.liveKit.token);
+  if(issued.liveKit.role==="host"||issued.liveKit.role==="cohost"){
+    await syncLiveCohostLocalTracks(mainRoom,room,client);
+    if(client.RoomEvent.LocalTrackPublished){
+      const handler=()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180);
+      mainRoom.on(client.RoomEvent.LocalTrackPublished,handler);
+      activeLiveCohostMainHandlers.push({room:mainRoom,event:client.RoomEvent.LocalTrackPublished,handler});
+    }
+    if(client.RoomEvent.LocalTrackUnpublished){
+      const handler=publication=>{
+        const kind=String(publication?.kind||publication?.track?.kind||"").toLowerCase();
+        if(["audio","video"].includes(kind))window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Source sync failed.",error?.message||error)),180);
+      };
+      mainRoom.on(client.RoomEvent.LocalTrackUnpublished,handler);
+      activeLiveCohostMainHandlers.push({room:mainRoom,event:client.RoomEvent.LocalTrackUnpublished,handler});
+    }
+    for(const eventName of ["TrackMuted","TrackUnmuted","TrackRestarted"]){
+      const event=client.RoomEvent?.[eventName];
+      if(event){
+        const handler=()=>window.setTimeout(()=>void syncLiveCohostLocalTracks(mainRoom,room,client).catch(error=>console.warn("[Minglora Co-host] Media state sync failed.",error?.message||error)),180);
+        mainRoom.on(event,handler);
+        activeLiveCohostMainHandlers.push({room:mainRoom,event,handler});
+      }
+    }
+
+  }
+  for(const participant of room.remoteParticipants?.values?.()||[])ensureLiveCohostTile(participant.identity,participant);
+  const local=room.localParticipant;
+  if((issued.liveKit.role==="host"||issued.liveKit.role==="cohost")&&local?.identity)ensureLiveCohostTile(local.identity,{name:state.user?.name||"You"});
+  updateLiveCohostStageCount();
+  }catch(error){
+    await stopLiveCohostLocal();
+    throw error;
+  }
+}
+function renderLiveCohostMatch(match,participants,role,hasSession){
+  const status=$("#live-cohost-match-status"),roster=$("#live-cohost-match-roster"),actions=$("#live-cohost-match-actions");
+  const startButtons=$("#live-cohost-match-panel")?.querySelectorAll("[data-cohost-match-start]");
+  const active=match?.status==="active";
+  if(status)status.textContent=active
+    ?(match.mode==="team"?"TEAM MATCH ACTIVE":"SOLO MATCH ACTIVE")+" · started "+(match.started_at?new Date(match.started_at).toLocaleTimeString():"")
+    :match?.status==="ended"?"Last Co-host match ended. Start another match when ready."
+    :hasSession?"No Co-host match is active.":"Start a Co-host stage to enable matches.";
+  if(startButtons)startButtons.forEach(button=>{button.hidden=!hasSession||Boolean(active)||role!=="host";button.disabled=!hasSession||Boolean(active);});
+  if(roster){
+    const rows=Array.isArray(participants)?participants:[];
+    roster.innerHTML=rows.map(item=>{
+      const name=item.user?.display_name||item.user?.username||"Creator";
+      const team=match?.mode==="team"?(item.team==="a"?"Team A":item.team==="b"?"Team B":""):"";
+      return "<div class='live-cohost-match-row'><span>"+esc(name)+"</span><span>"+esc(team)+"</span><strong>"+Number(item.points||0).toLocaleString()+" pts</strong></div>";
+    }).join("");
+  }
+  if(actions){
+    actions.innerHTML=active&&role==="host"&&match.created_by===state.user?.id
+      ?"<button type='button' id='live-cohost-match-end' class='danger'>End Match</button>":"";
+    $("#live-cohost-match-end")?.addEventListener("click",async()=>{
+      const button=$("#live-cohost-match-end");if(button)button.disabled=true;
+      try{
+        await api("/live/cohost/matches/"+encodeURIComponent(match.id)+"/end",{method:"POST",body:"{}"});
+        toast("Co-host match ended. Every creator's LIVE remains active.");
+        await refreshLiveCohostPanel(activeLiveSession,activeLiveRole,activeLiveRoom,window.LivekitClient);
+      }catch(error){toast(error.message||"Match could not be ended.");if(button)button.disabled=false;}
+    });
+  }
+}
+function renderLiveCohostRoster(participants){
+  const root=$("#live-cohost-roster");if(!root)return;
+  const rows=Array.isArray(participants)?participants.filter(item=>["invited","requested","accepted","connected"].includes(item.status)):[];
+  root.innerHTML=rows.map(item=>{
+    const name=String(item.user?.display_name||item.user?.username||"Minglora creator");
+    const status=item.status==="connected"?"LIVE on Co-host":item.status==="accepted"?"Accepted · connecting":item.status==="requested"?"Requesting to join":"Invitation pending";
+    const host=String(activeLiveCohostSession?.host_user_id||"")===String(state.user?.id||"");
+    const controls=item.status==="requested"&&host
+      ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-accept='"+esc(item.user_id)+"'>Accept request</button><button type='button' data-cohost-reject='"+esc(item.user_id)+"'>Decline</button></span>"
+      :item.status==="invited"&&host
+        ?"<span class='live-cohost-row-actions'><span class='live-cohost-roster-state'>Invitation sent</span><button type='button' data-cohost-reject='"+esc(item.user_id)+"'>Cancel invite</button></span>"
+        :["accepted","connected"].includes(item.status)&&host&&item.role!=="host"
+          ?"<span class='live-cohost-row-actions'><button type='button' data-cohost-remove='"+esc(item.user_id)+"'>Remove</button></span>":"";
+    return "<div class='live-cohost-roster-row'><span class='live-cohost-roster-name'>"+esc(name)+"</span><span class='live-cohost-roster-state'>"+esc(status)+"</span>"+controls+"</div>";
+  }).join("");
+  root.querySelectorAll("[data-cohost-accept],[data-cohost-reject],[data-cohost-remove]").forEach(button=>button.addEventListener("click",async()=>{
+    const userId=button.dataset.cohostAccept||button.dataset.cohostReject||button.dataset.cohostRemove;
+    const decision=button.dataset.cohostAccept?"accept":button.dataset.cohostReject?"reject":"remove";
+    button.disabled=true;
+    try{
+      await api("/live/cohost/sessions/"+encodeURIComponent(activeLiveCohostSession.id)+"/participants/"+encodeURIComponent(userId),{
+        method:"PATCH",body:JSON.stringify({decision})
+      });
+      toast(decision==="accept"?"Creator accepted into Co-host.":decision==="reject"?"Co-host request declined.":"Creator removed from Co-host. Their own LIVE continues.");
+      await refreshLiveCohostPanel(activeLiveSession,activeLiveRole,activeLiveRoom,window.LivekitClient);
+    }catch(error){toast(error.message||"Co-host action failed.");button.disabled=false;}
+  }));
+}
+function renderLiveCohostDiscovery(stages,role,currentSession){
+  const root=$("#live-cohost-discover-list");if(!root)return;
+  const rows=Array.isArray(stages)?stages.filter(item=>item.status==="active"&&item.host_user_id!==state.user?.id&&item.id!==currentSession?.id):[];
+  if(!rows.length){root.innerHTML="<p class='muted'>No other active creator Co-host stages right now.</p>";return;}
+  const mayRequest=role==="host"&&!currentSession;
+  root.innerHTML=rows.map(item=>{
+    const name=item.host?.display_name||item.host?.username||"LIVE creator";
+    const count=Math.min(4,Number(item.connectedCount||1));
+    const status=item.myStatus==="requested"?"Request pending":["accepted","connected"].includes(item.myStatus)?"Already participating":"";
+    const button=mayRequest
+      ?"<button type='button' data-cohost-request-session='"+esc(item.id)+"' "+(status?"disabled":"")+">"+esc(status||"Request to join")+"</button>"
+      :"<span class='live-cohost-roster-state'>"+esc(status||"LIVE now")+"</span>";
+    return "<div class='live-cohost-discover-row'><div class='live-cohost-discover-host'><strong>"+esc(name)+"</strong><small>"+count+" of 4 creators · "+esc(item.broadcast?.title||"LIVE now")+"</small></div>"+button+"</div>";
+  }).join("");
+  root.querySelectorAll("[data-cohost-request-session]").forEach(button=>button.addEventListener("click",async()=>{
+    const sessionId=button.dataset.cohostRequestSession;
+    button.disabled=true;button.textContent="Sending…";
+    try{
+      await api("/live/cohost/sessions/"+encodeURIComponent(sessionId)+"/requests",{method:"POST",body:"{}"});
+      toast("Your Co-host request was sent. Your own LIVE remains active.");
+      await refreshLiveCohostPanel(activeLiveSession,activeLiveRole,activeLiveRoom,window.LivekitClient);
+    }catch(error){toast(error.message||"Co-host request could not be sent.");button.disabled=false;button.textContent="Request to join";}
+  }));
+}
+async function refreshLiveCohostPanel(session,role,mainRoom,client){
+  if(liveCohostRefreshBusy||!session?.id)return;
+  liveCohostRefreshBusy=true;
+  try{
+    const [stageData,invitationsData,discoveryData]=await Promise.all([
+      api("/live/cohost/sessions/by-broadcast/"+encodeURIComponent(session.id)),
+      api("/live/cohost/invitations"),
+      api("/live/cohost/discover").catch(()=>({stages:[]}))
+    ]);
+    const cohostSession=stageData.session||null,participants=stageData.participants||[];
+    const status=$("#live-cohost-status"),startForm=$("#live-cohost-start-form"),inviteForm=$("#live-cohost-invite-form");
+    const isOwner=cohostSession?.host_user_id===state.user?.id;
+    const me=participants.find(item=>String(item.user_id)===String(state.user?.id));
+    if(startForm)startForm.hidden=Boolean(cohostSession);
+    if(inviteForm)inviteForm.hidden=!(cohostSession&&isOwner);
+    const requestButton=$("#live-cohost-request-button");
+    if(requestButton){
+      requestButton.hidden=!(cohostSession&&role==="viewer");
+      requestButton.disabled=Boolean(me&&["requested","accepted","connected"].includes(me.status));
+      requestButton.textContent=me?.status==="requested"?"Request pending":["accepted","connected"].includes(me?.status)?"Accepted · joining":"Request to join Co-host";
+    }
+    if(status)status.textContent=cohostSession
+      ?"Co-host stage active · "+Math.min(4,participants.length)+" of 4 creator places"
+      :"No Co-host stage is active for this LIVE.";
+    activeLiveCohostSession=cohostSession?{...cohostSession,participants}:null;
+    renderLiveCohostDiscovery(discoveryData.stages||[],role,cohostSession);
+    let matchData={match:null,participants:[]};
+    if(cohostSession&&cohostSession.status==="active"){
+      matchData=await api("/live/cohost/sessions/"+encodeURIComponent(cohostSession.id)+"/match");
+    }
+    renderLiveCohostMatch(matchData.match,matchData.participants,role,Boolean(cohostSession));
+    if(cohostSession&&cohostSession.status==="active"){
+      renderLiveCohostRoster(participants);
+      if(!activeLiveCohostRoom||activeLiveCohostSession?.id!==cohostSession.id)
+        await connectLiveCohostStage(cohostSession,participants,mainRoom,client);
+      else{
+        activeLiveCohostSession={...cohostSession,participants};
+        $("#live-cohost-stage")?.querySelectorAll(".live-cohost-tile").forEach(tile=>{
+          const participant=participants.find(item=>String(item.user_id)===tile.dataset.cohostIdentity);
+          const label=tile.querySelector(".live-cohost-name");
+          if(label&&participant)label.textContent=participant.user?.display_name||participant.user?.username||"Minglora creator";
+        });
+      }
+      const actions=$("#live-cohost-actions");
+      if(actions){
+        actions.hidden=!(me&&["accepted","connected"].includes(me.status));
+        actions.innerHTML=isOwner
+          ?"<button type='button' id='live-cohost-end-button' class='danger'>End Co-host stage</button>"
+          :"<button type='button' id='live-cohost-leave-button'>Leave Co-host</button>";
+        $("#live-cohost-end-button")?.addEventListener("click",async()=>{
+          if(!window.confirm("End the shared Co-host stage? Every creator's own LIVE will keep running."))return;
+          const button=$("#live-cohost-end-button");if(button)button.disabled=true;
+          try{await api("/live/cohost/sessions/"+encodeURIComponent(cohostSession.id)+"/end",{method:"POST",body:"{}"});await stopLiveCohostLocal();toast("Co-host ended. All creators' separate LIVE sessions are still running.");await refreshLiveCohostPanel(session,role,mainRoom,client);}
+          catch(error){toast(error.message||"Co-host could not be ended.");if(button)button.disabled=false;}
+        });
+        $("#live-cohost-leave-button")?.addEventListener("click",async()=>{
+          const button=$("#live-cohost-leave-button");if(button)button.disabled=true;
+          try{await api("/live/cohost/sessions/"+encodeURIComponent(cohostSession.id)+"/leave",{method:"POST",body:"{}"});await stopLiveCohostLocal();toast("You left Co-host. Your own LIVE continues.");await refreshLiveCohostPanel(session,role,mainRoom,client);}
+          catch(error){toast(error.message||"Could not leave Co-host.");if(button)button.disabled=false;}
+        });
+      }
+    }else{
+      if(activeLiveCohostRoom)await stopLiveCohostLocal();
+      const actions=$("#live-cohost-actions");if(actions){actions.hidden=true;actions.replaceChildren();}
+      const roster=$("#live-cohost-roster");if(roster)roster.innerHTML="";
+    }
+    const invitations=$("#live-cohost-invitations");
+    const pending=(invitationsData.invitations||[]).filter(item=>item.status==="invited"&&item.session?.status==="active");
+    if(invitations){
+      invitations.innerHTML=pending.length
+        ?"<strong>Invitations to you</strong>"+pending.map(item=>"<div class='live-cohost-invitation-row'><span>@"+esc(item.inviter?.username||"creator")+" invited you to Co-host</span><span class='live-cohost-row-actions'><button type='button' data-cohost-invitation-accept='"+esc(item.session_id)+"'>Accept</button><button type='button' data-cohost-invitation-reject='"+esc(item.session_id)+"'>Decline</button></span></div>").join("")
+        :"";
+      invitations.querySelectorAll("[data-cohost-invitation-accept],[data-cohost-invitation-reject]").forEach(button=>button.addEventListener("click",async()=>{
+        const id=button.dataset.cohostInvitationAccept||button.dataset.cohostInvitationReject;
+        const decision=button.dataset.cohostInvitationAccept?"accept":"reject";
+        button.disabled=true;
+        try{
+          await api("/live/cohost/sessions/"+encodeURIComponent(id)+"/participants/"+encodeURIComponent(state.user.id),{
+            method:"PATCH",body:JSON.stringify({decision})
+          });
+          toast(decision==="accept"?"Co-host invitation accepted. Your LIVE remains connected.":"Co-host invitation declined.");
+          await refreshLiveCohostPanel(session,role,mainRoom,client);
+        }catch(error){toast(error.message||"Invitation action failed.");button.disabled=false;}
+      }));
+    }
+    const inviteStatus=$("#live-cohost-invite-status");
+    if(inviteStatus&&cohostSession&&isOwner&&!(inviteForm?.dataset.lastResult))inviteStatus.textContent="Invite a creator who is already LIVE on their own account.";
+  }catch(error){
+    const status=$("#live-cohost-status");if(status)status.textContent=error.message||"Co-host status could not be loaded.";
+  }finally{liveCohostRefreshBusy=false;}
+}
+function setupLiveCohostPanel(session,role,mainRoom,client){
+  const startForm=$("#live-cohost-start-form");
+  startForm?.addEventListener("submit",async event=>{
+    event.preventDefault();const button=startForm.querySelector("button[type='submit']");button.disabled=true;
+    try{
+      await api("/live/cohost/sessions",{method:"POST",body:JSON.stringify({broadcastId:session.id})});
+      toast("Creator Co-host stage started. Your own LIVE connection stayed active.");
+      await refreshLiveCohostPanel(session,role,mainRoom,client);
+    }catch(error){toast(error.message||"Co-host stage could not be started.");}
+    finally{button.disabled=false;}
+  });
+  const requestButton=$("#live-cohost-request-button");
+  requestButton?.addEventListener("click",async()=>{
+    if(!activeLiveCohostSession?.id){toast("There is no active Co-host stage to request.");return;}
+    requestButton.disabled=true;
+    try{
+      const result=await api("/live/cohost/sessions/"+encodeURIComponent(activeLiveCohostSession.id)+"/requests",{
+        method:"POST",body:"{}"
+      });
+      requestButton.textContent="Request sent";
+      toast("Your creator Co-host request was sent.");
+      await refreshLiveCohostPanel(session,role,mainRoom,client);
+    }catch(error){toast(error.message||"Co-host request could not be sent.");requestButton.disabled=false;}
+  });
+  $("#live-cohost-match-panel")?.querySelectorAll("[data-cohost-match-start]").forEach(button=>button.addEventListener("click",async()=>{
+    const mode=button.dataset.cohostMatchStart;
+    if(!activeLiveCohostSession?.id){toast("Start Co-host before starting a match.");return;}
+    button.disabled=true;
+    try{
+      await api("/live/cohost/sessions/"+encodeURIComponent(activeLiveCohostSession.id)+"/matches",{
+        method:"POST",body:JSON.stringify({mode})
+      });
+      toast(mode==="team"?"Team Match started.":"Solo Match started.");
+      await refreshLiveCohostPanel(session,role,mainRoom,client);
+    }catch(error){toast(error.message||"Co-host Match could not be started.");button.disabled=false;}
+  }));
+  const inviteForm=$("#live-cohost-invite-form");
+  const creatorSearch=$("#live-cohost-invite-username");
+  const creatorResults=$("#live-cohost-creator-results");
+  let creatorSearchTimer=null;
+  const searchCreators=async()=>{
+    if(!creatorSearch||!creatorResults)return;
+    const q=creatorSearch.value.trim();
+    try{
+      const result=await api("/live/cohost/creators?q="+encodeURIComponent(q));
+      const rows=result.creators||[];
+      creatorResults.innerHTML=rows.length
+        ?rows.map(item=>"<button type='button' class='live-cohost-creator-option' data-cohost-invite-creator='"+esc(item.username||"")+"'><span><strong>@"+esc(item.username||"creator")+"</strong><small>"+(item.isFriend?"Friend · ":"")+"LIVE now</small></span><span>Invite</span></button>").join("")
+        :"<p class='muted'>No matching creators are LIVE right now.</p>";
+      creatorResults.querySelectorAll("[data-cohost-invite-creator]").forEach(button=>button.addEventListener("click",()=>{
+        creatorSearch.value=button.dataset.cohostInviteCreator||"";
+        if(inviteForm?.requestSubmit)inviteForm.requestSubmit();
+      }));
+    }catch(error){creatorResults.textContent=error.message||"LIVE creator search is unavailable.";}
+  };
+  creatorSearch?.addEventListener("focus",searchCreators);
+  creatorSearch?.addEventListener("input",()=>{
+    if(creatorSearchTimer)clearTimeout(creatorSearchTimer);
+    creatorSearchTimer=setTimeout(searchCreators,220);
+  });
+  inviteForm?.addEventListener("submit",async event=>{
+    event.preventDefault();const username=String(inviteForm.elements.username?.value||"").trim();if(!username)return;
+    const button=inviteForm.querySelector("button[type='submit']");button.disabled=true;
+    const note=$("#live-cohost-invite-status");if(note)note.textContent="Sending creator invitation…";
+    try{
+      if(!activeLiveCohostSession?.id)throw new Error("Start the Co-host stage first.");
+      const result=await api("/live/cohost/sessions/"+encodeURIComponent(activeLiveCohostSession.id)+"/invitations",{
+        method:"POST",body:JSON.stringify({username})
+      });
+      inviteForm.reset();if(note)note.textContent="Invitation sent to @"+String(result.user?.username||username)+". They can accept from their own LIVE.";
+      toast("Co-host invitation sent to the LIVE creator.");
+      await refreshLiveCohostPanel(session,role,mainRoom,client);
+    }catch(error){if(note)note.textContent=error.message||"Creator invitation failed.";toast(error.message||"Creator invitation failed.");}
+    finally{button.disabled=false;}
+  });
+  void refreshLiveCohostPanel(session,role,mainRoom,client);
+  if(liveCohostRefreshTimer)clearInterval(liveCohostRefreshTimer);
+  liveCohostRefreshTimer=setInterval(()=>void refreshLiveCohostPanel(session,role,mainRoom,client),5000);
 }
 function renderLivePinnedComment(comment){
   activeLivePinnedComment=comment?.id?{
@@ -2492,6 +2926,7 @@ const LIVE_TOOLS_PANEL_TARGET_ATTRIBUTES=Object.freeze({
   layouts:"data-live-tools-panel-target='layouts'",
   permissions:"data-live-tools-panel-target='permissions'",
   guests:"data-live-tools-panel-target='guests'",
+  cohost:"data-live-tools-panel-target='cohost'",
   viewers:"data-live-tools-panel-target='viewers'",
   fanclub:"data-live-tools-panel-target='fanclub'",
   matches:"data-live-tools-panel-target='matches'",
@@ -2504,6 +2939,7 @@ const LIVE_TOOLS_PANEL_TARGET_ATTRIBUTES=Object.freeze({
 });
 const LIVE_TOOLS_PANEL_SELECTOR_ATTRIBUTES=Object.freeze({
   guests:"data-live-tools-target='#live-speaker-request-panel'",
+  cohost:"data-live-tools-target='#live-cohost-panel'",
   fanclub:"data-live-tools-target='#live-fan-club-panel'",
   matches:"data-live-tools-target='#live-match-panel'",
   gifts:"data-live-tools-target='#live-gift-panel'",
@@ -2758,16 +3194,20 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveTheme=LIVE_ROOM_THEME_OPTIONS.some(option=>option.value===session.liveTheme)?session.liveTheme:'studio';
   activeLiveSession={...session,liveTheme,broadcastType,liveMode,liveSettings};activeLiveRole=role;liveCameraEnabled=canUseCamera;liveMicrophoneEnabled=true;liveAudioMuted=false;liveScreenShareEnabled=false;liveCameraFacing='user';
   const stageMarkup=broadcastType==="audio_only"
-    ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
-    : "<div id='live-video-stage' class='live-video-stage live-mode-"+liveMode+"'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
+    ? "<div id='live-video-stage' class='live-video-stage live-audio-stage'><div class='live-audio-scene'><div class='live-audio-orb'><span class='live-audio-orbit orbit-one'></span><span class='live-audio-orbit orbit-two'></span><img src='"+avatar(session.host||state.user)+"' alt='' class='live-audio-host-avatar'></div><span class='live-audio-live-label'>LIVE AUDIO</span><h2>You're in the room</h2><p>Voice-first. Camera-free. Join the conversation.</p><div class='live-audio-waveform' id='live-audio-waveform' aria-label='Live audio activity'><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div id='live-guest-layout' class='live-guest-layout audio-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-cohost-stage' class='live-cohost-stage' data-count='1' aria-label='Creator Co-host LIVE stage'></div><div id='live-cohost-audio-root' class='live-cohost-audio-root'></div><div id='live-speaker-list' class='live-speaker-list'><span class='muted'>Connecting speakers…</span></div></div>"
+    : "<div id='live-video-stage' class='live-video-stage live-mode-"+liveMode+"'><div id='live-guest-layout' class='live-guest-layout' aria-label='LIVE host and guest seats'></div><div id='live-cohost-stage' class='live-cohost-stage' data-count='1' aria-label='Creator Co-host LIVE stage'></div><div id='live-cohost-audio-root' class='live-cohost-audio-root'></div><div id='live-screen-share-stage' class='live-screen-share-stage' aria-label='Shared screen'></div></div>";
   const liveEntryBanner=state.user?.gifterBadge?.liveEntranceUnlocked
     ? "<aside class='gp-live-entry-banner' role='status'><span class='gp-live-entry-seal' aria-hidden='true'>✦25</span><span class='gp-live-entry-copy'><strong>"+esc(state.user.name||'Minglora member')+"</strong><small>LV 25+ Gifter · special LIVE entrance unlocked</small></span><span class='gp-live-entry-wordmark'>MINGLORA LIVE</span></aside>"
     : '';
   const speakerTools=role==="host"
-    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Co-host & Multi-Guest stage</strong><small>Manage up to 8 guest seats in Video + Audio and the other Audio Only layouts. Audio Only Side by Side supports 9.</small></div><span class='live-speaker-seat-limit'>8 guest seats</span></div><form id='live-cohost-invite-form' class='live-cohost-invite-form'><label for='live-cohost-invite-username'>Invite a member by username</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit'>Invite Co-host</button></div><small id='live-cohost-invite-status' role='status'>Invited members must join this LIVE before accepting.</small></form><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Turn ON permits requests when Allow guest requests and Allow co-host are also enabled.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading guest requests…</p></div></section>"
+    ? "<section id='live-speaker-request-panel' class='live-speaker-request-panel host' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><div><strong>Multi-guest LIVE</strong><small>Manage viewer requests and approved guest seats for this LIVE. Co-host creators are managed separately.</small></div><span class='live-speaker-seat-limit'>Guest stage</span></div><label class='live-room-permission-toggle live-guest-stage-toggle'><input type='checkbox' id='live-guest-stage-toggle' data-live-room-setting='guestStageEnabled'"+(liveSettings.guestStageEnabled!==false?" checked":"")+"><span class='live-preflight-switch' aria-hidden='true'></span><span><strong>Guest stage</strong><small>Turn OFF to block requests and remove current speakers. Allow viewers to request a guest place in this LIVE.</small></span><span id='live-guest-stage-state' class='live-guest-stage-state'>"+(liveSettings.guestStageEnabled!==false?"ON":"OFF")+"</span></label><small class='muted'>Manage up to 8 guest seats in Video + Audio and the other Audio Only layouts. Audio Only Side by Side supports 9.</small><div class='live-guest-stage-overview' aria-label='Guest stage counts'><span><strong id='live-guest-pending-count'>0</strong><small>Pending</small></span><span><strong id='live-guest-approved-count'>0</strong><small>Approved</small></span><span><strong id='live-guest-active-count'>0</strong><small>On stage</small></span><span><strong id='live-guest-history-count'>0</strong><small>History</small></span></div><div id='live-speaker-request-list' class='live-speaker-request-list'><p class='muted'>Loading Multi-guest requests…</p></div></section>"
     : role==="viewer"
-      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false||liveSettings.allowCoHost===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Guest stage is unavailable</strong><p class='muted'>The host is not accepting guest speaker requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Co-host Match request</strong><small>Send a request to join this creator’s LIVE stage</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to Co-host</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
-      : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
+      ? (liveSettings.guestStageEnabled===false||liveSettings.allowGuestRequests===false?"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><strong>Multi-guest requests are unavailable</strong><p class='muted'>The host is not accepting audience guest requests right now.</p></section>":"<section id='live-speaker-request-panel' class='live-speaker-request-panel' data-live-tools-panel='guests'><div class='live-speaker-panel-heading'><strong>Join as a guest</strong><small>Ask this creator to bring you onto their LIVE stage.</small></div><button type='button' class='secondary full' id='live-request-speaker'>Request to join</button><p id='live-speaker-request-status' class='muted'>You are listening as an audience member.</p></section>")
+      : "<section id='live-speaker-request-panel' class='live-speaker-request-panel guest' data-live-tools-panel='guests'><strong>You're on the Multi-guest stage</strong><small>"+(broadcastType==="audio_only"?"Your microphone is live in this audio-only room.":"Your microphone and camera controls are available below.")+"</small></section>";
+  const cohostTools="<section id='live-cohost-panel' class='live-tools-card live-cohost-panel' data-live-tools-panel='cohost'><div class='live-cohost-heading'><div><strong>Creator Co-host LIVE</strong><small>Bring 2, 3 or 4 creators together while every creator keeps their own LIVE running.</small></div><span class='live-cohost-live-badge'>CREATOR STAGE</span></div>"+
+    (role==="host"?"<form id='live-cohost-start-form' class='live-cohost-form'><button type='submit' class='primary'>Start Co-host stage</button><small>Creates a separate collaboration room. Your current LIVE stays connected.</small></form><form id='live-cohost-invite-form' class='live-cohost-form' hidden><label for='live-cohost-invite-username'>Invite a creator who is already LIVE</label><div class='live-cohost-invite-row'><input id='live-cohost-invite-username' name='username' maxlength='30' autocomplete='off' placeholder='Creator username' required><button type='submit'>Invite creator</button></div><small id='live-cohost-invite-status' role='status'>Invited creators accept from their own active LIVE.</small><div id='live-cohost-creator-results' class='live-cohost-creator-results' aria-live='polite'></div></form>":"<p class='live-cohost-note'>Keep your own LIVE running while you discover and request to join another creator's Co-host stage.</p>")+
+    "<div id='live-cohost-discover' class='live-cohost-discover'><div class='live-cohost-discover-heading'><strong>Discover active Co-host stages</strong><small>Request to join while your own LIVE keeps running.</small></div><div id='live-cohost-discover-list' class='live-cohost-discover-list' aria-live='polite'>Loading active Co-host stages…</div></div><div id='live-cohost-status' class='live-cohost-status' role='status'>Checking for an active Co-host stage…</div><div id='live-cohost-roster' class='live-cohost-roster' aria-live='polite'></div><div id='live-cohost-invitations' class='live-cohost-invitations'></div><div id='live-cohost-actions' class='live-cohost-actions' hidden></div>"+
+    "<section id='live-cohost-match-panel' class='live-cohost-match-panel'><div class='live-cohost-match-heading'><strong>Co-host Match</strong><small>Start a Solo or Team match without ending any creator's LIVE.</small></div>"+(role==="host"?"<div class='live-cohost-match-start'><button type='button' data-cohost-match-start='solo'>Start Solo Match</button><button type='button' data-cohost-match-start='team'>Start Team Match</button></div>":"")+"<div id='live-cohost-match-status' class='live-cohost-match-status'>No Co-host match is active.</div><div id='live-cohost-match-roster' class='live-cohost-match-roster'></div><div id='live-cohost-match-actions' class='live-cohost-match-actions'></div></section></section>";
   const rewardTools=!giftsEnabled?"":"<section id='live-reward-panel' class='live-reward-panel' data-live-tools-panel='rewards'>"+
     "<div class='live-reward-heading'><div><strong>Goody Bags & Treasure Boxes</strong><small>LIVE community rewards</small></div>"+(role==="host"?"<span id='live-reward-balance' class='live-reward-balance'>Loading Coins…</span>":"")+"</div>"+
     (role==="host"
@@ -2790,7 +3230,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     liveControlButton("live-audio-toggle","volume","Mute LIVE room audio","Sound",{pressed:true}),
     liveControlButton("live-chat-toggle","message","Open LIVE chat","Chat"),
     liveControlButton("live-gifts-toggle","gift",role==="host"?"Preview LIVE gift catalogue":giftsEnabled?"Open LIVE gifts":"View LIVE gift availability","Gift"),
-    liveControlButton("live-cohost-toggle","cohost","Open Co-host Match requests","Co-host"),
+    liveControlButton("live-cohost-toggle","cohost","Open creator Co-host stage","Co-host"),
     liveControlButton("live-share-toggle","share","Share this LIVE","Share"),
     liveControlButton("live-fullscreen-toggle","fullscreen","Enter room full screen","Expand",{pressed:false}),
     role!=="host"?liveControlButton("live-leave","end",role==="guest"?"Leave stage":"Leave LIVE","Leave",{danger:true}):""
@@ -2852,7 +3292,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     "<section id='live-tools-drawer' class='live-tools-drawer' role='dialog' aria-modal='true' aria-labelledby='live-tools-title' tabindex='-1'>"+
     "<header class='live-tools-header'><div><span class='live-tools-eyebrow'>MINGLORA LIVE</span><h2 id='live-tools-title'>LIVE settings & tools</h2><small>Manage your room without covering the stream.</small></div>"+
     "<button type='button' class='live-tools-close' id='live-tools-close' aria-label='Close LIVE settings'>×</button></header>"+
-    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveDeviceSettings+liveModeratorTools+speakerTools+rewardTools+liveGiftTools+liveTopGiftersTools+"</div></section></div>";
+    liveToolsNavigation+"<div class='live-tools-content'>"+liveLayoutPanel+liveRoomPermissionPanel+liveViewerTools+liveFanClubTools+liveMatchTools+liveThemeAppearance+liveDeviceSettings+liveModeratorTools+cohostTools+speakerTools+rewardTools+liveGiftTools+liveTopGiftersTools+"</div></section></div>";
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
@@ -3123,6 +3563,7 @@ activeLivePinnedComment=null;
     }
     updatePresence();
     refreshSpeakerRoster();
+    setupLiveCohostPanel(session,role,room,client);
     await syncLiveParticipantPresence(session);
     if(role==='host')startLiveViewerRefresh(session);
     if(role==='viewer'){
@@ -3357,7 +3798,7 @@ activeLivePinnedComment=null;
       setLiveRoomPanelTab("tools");
       openLiveToolsPanel();
     };
-    $("#live-cohost-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-speaker-request-panel"));
+    $("#live-cohost-toggle")?.addEventListener("click",()=>openLiveToolsPanel("#live-cohost-panel"));
     $("#live-chat-toggle")?.addEventListener("click",showLiveRoomChat);
     $("#live-fullscreen-chat-tab")?.addEventListener("click",showLiveRoomChat);
     $("#live-fullscreen-tools-tab")?.addEventListener("click",showLiveRoomTools);
@@ -3555,12 +3996,14 @@ activeLivePinnedComment=null;
       document.removeEventListener("fullscreenchange",liveFullscreenChangeListener);
       if(document.fullscreenElement===livePlayerShell&&document.exitFullscreen)await document.exitFullscreen().catch(()=>{});
       activeLiveDevicePreferences=null;
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      await stopLiveCohostLocal();
+closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-back")?.addEventListener("click",async()=>{
       if(role==="host"){toast("End your LIVE session before returning to the directory.");return;}
       await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
-      closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
+      await stopLiveCohostLocal();
+closeLiveToolsPanel();renderLivePinnedComment(null);stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveRewardRefresh();stopLiveFanClubHeartbeat();stopLiveMatchRefresh();stopLiveViewerRefresh();closeLiveProfilePreview();await room.disconnect();activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;await renderLive();
     });
     $("#live-chat-form")?.addEventListener("submit",async event=>{
       event.preventDefault();const form=event.currentTarget,body=String(form.elements.body.value||"").trim();if(!body)return;
@@ -3817,6 +4260,7 @@ activeLivePinnedComment=null;
     if(role==="host")toast(broadcastType==="audio_only"?"You are LIVE in Audio Only mode. Your camera was not requested.":"You are LIVE. Your camera and microphone are connected.");
     else if(role==="guest")toast(broadcastType==="audio_only"?"You're on stage. Your microphone is connected; audio-only LIVE does not use a camera.":"You're on stage. Your microphone and camera are connected.");
   }catch(error){
+    await stopLiveCohostLocal();
     stopLiveChatRefresh();stopLiveSpeakerRefresh();stopLiveParticipantSync();stopLiveGiftEvents();await room.disconnect().catch(()=>{});activeLiveRoom=null;activeLiveSession=null;activeLiveRole=null;
     if(role==="host")await api("/live/sessions/"+encodeURIComponent(session.id)+"/end",{method:"POST",body:"{}"}).catch(()=>{});
     else await api("/live/sessions/"+encodeURIComponent(session.id)+"/leave",{method:"POST",body:"{}"}).catch(()=>{});
