@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_EXPERIENCE_SETTINGS, validateExperienceSettingsPatch } from './domain/experience-settings.js';
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
-import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
+import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, requestSupabaseWorkerState, isSupabasePersistence } from './store.js';
 import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput, MEETWAVE_PARTICIPANT_LIMIT } from '../backend/modules/meetwave/service.js';
@@ -53,6 +53,7 @@ import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISett
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { createMingloraAITaskWorker } from '../backend/modules/ai-network/ai-task-worker.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -2371,6 +2372,26 @@ async function route(req, res) {
         }
       };
 
+      const runAITaskHistoryCommand = async taskId => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can view AI task history.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI task history requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_task_history', {
+          actorUserId: user.id,
+          taskId
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI task history is unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+
       const runAIProviderCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2670,6 +2691,14 @@ async function route(req, res) {
       if (method === 'GET' && sub === 'tasks') {
         const result = await runAITaskCommand('list_tasks');
         return json(res, 200, result || { tasks: [], runtime: null });
+      }
+      if (parts[0] === 'tasks' && parts.length === 3 && method === 'GET' && parts[2] === 'history') {
+        const taskId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required.'), { status: 400 });
+        }
+        const result = await runAITaskHistoryCommand(taskId);
+        return json(res, 200, result || { task_id: taskId, events: [] });
       }
       if (method === 'POST' && sub === 'tasks') {
         const input = await body(req, 72000);
@@ -10661,6 +10690,13 @@ const liveRewardSettlementTimer=setInterval(async()=>{
 },15000);
 liveRewardSettlementTimer.unref?.();
 
+const mingloraAITaskWorker = createMingloraAITaskWorker({
+  env: process.env,
+  requestWorkerCommand: requestSupabaseWorkerState,
+  generateDraft: generateOpenAICreatorDraft,
+  isPersistenceReady: isSupabasePersistence()
+});
+
 server.listen(PORT,'0.0.0.0',async()=>{
   if(String(process.env.MEETWAVE_PURGE_ALL_ROOMS_ON_STARTUP||'').trim().toLowerCase()==='true'){
     try{
@@ -10686,6 +10722,9 @@ server.listen(PORT,'0.0.0.0',async()=>{
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
   startLiveSessionCleanupSweep();
   console.log(`Minglora listening on port ${PORT}`);
+  const aiTaskWorkerStatus = mingloraAITaskWorker.start();
+  console.info('[Minglora AI task worker]', JSON.stringify(aiTaskWorkerStatus));
+
   const persistence = await persistenceHealth();
   const aiReadiness = getAIProviderStatus();
   console.info('[Minglora readiness]', JSON.stringify({
