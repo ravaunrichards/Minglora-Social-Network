@@ -205,7 +205,7 @@ export async function generateGeminiTaskOutput({
   return {
     output,
     provider: 'google_gemini',
-    model: String(data.modelVersion || model).slice(0, 180),
+    model: String(model).slice(0, 180),
     provider_request_id: response.requestId || String(data.responseId || '').slice(0, 180) || null,
     usage: {
       input_tokens: Number.isFinite(Number(usage.promptTokenCount)) ? Number(usage.promptTokenCount) : null,
