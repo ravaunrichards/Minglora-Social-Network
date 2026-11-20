@@ -2850,7 +2850,7 @@
           method:'PATCH',body:{targetType,operation}
         });
         await loadAISocialCenter(identityId);
-        setNotice('AI-generated ' + targetType + ' ' + operation + 'd and audited.');
+        setNotice('AI-generated ' + targetType + ' ' + ({hide:'hidden',restore:'restored',delete:'deleted'}[operation]) + ' and audited.');
         paintSnapshot();
         return;
       }
