@@ -29,7 +29,7 @@ alter table ai_network.ai_provider_accounts
   drop constraint if exists ai_provider_accounts_status_check;
 alter table ai_network.ai_provider_accounts
   add constraint ai_provider_accounts_status_check
-  check (status in ('unconfigured','enabled','disabled','revoked'));
+  check (status in ('unconfigured','configured','restricted','enabled','disabled','revoked'));
 create index if not exists ai_provider_accounts_owner_provider_idx
   on ai_network.ai_provider_accounts(owner_user_id, provider_name);
 
@@ -262,7 +262,12 @@ begin
       v_provider_account_id,p_actor_user_id,v_provider_name,v_health_status,nullif(v_model_identifier,''),
       v_response_time_ms,v_error_code,v_reason,v_metadata,v_checked_at
     ) returning event_id into v_event_id;
-    v_account_health_status := case when v_health_status='healthy' then 'healthy' else 'unhealthy' end;
+    v_account_health_status := case
+      when v_health_status='healthy' then 'healthy'
+      when v_health_status='degraded' then 'degraded'
+      when v_health_status='unknown' then 'unknown'
+      else 'unavailable'
+    end;
     update ai_network.ai_provider_accounts a
     set health_status=v_account_health_status,last_checked_at=v_checked_at
     where a.provider_account_id=v_provider_account_id and a.owner_user_id=p_actor_user_id;
