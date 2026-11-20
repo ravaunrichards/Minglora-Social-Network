@@ -2860,7 +2860,7 @@ async function route(req, res) {
           const batch = candidates.slice(offset, offset + 5);
           const outcomes = await Promise.all(batch.map(async model => {
             const textGeneration = provider !== 'openai';
-            const modelVersion = String(model.version || model.lifecycle || '').slice(0, 80);
+            const modelVersion = String(model.version || '').slice(0, 80);
             try {
               const result = await runAIProviderCommand('create_provider_model', {
                 provider_name: provider,
