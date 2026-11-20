@@ -338,7 +338,7 @@ export async function probeAIProvider(providerId, options = {}) {
   }
 }
 
-export async function generateAIProviderText(providerId, {
+/**\n * Low-level provider transport only. Callers must apply the Minglora authorization,\n * input/output moderation, identity scope, budget and usage-recording gates before\n * exposing generated text to users. This module intentionally creates no routes.\n */\nexport async function generateAIProviderText(providerId, {
   model: requestedModel,
   prompt,
   systemPrompt,
@@ -405,7 +405,7 @@ export async function generateAIProviderText(providerId, {
   }
 
   const responseModel = text(payload.model) || model;
-  const requestId = text(payload._request_id || payload.request_id || payload.responseId || payload.response_id)
+  const requestId = text(payload._request_id || payload.request_id || payload.responseId || payload.response_id || payload.id)
     || (typeof options.requestIdFromHeaders === 'function' ? text(options.requestIdFromHeaders()) : '');
   return {
     providerId: id,
