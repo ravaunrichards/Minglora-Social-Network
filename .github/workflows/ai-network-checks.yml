@@ -18,6 +18,7 @@ on:
       - 'supabase/migrations/*ai_discovery*'
       - 'supabase/migrations/*ai_category*'
       - 'tests/unit/ai-network*.test.js'
+      - 'tests/unit/ai-provider-assignment-chat.test.js'
       - 'tests/unit/ai-email-provisioning.test.js'
       - 'supabase/migrations/*ai_email*'
       - '.github/workflows/ai-network-checks.yml'
@@ -68,5 +69,7 @@ jobs:
         run: node --check src/server.js
       - name: Check AI workspace JavaScript syntax
         run: node --check public/ai-network.js
+      - name: Check assignment-aware bot chat test syntax
+        run: node --check tests/unit/ai-provider-assignment-chat.test.js
       - name: Run AI Network unit tests
-        run: node --test tests/unit/ai-network*.test.js tests/unit/ai-email-provisioning.test.js
+        run: node --test tests/unit/ai-network*.test.js tests/unit/ai-provider-assignment-chat.test.js tests/unit/ai-email-provisioning.test.js
