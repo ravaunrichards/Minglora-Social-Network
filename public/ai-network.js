@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '', socialSettings: null, socialError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -1678,6 +1678,129 @@
       'ai-network-span-2');
   }
 
+  async function loadAISocialSettings() {
+    state.socialError = '';
+    try {
+      state.socialSettings = await request('/social/settings');
+    } catch (error) {
+      state.socialSettings = null;
+      state.socialError = error.message || 'AI social settings are unavailable.';
+    }
+  }
+
+  function renderAISocialCenter() {
+    const data = state.socialSettings || {};
+    const controls = data.controls || {};
+    const identities = list(data.identities);
+    const conversations = list(data.conversations);
+    const posts = list(data.posts);
+    const publicProfiles = list(data.publicProfiles);
+    const activity = list(data.activity);
+    if (state.socialError) return '<section class="ai-network-card ai-network-span-2"><div class="ai-network-card-heading"><div><span class="ai-network-eyebrow">PHASE 7 · SOCIAL NETWORK</span><h2>AI Social Network</h2></div></div><div class="ai-network-alert ai-network-alert--warning">' + esc(state.socialError) + '</div><button type="button" class="secondary" data-ai-action="social-reload">Retry social controls</button></section>';
+    const identityOptions = identities.map(item => ({
+      value:item.identity_id,
+      label:(item.display_name || 'AI identity') + ' · @' + (item.username || 'ai')
+    })).filter(item => item.value);
+    const globalForm = '<form class="ai-network-form" data-ai-form="social-controls">' +
+      '<div class="ai-network-form-title">Platform-wide AI social safety</div>' +
+      '<label class="ai-network-check"><input type="checkbox" name="globalPaused"' + (controls.global_paused !== false ? ' checked' : '') + '><span>Keep all AI social activity paused</span></label>' +
+      '<label>Pause reason<input name="pauseReason" maxlength="240" value="' + esc(controls.pause_reason || '') + '" placeholder="Administrator pause reason"></label>' +
+      '<p class="ai-network-note">The initial state is paused. Unpausing is an explicit administrator action. Per-identity permissions and human approval remain required.</p>' +
+      '<button type="submit" class="primary">Save global social pause</button></form>';
+    const permissionRows = identities.length ? identities.map(identity => {
+      const p = identity.permissions || {};
+      const eligible = identity.status === 'active' && identity.enabled === true;
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
+        esc(identity.display_name || 'AI member') + '</strong><div class="ai-network-meta">' + pill('AI MEMBER','ai') + ' ' +
+        pill(identity.status || 'created',eligible?'success':'warning') + ' ' +
+        pill(p.is_suspended === false ? 'Social access enabled' : 'Suspended',p.is_suspended === false?'warning':'neutral') +
+        '</div><small>@' + esc(identity.username || '') + ' · Profile: ' + esc(identity.profile_visibility || 'private') + '</small></div></div>' +
+        '<form class="ai-network-form ai-network-social-permissions" data-ai-form="social-permissions" data-identity-id="' + esc(identity.identity_id) + '">' +
+        '<div class="ai-network-check-grid">' +
+        [['canPost','can_post','Posting'],['canComment','can_comment','Commenting'],['canReact','can_react','Reactions'],['canMessage','can_message','Member replies'],['canAIInteract','can_ai_interact','AI-to-AI']].map(item =>
+          '<label class="ai-network-check"><input type="checkbox" name="' + item[0] + '"' + (p[item[1]] === true ? ' checked' : '') + '><span>' + item[2] + '</span></label>'
+        ).join('') +
+        '<label class="ai-network-check"><input type="checkbox" name="isSuspended"' + (p.is_suspended !== false ? ' checked' : '') + '><span>Suspend this AI identity</span></label>' +
+        '</div><label>Profile visibility<select name="profileVisibility">' + options([
+          {value:'private',label:'Private'},{value:'public',label:'Public'},{value:'hidden',label:'Hidden'}
+        ],identity.profile_visibility || 'private') + '</select></label>' +
+        '<div class="ai-network-form-grid"><label>Posts/hour<input type="number" name="maxPostsPerHour" min="0" max="5" value="' + esc(p.max_posts_per_hour ?? 2) + '"></label>' +
+        '<label>Comments/hour<input type="number" name="maxCommentsPerHour" min="0" max="10" value="' + esc(p.max_comments_per_hour ?? 5) + '"></label>' +
+        '<label>Reactions/hour<input type="number" name="maxReactionsPerHour" min="0" max="20" value="' + esc(p.max_reactions_per_hour ?? 10) + '"></label>' +
+        '<label>Messages/hour<input type="number" name="maxMessagesPerHour" min="0" max="5" value="' + esc(p.max_messages_per_hour ?? 2) + '"></label>' +
+        '<label>AI interactions/hour<input type="number" name="maxAIInteractionsPerHour" min="0" max="10" value="' + esc(p.max_ai_interactions_per_hour ?? 3) + '"></label></div>' +
+        '<p class="ai-network-note">Every action still needs an administrator-approved request. An identity must separately be active and enabled in the identity registry.</p>' +
+        '<button type="submit" class="secondary">Save AI social permissions</button></form></article>';
+    }).join('') : empty('No AI identities are registered to this owner yet.');
+    const postComposer = '<form class="ai-network-form" data-ai-form="social-post"><div class="ai-network-form-title">Publish a human-reviewed AI member post</div>' +
+      '<label>AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
+      '<label>Post text<textarea name="text" required minlength="1" maxlength="5000" rows="3" placeholder="Write the exact text to publish under the AI identity."></textarea></label>' +
+      '<p class="ai-network-note">This composer publishes only the text you supply. It is labelled AI BOT and owner-reviewed; no model-generated or scheduled posting runs automatically.</p>' +
+      '<button type="submit" class="primary"' + (!identityOptions.length || controls.global_paused !== false ? ' disabled' : '') + '>Publish owner-reviewed AI post</button></form>';
+    const postRows = posts.length ? '<div class="ai-network-list">' + posts.slice(0,20).map(post =>
+      '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' + esc(post.text || '(empty post)') +
+      '</strong><div class="ai-network-meta">' + pill('AI BOT · OWNER-REVIEWED','ai') + ' ' + pill(post.status || 'published',post.status === 'published'?'success':'warning') +
+      '</div><small>' + esc(date(post.createdAt)) + ' · ' + number((post.comments || []).length) + ' comments · ' + number(Object.keys(post.reactions || {}).length) + ' reactions</small></div></div>' +
+      '<div class="ai-network-row-actions">' +
+      (post.status === 'published' ? '<button type="button" class="secondary" data-ai-action="social-post-manage" data-id="' + esc(post.id) + '" data-status="hide">Hide</button>' :
+        '<button type="button" class="secondary" data-ai-action="social-post-manage" data-id="' + esc(post.id) + '" data-status="restore">Restore</button>') +
+      '<button type="button" class="danger" data-ai-action="social-post-manage" data-id="' + esc(post.id) + '" data-status="delete">Delete</button></div></article>'
+    ).join('') + '</div>' : empty('No AI member posts have been published.');
+    const interactionForms = '<h3>AI comments and reactions</h3>' +
+      '<div class="ai-network-form-grid">' +
+      '<form class="ai-network-form" data-ai-form="social-comment"><div class="ai-network-form-title">Comment on a public post</div>' +
+      '<label>AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
+      '<label>Public post ID<input name="postId" required maxlength="180" placeholder="Paste a public Minglora post ID"></label>' +
+      '<label>Comment text<textarea name="text" required maxlength="2000" rows="2"></textarea></label>' +
+      '<p class="ai-network-note">Only public posts that allow comments from everyone are eligible. The author must be an active, enabled, public AI member.</p>' +
+      '<button type="submit" class="secondary" ' + (controls.global_paused !== false ? 'disabled' : '') + '>Submit approved AI comment</button></form>' +
+      '<form class="ai-network-form" data-ai-form="social-reaction"><div class="ai-network-form-title">React to a public post</div>' +
+      '<label>AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
+      '<label>Public post ID<input name="postId" required maxlength="180" placeholder="Paste a public Minglora post ID"></label>' +
+      '<label>Reaction<select name="reaction">' + options(['like','love','care','haha','wow','sad','angry'].map(value=>({value,label:value.charAt(0).toUpperCase()+value.slice(1)})),'like') + '</select></label>' +
+      '<button type="submit" class="secondary" ' + (controls.global_paused !== false ? 'disabled' : '') + '>Submit approved AI reaction</button></form></div>';
+    const conversationRows = conversations.length ? conversations.map(conversation => {
+      const identity = identities.find(item => item.identity_id === conversation.identityId);
+      const messages = list(conversation.messages).slice(-5).map(message =>
+        '<article class="ai-network-chat-message"><div class="ai-network-chat-message-heading"><strong>' +
+        esc(message.author?.name || (message.senderType === 'ai' ? identity?.display_name || 'AI member' : conversation.member?.name || 'Minglora member')) +
+        '</strong> ' + (message.senderType === 'ai' ? pill('AI BOT','ai') : pill('HUMAN MEMBER','neutral')) +
+        '</div><p>' + esc(message.text || '') + '</p><small>' + esc(date(message.createdAt)) + '</small></article>'
+      ).join('');
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
+        esc(identity?.display_name || 'AI identity') + ' ↔ ' + esc(conversation.member?.name || 'Member') + '</strong><div class="ai-network-meta">' +
+        pill('HUMAN-INITIATED','success') + ' ' + pill('CONSENT REQUIRED','ai') + '</div><small>' + esc(conversation.member?.username ? '@'+conversation.member.username : '') +
+        ' · ' + esc(date(conversation.lastActivityAt)) + '</small></div></div>' + messages +
+        '<form class="ai-network-form" data-ai-form="social-message" data-identity-id="' + esc(conversation.identityId) + '" data-member-user-id="' + esc(conversation.memberUserId) + '">' +
+        '<label>Approved AI reply<textarea name="text" required maxlength="3000" rows="2" placeholder="Write a reply. The member already initiated this conversation."></textarea></label>' +
+        '<button class="primary" type="submit">Send disclosed AI reply</button></form></article>';
+    }).join('') : empty('No members have initiated conversations with your AI identities.');
+    const aiInteraction = '<form class="ai-network-form" data-ai-form="social-ai-message"><div class="ai-network-form-title">Human-approved AI-to-AI interaction</div>' +
+      '<div class="ai-network-form-grid"><label>From AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
+      '<label>Public target AI identity<select name="targetIdentityId" required>' + options(publicProfiles.filter(item => item.status === 'active' && item.enabled === true).map(item => ({
+        value:item.identityId,label:item.displayName + ' · @' + item.username
+      })), '') + '</select></label></div>' +
+      '<label>Message<textarea name="text" required maxlength="3000" rows="2" placeholder="Write the interaction content for human review."></textarea></label>' +
+      '<p class="ai-network-note">Each interaction is explicitly approved, logged and limited to a chain depth of two. No autonomous AI conversation loop is started.</p>' +
+      '<button type="submit" class="secondary"' + (!publicProfiles.length || controls.global_paused !== false ? ' disabled' : '') + '>Send one approved AI-to-AI interaction</button></form>';
+    const activityRows = activity.slice(0,30).map(item =>
+      '<tr><td>' + esc(date(item.created_at)) + '</td><td>' + esc(item.action || '') + '</td><td>' + esc(item.actor_type || '') +
+      '</td><td>' + esc(item.outcome || '') + '</td><td>' + esc(item.target_type || '') + ' ' + esc(item.target_id || '') + '</td></tr>'
+    ).join('');
+    const audit = '<div class="ai-network-table-wrap"><table class="ai-network-table"><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Outcome</th><th>Target</th></tr></thead><tbody>' +
+      (activityRows || '<tr><td colspan="5">No AI social activity has been recorded.</td></tr>') + '</tbody></table></div>';
+    return '<section class="ai-network-card ai-network-span-2"><div class="ai-network-card-heading"><div><span class="ai-network-eyebrow">PHASE 7 · SOCIAL NETWORK</span><h2>AI Social Network</h2>' +
+      '<p>Manage AI profiles, approved posts, comments, reactions, Messenger consent, AI-to-AI interactions and audit history.</p></div>' +
+      pill(controls.global_paused === false ? 'Global controls open' : 'Global pause active',controls.global_paused === false?'warning':'success') + '</div>' +
+      globalForm + '<h3>Identity social permissions</h3>' + permissionRows +
+      '<h3>AI post management</h3>' + postComposer + postRows +
+      interactionForms +
+      '<h3>Human-initiated Messenger conversations</h3>' + conversationRows +
+      '<h3>AI-to-AI interactions</h3>' + aiInteraction +
+      '<h3>Interaction history</h3>' + audit +
+      '<p class="ai-network-note">Social controls are stored in the private ai_network schema. Human identities remain in the existing member system. AI identities never inherit human authentication or account privileges.</p></section>';
+  }
+
   function renderSnapshot(snapshot) {
     const settings = snapshot.settings, performance = snapshot.performance, provider = snapshot.providerStatus;
     const bots = list(snapshot.bots), teams = list(snapshot.teams), schedules = list(snapshot.schedules);
@@ -1756,6 +1879,7 @@
         '<div class="ai-network-consent-state">' + pill(settings.companionOptIn ? 'Opted in' : 'Opted out', settings.companionOptIn ? 'success' : 'neutral') +
         '<span>Retention preference: 30 days. Conversation runtime is not enabled yet.</span></div>' +
         '<p class="ai-network-note">Use the safety settings below to change consent. No companion will start contacting you automatically.</p>') +
+      renderAISocialCenter() +
       card('AI Community Events', '09 · COMMUNITY', '<p>Prepare transparent AI-hosted sessions. Event drafts do not send invitations; participation remains opt-in.</p>' +
         renderEvents(events) + '<form class="ai-network-form" data-ai-form="event"><div class="ai-network-form-title">Draft an AI community event</div>' +
         '<label>Event title<input name="title" required minlength="3" maxlength="100" placeholder="Creator Learning Circle"></label>' +
@@ -1811,6 +1935,7 @@
       await loadAITaskQueue();
       await loadAIOrganizationRegistry();
       await loadAIDelegations();
+      await loadAISocialSettings();
       paintSnapshot();
     } catch (error) {
       state.error = error.message;
@@ -1831,6 +1956,7 @@
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
     await loadAIDelegations();
+    await loadAISocialSettings();
     paintSnapshot();
   }
 
@@ -1841,7 +1967,61 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'identity-search') {
+    if (kind === 'social-controls') {
+      path = '/social/controls';
+      payload.globalPaused = form.querySelector('[name="globalPaused"]').checked;
+      payload.pauseReason = value('pauseReason');
+    } else if (kind === 'social-permissions') {
+      path = '/social/permissions';
+      payload.identityId = form.dataset.identityId || '';
+      if (!payload.identityId) throw new Error('Select an AI identity before changing social permissions.');
+      for (const [field,key] of [['canPost','canPost'],['canComment','canComment'],['canReact','canReact'],['canMessage','canMessage'],['canAIInteract','canAIInteract']]) {
+        payload[key] = form.querySelector('[name="' + field + '"]').checked;
+      }
+      payload.isSuspended = form.querySelector('[name="isSuspended"]').checked;
+      payload.profileVisibility = value('profileVisibility');
+      for (const key of ['maxPostsPerHour','maxCommentsPerHour','maxReactionsPerHour','maxMessagesPerHour','maxAIInteractionsPerHour']) {
+        payload[key] = Number(value(key));
+      }
+    } else if (kind === 'social-post') {
+      path = '/social/posts';
+      payload.identityId = value('identityId');
+      payload.text = value('text');
+      payload.audience = 'public';
+      payload.humanApproved = true;
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.idempotencyKey = form.dataset.idempotencyKey;
+      if (!payload.identityId || !payload.text) throw new Error('Choose an AI identity and enter the post text.');
+      if (!window.confirm('Publish this exact text as an AI member? It will be visibly labelled AI BOT and owner-reviewed.')) return;
+    } else if (kind === 'social-comment') {
+      path = '/social/comment';
+      payload.identityId = form.dataset.identityId || value('identityId');
+      payload.postId = value('postId');
+      payload.text = value('text');
+      payload.humanApproved = true;
+      if (!window.confirm('Submit this comment under the selected AI identity?')) return;
+    } else if (kind === 'social-reaction') {
+      path = '/social/reaction';
+      payload.identityId = form.dataset.identityId || value('identityId');
+      payload.postId = value('postId');
+      payload.reaction = value('reaction');
+      payload.humanApproved = true;
+      if (!window.confirm('Submit this reaction under the selected AI identity?')) return;
+    } else if (kind === 'social-message') {
+      path = '/social/message';
+      payload.identityId = form.dataset.identityId || '';
+      payload.memberUserId = form.dataset.memberUserId || '';
+      payload.text = value('text');
+      payload.humanApproved = true;
+      if (!window.confirm('Send this exact message as the AI member? The human member initiated the conversation and consented to AI replies.')) return;
+    } else if (kind === 'social-ai-message') {
+      path = '/social/ai-message';
+      payload.identityId = value('identityId');
+      payload.targetIdentityId = value('targetIdentityId');
+      payload.text = value('text');
+      payload.humanApproved = true;
+      if (!window.confirm('Send one human-approved interaction between these two AI identities? This does not start an autonomous conversation.')) return;
+    } else if (kind === 'identity-search') {
       state.identityRegistrySearch = value('search').slice(0, 120);
       state.identityRegistryOffset = 0;
       await loadAIIdentityRegistry();
@@ -2490,7 +2670,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval', 'social-controls','social-permissions','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
@@ -2637,6 +2817,19 @@
         const offset = Number(button.dataset.offset);
         if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Choose a valid AI identity registry page.');
         state.identityRegistryOffset = offset;
+      }
+      else if (action === 'social-reload') {
+        await loadAISocialSettings();
+        setNotice('AI social settings refreshed.');
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'social-post-manage') {
+        if (!id || !['hide','restore','delete'].includes(button.dataset.status)) throw new Error('Choose a valid AI social post action.');
+        if (!window.confirm((button.dataset.status === 'delete' ? 'Permanently delete' : button.dataset.status === 'hide' ? 'Hide' : 'Restore') + ' this AI post? The action will be audited.')) return;
+        await request('/social/posts/' + encodeURIComponent(id) + '/manage', {
+          method:'POST', body:{ action:button.dataset.status }
+        });
       }
       else if (action === 'identity-search-clear') {
         state.identityRegistrySearch = '';

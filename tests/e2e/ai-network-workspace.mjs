@@ -54,6 +54,45 @@ let memorySettings = {
 };
 let memoryEntries = [];
 const memoryRequests = { settings:[], creates:[], updates:[], deletes:[] };
+
+const socialMemberId = '44444444-4444-4444-8444-444444444444';
+let socialGlobalPaused = true;
+const socialPermissions = {
+  can_post:false, can_comment:false, can_react:false, can_message:false,
+  can_ai_interact:false, is_suspended:true, require_human_approval:true,
+  max_posts_per_hour:2, max_comments_per_hour:5, max_reactions_per_hour:10,
+  max_messages_per_hour:2, max_ai_interactions_per_hour:3
+};
+const socialIdentitySettings = [{
+  identity_id:ownerIdentityId, display_name:'Ari Morgan', username:'ari_morgan',
+  status:'active', enabled:true, profile_visibility:'private',
+  permissions:structuredClone(socialPermissions)
+}];
+const socialPublicProfiles = [{
+  identityId:'22222222-2222-4222-8222-222222222222',
+  displayName:'Nia Campbell', username:'nia_campbell',
+  status:'active', enabled:true, profileVisibility:'public'
+}];
+const socialPosts = [];
+const socialConversations = [{
+  id:'phase7-human-started-conversation', identityId:ownerIdentityId,
+  ownerUserId:'55555555-5555-4555-8555-555555555555',
+  memberUserId:socialMemberId, humanInitiated:true, status:'active',
+  createdAt:new Date().toISOString(), lastActivityAt:new Date().toISOString(),
+  member:{id:socialMemberId,name:'Test Member',username:'test_member'},
+  messages:[{
+    id:'phase7-member-first-message', conversationId:'phase7-human-started-conversation',
+    from:socialMemberId,to:'ai:'+ownerIdentityId,senderType:'human',
+    text:'I started this conversation with the AI member.',createdAt:new Date().toISOString(),
+    author:{id:socialMemberId,name:'Test Member',username:'test_member'}
+  }]
+}];
+const socialActivity = [];
+const socialRequests = { controls:[], permissions:[], posts:[], comments:[], reactions:[], messages:[], aiMessages:[], moderation:[] };
+const publicHumanPost = {
+  id:'phase7-human-public-post', userId:socialMemberId, audience:'public',
+  status:'published', archivedAt:null, comments:[], reactions:{}
+};
 const categoryKeys = [
   'ai_friends', 'ai_creators', 'ai_influencers', 'ai_news', 'ai_musicians',
   'ai_entertainers', 'ai_gamers', 'ai_community_hosts', 'ai_live_hosts',
@@ -140,6 +179,108 @@ function aiApiResponse(req, url, body) {
   const method = req.method || 'GET';
 
   if (method === 'GET' && pathname === '/') return snapshot;
+
+  if (method === 'GET' && pathname === '/social/settings') {
+    return {
+      controls:{ global_paused:socialGlobalPaused, pause_reason:socialGlobalPaused?'Default test pause':'Test admin enabled social actions' },
+      identities:socialIdentitySettings.map(item=>structuredClone(item)),
+      activity:socialActivity.slice().reverse().map(item=>structuredClone(item)),
+      conversations:socialConversations.map(item=>structuredClone(item)),
+      posts:socialPosts.slice().reverse().map(item=>structuredClone(item)),
+      publicProfiles:socialPublicProfiles.map(item=>structuredClone(item))
+    };
+  }
+  if (method === 'PATCH' && pathname === '/social/controls') {
+    socialRequests.controls.push(structuredClone(body));
+    socialGlobalPaused=body.globalPaused!==false;
+    socialActivity.push({action:socialGlobalPaused?'global_pause':'global_resume',actor_type:'admin',outcome:'completed',created_at:new Date().toISOString()});
+    return {global_paused:socialGlobalPaused,updated:true};
+  }
+  if (method === 'PATCH' && pathname === '/social/permissions') {
+    socialRequests.permissions.push(structuredClone(body));
+    const current=socialIdentitySettings.find(item=>item.identity_id===body.identityId);
+    if(!current)return {error:'AI identity not found.'};
+    current.permissions={
+      can_post:body.canPost===true,can_comment:body.canComment===true,
+      can_react:body.canReact===true,can_message:body.canMessage===true,
+      can_ai_interact:body.canAIInteract===true,is_suspended:body.isSuspended!==false,
+      require_human_approval:true,
+      max_posts_per_hour:body.maxPostsPerHour,max_comments_per_hour:body.maxCommentsPerHour,
+      max_reactions_per_hour:body.maxReactionsPerHour,max_messages_per_hour:body.maxMessagesPerHour,
+      max_ai_interactions_per_hour:body.maxAIInteractionsPerHour
+    };
+    current.profile_visibility=body.profileVisibility||'private';
+    socialActivity.push({action:'permissions_updated',actor_type:'admin',outcome:'completed',created_at:new Date().toISOString()});
+    return {saved:true,identity_id:body.identityId};
+  }
+  const socialReady=(identityId,key,humanApproved)=>{
+    const current=socialIdentitySettings.find(item=>item.identity_id===identityId);
+    if(socialGlobalPaused)return 'AI social activity is globally paused.';
+    if(!current||current.status!=='active'||current.enabled!==true)return 'AI identity must be active and enabled.';
+    if(current.permissions.is_suspended!==false||current.permissions[key]!==true)return 'AI social permission denied.';
+    if(humanApproved!==true)return 'Human approval is required.';
+    return '';
+  };
+  if(method==='POST'&&pathname==='/social/posts'){
+    socialRequests.posts.push(structuredClone(body));
+    const denied=socialReady(body.identityId,'can_post',body.humanApproved);
+    if(denied)return {error:denied};
+    const existing=socialPosts.find(post=>post.idempotencyKey===body.idempotencyKey);
+    if(existing)return {post:structuredClone(existing),reused:true};
+    const post={id:randomUUID(),aiIdentityId:body.identityId,ownerUserId:'55555555-5555-4555-8555-555555555555',text:body.text,
+      audience:'public',status:'published',comments:[],reactions:{},createdAt:new Date().toISOString(),
+      idempotencyKey:body.idempotencyKey};
+    socialPosts.push(post);
+    socialActivity.push({action:'post',target_type:'feed_post',target_id:post.id,actor_type:'ai',outcome:'completed',created_at:post.createdAt});
+    return {post:structuredClone(post)};
+  }
+  if(method==='POST'&&pathname==='/social/comment'){
+    socialRequests.comments.push(structuredClone(body));
+    const denied=socialReady(body.identityId,'can_comment',body.humanApproved);
+    if(denied)return {error:denied};
+    const comment={id:randomUUID(),identityId:body.identityId,authorType:'ai',text:body.text,createdAt:new Date().toISOString()};
+    socialActivity.push({action:'comment',target_type:'post',target_id:body.postId,actor_type:'ai',outcome:'completed',created_at:comment.createdAt});
+    return {comment};
+  }
+  if(method==='POST'&&pathname==='/social/reaction'){
+    socialRequests.reactions.push(structuredClone(body));
+    const denied=socialReady(body.identityId,'can_react',body.humanApproved);
+    if(denied)return {error:denied};
+    socialActivity.push({action:'react',target_type:'post',target_id:body.postId,actor_type:'ai',outcome:'completed',created_at:new Date().toISOString()});
+    return {ok:true};
+  }
+  if(method==='POST'&&pathname==='/social/message'){
+    socialRequests.messages.push(structuredClone(body));
+    const denied=socialReady(body.identityId,'can_message',body.humanApproved);
+    if(denied)return {error:denied};
+    const conversation=socialConversations.find(item=>item.identityId===body.identityId&&item.memberUserId===body.memberUserId&&item.humanInitiated);
+    if(!conversation)return {error:'AI messages require a human-initiated conversation.'};
+    const message={id:randomUUID(),conversationId:conversation.id,from:'ai:'+body.identityId,to:body.memberUserId,
+      senderType:'ai',text:body.text,createdAt:new Date().toISOString(),aiDisclosureRequired:true};
+    conversation.messages.push(message);conversation.lastActivityAt=message.createdAt;
+    socialActivity.push({action:'message',target_type:'ai_conversation',target_id:conversation.id,actor_type:'ai',outcome:'completed',created_at:message.createdAt});
+    return {message};
+  }
+  if(method==='POST'&&pathname==='/social/ai-message'){
+    socialRequests.aiMessages.push(structuredClone(body));
+    const denied=socialReady(body.identityId,'can_ai_interact',body.humanApproved);
+    if(denied)return {error:denied};
+    const target=socialPublicProfiles.find(item=>item.identityId===body.targetIdentityId&&item.status==='active'&&item.enabled&&item.profileVisibility==='public');
+    if(!target||body.identityId===body.targetIdentityId)return {error:'Target AI profile is not available.'};
+    socialActivity.push({action:'ai_interact',target_type:'ai_identity',target_id:body.targetIdentityId,actor_type:'ai',outcome:'completed',created_at:new Date().toISOString()});
+    return {message:{id:randomUUID(),senderType:'ai',text:body.text,aiDisclosureRequired:true}};
+  }
+  const socialManage=pathname.match(/^\/social\/posts\/([0-9a-f-]+)\/manage$/i);
+  if(method==='POST'&&socialManage){
+    socialRequests.moderation.push({postId:socialManage[1],body:structuredClone(body)});
+    const post=socialPosts.find(item=>item.id===socialManage[1]);
+    if(!post)return {error:'AI post not found.'};
+    if(body.action==='delete')socialPosts.splice(socialPosts.indexOf(post),1);
+    else post.status=body.action==='hide'?'hidden':'published';
+    socialActivity.push({action:'content_'+(body.action==='hide'?'hidden':body.action==='restore'?'restored':'deleted'),
+      target_type:'feed_post',target_id:post.id,actor_type:'admin',outcome:'completed',created_at:new Date().toISOString()});
+    return {ok:true,action:body.action};
+  }
   const memoryPath = pathname.match(/^\/identities\/([0-9a-f-]+)\/memory(?:\/([0-9a-f-]+|settings))?$/i);
   if (memoryPath) {
     const identityId = memoryPath[1];
@@ -764,6 +905,108 @@ try {
   assert.equal(savedGroups.length, 1);
   assert.equal(savedGroups[0].filters.genders[0], 'female');
 
+  // Phase 7: use the existing administrator UI to exercise every social workflow against a disposable API fixture.
+  await page.getByText('AI Social Network').waitFor({ state:'visible' });
+  const globalSocialForm=page.locator('form[data-ai-form="social-controls"]');
+  await globalSocialForm.locator('[name="globalPaused"]').check();
+  assert.equal(socialGlobalPaused,true,'AI social must start globally paused.');
+  await globalSocialForm.locator('[name="globalPaused"]').uncheck();
+  await globalSocialForm.locator('[name="pauseReason"]').fill('Browser QA approved social workflow test.');
+  await globalSocialForm.locator('button[type="submit"]').click();
+  await page.getByText('Global controls open').waitFor({state:'visible'});
+  await page.waitForTimeout(300); // Wait for the global submit guard to clear after repaint.
+  assert.equal(socialGlobalPaused,false,'Administrator must be able to open the global control gate.');
+
+  const permissionsForm=page.locator('form[data-ai-form="social-permissions"]').first();
+  for(const name of ['canPost','canComment','canReact','canMessage','canAIInteract']){
+    await permissionsForm.locator('[name="'+name+'"]').check();
+  }
+  await permissionsForm.locator('[name="isSuspended"]').uncheck();
+  await permissionsForm.locator('[name="profileVisibility"]').selectOption('public');
+  await permissionsForm.locator('button[type="submit"]').click();
+  await page.getByText('Social access enabled').waitFor({state:'visible'});
+  await page.waitForTimeout(300); // Wait for the global submit guard to clear after repaint.
+  assert.equal(socialIdentitySettings[0].permissions.can_post,true);
+  assert.equal(socialIdentitySettings[0].permissions.can_comment,true);
+  assert.equal(socialIdentitySettings[0].permissions.can_react,true);
+  assert.equal(socialIdentitySettings[0].permissions.can_message,true);
+  assert.equal(socialIdentitySettings[0].permissions.can_ai_interact,true);
+  assert.equal(socialIdentitySettings[0].permissions.is_suspended,false);
+
+  page.on('dialog',dialog=>dialog.accept());
+  const postForm=page.locator('form[data-ai-form="social-post"]');
+  await postForm.locator('[name="identityId"]').selectOption(ownerIdentityId);
+  await postForm.locator('[name="text"]').fill('Phase 7 owner-approved AI post from browser QA.');
+  await postForm.locator('button[type="submit"]').click();
+  await page.getByText('Phase 7 owner-approved AI post from browser QA.').waitFor({state:'visible'});
+  await page.waitForTimeout(300); // Wait for the global submit guard to clear after repaint.
+  assert.equal(socialRequests.posts.length,1,'AI post must reach the social post route.');
+  const createdSocialPost=socialPosts[0];
+  assert.equal(createdSocialPost.status,'published');
+  assert.equal(createdSocialPost.audience,'public');
+
+  const commentForm=page.locator('form[data-ai-form="social-comment"]');
+  await commentForm.locator('[name="identityId"]').selectOption(ownerIdentityId);
+  await commentForm.locator('[name="postId"]').fill(publicHumanPost.id);
+  await commentForm.locator('[name="text"]').fill('Phase 7 approved AI comment.');
+  const commentResponse=page.waitForResponse(response=>response.url().includes('/social/comment')&&response.request().method()==='POST');
+  await commentForm.locator('button[type="submit"]').click();
+  await commentResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
+  assert.equal(socialRequests.comments[0].humanApproved,true);
+
+  const reactionForm=page.locator('form[data-ai-form="social-reaction"]');
+  await reactionForm.locator('[name="identityId"]').selectOption(ownerIdentityId);
+  await reactionForm.locator('[name="postId"]').fill(publicHumanPost.id);
+  await reactionForm.locator('[name="reaction"]').selectOption('love');
+  const reactionResponse=page.waitForResponse(response=>response.url().includes('/social/reaction')&&response.request().method()==='POST');
+  await reactionForm.locator('button[type="submit"]').click();
+  await reactionResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
+  assert.equal(socialRequests.reactions[0].humanApproved,true);
+
+  const replyForm=page.locator('form[data-ai-form="social-message"]');
+  await replyForm.locator('[name="text"]').fill('Phase 7 approved AI reply to a member-initiated conversation.');
+  const replyResponse=page.waitForResponse(response=>response.url().includes('/social/message')&&response.request().method()==='POST');
+  await replyForm.locator('button[type="submit"]').click();
+  await replyResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
+  assert.equal(socialConversations[0].humanInitiated,true);
+  assert.equal(socialRequests.messages[0].humanApproved,true);
+
+  const aiMessageForm=page.locator('form[data-ai-form="social-ai-message"]');
+  await aiMessageForm.locator('[name="identityId"]').selectOption(ownerIdentityId);
+  await aiMessageForm.locator('[name="targetIdentityId"]').selectOption(socialPublicProfiles[0].identityId);
+  await aiMessageForm.locator('[name="text"]').fill('One approved AI-to-AI interaction.');
+  const aiMessageResponse=page.waitForResponse(response=>response.url().includes('/social/ai-message')&&response.request().method()==='POST');
+  await aiMessageForm.locator('button[type="submit"]').click();
+  await aiMessageResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
+  assert.equal(socialRequests.aiMessages[0].humanApproved,true);
+
+  const managePost=page.locator('[data-ai-action="social-post-manage"][data-status="hide"]').first();
+  const hideResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
+  await managePost.click();
+  await hideResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
+  const restorePost=page.locator('[data-ai-action="social-post-manage"][data-status="restore"]').first();
+  const restoreResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
+  await restorePost.click();
+  await restoreResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
+  const deletePost=page.locator('[data-ai-action="social-post-manage"][data-status="delete"]').first();
+  const deleteResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
+  await deletePost.click();
+  await deleteResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
+  assert.ok(socialActivity.length>=7,'Social actions and content moderation must produce audit history.');
+
+  const pauseAgain=page.locator('form[data-ai-form="social-controls"]');
+  await pauseAgain.locator('[name="globalPaused"]').check();
+  await pauseAgain.locator('button[type="submit"]').click();
+  await page.getByText('Global pause active').waitFor({state:'visible'});
+  assert.equal(socialGlobalPaused,true,'Global AI social suspension must be available after workflows are tested.');
+
   const viewports = [
     { name: 'compact-phone', width: 320, height: 740 },
     { name: 'standard-phone', width: 390, height: 844 },
@@ -816,6 +1059,13 @@ try {
     memoryEntryUpdates: memoryRequests.updates.length,
     memoryEntryDeletes: memoryRequests.deletes.length,
     savedDiscoveryGroups: savedGroups.length,
+    aiSocialPosts: socialRequests.posts.length,
+    aiSocialComments: socialRequests.comments.length,
+    aiSocialReactions: socialRequests.reactions.length,
+    aiSocialMemberReplies: socialRequests.messages.length,
+    aiSocialToAIInteractions: socialRequests.aiMessages.length,
+    aiSocialContentManagement: socialRequests.moderation.length,
+    aiSocialAuditEvents: socialActivity.length,
     viewportsChecked: viewports.length,
     screenshotsCaptured: screenshots,
     externalApiRequests: externalApiRequests.length,

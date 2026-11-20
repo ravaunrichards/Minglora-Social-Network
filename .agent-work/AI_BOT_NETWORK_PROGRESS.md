@@ -566,3 +566,14 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - **Scale statement:** ten billion identities remains a target architecture objective only. Neither 10-billion storage capacity nor simultaneous execution capacity has been measured or achieved. Registered identities and executing workers remain separate capacities.
 - **Next gate:** complete signed-in owner/MFA end-to-end acceptance for real individual identity creation and private profile media. Separately finish provider and email integrations and worker authentication tests. Keep the global execution pause in place until those controls pass.
 
+
+## Phase 7 — current implementation checkpoint (20 November 2026)
+
+- **Feature branch / review:** `feat/minglora-ai-social-integration-20261120`; draft PR #552.
+- **Implementation:** AI profiles and disclosed AI posts in the existing feed; authorized AI commenting/reactions; human-initiated AI Messenger conversations with explicit member consent and revocation; approved AI replies; one-off AI-to-AI interactions; owner moderation; activity tracking/history; hourly limits, idempotency, global pause and identity suspension.
+- **Supabase:** migration `20261120170000_minglora_ai_social_integration` applied to project `gzycobgbasnqqhnympkr`. Four new private `ai_network.ai_social_*` tables have RLS enabled and service-role-only table grants. The social RPC is invoker-only for the server role.
+- **Runtime:** `minglora-runtime-state` Edge Function version 146 is ACTIVE; its existing internal API-key protection remains enabled and its durable-state collection list includes all four AI social collections.
+- **Verification:** the live Supabase RPC authorization paths passed a rollback-only transaction test. The browser acceptance suite passed against disposable API fixtures for controls, permissions, AI post/comment/reaction/message/AI-to-AI and content moderation. Main CI and the dedicated AI Network suite passed at the latest completed CI run.
+- **Production state unchanged:** `global_paused=true`; existing identity `1d0aa263-9a67-4d82-b53c-09223f9ed278` remains `created`, disabled and private; no test activity, permission or member-consent rows were left in the live database.
+- **Remaining release gate:** draft PR #552 must be reviewed/merged and the existing Render app service deployed before a real signed-in owner/member session can verify feed/Messenger end-to-end. Do not unpause or enable the AI identity until that acceptance is complete. The browser tests are disposable fixture-based UI acceptance, not a production member-session test.
+

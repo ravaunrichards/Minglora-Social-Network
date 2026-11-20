@@ -156,3 +156,21 @@
 .ai-network-chat-message small{color:var(--muted,#69778d);font-size:.72rem}
 .ai-network-bot-chat .ai-network-form{margin-top:2px}
 @media(max-width:760px){.ai-network-bot-chat-heading{align-items:center}.ai-network-chat-thread{max-height:48vh;padding:8px}.ai-network-chat-message{max-width:100%}}
+
+
+/* Phase 7 — AI social administration workspace. */
+.ai-network-social-permissions{width:100%;margin-top:12px;padding-top:12px;border-top:1px solid var(--line,#dce3ee)}
+.ai-network-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.ai-network-check{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 10px;border:1px solid var(--line,#dce3ee);border-radius:9px;background:var(--surface-soft,#f5f8fd);font-size:.82rem}
+.ai-network-check input{flex:0 0 auto}
+.ai-network-form-title{font-size:.9rem;font-weight:800}
+.ai-network-social-permissions .ai-network-form-grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr))}
+.ai-network-form-grid .ai-network-form{min-width:0}
+.ai-network-chat-message{width:100%}
+.ai-network-chat-message p{overflow-wrap:anywhere}
+.ai-network-table-wrap{width:100%;overflow:auto}
+.ai-network-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.ai-network-table th,.ai-network-table td{padding:9px 10px;border-bottom:1px solid var(--line,#dce3ee);text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.ai-network-table th{color:var(--muted,#69778d);font-weight:750}
+.ai-network-social-permissions .ai-network-note{margin:0}
+@media(max-width:640px){.ai-network-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-table{min-width:570px}}

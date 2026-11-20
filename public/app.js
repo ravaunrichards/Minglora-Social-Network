@@ -657,6 +657,8 @@ function renderSavedControls(post){
 
 function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
+  const isAI=author.isAI===true||post.authorType==='ai'||post.aiDisclosureRequired===true;
+  const aiIdentityId=String(post.aiIdentityId||author.aiIdentityId||String(post.userId||'').replace(/^ai:/,''));
   const savedControls=options.saved?renderSavedControls(post):'';
   const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
   const isVideoPost=(post.media||[]).some(media=>media.mediaType==='video');
@@ -665,8 +667,8 @@ function postCard(post,options={}){
   const collaborationAttribution=(post.collaborators||[]).length?`<div class="video-collaborator-attribution">With ${(post.collaborators||[]).map(member=>'@'+esc(member.username||'member')).join(', ')}</div>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
-      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong><small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
-      <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
+      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong ${isAI?'':'data-profile="'+esc(author.id||'')+'"'}>${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong>${isAI?'<span class="ai-member-disclosure">AI BOT · OWNER-REVIEWED</span>':''}<small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
+      ${isAI?'<button type="button" class="post-ai-message" data-message-ai="'+esc(aiIdentityId)+'" data-ai-name="'+esc(author.name||'AI member')+'">Message AI</button>':'<button class="post-menu" aria-label="Post options" data-post-menu="'+esc(post.id)+'">···</button>'}
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
     ${remixAttribution}${collaborationAttribution}
@@ -690,12 +692,12 @@ function postCard(post,options={}){
       <button data-focus-comment="${esc(post.id)}">▢ &nbsp; Comment</button>
       ${remixControls}
       ${watchLaterControl}
-      <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
+      ${isAI?'':'<button data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'">'+(post.isSaved?'▣ Saved':'▢ Save')+'</button>'}
       <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
-      <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
+      ${isAI?'':'<button type="button" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'">🎁 Gift</button>'}
     </div>
     ${savedControls}
-    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
+    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" ${c.author?.isAI?'':'data-profile="'+esc(c.author?.id||'')+'" role="link" tabindex="0"'}>@${esc(c.author?.username||'')}</small><strong ${c.author?.isAI?'':'data-profile="'+esc(c.author?.id||'')+'" role="link" tabindex="0"'}>${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}${c.author?.isAI?'<span class="ai-member-disclosure">AI BOT</span>':''}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
     <form class="comment-form" data-comment-form="${esc(post.id)}">${thoughtAvatarMarkup(state.user)}<input name="text" maxlength="2000" placeholder="Write a comment…" aria-label="Write a comment" required><button type="submit">Send</button></form>
   </article>`;
 }
@@ -732,6 +734,21 @@ function bindFeed(root=document){
     storyRail.scrollBy({left:direction*Math.max(220,storyRail.clientWidth*.72),behavior:'smooth'});
   }));
   bindProfileLinks(root);
+  root.querySelectorAll('[data-message-ai]').forEach(button=>button.addEventListener('click',()=>{
+    const identityId=String(button.dataset.messageAi||'');
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId)){
+      toast('This AI profile cannot be opened right now.');return;
+    }
+    openMessageWindow({
+      id:'ai:'+identityId,
+      name:button.dataset.aiName||'AI member',
+      username:'ai_member',
+      avatar:'',
+      isAI:true,
+      aiIdentityId:identityId,
+      aiDisclosureRequired:true
+    });
+  }));
   root.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
     el.disabled=true;
     try{await api(`/posts/${el.dataset.react}/reactions`,{method:'POST',body:JSON.stringify({reaction:el.dataset.currentReaction||'like'})});await refreshVisiblePosts();}
@@ -4549,8 +4566,12 @@ function creatorMonetizationMarkup(){
     "<section class='creator-studio-panel creator-ledger-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>EARNINGS LEDGER</span><h3>Gift earnings history</h3></div><small>Creator and platform shares are settled separately.</small></div>"+history+"</section>";
 }
 async function creatorSettingsMarkup(){
-  const result=await api("/settings");
+  const [result,aiConsent]=await Promise.all([
+    api("/settings"),
+    api("/ai-social/consent").catch(()=>({allowAIMessages:false}))
+  ]);
   const s=result.settings||{},privacy=s.privacy||{},notifications=s.notifications||{},preferences=s.preferences||{};
+  const allowAIMessages=aiConsent.allowAIMessages===true;
   state.creatorStudio.settings=result;
   const themes=["minglora","ocean","tropical","royal","emerald","rose","golden","lavender","midnight","graphite"];
   const themeOptions=themes.map(value=>"<option value='"+value+"' "+(preferences.colorTheme===value?"selected":"")+">"+value.charAt(0).toUpperCase()+value.slice(1)+"</option>").join("");
@@ -4559,7 +4580,8 @@ async function creatorSettingsMarkup(){
     "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PRIVACY</span><h3>Who can reach you?</h3></div></div>"+
     "<label class='creator-field-label' for='creator-privacy-visibility'>Profile visibility</label><select id='creator-privacy-visibility' name='profileVisibility' class='creator-select'><option value='public' "+(privacy.profileVisibility==="public"?"selected":"")+">Public</option><option value='friends' "+(privacy.profileVisibility==="friends"?"selected":"")+">Friends only</option><option value='private' "+(privacy.profileVisibility==="private"?"selected":"")+">Private</option></select>"+
     "<label class='creator-field-label' for='creator-message-audience'>Who can message you?</label><select id='creator-message-audience' name='messageAudience' class='creator-select'><option value='everyone' "+(privacy.messageAudience==="everyone"?"selected":"")+">Everyone</option><option value='friends' "+(privacy.messageAudience==="friends"?"selected":"")+">Friends only</option><option value='nobody' "+(privacy.messageAudience==="nobody"?"selected":"")+">Nobody</option></select>"+
-    "<label class='creator-toggle-row'><span><strong>Friend requests</strong><small>Allow members to send you friend requests.</small></span><input type='checkbox' name='allowFriendRequests' "+(privacy.allowFriendRequests?"checked":"")+"></label></section>"+
+    "<label class='creator-toggle-row'><span><strong>Friend requests</strong><small>Allow members to send you friend requests.</small></span><input type='checkbox' name='allowFriendRequests' "+(privacy.allowFriendRequests?"checked":"")+"></label>"+
+    "<label class='creator-toggle-row'><span><strong>AI member messages</strong><small>Allow approved AI identities to reply only after you start the conversation. Sending your first message to an AI opts you in; you can turn this off here at any time.</small></span><input type='checkbox' name='allowAIMessages' "+(allowAIMessages?"checked":"")+"></label></section>"+
     "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>NOTIFICATIONS</span><h3>Stay informed</h3></div></div>"+
     [["inApp","In-app notifications","Notifications inside Minglora."],["friendRequests","Friend requests","Requests and friendship updates."],["messages","Messages","New direct messages."],["interactions","Post interactions","Reactions and comments."],["push","Browser push","Push delivery when configured on this device."]].map(([key,label,help])=>"<label class='creator-toggle-row'><span><strong>"+label+"</strong><small>"+help+"</small></span><input type='checkbox' name='notification-"+key+"' "+(notifications[key]?"checked":"")+"></label>").join("")+"</section>"+
     "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>APPEARANCE</span><h3>Studio & app appearance</h3></div></div>"+
@@ -4944,11 +4966,20 @@ async function renderCreatorSection(section){
         }
       };
       try{
+        let aiConsentSaved=true;
+        try{
+          await api("/ai-social/consent",{method:"PATCH",body:JSON.stringify({allowAIMessages:checkbox("allowAIMessages")})});
+        }catch(error){
+          aiConsentSaved=false;
+          console.warn("[Minglora settings] AI messaging consent is unavailable in this persistence mode:",String(error?.message||error).slice(0,160));
+        }
         const result=await api("/settings",{method:"PATCH",body:JSON.stringify(patch)});
         s.settings=result;
         state.settings=result.settings;
         window.dispatchEvent(new CustomEvent("minglora:settings-loaded",{detail:result.settings}));
-        if(status)status.textContent="Your Minglora account settings have been saved.";
+        if(status)status.textContent=aiConsentSaved
+          ?"Your Minglora account settings have been saved."
+          :"Your account settings were saved. AI message consent is unavailable until the shared social service is connected.";
         toast("Creator Studio settings saved.");
         await renderCreatorSection("settings");
       }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
@@ -8434,6 +8465,8 @@ function renderMessageContent(messages=[]){
   if(!messages.length)return '<div class="message-window-empty">No messages yet. Say hello to start this chat.</div>';
   return messages.map(message=>{
     const mine=message.from===state.user.id;
+    const aiSocialMessage=message.isAISocialMessage===true;
+    const aiAttribution=message.aiDisclosureRequired===true?'<small class="message-ai-attribution">AI BOT</small>':'';
     const receipt=mine?(message.groupId?(message.readState?.readCount+' of '+message.readState?.total+' seen'):(message.read?'Seen':'Sent')):'';
     const reply=message.replyToId?messages.find(item=>item.id===message.replyToId):null;
     const replyHtml=reply?'<div class="message-reply-preview"><strong>'+esc(reply.author?.name||'Replying to a message')+'</strong><span>'+esc(reply.unsent?'Message unavailable':reply.text||((reply.attachments||[]).length?'Attachment':'Message'))+'</span></div>':'';
@@ -8442,15 +8475,15 @@ function renderMessageContent(messages=[]){
     const gif=message.unsent?'':(message.gifUrl?'<a class="message-attachment-gif" href="'+esc(message.gifUrl)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(message.gifUrl)+'" alt="GIF"></a>':'');
     const attachments=message.unsent?'':messageAttachmentHtml(message.attachments);
     const editable=mine&&!message.unsent&&!message.stickerId&&!message.gifUrl&&Boolean(message.text);
-    const actions='<details class="message-bubble-actions"><summary aria-label="Message options" title="Message options">···</summary><div class="message-bubble-actions-menu">'+
+    const actions=aiSocialMessage?'':'<details class="message-bubble-actions"><summary aria-label="Message options" title="Message options">···</summary><div class="message-bubble-actions-menu">'+
       '<button type="button" data-message-reply="'+esc(message.id)+'">Reply</button>'+
       (editable?'<button type="button" data-message-edit="'+esc(message.id)+'">Edit message</button>':'')+
       '<button type="button" data-message-delete-me="'+esc(message.id)+'">Delete for me</button>'+
       (mine&&!message.unsent?'<button type="button" class="danger" data-message-unsend="'+esc(message.id)+'">Unsend for everyone</button>':'')+
     '</div></details>';
     const counts={};Object.values(message.reactions||{}).forEach(value=>{counts[value]=(counts[value]||0)+1;});
-    const reactionHtml='<div class="message-reaction-row">'+['👍','❤️','😂','😮','😢','🙏'].map(reaction=>'<button type="button" class="message-reaction-button '+(message.reactions?.[state.user.id]===reaction?'is-selected':'')+'" data-message-react="'+esc(message.id)+'" data-reaction="'+reaction+'" aria-label="React '+reaction+'">'+reaction+(counts[reaction]?' <small>'+counts[reaction]+'</small>':'')+'</button>').join('')+'</div>';
-    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+replyHtml+content+gif+attachments+expiryLabel+reactionHtml+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
+    const reactionHtml=aiSocialMessage?'':'<div class="message-reaction-row">'+['👍','❤️','😂','😮','😢','🙏'].map(reaction=>'<button type="button" class="message-reaction-button '+(message.reactions?.[state.user.id]===reaction?'is-selected':'')+'" data-message-react="'+esc(message.id)+'" data-reaction="'+reaction+'" aria-label="React '+reaction+'">'+reaction+(counts[reaction]?' <small>'+counts[reaction]+'</small>':'')+'</button>').join('')+'</div>';
+    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+(aiSocialMessage?' is-ai-social-message':'')+'" data-message-id="'+esc(message.id)+'">'+actions+replyHtml+aiAttribution+content+gif+attachments+expiryLabel+reactionHtml+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
   }).join('');
 }
 function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(','),JSON.stringify(message.reactions||{}),message.replyToId||'',JSON.stringify(message.readBy||{})].join(':')).join('|');}
@@ -8640,7 +8673,7 @@ function renderMessageWindows(){
   if(!dock){dock=document.createElement('div');dock.id='message-window-dock';document.body.append(dock);}
   messagePickers.forEach(picker=>picker.destroy());messagePickers.clear();
   dock.innerHTML=state.messageWindows.slice().reverse().map(win=>{
-    const conversation=state.conversations.find(item=>item.user.id===win.user.id),messages=conversation?.messages||[];
+    const conversation=state.conversations.find(item=>item.user.id===win.user.id),messages=conversation?.messages||[],isAI=win.user.isAI===true;
     const stickerButtons=MESSAGE_STICKERS.map(sticker=>'<button type="button" class="message-sticker-choice" data-message-sticker="'+sticker.id+'" aria-label="'+sticker.label+'">'+sticker.emoji+'</button>').join('');
     const emojiButtons=MESSAGE_QUICK_EMOJIS.map(emoji=>'<button type="button" class="message-emoji-choice" data-message-emoji="'+emoji+'" aria-label="Insert '+emoji+'">'+emoji+'</button>').join('');
     const replyMessage=win.replyToId?state.conversations.flatMap(item=>item.messages||[]).find(item=>item.id===win.replyToId):null;
@@ -8653,17 +8686,20 @@ function renderMessageWindows(){
         '<div class="message-window-emoji-panel" data-message-emoji-panel="'+esc(win.user.id)+'" hidden>'+emojiButtons+'</div>'+
         '<div class="message-window-gif-panel" data-message-gif-panel="'+esc(win.user.id)+'" hidden><form class="message-gif-search" data-message-gif-search="'+esc(win.user.id)+'"><input name="query" maxlength="80" placeholder="Search GIFs…" aria-label="Search GIFs"><button type="submit">Search</button></form><div class="message-gif-results" data-message-gif-results="'+esc(win.user.id)+'"><span>Search Tenor GIFs to send one.</span></div></div>'+
         '<div class="message-window-record-status" data-message-record-status="'+esc(win.user.id)+'" role="status" hidden>Recording voice note…</div>'+
-        '<div class="message-window-toolbar"><button type="button" data-message-attach="'+esc(win.user.id)+'" title="Photos, videos and files" aria-label="Attach photos, videos and files">🖼</button><button type="button" data-message-voice="'+esc(win.user.id)+'" title="Voice note — record and send" aria-label="Record a voice note"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><button type="button" data-message-open-stickers="'+esc(win.user.id)+'" title="Stickers" aria-label="Open stickers">✳</button><button type="button" data-message-open-gifs="'+esc(win.user.id)+'" title="GIFs" aria-label="Open GIF search">GIF</button></div>'+
+        '<div class="message-window-toolbar" style="'+(isAI?'display:none':'')+'"><button type="button" data-message-attach="'+esc(win.user.id)+'" title="Photos, videos and files" aria-label="Attach photos, videos and files">🖼</button><button type="button" data-message-voice="'+esc(win.user.id)+'" title="Voice note — record and send" aria-label="Record a voice note"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><button type="button" data-message-open-stickers="'+esc(win.user.id)+'" title="Stickers" aria-label="Open stickers">✳</button><button type="button" data-message-open-gifs="'+esc(win.user.id)+'" title="GIFs" aria-label="Open GIF search">GIF</button></div>'+
         '<form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Aa" autocomplete="off" aria-label="Write a message"><button type="button" class="message-emoji-toggle" data-message-open-emoji="'+esc(win.user.id)+'" aria-label="Choose emoji" title="Emoji">😊</button><button class="message-send-button" type="submit" aria-label="Send message" title="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.2 21 12 3.4 3.8l-.1 6.4 12 1.8-12 1.8z" fill="currentColor"/></svg></button></form>'+
       '</div></div>'
     );
-    const callControls=win.isGroup
+    const callControls=isAI
+      ? '<span class="message-window-ai-disclosure">AI BOT · first message starts the chat and permits replies. Revoke consent in Settings.</span>'
+      : win.isGroup
       ?'<button type="button" class="message-window-call" data-message-group-audio="'+esc(win.groupId)+'" title="Start group voice call" aria-label="Start group voice call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button type="button" class="message-window-call" data-message-group-video="'+esc(win.groupId)+'" title="Start group video call" aria-label="Start group video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button type="button" class="message-window-call" data-message-group-manage="'+esc(win.groupId)+'" title="Group members" aria-label="Group members">'+messenger3dIcon('groups')+'</button>'
       :'<button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Phone call" title="Phone call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button class="message-window-call" type="button" data-message-remove="'+esc(win.user.id)+'" aria-label="Remove conversation" title="Remove conversation">···</button>';
     const profileControl=win.isGroup
       ?'<span class="message-window-profile is-group"><span class="message-group-avatar">'+messenger3dIcon('groups')+'</span><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+esc(conversation?.group?.memberCount||0)+' members</small></span></span>'
+      :isAI?'<span class="message-window-profile is-ai-member"><span class="messenger-ai-avatar">AI</span><span><strong>'+esc(win.user.name)+'</strong><small>AI BOT · identity disclosed</small></span></span>'
       :'<button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+(state.messengerPresence[win.user.id]===true?'Active now':'')+'</small></span></button>';
-    return '<section class="message-window '+(win.minimized?'is-minimized':'')+(win.isGroup?' is-group-chat':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header">'+profileControl+'<div class="message-window-controls"><button type="button" class="message-window-call" data-message-tools="'+esc(win.user.id)+'" title="Search messages and view shared media" aria-label="Search messages and view shared media">'+messenger3dIcon('search')+'</button>'+callControls+'<button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
+    return '<section class="message-window '+(win.minimized?'is-minimized':'')+(win.isGroup?' is-group-chat':'')+(isAI?' is-ai-chat':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header">'+profileControl+'<div class="message-window-controls">'+(isAI?'':'<button type="button" class="message-window-call" data-message-tools="'+esc(win.user.id)+'" title="Search messages and view shared media" aria-label="Search messages and view shared media">'+messenger3dIcon('search')+'</button>')+callControls+'<button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
   }).join('');
   dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
   dock.querySelectorAll('[data-message-close]').forEach(button=>button.onclick=()=>{const id=button.dataset.messageClose;cancelMessageVoiceRecording(id);state.messageWindows=state.messageWindows.filter(item=>item.user.id!==id);renderMessageWindows();syncMessageRefreshPolling();});
@@ -8729,10 +8765,9 @@ function renderMessageWindows(){
   }));
   state.messageWindows.filter(win=>!win.minimized).forEach(win=>{
     const root=dock.querySelector('[data-message-picker="'+CSS.escape(win.user.id)+'"]');
-    if(root)messagePickers.set(win.user.id,createMediaPicker(root,{slot:'message',maxFiles:5,compact:true}));
+    if(root&&!win.user.isAI)messagePickers.set(win.user.id,createMediaPicker(root,{slot:'message',maxFiles:5,compact:true}));
     const form=dock.querySelector('[data-message-form="'+CSS.escape(win.user.id)+'"]');
-    form?.elements.text?.addEventListener('input',()=>messageTyping(win,true));
-    form?.elements.text?.addEventListener('blur',()=>messageTyping(win,false));
+    if(!win.user.isAI){form?.elements.text?.addEventListener('input',()=>messageTyping(win,true));form?.elements.text?.addEventListener('blur',()=>messageTyping(win,false));}
     form?.addEventListener('submit',async event=>{
       event.preventDefault();messageTyping(win,false);const button=form.querySelector('button[type="submit"]'),text=String(form.elements.text.value||'').trim(),picker=messagePickers.get(win.user.id);
       button.disabled=true;
@@ -8965,14 +9000,14 @@ async function renderMessengerPanelList(){
   bindMessengerConversationRows(list,'chats');
 }
 function messengerConversationRow(conversation,section){
-  const member=conversation.user||{},last=conversation.messages?.at(-1),isGroup=Boolean(conversation.groupId||member.isGroup);
+  const member=conversation.user||{},last=conversation.messages?.at(-1),isGroup=Boolean(conversation.groupId||member.isGroup),isAI=member.isAI===true;
   let preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':last?.stickerId?'Sticker':'Start chatting');
   if(isGroup&&last?.author?.name)preview=last.author.name+': '+preview;
   const unread=Number(conversation.unreadCount)||0,archived=section==='archived',restricted=section==='restricted';
   const online=!isGroup&&state.messengerPresence?.[member.id]===true;
-  const action=archived?'<button type="button" class="messenger-chat-row-action" data-messenger-unarchive="'+esc(member.id)+'" title="Restore chat" aria-label="Restore chat">'+messenger3dIcon('restore')+'</button>':restricted?'<button type="button" class="messenger-chat-row-action" data-messenger-unrestrict="'+esc(member.id)+'" title="Unrestrict account" aria-label="Unrestrict account">'+messenger3dIcon('unlock')+'</button>':'<button type="button" class="messenger-chat-row-action" data-messenger-archive="'+esc(member.id)+'" title="Archive chat" aria-label="Archive chat">'+messenger3dIcon('archive')+'</button>'+(isGroup?'':'<button type="button" class="messenger-chat-row-action" data-messenger-restrict="'+esc(member.id)+'" title="Restrict account" aria-label="Restrict account">'+messenger3dIcon('lock')+'</button>');
-  const avatarHtml=isGroup?'<span class="messenger-chat-avatar messenger-group-avatar">'+messenger3dIcon('groups')+'</span>':'<img class="messenger-chat-avatar" src="'+avatar(member)+'" alt="">';
-  return '<article class="messenger-chat-row '+(isGroup?'is-group-row':'')+'" data-messenger-open="'+esc(member.id)+'" tabindex="0" role="button" aria-label="Open chat with '+esc(member.name||'Minglora member')+'">'+avatarHtml+(online?'<i class="messenger-chat-online-dot" aria-label="Active now"></i>':'')+'<span class="messenger-chat-copy"><strong>'+esc(member.name||'Minglora member')+'</strong><small>'+esc(isGroup?(conversation.group?.memberCount||0)+' members':preview)+'</small></span>'+(unread?'<span class="messenger-chat-unread">'+(unread>99?'99+':unread)+'</span>':'')+'<span class="messenger-chat-row-actions">'+action+'</span></article>';
+  const action=isAI?'':archived?'<button type="button" class="messenger-chat-row-action" data-messenger-unarchive="'+esc(member.id)+'" title="Restore chat" aria-label="Restore chat">'+messenger3dIcon('restore')+'</button>':restricted?'<button type="button" class="messenger-chat-row-action" data-messenger-unrestrict="'+esc(member.id)+'" title="Unrestrict account" aria-label="Unrestrict account">'+messenger3dIcon('unlock')+'</button>':'<button type="button" class="messenger-chat-row-action" data-messenger-archive="'+esc(member.id)+'" title="Archive chat" aria-label="Archive chat">'+messenger3dIcon('archive')+'</button>'+(isGroup?'':'<button type="button" class="messenger-chat-row-action" data-messenger-restrict="'+esc(member.id)+'" title="Restrict account" aria-label="Restrict account">'+messenger3dIcon('lock')+'</button>');
+  const avatarHtml=isGroup?'<span class="messenger-chat-avatar messenger-group-avatar">'+messenger3dIcon('groups')+'</span>':isAI?'<span class="messenger-chat-avatar messenger-ai-avatar" aria-label="AI member">AI</span>':'<img class="messenger-chat-avatar" src="'+avatar(member)+'" alt="">';
+  return '<article class="messenger-chat-row '+(isGroup?'is-group-row':'')+(isAI?' is-ai-row':'')+'" data-messenger-open="'+esc(member.id)+'" tabindex="0" role="button" aria-label="Open chat with '+esc(member.name||'Minglora member')+'">'+avatarHtml+(online?'<i class="messenger-chat-online-dot" aria-label="Active now"></i>':'')+'<span class="messenger-chat-copy"><strong>'+esc(member.name||'Minglora member')+(isAI?' <span class="ai-member-disclosure">AI BOT</span>':'')+'</strong><small>'+esc(isAI?'AI member · '+preview:isGroup?(conversation.group?.memberCount||0)+' members':preview)+'</small></span>'+(unread?'<span class="messenger-chat-unread">'+(unread>99?'99+':unread)+'</span>':'')+'<span class="messenger-chat-row-actions">'+action+'</span></article>';
 }
 function bindMessengerConversationRows(list,section){
   list.querySelectorAll('[data-messenger-open]').forEach(row=>{

@@ -326,6 +326,108 @@ function readProfileSections(userId){
   const saved=(db.profileSections||[]).find(item=>item.userId===userId);
   return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
 }
+function getAISocialProfile(identityId) {
+  const wanted=String(identityId||'').trim();
+  return (db.aiSocialProfiles||[]).find(profile=>String(profile.identityId||profile.identity_id||'')===wanted)||null;
+}
+function safeSocialAuthor(userId,viewerId=null) {
+  const id=String(userId||'');
+  if(id.startsWith('ai:')){
+    const identityId=id.slice(3);
+    const profile=getAISocialProfile(identityId);
+    if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true)return null;
+    return {
+      id,
+      name:String(profile.displayName||profile.display_name||'AI member'),
+      username:String(profile.username||'ai_member'),
+      bio:String(profile.bio||''),
+      avatar:'',
+      avatarUrl:'',
+      isAI:true,
+      aiIdentityId:identityId,
+      aiDisclosureRequired:true
+    };
+  }
+  return safeUser((db.users||[]).find(member=>member.id===id),viewerId);
+}
+async function syncPublicAISocialProfiles(actorUserId) {
+  if(!isSupabasePersistence())return Array.isArray(db.aiSocialProfiles)?db.aiSocialProfiles:[];
+  const response=await requestSupabaseState('ai_social_command',{
+    actorUserId,
+    aiAction:'list_public_profiles',
+    payload:{}
+  });
+  const profiles=Array.isArray(response?.result?.profiles)?response.result.profiles:[];
+  db.aiSocialProfiles=profiles.map(profile=>({
+    identityId:String(profile.identity_id||''),
+    ownerUserId:String(profile.owner_user_id||''),
+    displayName:String(profile.display_name||'AI member'),
+    username:String(profile.username||'ai_member'),
+    bio:String(profile.bio||''),
+    introduction:String(profile.introduction||''),
+    profession:String(profile.profession||''),
+    interests:Array.isArray(profile.interests)?profile.interests:[],
+    skills:Array.isArray(profile.skills)?profile.skills:[],
+    avatarStorageRef:String(profile.avatar_storage_ref||''),
+    profileVisibility:String(profile.profile_visibility||'private'),
+    aiDisclosureRequired:true,
+    status:String(profile.status||'created'),
+    enabled:profile.enabled===true
+  }));
+  return db.aiSocialProfiles;
+}
+async function runAISocialCommand(actorUserId,aiAction,payload={}) {
+  if(!isSupabasePersistence()){
+    throw Object.assign(new Error('AI social permissions and activity history require Minglora Supabase persistence.'),{status:503});
+  }
+  const response=await requestSupabaseState('ai_social_command',{actorUserId,aiAction,payload});
+  if(response?.skipped)throw Object.assign(new Error('AI social actions are unavailable in local-only persistence mode.'),{status:503});
+  return response?.result;
+}
+function isVisibleAISocialPost(viewerId,post) {
+  if(!post||post.status!=='published'||post.archivedAt||post.audience!=='public')return false;
+  const profile=getAISocialProfile(post.aiIdentityId);
+  if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true)return false;
+  const ownerId=String(post.ownerUserId||profile.ownerUserId||'');
+  return !ownerId||!blockedBetween(viewerId,ownerId);
+}
+async function publicAISocialPost(post,viewerId) {
+  const author=safeSocialAuthor('ai:'+post.aiIdentityId,viewerId);
+  if(!author||!isVisibleAISocialPost(viewerId,post))return null;
+  const comments=(post.comments||[]).map(comment=>({...comment,author:safeSocialAuthor(comment.userId,viewerId)}))
+    .filter(comment=>comment.author);
+  const reactions=post.reactions&&typeof post.reactions==='object'?post.reactions:{};
+  return {
+    id:post.id,
+    userId:'ai:'+post.aiIdentityId,
+    authorType:'ai',
+    aiIdentityId:post.aiIdentityId,
+    text:String(post.text||''),
+    audience:'public',
+    createdAt:post.createdAt,
+    updatedAt:post.updatedAt||post.createdAt,
+    comments,
+    reactions,
+    reactionCount:Object.keys(reactions).length,
+    myReaction:reactions[viewerId]||null,
+    isSaved:false,
+    isWatchLater:false,
+    following:false,
+    media:[],
+    aiDisclosureRequired:true,
+    aiContentMode:'human-reviewed',
+    author
+  };
+}
+async function recordAISocialMemberActivity(actorUserId,identityId,action,targetType,targetId) {
+  return runAISocialCommand(actorUserId,'record_member_activity',{
+    identity_id:identityId,
+    social_action:action,
+    target_type:targetType,
+    target_id:String(targetId||'')
+  });
+}
+
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
   const owner=(db.users||[]).find(member=>member.id===ownerId);
   if(!owner||isAccountBlocked(owner))return false;
@@ -1084,7 +1186,7 @@ async function publicSoundtrack(track,viewerId) {
   return card?{...track,sound:card}:null;
 }
 async function publicPost(p,viewerId) {
-  const author=db.users.find(u=>u.id===p.userId);
+  const author=safeSocialAuthor(p.userId,viewerId);
   const media=await Promise.all((p.mediaIds||[]).map(async id=>{
     const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===p.userId&&item.slot==='post');
     if(!asset||asset.status==='deleted')return null;
@@ -1116,7 +1218,7 @@ async function publicPost(p,viewerId) {
   return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
-    comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
+    comments:(p.comments||[]).map(c=>({...c,author:safeSocialAuthor(c.userId,viewerId)})).filter(c=>c.author)};
 }
 function isVisibleVideoPost(viewerId, post) {
   if (!post || post.status === 'hidden' || post.archivedAt || !post.userId || blockedBetween(viewerId, post.userId)) return false;
@@ -1240,6 +1342,7 @@ async function publicDiscoveryPost(post) {
 }
 
 function findReportedPost(targetId){
+  const aiPost=(db.aiSocialPosts||[]).find(item=>item.id===targetId);if(aiPost)return {collection:'aiSocialPosts',post:aiPost,ownerId:aiPost.ownerUserId};
   const post=(db.posts||[]).find(item=>item.id===targetId);if(post)return {collection:'posts',post,ownerId:post.userId};
   const groupPost=(db.groupPosts||[]).find(item=>item.id===targetId);if(groupPost)return {collection:'groupPosts',post:groupPost,ownerId:groupPost.userId};
   const pagePost=(db.pagePosts||[]).find(item=>item.id===targetId);if(pagePost)return {collection:'pagePosts',post:pagePost,ownerId:pagePost.publishedBy};
@@ -1845,6 +1948,242 @@ async function route(req, res) {
         });
         return response?.result;
       };
+
+      const runAISocialCommand = async (socialAction,payload={}) => {
+        if(!isSupabasePersistence())throw Object.assign(new Error('AI social permissions and audit history require Minglora Supabase persistence.'),{status:503});
+        const response=await requestSupabaseState('ai_social_command',{actorUserId:user.id,aiAction:socialAction,payload});
+        if(response?.skipped)throw Object.assign(new Error('AI social controls are unavailable in local-only persistence mode.'),{status:503});
+        return response?.result;
+      };
+      const validSocialIdentityId = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));
+      const socialIdentityOwned = async identityId => {
+        if(!validSocialIdentityId(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
+        return runAISocialCommand('get_permissions',{identity_id:identityId});
+      };
+      const authorizeAISocialAction = async (identityId,action,extra={}) => {
+        const key=String(extra.idempotency_key||uid());
+        return runAISocialCommand('authorize',{
+          identity_id:identityId,
+          social_action:action,
+          target_type:String(extra.target_type||''),
+          target_id:String(extra.target_id||''),
+          human_approved:extra.human_approved===true,
+          idempotency_key:key,
+          ...(extra.recipient_user_id?{recipient_user_id:extra.recipient_user_id}:{}),
+          ...(extra.human_initiated?{human_initiated:true}:{}),
+          ...(extra.target_identity_id?{target_identity_id:extra.target_identity_id}:{}),
+          ...(extra.chain_id?{chain_id:extra.chain_id}:{}),
+          ...(extra.loop_depth!==undefined?{loop_depth:extra.loop_depth}:{})
+        });
+      };
+      if(method==='GET'&&sub==='social/settings'){
+        const [settings,history]=await Promise.all([
+          runAISocialCommand('get_settings',{}),
+          runAISocialCommand('history',{})
+        ]);
+        try{await syncPublicAISocialProfiles(user.id);}catch(error){console.warn('[Minglora AI social] Public discovery unavailable:',String(error?.message||error).slice(0,160));}
+        const conversations=(db.aiSocialConversations||[])
+          .filter(item=>item.ownerUserId===user.id&&item.status!=='closed')
+          .map(item=>{
+            const member=(db.users||[]).find(row=>row.id===item.memberUserId);
+            const messages=(db.aiSocialMessages||[])
+              .filter(message=>message.conversationId===item.id)
+              .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))
+              .map(message=>({...message,author:safeSocialAuthor(message.from,user.id)}));
+            return {
+              id:item.id,identityId:item.identityId,memberUserId:item.memberUserId,
+              member:member?safeUser(member,user.id):null,
+              humanInitiated:item.humanInitiated===true,status:item.status||'active',
+              createdAt:item.createdAt,lastActivityAt:item.lastActivityAt,messages
+            };
+          }).filter(item=>item.member);
+        const posts=(db.aiSocialPosts||[]).filter(post=>post.ownerUserId===user.id)
+          .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,100);
+        const publicProfiles=(db.aiSocialProfiles||[]).map(profile=>({
+          identityId:profile.identityId,displayName:profile.displayName,username:profile.username,
+          status:profile.status,enabled:profile.enabled,profileVisibility:profile.profileVisibility
+        }));
+        return json(res,200,{...settings,activity:history?.activity||[],conversations,posts,publicProfiles});
+      }
+      if(method==='PATCH'&&sub==='social/controls'){
+        if(typeof input.globalPaused!=='boolean')return json(res,400,{error:'globalPaused must be true or false.'});
+        const result=await runAISocialCommand('set_global_pause',{
+          global_paused:input.globalPaused,
+          pause_reason:String(input.pauseReason||'').trim().slice(0,240)
+        });
+        return json(res,200,result||{updated:true});
+      }
+      if(method==='PATCH'&&sub==='social/permissions'){
+        const identityId=String(input.identityId||'');
+        await socialIdentityOwned(identityId);
+        const result=await runAISocialCommand('set_permissions',{
+          identity_id:identityId,
+          can_post:input.canPost===true,
+          can_comment:input.canComment===true,
+          can_react:input.canReact===true,
+          can_message:input.canMessage===true,
+          can_ai_interact:input.canAIInteract===true,
+          is_suspended:input.isSuspended!==false,
+          profile_visibility:['public','followers','private','hidden'].includes(input.profileVisibility)?input.profileVisibility:'private',
+          max_posts_per_hour:input.maxPostsPerHour??2,
+          max_comments_per_hour:input.maxCommentsPerHour??5,
+          max_reactions_per_hour:input.maxReactionsPerHour??10,
+          max_messages_per_hour:input.maxMessagesPerHour??2,
+          max_ai_interactions_per_hour:input.maxAIInteractionsPerHour??3
+        });
+        return json(res,200,result||{saved:true});
+      }
+      if(method==='POST'&&sub==='social/posts'){
+        const identityId=String(input.identityId||'');
+        const text=String(input.text||'').trim();
+        const audience=String(input.audience||'public');
+        if(!text||text.length>5000)return json(res,400,{error:'AI post text must contain 1–5000 characters.'});
+        if(audience!=='public')return json(res,400,{error:'AI Network posts can only be published publicly; private and follower-only AI posts are not enabled.'});
+        await socialIdentityOwned(identityId);
+        const idempotencyKey=String(input.idempotencyKey||uid()).slice(0,160);
+        const existing=(db.aiSocialPosts||[]).find(post=>post.aiIdentityId===identityId&&post.idempotencyKey===idempotencyKey);
+        if(existing)return json(res,200,{post:await publicAISocialPost(existing,user.id),reused:true});
+        const authorization=await authorizeAISocialAction(identityId,'post',{
+          target_type:'feed_post',target_id:'pending',human_approved:input.humanApproved===true,idempotency_key:idempotencyKey
+        });
+        let profile=getAISocialProfile(identityId);
+        if(!profile){
+          await syncPublicAISocialProfiles(user.id);
+          profile=getAISocialProfile(identityId);
+        }
+        if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true){
+          if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});
+          return json(res,409,{error:'The AI member profile must be active, enabled, public and unsuspended before publishing.'});
+        }
+        const post={id:uid(),aiIdentityId:identityId,ownerUserId:user.id,text,audience:'public',status:'published',
+          comments:[],reactions:{},createdAt:now(),updatedAt:now(),idempotencyKey,
+          authorType:'ai',aiDisclosureRequired:true,contentMode:'owner-approved',activityEventId:authorization?.event_id||null};
+        db.aiSocialPosts||=[];
+        db.aiSocialPosts.unshift(post);
+        try{
+          await saveStore();
+          if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});
+        }catch(error){
+          db.aiSocialPosts=db.aiSocialPosts.filter(item=>item.id!==post.id);
+          throw error;
+        }
+        return json(res,201,{post:await publicAISocialPost(post,user.id)});
+      }
+      if(method==='POST'&&sub==='social/comment'){
+        const identityId=String(input.identityId||''),postId=String(input.postId||''),text=String(input.text||'').trim();
+        if(!text||text.length>2000)return json(res,400,{error:'AI comments must contain 1–2000 characters.'});
+        await socialIdentityOwned(identityId);
+        const humanPost=(db.posts||[]).find(post=>post.id===postId);
+        const aiPost=(db.aiSocialPosts||[]).find(post=>post.id===postId);
+        const target=humanPost||aiPost;
+        if(!target||target.status==='hidden'||target.archivedAt)return json(res,404,{error:'Post not found.'});
+        let action='comment',authExtra={target_type:'post',target_id:postId,human_approved:input.humanApproved===true};
+        if(aiPost){
+          if(!isVisibleAISocialPost(user.id,aiPost))return json(res,404,{error:'AI post not found.'});
+          action='ai_interact';
+          authExtra={...authExtra,target_identity_id:aiPost.aiIdentityId,chain_id:uid(),loop_depth:1};
+        }else{
+          const owner=db.users.find(member=>member.id===humanPost.userId);
+          if(humanPost.audience!=='public'||blockedBetween(user.id,humanPost.userId)||!owner||
+            (getUserSettings(owner).privacy.commentAudience||'everyone')!=='everyone'){
+            return json(res,403,{error:'AI comments are limited to public posts whose creator accepts comments from everyone.'});
+          }
+        }
+        const authorization=await authorizeAISocialAction(identityId,action,authExtra);
+        const comment={id:uid(),userId:'ai:'+identityId,identityId,authorType:'ai',text,createdAt:now(),aiDisclosureRequired:true};
+        target.comments||=[];target.comments.push(comment);
+        try{await saveStore();if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});}
+        catch(error){target.comments=target.comments.filter(item=>item.id!==comment.id);throw error;}
+        return json(res,201,{comment:{...comment,author:safeSocialAuthor(comment.userId,user.id)}});
+      }
+      if(method==='POST'&&sub==='social/reaction'){
+        const identityId=String(input.identityId||''),postId=String(input.postId||''),reaction=String(input.reaction||'like');
+        if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});
+        await socialIdentityOwned(identityId);
+        const humanPost=(db.posts||[]).find(post=>post.id===postId);
+        const aiPost=(db.aiSocialPosts||[]).find(post=>post.id===postId);
+        const target=humanPost||aiPost;
+        if(!target||target.status==='hidden'||target.archivedAt)return json(res,404,{error:'Post not found.'});
+        let action='react',authExtra={target_type:'post',target_id:postId,human_approved:input.humanApproved===true};
+        if(aiPost){
+          if(!isVisibleAISocialPost(user.id,aiPost))return json(res,404,{error:'AI post not found.'});
+          action='ai_interact';
+          authExtra={...authExtra,target_identity_id:aiPost.aiIdentityId,chain_id:uid(),loop_depth:1};
+        }else if(humanPost.audience!=='public'||blockedBetween(user.id,humanPost.userId)){
+          return json(res,403,{error:'AI reactions are limited to public posts.'});
+        }
+        const authorization=await authorizeAISocialAction(identityId,action,authExtra);
+        target.reactions||={};const key='ai:'+identityId;const previous=target.reactions[key];
+        if(previous===reaction)delete target.reactions[key];else target.reactions[key]=reaction;
+        try{await saveStore();if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});}
+        catch(error){if(previous===undefined)delete target.reactions[key];else target.reactions[key]=previous;throw error;}
+        return json(res,200,{ok:true,post:aiPost?await publicAISocialPost(aiPost,user.id):await publicPost(humanPost,user.id)});
+      }
+      if(method==='POST'&&sub==='social/message'){
+        const identityId=String(input.identityId||''),memberUserId=String(input.memberUserId||''),text=String(input.text||'').trim();
+        if(!validSocialIdentityId(identityId)||!validSocialIdentityId(memberUserId)||!text||text.length>3000){
+          return json(res,400,{error:'Choose a valid AI identity, consenting member and a message of 1–3000 characters.'});
+        }
+        await socialIdentityOwned(identityId);
+        const conversation=(db.aiSocialConversations||[]).find(item=>item.identityId===identityId&&item.memberUserId===memberUserId&&item.humanInitiated===true);
+        if(!conversation)return json(res,403,{error:'AI messages are allowed only after the member starts the conversation.'});
+        if(blockedBetween(user.id,memberUserId))return json(res,403,{error:'This conversation is unavailable.'});
+        const authorization=await authorizeAISocialAction(identityId,'message',{
+          target_type:'ai_conversation',target_id:conversation.id,human_approved:input.humanApproved===true,
+          recipient_user_id:memberUserId,human_initiated:true
+        });
+        const message={id:uid(),conversationId:conversation.id,identityId,from:'ai:'+identityId,to:memberUserId,
+          senderType:'ai',senderUserId:null,text,createdAt:now(),humanApproved:true,aiDisclosureRequired:true,contentMode:'owner-approved'};
+        db.aiSocialMessages||=[];db.aiSocialMessages.push(message);
+        conversation.lastActivityAt=message.createdAt;
+        try{await saveStore();if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});}
+        catch(error){db.aiSocialMessages=db.aiSocialMessages.filter(item=>item.id!==message.id);throw error;}
+        notify(memberUserId,user.id,'message','You received an approved message from an AI member.',{aiIdentityId:identityId,aiDisclosureRequired:true});
+        return json(res,201,{message:{...message,author:safeSocialAuthor(message.from,user.id)}});
+      }
+      if(method==='POST'&&sub==='social/ai-message'){
+        const identityId=String(input.identityId||''),targetIdentityId=String(input.targetIdentityId||''),text=String(input.text||'').trim();
+        if(!validSocialIdentityId(identityId)||!validSocialIdentityId(targetIdentityId)||identityId===targetIdentityId||!text||text.length>3000){
+          return json(res,400,{error:'Choose two different valid AI identities and a message of 1–3000 characters.'});
+        }
+        await socialIdentityOwned(identityId);
+        const authorization=await authorizeAISocialAction(identityId,'ai_interact',{
+          target_type:'ai_conversation',target_id:targetIdentityId,human_approved:input.humanApproved===true,
+          target_identity_id:targetIdentityId,chain_id:uid(),loop_depth:1
+        });
+        const targetProfile=getAISocialProfile(targetIdentityId);
+        if(!targetProfile)await syncPublicAISocialProfiles(user.id);
+        const recipient=getAISocialProfile(targetIdentityId);
+        if(!recipient||recipient.profileVisibility!=='public'||recipient.status!=='active'||recipient.enabled!==true||
+          blockedBetween(user.id,recipient.ownerUserId)){
+          if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});
+          return json(res,404,{error:'The target AI profile is not available for interaction.'});
+        }
+        const conversationId='ai:'+([identityId,targetIdentityId].sort().join(':'));
+        const message={id:uid(),conversationId,identityId,from:'ai:'+identityId,to:'ai:'+targetIdentityId,
+          senderType:'ai',text,createdAt:now(),humanApproved:true,aiDisclosureRequired:true,contentMode:'owner-approved'};
+        db.aiSocialMessages||=[];db.aiSocialMessages.push(message);
+        try{await saveStore();if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});}
+        catch(error){db.aiSocialMessages=db.aiSocialMessages.filter(item=>item.id!==message.id);throw error;}
+        return json(res,201,{message:{...message,author:safeSocialAuthor(message.from,user.id)}});
+      }
+      const socialManageMatch=sub.match(/^social\/posts\/([^/]+)\/manage$/);
+      if(method==='POST'&&socialManageMatch){
+        const postId=decodeURIComponent(socialManageMatch[1]),action=String(input.action||'');
+        const post=(db.aiSocialPosts||[]).find(item=>item.id===postId);
+        if(!post)return json(res,404,{error:'AI post not found.'});
+        if(!validSocialIdentityId(post.aiIdentityId)||post.ownerUserId!==user.id)return json(res,403,{error:'Only this AI identity owner can manage the post.'});
+        if(!['hide','restore','delete'].includes(action))return json(res,400,{error:'Choose hide, restore or delete.'});
+        await runAISocialCommand('record_admin_action',{
+          identity_id:post.aiIdentityId,
+          admin_action:action==='hide'?'content_hidden':action==='restore'?'content_restored':'content_deleted',
+          target_type:'feed_post',target_id:post.id
+        });
+        if(action==='delete')db.aiSocialPosts=db.aiSocialPosts.filter(item=>item.id!==post.id);
+        else{post.status=action==='hide'?'hidden':'published';post.updatedAt=now();}
+        await saveStore();
+        return json(res,200,{ok:true,action,postId});
+      }
 
       const runAIIdentityBatchCommand = async (batchAction, payload = {}) => {
         if (!isSupabasePersistence()) {
@@ -7440,6 +7779,31 @@ async function route(req, res) {
         });
         return json(res,200,result);
       }
+      if(p==='/api/ai-social/consent'&&method==='GET'){
+        const result=await runAISocialCommand(user.id,'get_member_consent',{});
+        return json(res,200,{allowAIMessages:result?.allow_ai_messages===true});
+      }
+      if(p==='/api/ai-social/consent'&&method==='PATCH'){
+        if(typeof input.allowAIMessages!=='boolean')return json(res,400,{error:'allowAIMessages must be true or false.'});
+        const result=await runAISocialCommand(user.id,'set_member_consent',{allow_ai_messages:input.allowAIMessages});
+        return json(res,200,{allowAIMessages:result?.allow_ai_messages===true,saved:true});
+      }
+      const publicAIProfileMatch=p.match(/^\/api\/ai-social\/profiles\/([^/]+)$/);
+      if(method==='GET'&&publicAIProfileMatch){
+        let identityId='';
+        try{identityId=decodeURIComponent(publicAIProfileMatch[1]);}catch{return json(res,400,{error:'Invalid AI identity ID.'});}
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId))return json(res,404,{error:'AI profile not found.'});
+        try{await syncPublicAISocialProfiles(user.id);}catch{return json(res,503,{error:'Public AI profile service is temporarily unavailable.'});}
+        const profile=getAISocialProfile(identityId);
+        if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true||blockedBetween(user.id,profile.ownerUserId))return json(res,404,{error:'AI profile not found.'});
+        return json(res,200,{profile:{
+          id:'ai:'+identityId,aiIdentityId:identityId,name:profile.displayName,
+          username:profile.username,bio:profile.bio,introduction:profile.introduction,
+          profession:profile.profession,interests:profile.interests||[],skills:profile.skills||[],
+          isAI:true,aiDisclosureRequired:true
+        }});
+      }
+
       if (method==='GET' && p==='/api/feed') {
         const scope=String(url.searchParams.get('scope')||'all');
         if(!['all','following','friends','subscribers','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, subscribers, or for-you.'});
@@ -7463,6 +7827,7 @@ async function route(req, res) {
           eligibleIds=new Set([...new Set(subscriberIds.map(value=>String(value||'')).filter(Boolean))].filter(id=>id!==user.id));
         }
         const searchQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        try{await syncPublicAISocialProfiles(user.id);}catch(error){db.aiSocialProfiles=[];console.warn('[Minglora feed] Public AI profile lookup failed closed:',String(error?.message||error).slice(0,160));}
         let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
         if(searchQuery){
           visiblePosts=visiblePosts.filter(post=>{
@@ -7473,7 +7838,16 @@ async function route(req, res) {
         const orderedPosts=scope==='for-you'
           ?rankForYouFeed(visiblePosts,user.id,activeFollows(),db.savedPosts||[])
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        const posts=(await Promise.all(orderedPosts.map(x=>publicPost(x,user.id)))).map(post=>({...post,following:followedIds.has(post.userId)}));
+        const humanPosts=(await Promise.all(orderedPosts.map(x=>publicPost(x,user.id)))).map(post=>({...post,following:followedIds.has(post.userId)}));
+        const includePublicAI=['all','for-you'].includes(scope);
+        const aiPosts=includePublicAI
+          ?(await Promise.all((db.aiSocialPosts||[])
+            .filter(post=>isVisibleAISocialPost(user.id,post))
+            .filter(post=>!searchQuery||[post.text,getAISocialProfile(post.aiIdentityId)?.displayName,getAISocialProfile(post.aiIdentityId)?.username]
+              .some(value=>String(value||'').toLowerCase().includes(searchQuery)))
+            .map(post=>publicAISocialPost(post,user.id)))).filter(Boolean)
+          :[];
+        const posts=[...humanPosts,...aiPosts].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
         if(!url.searchParams.has('limit')&&!url.searchParams.has('cursor'))return json(res,200,{posts,scope});
         if(scope==='for-you'){
           const limit=url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20;
@@ -8129,20 +8503,75 @@ async function route(req, res) {
         if(method==='DELETE'&&exists)db.savedPosts=db.savedPosts.filter(saved=>!(saved.userId===user.id&&saved.postId===post.id));
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
-      m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
-      m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
+            m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
+      if(method==='POST'&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        const aiPost=(db.aiSocialPosts||[]).find(x=>x.id===m[1]);
+        const target=post||aiPost;
+        const ownerId=aiPost?aiPost.ownerUserId:post?.userId;
+        if(!target||target.status==='hidden'||target.archivedAt||blockedBetween(user.id,ownerId))return json(res,404,{error:'Post not found.'});
+        if(aiPost&&!isVisibleAISocialPost(user.id,aiPost))return json(res,404,{error:'Post not found.'});
+        const reaction=String(input.reaction||'like');
+        if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});
+        if(aiPost){
+          await recordAISocialMemberActivity(user.id,aiPost.aiIdentityId,'member_reaction','post',aiPost.id);
+          target.reactions ||= {};
+          if(target.reactions[user.id]===reaction)delete target.reactions[user.id];else target.reactions[user.id]=reaction;
+        }else{
+          post.reactions ||= {};
+          if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;
+        }
+        if(ownerId&&ownerId!==user.id)notify(ownerId,user.id,'reaction',`${user.name} reacted to your post.`);
+        await saveStore();
+        return json(res,200,{post:aiPost?await publicAISocialPost(aiPost,user.id):await publicPost(post,user.id)});
+      }
+            m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
-        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
-        const comment=(post.comments||[]).find(x=>x.id===m[2]);
+        const aiPost=(db.aiSocialPosts||[]).find(x=>x.id===m[1]);
+        const target=post||aiPost,ownerId=aiPost?aiPost.ownerUserId:post?.userId;
+        if(!target||target.status==='hidden'||target.archivedAt||blockedBetween(user.id,ownerId))return json(res,404,{error:'Post not found.'});
+        if(aiPost&&!isVisibleAISocialPost(user.id,aiPost))return json(res,404,{error:'Post not found.'});
+        const comment=(target.comments||[]).find(x=>x.id===m[2]);
         if(!comment)return json(res,404,{error:'Comment not found.'});
-        if(comment.userId!==user.id&&post.userId!==user.id)return json(res,403,{error:'Only the comment author or post author can delete this comment.'});
-        post.comments=post.comments.filter(x=>x.id!==comment.id);
+        const aiCommentIdentity=String(comment.userId||'').startsWith('ai:')?String(comment.userId).slice(3):'';
+        const aiCommentOwner=aiCommentIdentity?getAISocialProfile(aiCommentIdentity)?.ownerUserId:null;
+        if(comment.userId!==user.id&&ownerId!==user.id&&aiCommentOwner!==user.id)
+          return json(res,403,{error:'Only the comment author, post owner or AI identity owner can delete this comment.'});
+        if(aiCommentIdentity){
+          await runAISocialCommand(user.id,'record_admin_action',{
+            identity_id:aiCommentIdentity,admin_action:'content_deleted',target_type:'post_comment',target_id:comment.id
+          });
+        }
+        target.comments=(target.comments||[]).filter(x=>x.id!==comment.id);
         await saveStore();return json(res,200,{ok:true,id:comment.id});
       }
-      m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const postOwner=db.users.find(member=>member.id===post.userId);const commentAudience=getUserSettings(postOwner).privacy.commentAudience||'everyone';if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+            m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
+      if(method==='POST'&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        const aiPost=(db.aiSocialPosts||[]).find(x=>x.id===m[1]);
+        const target=post||aiPost,text=String(input.text||'').trim();
+        const ownerId=aiPost?aiPost.ownerUserId:post?.userId;
+        if(!target||target.status==='hidden'||target.archivedAt||blockedBetween(user.id,ownerId))return json(res,404,{error:'Post not found.'});
+        if(aiPost&&!isVisibleAISocialPost(user.id,aiPost))return json(res,404,{error:'Post not found.'});
+        if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});
+        if(aiPost){
+          await recordAISocialMemberActivity(user.id,aiPost.aiIdentityId,'member_comment','post',aiPost.id);
+          const comment={id:uid(),userId:user.id,text,createdAt:now(),authorType:'human'};
+          target.comments||=[];target.comments.push(comment);
+          if(ownerId&&ownerId!==user.id)notify(ownerId,user.id,'comment',`${user.name} commented on an AI BOT post.`);
+          await saveStore();
+          return json(res,201,{comment:{...comment,author:safeUser(user)}});
+        }
+        const postOwner=db.users.find(member=>member.id===post.userId);
+        const commentAudience=getUserSettings(postOwner).privacy.commentAudience||'everyone';
+        if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});
+        const comment={id:uid(),userId:user.id,text,createdAt:now(),authorType:'human'};
+        post.comments.push(comment);
+        if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);
+        await saveStore();
+        return json(res,201,{comment:{...comment,author:safeUser(user)}});
+      }
       if(method==='GET'&&p==='/api/discovery/people/verification'){
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
         const users=db.users
@@ -9986,7 +10415,41 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
               messages,unreadCount,isRequest:false,messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({groupId:group.id}))},lastActivityAt:group.lastActivityAt||lastMessage?.createdAt||group.createdAt
             };
           }));
-        const all=[...conversations.filter(Boolean),...groupRows]
+        let aiRows=[];
+        try{
+          await syncPublicAISocialProfiles(user.id);
+          aiRows=(db.aiSocialConversations||[])
+            .filter(item=>item.memberUserId===user.id&&item.status!=='closed')
+            .map(item=>{
+              const profile=getAISocialProfile(item.identityId);
+              if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true||
+                blockedBetween(user.id,profile.ownerUserId))return null;
+              const raw=(db.aiSocialMessages||[]).filter(message=>message.conversationId===item.id)
+                .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+              const messages=raw.map(message=>({
+                ...message,
+                from:message.from,
+                to:message.to,
+                author:safeSocialAuthor(message.from,user.id),
+                aiDisclosureRequired:message.senderType==='ai'||String(message.from||'').startsWith('ai:'),
+                isAISocialMessage:true
+              })).filter(message=>message.author);
+              return {
+                id:'ai:'+item.identityId,
+                kind:'ai',
+                user:{id:'ai:'+item.identityId,name:profile.displayName,username:profile.username,
+                  avatar:'',avatarUrl:'',isAI:true,aiIdentityId:item.identityId,aiDisclosureRequired:true},
+                messages,
+                unreadCount:0,
+                isRequest:false,
+                humanInitiated:true,
+                lastActivityAt:item.lastActivityAt||item.createdAt
+              };
+            }).filter(Boolean);
+        }catch(error){
+          console.warn('[Minglora Messenger] AI conversations unavailable; human conversations remain available:',String(error?.message||error).slice(0,160));
+        }
+        const all=[...conversations.filter(Boolean),...groupRows,...aiRows]
           .sort((a,b)=>new Date(b.lastActivityAt||b.messages.at(-1)?.createdAt||0)-new Date(a.lastActivityAt||a.messages.at(-1)?.createdAt||0));
         return json(res,200,{conversations:all});
       }
@@ -10221,7 +10684,41 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,201,{message:{...msg,attachments,author:safeUser(user,user.id)}});
       }
       if(method==='POST'&&p==='/api/messages'){
-        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const to=String(input.to||''),text=String(input.text||'').trim();
+        if(to.startsWith('ai:')){
+          const identityId=to.slice(3);
+          if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId)||!text||text.length>3000||
+            input.attachmentIds?.length||input.stickerId||input.gifUrl){
+            return json(res,400,{error:'Start an AI conversation with a valid public AI identity and a text message of 1–3000 characters. Attachments, stickers and GIFs are not enabled for AI conversations.'});
+          }
+          try{await syncPublicAISocialProfiles(user.id);}catch{return json(res,503,{error:'AI member profiles are temporarily unavailable.'});}
+          const profile=getAISocialProfile(identityId);
+          if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true||
+            blockedBetween(user.id,profile.ownerUserId))return json(res,404,{error:'AI member not found.'});
+          await runAISocialCommand(user.id,'set_member_consent',{allow_ai_messages:true});
+          let conversation=(db.aiSocialConversations||[]).find(item=>item.identityId===identityId&&item.memberUserId===user.id&&item.status!=='closed');
+          const createdAt=now();
+          if(!conversation){
+            conversation={id:uid(),identityId,ownerUserId:profile.ownerUserId,memberUserId:user.id,
+              humanInitiated:true,status:'active',createdAt,lastActivityAt:createdAt};
+            db.aiSocialConversations||=[];db.aiSocialConversations.push(conversation);
+          }else{
+            conversation.humanInitiated=true;
+            conversation.lastActivityAt=createdAt;
+          }
+          await recordAISocialMemberActivity(user.id,identityId,'member_message','ai_conversation',conversation.id);
+          const msg={id:uid(),conversationId:conversation.id,identityId,from:user.id,to:'ai:'+identityId,
+            senderType:'human',senderUserId:user.id,text,createdAt,read:false,aiDisclosureRequired:false};
+          db.aiSocialMessages||=[];db.aiSocialMessages.push(msg);
+          try{await saveStore();}
+          catch(error){
+            db.aiSocialMessages=db.aiSocialMessages.filter(item=>item.id!==msg.id);
+            throw error;
+          }
+          if(profile.ownerUserId)notify(profile.ownerUserId,user.id,'message','A member started a conversation with an AI member.',{aiIdentityId:identityId,aiDisclosureRequired:true});
+          return json(res,201,{message:{...msg,author:safeUser(user,user.id)}});
+        }
+        const recipient=db.users.find(member=>member.id===to);
         const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
         const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
         const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;

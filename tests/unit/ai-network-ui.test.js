@@ -25,7 +25,7 @@ test('Minglora AI Network is a restorable first-party destination, separate from
   assert.match(html, /id="ai-network-sidebar-link"[^>]*hidden/);
   assert.ok(html.includes('Minglora AI Network'));
   assert.ok(html.includes('href="https://www.meta.ai/"'));
-  assert.ok(html.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
+  assert.ok(html.includes('/ai-network.css?v=20261120-ai-social-phase7-1'));
   assert.ok(html.includes('/ai-network.js?v=20261118-ai-centre-readiness-1'));
 });
 
@@ -49,7 +49,7 @@ test('AI Network script and styles are precached with matching asset versions', 
   assert.ok(sw.includes('/' + appAsset));
   assert.ok(sw.includes('/' + menuAsset));
   assert.ok(sw.includes('/ai-network.js?v=20261118-ai-centre-readiness-1'));
-  assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
+  assert.ok(sw.includes('/ai-network.css?v=20261120-ai-social-phase7-1'));
   assert.ok(html.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
   assert.ok(sw.includes('/minglora-menu.js?v=20261115-ai-admin-only-1'));
   assert.ok(sw.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
