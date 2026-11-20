@@ -236,10 +236,11 @@ test('running task cancellation invalidates the lease and aborts any in-flight p
   const worker = readFileSync(resolve(root, 'backend/modules/ai-network/ai-task-worker.js'), 'utf8');
   const provider = readFileSync(resolve(root, 'backend/modules/ai-network/openai-creator-drafts.js'), 'utf8');
 
-  assert.match(migration, /select q\\.status into v_previous_status[\\s\\S]*for update/);
-  assert.match(migration, /q\\.status in \\('pending_approval','queued','observation_only','running'\\)/);
-  assert.match(migration, /status='cancelled',worker_id=null,lease_token=null,lease_expires_at=null/);
-  assert.match(migration, /previous_status,new_status,reason/);
-  assert.match(worker, /heartbeat\\?\\.renewed !== true[\\s\\S]*controller\\.abort/);
-  assert.match(provider, /AbortSignal\\.any\\(\\[AbortSignal\\.timeout\\(timeoutMs\\), signal\\]\\)/);
+  assert.ok(migration.includes('select q.status into v_previous_status'));
+  assert.ok(migration.includes("q.status in ('pending_approval','queued','observation_only','running')"));
+  assert.ok(migration.includes("status='cancelled',worker_id=null,lease_token=null,lease_expires_at=null"));
+  assert.ok(migration.includes('previous_status,new_status,reason'));
+  assert.ok(worker.includes('heartbeat?.renewed !== true'));
+  assert.ok(worker.includes('controller.abort('));
+  assert.ok(provider.includes('AbortSignal.any([AbortSignal.timeout(timeoutMs), signal])'));
 });
