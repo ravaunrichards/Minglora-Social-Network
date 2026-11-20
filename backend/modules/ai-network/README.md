@@ -50,6 +50,7 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - GET /api/ai-network/provider-models
 - POST /api/ai-network/provider-models (manual metadata)
 - POST /api/ai-network/provider-models/sync (OpenAI, Anthropic, Gemini live discovery)
+- POST /api/ai-network/provider-inference-verification (fixed-prompt, bounded manual check)
 - GET /api/ai-network/provider-assignments
 - POST /api/ai-network/provider-assignments
 - PATCH /api/ai-network/provider-assignments/:assignmentId/status
@@ -78,6 +79,10 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The first supported human-initiated path uses the deployed OpenAI bot-chat and Creator Studio adapters with `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL` (or the explicitly selected legacy OpenAI key/model triplet). Both paths run behind the designated-owner/MFA gate, check provider access, moderate their input/output, enforce the shared owner/day token budget and do not expose tools or external actions. Provider-account and model-assignment records remain metadata for future routing; they are not prerequisites for this first human-initiated path. Autonomous workers and schedules remain disabled until worker identity/authentication, claim, heartbeat, completion, failure recovery and operational acceptance are implemented.
 
 Provider environment slots, the OpenAI bot-chat/Creator Studio setup and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
+
+## Bounded inference verification
+
+A moderator-triggered provider inference verification uses a fixed, non-user-editable prompt, an eight-token output cap and a 20-second timeout. No tools are supplied and generated text is withheld from responses and storage. A recent successful verification is required in addition to a healthy provider check before a managed provider account can be enabled. A later failed attempt invalidates an earlier successful one. The diagnostic does not enable provider execution, AI identity workers or autonomous publishing.
 
 ## Provider model discovery and assignment checks
 
