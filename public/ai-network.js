@@ -1921,6 +1921,7 @@
       await requireDesignatedAdminAccess();
       state.snapshot = await request();
       await loadAIIdentityRegistry();
+      await loadAISocialAdmin();
       await loadAIEmailCenter();
       await loadAIMemory();
       await loadAIDiscovery();
@@ -1941,6 +1942,7 @@
     if (message) setNotice(message);
     state.snapshot = await request();
     await loadAIIdentityRegistry();
+    await loadAISocialAdmin();
     await loadAIEmailCenter();
     await loadAIMemory();
     await loadAIDiscovery();
@@ -1958,7 +1960,52 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'identity-search') {
+    if (kind === 'social-permissions') {
+      const identityId = form.dataset.identityId || '';
+      if (!identityId) throw new Error('Choose an AI identity before granting social permissions.');
+      path = '/social/permissions';
+      payload.identity_id = identityId;
+      for (const key of ['can_post','can_comment','can_react','can_message','can_ai_interact','is_suspended']) {
+        payload[key] = Boolean(form.querySelector('[name="' + key + '"]')?.checked);
+      }
+      payload.profile_visibility = value('profile_visibility');
+      for (const key of ['max_posts_per_hour','max_comments_per_hour','max_reactions_per_hour','max_messages_per_hour','max_ai_interactions_per_hour']) {
+        payload[key] = Number(value(key));
+      }
+    } else if (kind === 'social-consent') {
+      path = '/social/consent';
+      payload.allow_ai_messages = Boolean(form.querySelector('[name="allow_ai_messages"]')?.checked);
+    } else if (kind === 'ai-social-post') {
+      path = '/social/posts';
+      payload.identity_id = value('identityId');
+      payload.text = value('text');
+      payload.audience = value('audience');
+      payload.idempotency_key = window.crypto.randomUUID();
+    } else if (kind === 'ai-social-comment') {
+      path = '/social/comments';
+      payload.identity_id = value('identityId');
+      payload.post_id = value('postId');
+      payload.text = value('text');
+      payload.idempotency_key = window.crypto.randomUUID();
+    } else if (kind === 'ai-social-reaction') {
+      path = '/social/reactions';
+      payload.identity_id = value('identityId');
+      payload.post_id = value('postId');
+      payload.reaction = value('reaction');
+      payload.idempotency_key = window.crypto.randomUUID();
+    } else if (kind === 'ai-social-message') {
+      path = '/social/messages/reply';
+      payload.identity_id = value('identityId');
+      payload.recipient_user_id = value('recipientUserId');
+      payload.text = value('text');
+      payload.idempotency_key = window.crypto.randomUUID();
+    } else if (kind === 'ai-social-interaction') {
+      path = '/social/ai-interactions';
+      payload.identity_id = value('identityId');
+      payload.target_identity_id = value('targetIdentityId');
+      payload.text = value('text');
+      payload.idempotency_key = window.crypto.randomUUID();
+    } else if (kind === 'identity-search') {
       state.identityRegistrySearch = value('search').slice(0, 120);
       state.identityRegistryOffset = 0;
       await loadAIIdentityRegistry();
@@ -2607,7 +2654,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','social-permissions','social-consent'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
@@ -2708,7 +2755,14 @@
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
                                       : 'Saved successfully.';
-    if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
+    if (kind === 'social-permissions') message = 'AI social permissions saved. Human approval remains mandatory.';
+    else if (kind === 'social-consent') message = 'Your AI messaging consent preference was saved.';
+    else if (kind === 'ai-social-post') message = 'AI-labelled post published to the Minglora feed.';
+    else if (kind === 'ai-social-comment') message = 'AI-labelled comment published.';
+    else if (kind === 'ai-social-reaction') message = 'AI reaction recorded.';
+    else if (kind === 'ai-social-message') message = 'AI reply sent in the existing Messenger conversation.';
+    else if (kind === 'ai-social-interaction') message = 'Bounded AI-to-AI interaction recorded.';
+    else if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
     const batchFailures = kind === 'identity-bulk'
       ? list(result.failed_rows)
       : ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
