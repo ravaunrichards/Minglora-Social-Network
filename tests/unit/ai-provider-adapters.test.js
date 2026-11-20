@@ -244,6 +244,15 @@ test('network failures and unsafe endpoints fail closed without credential discl
     error => error instanceof AIProviderAdapterError && error.code === 'invalid_endpoint'
   );
   assert.equal(calls, 0);
+
+  await assert.rejects(
+    listAIProviderModels('openai', {
+      env: { OPENAI_API_KEY: 'private-key', OPENAI_BASE_URL: 'https://attacker.example/v1' },
+      fetchImpl: async () => { calls++; return response({ data: [] }); }
+    }),
+    error => error instanceof AIProviderAdapterError && error.code === 'invalid_endpoint'
+  );
+  assert.equal(calls, 0);
 });
 
 test('invalid prompts and model identifiers are rejected before contacting a provider', async () => {
