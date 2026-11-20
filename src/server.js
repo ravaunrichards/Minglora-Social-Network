@@ -51,7 +51,7 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
-import { listAIProviderModels, probeAIProvider, SUPPORTED_AI_PROVIDER_ADAPTERS } from '../backend/modules/ai-network/provider-adapters.js';
+import { generateAIProviderText, listAIProviderModels, probeAIProvider, SUPPORTED_AI_PROVIDER_ADAPTERS } from '../backend/modules/ai-network/provider-adapters.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
@@ -61,6 +61,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
 let openAIProviderHealthState = null;
+const aiProviderInferenceCooldown = new Map();
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
 const activeAIBotChatOwners = new Set();
@@ -2927,6 +2928,172 @@ async function route(req, res) {
       }
       const providerModelVerificationCache = new Map();
       let providerModelCatalogPromise = null;
+      if (method === 'POST' && sub === 'provider-inference-verification') {
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !['provider_account_id','model_id'].includes(key))) {
+          throw Object.assign(new Error('Inference verification accepts only provider_account_id and model_id. The prompt is fixed by Minglora.'), { status: 400 });
+        }
+        const accountId = String(input.provider_account_id || '').trim();
+        const modelId = String(input.model_id || '').trim();
+        if (!aiIdentityIdPattern.test(accountId) || !aiIdentityIdPattern.test(modelId)) {
+          throw Object.assign(new Error('A valid provider account ID and model ID are required.'), { status: 400 });
+        }
+        const accounts = await runAIProviderCommand('list_provider_accounts');
+        const account = (Array.isArray(accounts) ? accounts : []).find(item => item.provider_account_id === accountId);
+        if (!account) {
+          throw Object.assign(new Error('Provider account was not found for this signed-in administrator.'), { status: 404 });
+        }
+        if (account.account_type !== 'managed') {
+          throw Object.assign(new Error('Inference verification requires a managed provider account linked to private Minglora environment credentials.'), { status: 409 });
+        }
+        if (String(account.status || '').toLowerCase() === 'revoked') {
+          throw Object.assign(new Error('A revoked provider account cannot be inference-tested or reactivated.'), { status: 409 });
+        }
+
+        const selected = await verifyProviderModelSelection(modelId);
+        const provider = String(selected.provider_name || '').toLowerCase();
+        if (String(account.provider_name || '').toLowerCase() !== provider) {
+          throw Object.assign(new Error('The selected model and provider account must belong to the same provider.'), { status: 409 });
+        }
+
+        const cooldownMs = 30000;
+        const now = Date.now();
+        const inMemoryLastAttempt = aiProviderInferenceCooldown.get(accountId) || 0;
+        if (now - inMemoryLastAttempt < cooldownMs) {
+          throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
+        }
+        const recentEvents = await runAIProviderCommand('list_provider_health', { provider_account_id: accountId });
+        const lastInferenceAttempt = (Array.isArray(recentEvents) ? recentEvents : [])
+          .find(event => event?.metadata?.inference_verification_attempt === true);
+        const lastAttemptAt = Date.parse(lastInferenceAttempt?.checked_at || '');
+        if (Number.isFinite(lastAttemptAt) && now - lastAttemptAt < cooldownMs) {
+          aiProviderInferenceCooldown.set(accountId, lastAttemptAt);
+          throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
+        }
+        aiProviderInferenceCooldown.set(accountId, now);
+        if (aiProviderInferenceCooldown.size > 1000) {
+          for (const [key, timestamp] of aiProviderInferenceCooldown) {
+            if (now - timestamp > 10 * 60 * 1000) aiProviderInferenceCooldown.delete(key);
+          }
+        }
+
+        const startedAt = Date.now();
+        const attemptAt = new Date(startedAt).toISOString();
+        await runAIProviderCommand('record_provider_health', {
+          provider_account_id: accountId,
+          provider_name: provider,
+          health_status: 'unknown',
+          model_identifier: selected.model_identifier,
+          response_time_ms: 0,
+          error_code: '',
+          reason: 'Bounded inference verification started. No generated output is retained.',
+          metadata: {
+            inference_verification_attempt: true,
+            inference_verified: false,
+            in_progress: true,
+            verification_type: 'fixed_prompt'
+          },
+          checked_at: attemptAt
+        });
+
+        try {
+          const generated = await generateAIProviderText(provider, {
+            model: selected.model_identifier,
+            prompt: 'Reply with exactly the single word READY.',
+            systemPrompt: 'This is a bounded provider connectivity test. Return only READY.',
+            maxOutputTokens: 8
+          }, { timeoutMs: 20000 });
+          const output = String(generated?.output || '').trim();
+          if (!output) {
+            throw Object.assign(new Error('The provider returned no text for the bounded inference test.'), { code: 'invalid_response' });
+          }
+          const responseTimeMs = Math.min(Math.max(Date.now() - startedAt, 0), 120000);
+          const inputTokens = Number.isFinite(Number(generated?.usage?.inputTokens))
+            ? Math.max(0, Math.trunc(Number(generated.usage.inputTokens))) : 0;
+          const outputTokens = Number.isFinite(Number(generated?.usage?.outputTokens))
+            ? Math.max(0, Math.trunc(Number(generated.usage.outputTokens))) : 0;
+          const totalTokens = Number.isFinite(Number(generated?.usage?.totalTokens))
+            ? Math.max(0, Math.trunc(Number(generated.usage.totalTokens))) : inputTokens + outputTokens;
+          const checkedAt = new Date().toISOString();
+          await runAIProviderCommand('record_provider_health', {
+            provider_account_id: accountId,
+            provider_name: provider,
+            health_status: 'healthy',
+            model_identifier: selected.model_identifier,
+            response_time_ms: responseTimeMs,
+            error_code: '',
+            reason: 'The selected model completed a bounded static inference test. Generated output was withheld and not retained.',
+            metadata: {
+              inference_verification_attempt: true,
+              inference_verified: true,
+              in_progress: false,
+              verification_type: 'fixed_prompt',
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              total_tokens: totalTokens
+            },
+            checked_at: checkedAt
+          });
+          aiProviderInferenceCooldown.set(accountId, Date.now());
+          return json(res, 200, {
+            verified: true,
+            inference_verified: true,
+            execution_enabled: false,
+            output_retained: false,
+            provider,
+            provider_account_id: accountId,
+            model_id: modelId,
+            model_identifier: selected.model_identifier,
+            responseTimeMs,
+            usage: { inputTokens, outputTokens, totalTokens },
+            checked_at: checkedAt,
+            note: 'The model generated a response to Minglora’s fixed verification prompt. Output text was withheld. Provider execution remains disabled until separately approved.'
+          });
+        } catch (error) {
+          const errorCode = String(error?.code || '').toLowerCase();
+          const allowedHealthStatuses = new Set([
+            'unknown','unhealthy','unauthorized','forbidden','model_unavailable',
+            'rate_limited','provider_unavailable','network_error','timeout',
+            'invalid_response','provider_error'
+          ]);
+          const healthStatus = allowedHealthStatuses.has(errorCode) ? errorCode : 'provider_error';
+          const responseTimeMs = Math.min(Math.max(Date.now() - startedAt, 0), 120000);
+          const checkedAt = new Date().toISOString();
+          const safeReason = String(error?.message || 'The provider inference request failed. Provider response details were withheld.').slice(0, 1000);
+          await runAIProviderCommand('record_provider_health', {
+            provider_account_id: accountId,
+            provider_name: provider,
+            health_status: healthStatus,
+            model_identifier: selected.model_identifier,
+            response_time_ms: responseTimeMs,
+            error_code: healthStatus,
+            reason: safeReason,
+            metadata: {
+              inference_verification_attempt: true,
+              inference_verified: false,
+              in_progress: false,
+              verification_type: 'fixed_prompt'
+            },
+            checked_at: checkedAt
+          });
+          aiProviderInferenceCooldown.set(accountId, Date.now());
+          return json(res, 200, {
+            verified: false,
+            inference_verified: false,
+            execution_enabled: false,
+            output_retained: false,
+            provider,
+            provider_account_id: accountId,
+            model_id: modelId,
+            model_identifier: selected.model_identifier,
+            status: healthStatus,
+            responseTimeMs,
+            checked_at: checkedAt,
+            note: safeReason
+          });
+        }
+      }
       const verifyProviderModelSelection = async modelId => {
         if (!providerModelCatalogPromise) providerModelCatalogPromise = runAIProviderCommand('list_provider_models');
         const catalog = await providerModelCatalogPromise;
