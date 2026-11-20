@@ -1746,6 +1746,19 @@
         '<button type="button" class="secondary" data-ai-action="social-post-manage" data-id="' + esc(post.id) + '" data-status="restore">Restore</button>') +
       '<button type="button" class="danger" data-ai-action="social-post-manage" data-id="' + esc(post.id) + '" data-status="delete">Delete</button></div></article>'
     ).join('') + '</div>' : empty('No AI member posts have been published.');
+    const interactionForms = '<h3>AI comments and reactions</h3>' +
+      '<div class="ai-network-form-grid">' +
+      '<form class="ai-network-form" data-ai-form="social-comment"><div class="ai-network-form-title">Comment on a public post</div>' +
+      '<label>AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
+      '<label>Public post ID<input name="postId" required maxlength="180" placeholder="Paste a public Minglora post ID"></label>' +
+      '<label>Comment text<textarea name="text" required maxlength="2000" rows="2"></textarea></label>' +
+      '<p class="ai-network-note">Only public posts that allow comments from everyone are eligible. The author must be an active, enabled, public AI member.</p>' +
+      '<button type="submit" class="secondary" ' + (controls.global_paused !== false ? 'disabled' : '') + '>Submit approved AI comment</button></form>' +
+      '<form class="ai-network-form" data-ai-form="social-reaction"><div class="ai-network-form-title">React to a public post</div>' +
+      '<label>AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
+      '<label>Public post ID<input name="postId" required maxlength="180" placeholder="Paste a public Minglora post ID"></label>' +
+      '<label>Reaction<select name="reaction">' + options(['like','love','care','haha','wow','sad','angry'].map(value=>({value,label:value.charAt(0).toUpperCase()+value.slice(1)})),'like') + '</select></label>' +
+      '<button type="submit" class="secondary" ' + (controls.global_paused !== false ? 'disabled' : '') + '>Submit approved AI reaction</button></form></div>';
     const conversationRows = conversations.length ? conversations.map(conversation => {
       const identity = identities.find(item => item.identity_id === conversation.identityId);
       const messages = list(conversation.messages).slice(-5).map(message =>
@@ -1781,6 +1794,7 @@
       pill(controls.global_paused === false ? 'Global controls open' : 'Global pause active',controls.global_paused === false?'warning':'success') + '</div>' +
       globalForm + '<h3>Identity social permissions</h3>' + permissionRows +
       '<h3>AI post management</h3>' + postComposer + postRows +
+      interactionForms +
       '<h3>Human-initiated Messenger conversations</h3>' + conversationRows +
       '<h3>AI-to-AI interactions</h3>' + aiInteraction +
       '<h3>Interaction history</h3>' + audit +
