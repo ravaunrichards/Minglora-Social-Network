@@ -51,6 +51,7 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
+import { probeAIProvider, SUPPORTED_AI_PROVIDER_ADAPTERS } from '../backend/modules/ai-network/provider-adapters.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
@@ -2708,17 +2709,46 @@ async function route(req, res) {
       }
 
       if (method === 'POST' && sub === 'provider-health') {
-        const input = await body(req, 4000);
-        if (!input || typeof input !== 'object' || Array.isArray(input) ||
-            input.provider !== 'openai' || Object.keys(input).some(key => key !== 'provider')) {
-          throw Object.assign(
-            new Error('The read-only provider probe currently accepts only provider=openai. Credentials must be configured in the private server environment, never in the request body.'),
-            { status: 400 }
-          );
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider health input must be a JSON object.'), { status: 400 });
         }
-        const health = await probeOpenAIProvider();
-        openAIProviderHealthState = health;
-        return json(res, 200, health);
+        const allowedKeys = new Set(['provider','provider_account_id','model']);
+        if (Object.keys(input).some(key => !allowedKeys.has(key))) {
+          throw Object.assign(new Error('Provider health accepts only provider, provider_account_id and model. Credentials must remain in the private server environment.'), { status: 400 });
+        }
+        const provider = String(input.provider || '').trim().toLowerCase();
+        if (!SUPPORTED_AI_PROVIDER_ADAPTERS.includes(provider)) {
+          throw Object.assign(new Error('This provider does not have a verified Minglora server-side adapter yet.'), { status: 501 });
+        }
+        const accountId = String(input.provider_account_id || '').trim();
+        if (accountId && !aiIdentityIdPattern.test(accountId)) {
+          throw Object.assign(new Error('A valid provider account ID is required.'), { status: 400 });
+        }
+        const startedAt = Date.now();
+        const health = await probeAIProvider(provider, {
+          model: String(input.model || '').trim() || undefined
+        });
+        const responseTimeMs = Math.min(Math.max(Date.now() - startedAt, 0), 120000);
+        if (accountId) {
+          await runAIProviderCommand('record_provider_health', {
+            provider_account_id: accountId,
+            provider_name: provider,
+            health_status: health.healthStatus === 'healthy' ? 'healthy' : health.status,
+            model_identifier: health.model || null,
+            response_time_ms: responseTimeMs,
+            error_code: health.connected ? '' : String(health.status || '').slice(0, 120),
+            reason: String(health.note || '').slice(0, 1000),
+            metadata: {
+              adapter_available: health.inferenceAdapterAvailable === true,
+              model_count: Number.isInteger(health.modelCount) ? health.modelCount : null,
+              execution_enabled: health.executionEnabled === true
+            },
+            checked_at: health.checkedAt
+          });
+        }
+        if (provider === 'openai') openAIProviderHealthState = health;
+        return json(res, 200, { ...health, responseTimeMs, persisted: Boolean(accountId) });
       }
 
       if (method === 'GET' && sub === 'provider-accounts') {
@@ -2732,6 +2762,27 @@ async function route(req, res) {
         }
         const result = await runAIProviderCommand('create_provider_account', input);
         return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (parts[0] === 'provider-accounts' && parts.length === 3 && parts[2] === 'status' && method === 'PATCH') {
+        const accountId = parts[1];
+        if (!aiIdentityIdPattern.test(accountId)) {
+          throw Object.assign(new Error('A valid provider account ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider account status input must be a JSON object.'), { status: 400 });
+        }
+        input.provider_account_id = accountId;
+        const result = await runAIProviderCommand('set_provider_account_status', input);
+        return json(res, 200, result || {});
+      }
+      if (parts[0] === 'provider-accounts' && parts.length === 3 && parts[2] === 'health' && method === 'GET') {
+        const accountId = parts[1];
+        if (!aiIdentityIdPattern.test(accountId)) {
+          throw Object.assign(new Error('A valid provider account ID is required.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('list_provider_health', { provider_account_id: accountId });
+        return json(res, 200, { health_events: Array.isArray(result) ? result : [] });
       }
       if (method === 'GET' && sub === 'provider-models') {
         const result = await runAIProviderCommand('list_provider_models');
