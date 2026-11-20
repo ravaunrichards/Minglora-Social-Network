@@ -108,3 +108,11 @@ test('provider health persistence maps adapter-only errors into supported event 
   assert.match(server, /\? String\(health\.status\)\.toLowerCase\(\)/);
   assert.match(server, /: 'provider_error'/);
 });
+
+test('provider assignments fail closed for unimplemented providers and require active Anthropic lifecycle', () => {
+  const server = read('src/server.js');
+  assert.match(server, /no implemented live model-discovery adapter/);
+  assert.match(server, /const lifecycleInvalid = providerId === 'anthropic'/);
+  assert.match(server, /model\.lifecycle !== 'active'/);
+  assert.match(server, /if \(provider === 'anthropic' && model\.lifecycle !== 'active'\) return false/);
+});
