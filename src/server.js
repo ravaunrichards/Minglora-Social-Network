@@ -10410,8 +10410,21 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='GET'&&p==='/api/messages'){
         const messagePeers=(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from);
         const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id));
-        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
+        const aiProfileForPeer = id => {
+          const identityId = aiSocialIdentityFromPeer(id);
+          if (!identityId) return null;
+          const matching = (db.messages || []).find(item => item.aiIdentityId === identityId &&
+            (item.aiRecipient || item.aiActor));
+          return matching?.aiRecipient || matching?.aiActor || null;
+        };
+        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>{
+          const aiProfile = aiProfileForPeer(id);
+          if (aiProfile) return !blockedBetween(user.id, aiProfile.ownerUserId || '');
+          return !blockedBetween(user.id,id)&&db.users.some(member=>member.id===id);
+        });
         const conversations=await Promise.all(peers.map(async id=>{
+          const aiPeerProfile = aiProfileForPeer(id);
+          const aiPeer = Boolean(aiPeerProfile);
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
           const visibleMessages=(db.messages||[]).filter(item=>
             ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
@@ -10426,10 +10439,24 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
               if(!asset)return null;
               try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
             }));
-            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id)};
+            const {aiActor,aiRecipient,...publicMessage}=item;
+            const aiMessageAuthor = item.senderType === 'ai' || String(item.from || '').startsWith('ai:')
+              ? publicAISocialActor(aiActor || aiRecipient) : null;
+            return {
+              ...publicMessage,
+              ...(aiActor ? {aiActor:publicAISocialActor(aiActor)} : {}),
+              ...(aiRecipient ? {aiRecipient:publicAISocialActor(aiRecipient)} : {}),
+              attachments:attachments.filter(Boolean),
+              author:aiMessageAuthor || safeUser(db.users.find(member=>member.id===item.from),user.id)
+            };
           }));
           const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
-          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
+          return {
+            id:'direct:'+id,kind:'direct',
+            user:aiPeer ? publicAISocialActor(aiPeerProfile) : safeUser(db.users.find(member=>member.id===id),user.id),
+            messages,unreadCount,isRequest:aiPeer ? false : (!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id)),
+            messageSettings:{disappearingAfterSeconds:aiPeer ? 0 : getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}
+          };
         }));
         const groupRows = await Promise.all((db.messageGroups||[])
           .filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
@@ -10694,6 +10721,50 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       }
       if(method==='POST'&&p==='/api/messages'){
         const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const aiIdentityId = aiSocialIdentityFromPeer(to);
+        if (aiIdentityId) {
+          if (!isSupabasePersistence()) return json(res,503,{error:'AI member messaging requires Minglora relational persistence.'});
+          if (!text || text.length > 3000 || (Array.isArray(input.attachmentIds) && input.attachmentIds.length) || input.stickerId || input.gifUrl) {
+            return json(res,400,{error:'AI member conversations currently support text messages up to 3,000 characters.'});
+          }
+          const profileResult = await requestSupabaseState('ai_social_command', {
+            actorUserId:user.id, aiAction:'list_public_profiles', payload:{}
+          });
+          const profile = (profileResult?.result?.profiles || []).find(item => String(item.identity_id) === aiIdentityId);
+          if (!profile || profile.status !== 'active' || profile.enabled !== true || profile.profile_visibility !== 'public') {
+            return json(res,404,{error:'AI member profile not found or not publicly available.'});
+          }
+          const ownerUserId = String(profile.owner_user_id || '');
+          if (!ownerUserId || blockedBetween(user.id,ownerUserId)) return json(res,404,{error:'AI member is unavailable.'});
+          const idempotencyKey = String(input.idempotencyKey || input.idempotency_key || '').trim().slice(0,160);
+          const prior = idempotencyKey ? (db.messages || []).find(item =>
+            item.from === user.id && item.to === to && item.aiSocialIdempotencyKey === idempotencyKey) : null;
+          if (prior) return json(res,200,{message:{...prior,author:safeUser(user)},reused:true});
+          const msgId = uid();
+          const activity = await requestSupabaseState('ai_social_command', {
+            actorUserId:user.id, aiAction:'record_member_activity',
+            payload:{
+              identity_id:aiIdentityId, social_action:'member_message',
+              target_type:'ai_identity', target_id:aiIdentityId
+            }
+          });
+          if (!activity?.result?.recorded) return json(res,503,{error:'The AI conversation activity could not be recorded.'});
+          const actor = storedAISocialActor(profile,ownerUserId);
+          const msg = {
+            id:msgId, from:user.id, to, text, createdAt:now(), read:false,
+            aiIdentityId, aiRecipient:actor, senderType:'human',
+            aiSocialActivityId:activity.result.event_id || null,
+            aiSocialIdempotencyKey:idempotencyKey || null
+          };
+          db.messages.push(msg);
+          try { await saveStore(); }
+          catch (error) {
+            db.messages = (db.messages || []).filter(item => item.id !== msgId);
+            throw error;
+          }
+          messengerRealtime?.publish([user.id],{type:'message:new',conversationId:to,messageId:msg.id,senderId:user.id});
+          return json(res,201,{message:{...msg,aiRecipient:publicAISocialActor(actor),author:safeUser(user)},aiMemberMessage:true});
+        }
         const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
         const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
         const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
