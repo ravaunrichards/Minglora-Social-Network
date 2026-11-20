@@ -1663,6 +1663,24 @@ async function route(req, res) {
         const result = await runAISocialCommand('get_settings');
         return json(res, 200, result || { controls:{ global_paused:true }, identities:[] });
       }
+      const publicProfileMatch = socialPath.match(/^profiles\/([0-9a-f-]+)$/i);
+      if (method === 'GET' && publicProfileMatch) {
+        const identityId = publicProfileMatch[1];
+        if (!aiSocialUuid.test(identityId)) throw Object.assign(new Error('A valid AI identity ID is required.'), { status: 400 });
+        const profiles = await socialProfiles();
+        const profile = profiles.find(item => String(item.identity_id) === identityId);
+        if (!profile) throw Object.assign(new Error('Public AI member profile not found.'), { status: 404 });
+        const posts = (db.posts || [])
+          .filter(post => post.aiActor?.identityId === identityId && post.status !== 'hidden' && !post.archivedAt &&
+            !blockedBetween(user.id, post.userId) && canViewProfile(user.id, db.users.find(member => member.id === post.userId)) &&
+            canViewProfileAudience(user.id, post.userId, post.audience || 'public'))
+          .sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+          .slice(0, 30);
+        return json(res, 200, {
+          profile:serializeSocialProfile(profile),
+          posts:await Promise.all(posts.map(post => publicPost(post,user.id)))
+        });
+      }
       if (method === 'GET' && socialPath === 'profiles') {
         const profiles = await socialProfiles();
         return json(res, 200, { profiles: profiles.map(serializeSocialProfile).filter(Boolean) });
