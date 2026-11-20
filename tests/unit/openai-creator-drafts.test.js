@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateOpenAICreatorDraft } from '../../backend/modules/ai-network/openai-creator-drafts.js';
+import { createProviderCircuitStore } from '../../backend/modules/ai-network/provider-routing.js';
 
 const env = {
   OPENAI_API_KEY: 'private-openai-test-key',
@@ -174,6 +175,7 @@ test('Creator Studio uses the configured alternate OpenAI model after a retryabl
       MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
       MINGLORA_AI_MAX_RETRIES: '0'
     },
+    circuitStore: createProviderCircuitStore(),
     fetchImpl: async (url, options) => {
       const payload = JSON.parse(options.body);
       calls.push({ url, payload });
