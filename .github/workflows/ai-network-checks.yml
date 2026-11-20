@@ -19,6 +19,8 @@ on:
       - 'supabase/migrations/*ai_discovery*'
       - 'supabase/migrations/*ai_category*'
       - 'tests/unit/ai-network*.test.js'
+      - 'tests/unit/ai-task-worker.test.js'
+      - 'tests/unit/openai-task-provider.test.js'
       - 'tests/unit/ai-email-provisioning.test.js'
       - 'supabase/migrations/*ai_email*'
       - '.github/workflows/ai-network-checks.yml'
