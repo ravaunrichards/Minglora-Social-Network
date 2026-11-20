@@ -338,7 +338,12 @@ export async function probeAIProvider(providerId, options = {}) {
   }
 }
 
-/**\n * Low-level provider transport only. Callers must apply the Minglora authorization,\n * input/output moderation, identity scope, budget and usage-recording gates before\n * exposing generated text to users. This module intentionally creates no routes.\n */\nexport async function generateAIProviderText(providerId, {
+/**
+ * Low-level provider transport only. Callers must apply the Minglora authorization,
+ * input/output moderation, identity scope, budget and usage-recording gates before
+ * exposing generated text to users. This module intentionally creates no routes.
+ */
+export async function generateAIProviderText(providerId, {
   model: requestedModel,
   prompt,
   systemPrompt,
