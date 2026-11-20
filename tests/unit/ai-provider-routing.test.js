@@ -226,3 +226,40 @@ test('repeated authentication failures do not open the availability circuit or i
   assert.equal(fallbackCalls, 0);
   assert.equal(circuitStore.has('openai:primary-model'), false);
 });
+
+
+test('a failed half-open recovery probe reopens the circuit for another cooldown', async () => {
+  const circuitStore = createProviderCircuitStore();
+  const config = { ...route(), maxRetries: 0, fallbackProvider: null, fallbackModel: null };
+  let currentTime = 5000;
+
+  for (let index = 0; index < 3; index += 1) {
+    await assert.rejects(runWithProviderFallback({
+      routeConfig: config,
+      circuitStore,
+      now: () => currentTime,
+      operation: async () => { throw providerFailure('network_error', true); }
+    }));
+  }
+
+  currentTime += 30001;
+  await assert.rejects(runWithProviderFallback({
+    routeConfig: config,
+    circuitStore,
+    now: () => currentTime,
+    operation: async () => { throw providerFailure('network_error', true); }
+  }));
+  const reopened = circuitStore.get('openai:primary-model');
+  assert.equal(reopened.halfOpen, false);
+  assert.equal(reopened.openUntil, currentTime + 30000);
+
+  currentTime += 1000;
+  let calls = 0;
+  await assert.rejects(runWithProviderFallback({
+    routeConfig: config,
+    circuitStore,
+    now: () => currentTime,
+    operation: async () => { calls += 1; throw providerFailure('network_error', true); }
+  }), error => error.code === 'circuit_open');
+  assert.equal(calls, 0, 'requests during the renewed cooldown must not reach the provider');
+});
