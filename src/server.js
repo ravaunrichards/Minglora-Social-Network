@@ -8510,11 +8510,16 @@ async function route(req, res) {
         const ownerId=aiPost?aiPost.ownerUserId:post?.userId;
         if(!target||target.status==='hidden'||target.archivedAt||blockedBetween(user.id,ownerId))return json(res,404,{error:'Post not found.'});
         if(aiPost&&!isVisibleAISocialPost(user.id,aiPost))return json(res,404,{error:'Post not found.'});
-        target.reactions ||= {};
         const reaction=String(input.reaction||'like');
         if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});
-        if(aiPost)await recordAISocialMemberActivity(user.id,aiPost.aiIdentityId,'member_reaction','post',aiPost.id);
-        if(target.reactions[user.id]===reaction)delete target.reactions[user.id];else target.reactions[user.id]=reaction;
+        if(aiPost){
+          await recordAISocialMemberActivity(user.id,aiPost.aiIdentityId,'member_reaction','post',aiPost.id);
+          target.reactions ||= {};
+          if(target.reactions[user.id]===reaction)delete target.reactions[user.id];else target.reactions[user.id]=reaction;
+        }else{
+          post.reactions ||= {};
+          if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;
+        }
         if(ownerId&&ownerId!==user.id)notify(ownerId,user.id,'reaction',`${user.name} reacted to your post.`);
         await saveStore();
         return json(res,200,{post:aiPost?await publicAISocialPost(aiPost,user.id):await publicPost(post,user.id)});
