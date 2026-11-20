@@ -367,6 +367,7 @@ declare
   v_controls ai_network.ai_task_runtime_controls%rowtype;
   v_limit ai_network.ai_task_provider_limits%rowtype;
   v_task ai_network.ai_task_queue%rowtype;
+  v_task_id uuid;
   v_assignment_id uuid;
   v_provider text;
   v_model text;
