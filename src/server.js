@@ -61,7 +61,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
 let openAIProviderHealthState = null;
-const aiProviderInferenceCooldown = new Map();
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
 const activeAIBotChatOwners = new Set();
@@ -2985,29 +2984,17 @@ async function route(req, res) {
           throw Object.assign(new Error('The selected model and provider account must belong to the same provider.'), { status: 409 });
         }
 
-        const cooldownMs = 30000;
-        const now = Date.now();
-        const inMemoryLastAttempt = aiProviderInferenceCooldown.get(accountId) || 0;
-        if (now - inMemoryLastAttempt < cooldownMs) {
-          throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
-        }
-        const recentEvents = await runAIProviderCommand('list_provider_health', { provider_account_id: accountId });
-        const reservationTimestamp = aiProviderInferenceCooldown.get(accountId) || 0;
-        if (now - reservationTimestamp < cooldownMs) {
-          throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
-        }
-        const lastInferenceAttempt = (Array.isArray(recentEvents) ? recentEvents : [])
-          .find(event => event?.metadata?.inference_verification_attempt === true);
-        const lastAttemptAt = Date.parse(lastInferenceAttempt?.checked_at || '');
-        if (Number.isFinite(lastAttemptAt) && now - lastAttemptAt < cooldownMs) {
-          aiProviderInferenceCooldown.set(accountId, lastAttemptAt);
-          throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
-        }
-        aiProviderInferenceCooldown.set(accountId, now);
-        if (aiProviderInferenceCooldown.size > 1000) {
-          for (const [key, timestamp] of aiProviderInferenceCooldown) {
-            if (now - timestamp > 10 * 60 * 1000) aiProviderInferenceCooldown.delete(key);
+        try {
+          await runAIProviderCommand('reserve_provider_inference', {
+            provider_account_id: accountId,
+            provider_name: provider,
+            model_identifier: selected.model_identifier
+          });
+        } catch (error) {
+          if (/30-second safety interval/i.test(String(error?.message || ''))) {
+            throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
           }
+          throw error;
         }
 
         const startedAt = Date.now();
@@ -3067,7 +3054,6 @@ async function route(req, res) {
             },
             checked_at: checkedAt
           });
-          aiProviderInferenceCooldown.set(accountId, Date.now());
           return json(res, 200, {
             verified: true,
             inference_verified: true,
@@ -3092,7 +3078,17 @@ async function route(req, res) {
           const healthStatus = allowedHealthStatuses.has(errorCode) ? errorCode : 'provider_error';
           const responseTimeMs = Math.min(Math.max(Date.now() - startedAt, 0), 120000);
           const checkedAt = new Date().toISOString();
-          const safeReason = String(error?.message || 'The provider inference request failed. Provider response details were withheld.').slice(0, 1000);
+          const safeReason = ({
+            unauthorized: 'The provider rejected the configured credential.',
+            forbidden: 'The provider credential does not have permission for this model.',
+            model_unavailable: 'The selected model is not available to this provider account.',
+            rate_limited: 'The provider rate limit or quota prevented inference.',
+            provider_unavailable: 'The provider service was unavailable during inference verification.',
+            network_error: 'The provider request could not complete because of a network error.',
+            timeout: 'The provider inference request timed out.',
+            invalid_response: 'The provider did not return the expected fixed verification response.',
+            provider_error: 'The provider inference request failed.'
+          })[healthStatus] || 'The provider inference request failed.';
           await runAIProviderCommand('record_provider_health', {
             provider_account_id: accountId,
             provider_name: provider,
