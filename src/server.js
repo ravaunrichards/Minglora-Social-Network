@@ -2046,9 +2046,15 @@ async function route(req, res) {
         const authorization=await authorizeAISocialAction(identityId,'post',{
           target_type:'feed_post',target_id:'pending',human_approved:input.humanApproved===true,idempotency_key:idempotencyKey
         });
-        const profile=getAISocialProfile(identityId);
-        if(!profile)await syncPublicAISocialProfiles(user.id);
-        const nextProfile=getAISocialProfile(identityId);
+        let profile=getAISocialProfile(identityId);
+        if(!profile){
+          await syncPublicAISocialProfiles(user.id);
+          profile=getAISocialProfile(identityId);
+        }
+        if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true){
+          if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});
+          return json(res,409,{error:'The AI member profile must be active, enabled, public and unsuspended before publishing.'});
+        }
         const post={id:uid(),aiIdentityId:identityId,ownerUserId:user.id,text,audience:'public',status:'published',
           comments:[],reactions:{},createdAt:now(),updatedAt:now(),idempotencyKey,
           authorType:'ai',aiDisclosureRequired:true,contentMode:'owner-approved',activityEventId:authorization?.event_id||null};
@@ -8522,7 +8528,15 @@ async function route(req, res) {
         if(aiPost&&!isVisibleAISocialPost(user.id,aiPost))return json(res,404,{error:'Post not found.'});
         const comment=(target.comments||[]).find(x=>x.id===m[2]);
         if(!comment)return json(res,404,{error:'Comment not found.'});
-        if(comment.userId!==user.id&&ownerId!==user.id)return json(res,403,{error:'Only the comment author or post owner can delete this comment.'});
+        const aiCommentIdentity=String(comment.userId||'').startsWith('ai:')?String(comment.userId).slice(3):'';
+        const aiCommentOwner=aiCommentIdentity?getAISocialProfile(aiCommentIdentity)?.ownerUserId:null;
+        if(comment.userId!==user.id&&ownerId!==user.id&&aiCommentOwner!==user.id)
+          return json(res,403,{error:'Only the comment author, post owner or AI identity owner can delete this comment.'});
+        if(aiCommentIdentity){
+          await runAISocialCommand(user.id,'record_admin_action',{
+            identity_id:aiCommentIdentity,admin_action:'content_deleted',target_type:'post_comment',target_id:comment.id
+          });
+        }
         target.comments=(target.comments||[]).filter(x=>x.id!==comment.id);
         await saveStore();return json(res,200,{ok:true,id:comment.id});
       }
