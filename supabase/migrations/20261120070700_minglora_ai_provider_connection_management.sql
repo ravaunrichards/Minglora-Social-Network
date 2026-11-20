@@ -175,7 +175,9 @@ begin
         'provider_name',m.provider_name,
         'model_name',m.model_name,
         'model_identifier',m.model_identifier,
-        'model_version',m.model_version
+        'model_version',m.model_version,
+        'text_capability',m.text_capability,
+        'is_active',m.is_active
       ),
       'provider_account',case when pa.provider_account_id is null then null else jsonb_build_object(
         'provider_account_id',pa.provider_account_id,
