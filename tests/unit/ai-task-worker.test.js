@@ -118,7 +118,7 @@ test('successful worker execution uses the database-selected route and persists 
     requestWorkerCommand: commands.requestWorkerCommand,
     generateDraft: async args => {
       generationArgs = args;
-      await args.beforeGenerationRequest({ provider: 'openai', model: 'gpt-6.1-sol', attempt: 0 });
+      await args.beforeProviderRequest({ provider: 'openai', model: 'gpt-6.1-sol', phase: 'generation', estimatedTokens: 1500, attempt: 0 });
       return {
         output: 'A clear, friendly launch caption for the new feature.',
         provider: 'openai',
@@ -155,7 +155,7 @@ test('rate capacity exhaustion schedules a retry and never calls completion', as
     env: enabledEnv(),
     requestWorkerCommand: commands.requestWorkerCommand,
     generateDraft: async args => {
-      await args.beforeGenerationRequest({ provider: 'openai', model: 'gpt-6.1-sol', attempt: 0 });
+      await args.beforeProviderRequest({ provider: 'openai', model: 'gpt-6.1-sol', phase: 'generation', estimatedTokens: 1500, attempt: 0 });
       return { output: 'Should never get here.' };
     },
     isPersistenceReady: true
@@ -174,7 +174,7 @@ test('provider failure is persisted as a failure and never reported as success',
     env: enabledEnv(),
     requestWorkerCommand: commands.requestWorkerCommand,
     generateDraft: async args => {
-      await args.beforeGenerationRequest({ provider: 'openai', model: 'gpt-6.1-sol', attempt: 0 });
+      await args.beforeProviderRequest({ provider: 'openai', model: 'gpt-6.1-sol', phase: 'generation', estimatedTokens: 1500, attempt: 0 });
       throw Object.assign(new Error('OpenAI timed out.'), { code: 'timeout', status: 502, retryable: true });
     },
     isPersistenceReady: true
@@ -194,7 +194,7 @@ test('empty provider output cannot produce a successful task completion', async 
     env: enabledEnv(),
     requestWorkerCommand: commands.requestWorkerCommand,
     generateDraft: async args => {
-      await args.beforeGenerationRequest({ provider: 'openai', model: 'gpt-6.1-sol', attempt: 0 });
+      await args.beforeProviderRequest({ provider: 'openai', model: 'gpt-6.1-sol', phase: 'generation', estimatedTokens: 1500, attempt: 0 });
       return { output: '   ', providerRouting: { selectedProvider: 'openai', selectedModel: 'gpt-6.1-sol' } };
     },
     isPersistenceReady: true
