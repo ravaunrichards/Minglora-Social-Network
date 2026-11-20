@@ -3105,7 +3105,6 @@ async function route(req, res) {
             },
             checked_at: checkedAt
           });
-          aiProviderInferenceCooldown.set(accountId, Date.now());
           return json(res, 200, {
             verified: false,
             inference_verified: false,
