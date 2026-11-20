@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerHealthEvents: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -699,18 +699,21 @@
   async function loadAIProviderRegistry() {
     state.providerError = '';
     try {
-      const [accounts, models, assignments] = await Promise.all([
+      const [accounts, models, assignments, healthEvents] = await Promise.all([
         request('/provider-accounts'),
         request('/provider-models'),
-        request('/provider-assignments')
+        request('/provider-assignments'),
+        request('/provider-health-events').catch(() => ({ events: [] }))
       ]);
       state.providerAccounts = list(accounts.provider_accounts);
       state.providerModels = list(models.provider_models);
       state.providerAssignments = list(assignments.assignments);
+      state.providerHealthEvents = list(healthEvents.events);
     } catch (error) {
       state.providerAccounts = [];
       state.providerModels = [];
       state.providerAssignments = [];
+      state.providerHealthEvents = [];
       state.providerError = error.message || 'AI provider catalogue is unavailable.';
     }
   }
@@ -1116,12 +1119,42 @@
       label:model.provider_name + ' · ' + model.model_name + (model.model_version ? ' · ' + model.model_version : '')
     }));
     const accountRows = accounts.length
-      ? '<div class="ai-network-list">' + accounts.map(account =>
-          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
-          esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
-          pill(account.status || 'unconfigured') + ' ' + pill('health ' + (account.health_status || 'unknown')) +
-          '</div><small>Account metadata only · credentials not stored here</small></div></div></article>'
-        ).join('') + '</div>'
+      ? '<div class="ai-network-list">' + accounts.map(account => {
+          const accountId = String(account.provider_account_id || '');
+          const providerId = String(account.provider_identifier || '').toLowerCase();
+          const adapter = providerCatalogue.find(provider => provider.providerId === providerId);
+          const events = state.providerHealthEvents.filter(event => event.provider_account_id === accountId);
+          const latest = events[0] || null;
+          const checkedAt = account.last_checked_at ? Date.parse(account.last_checked_at) : NaN;
+          const freshHealthy = account.health_status === 'healthy' && Number.isFinite(checkedAt) && Date.now() - checkedAt <= 15 * 60 * 1000;
+          const canManage = account.status !== 'revoked' && account.status !== 'restricted';
+          const nextStatus = account.status === 'configured' ? 'disabled' : 'configured';
+          const probeControl = adapter?.healthProbeAvailable
+            ? '<div class="ai-network-row-actions">' +
+              '<form class="ai-network-inline-form" data-ai-form="provider-account-probe" data-provider-account-id="' + esc(accountId) + '"><button class="secondary" type="submit">Test connection</button></form>' +
+              '<form class="ai-network-inline-form" data-ai-form="provider-account-models" data-provider-account-id="' + esc(accountId) + '"><button class="secondary" type="submit">Discover models</button></form>' +
+              '</div>'
+            : '<small>Connection test and model discovery are not implemented for this provider yet.</small>';
+          const statusControl = !canManage
+            ? '<small>Account state is locked. Restricted/revoked accounts require separate administrator review.</small>'
+            : account.status === 'configured' || freshHealthy
+              ? '<form class="ai-network-inline-form" data-ai-form="provider-account-status" data-provider-account-id="' + esc(accountId) + '">' +
+                '<input type="hidden" name="status" value="' + nextStatus + '">' +
+                '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Reason for enabling or disabling"></label>' +
+                '<button class="secondary" type="submit">' + (nextStatus === 'disabled' ? 'Disable provider' : 'Enable provider') + '</button></form>'
+              : '<small>Enablement stays locked until a successful provider check is less than 15 minutes old.</small>';
+          const history = latest
+            ? '<p class="ai-network-note">Last check: ' + esc(latest.probe_status) + ' · ' + esc(date(latest.checked_at)) +
+              (latest.model_count === null ? '' : ' · ' + number(latest.model_count) + ' models') +
+              '<br>' + esc(latest.note || '') + '</p>'
+            : '<p class="ai-network-note">No persisted connection check has been recorded.</p>';
+          return '<article class="ai-network-list-row ai-network-provider-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
+            pill(account.status || 'unconfigured') + ' ' + pill('health ' + (account.health_status || 'unknown'),
+              account.health_status === 'healthy' ? 'success' : 'warning') +
+            '</div><small>Account metadata only · credentials never stored here</small>' + history +
+            probeControl + statusControl + '</div></div></article>';
+        }).join('') + '</div>'
       : empty('No provider account references registered.');
     const modelRows = models.length
       ? '<div class="ai-network-list">' + models.map(model =>
@@ -1242,7 +1275,7 @@
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
       '<div><h4>Model catalogue</h4>' + modelRows + modelForm + '</div></div>' +
       assignmentForm + bulkAssignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
-      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access.</p>',
+      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Provider accounts can be enabled only after a recent successful server-side connection test; disable actions and health history are recorded separately. Model assignments remain pending until a separate model execution and safety acceptance. A successful model-list probe does not verify text generation.</p>',
       'ai-network-span-2');
   }
 
@@ -2220,6 +2253,20 @@
     } else if (kind === 'provider-health-probe') {
       path = '/provider-health';
       payload.provider = 'openai';
+    } else if (kind === 'provider-account-probe') {
+      const accountId = form.dataset.providerAccountId || '';
+      if (!accountId) throw new Error('Provider account details are missing.');
+      path = '/provider-accounts/' + encodeURIComponent(accountId) + '/probe';
+    } else if (kind === 'provider-account-models') {
+      const accountId = form.dataset.providerAccountId || '';
+      if (!accountId) throw new Error('Provider account details are missing.');
+      path = '/provider-accounts/' + encodeURIComponent(accountId) + '/models/refresh';
+    } else if (kind === 'provider-account-status') {
+      const accountId = form.dataset.providerAccountId || '';
+      if (!accountId) throw new Error('Provider account details are missing.');
+      path = '/provider-accounts/' + encodeURIComponent(accountId) + '/status';
+      payload.status = value('status');
+      payload.reason = value('reason');
     } else if (kind === 'provider-assignment-status') {
       const assignmentId = form.dataset.assignmentId;
       if (!assignmentId) throw new Error('Provider assignment details are missing.');
