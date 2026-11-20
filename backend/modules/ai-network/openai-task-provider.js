@@ -151,10 +151,17 @@ export async function generateOpenAITaskOutput({
     throw providerError('moderation_blocked', 'The task input was flagged by content moderation.', 422, { retryable: false });
   }
 
+  // A task may use only the model reserved and quota-checked by its database route.
+  // Alternate models become eligible only after they have their own validated assignment/limit route.
   const routeConfig = resolveProviderRoute({
     primaryProvider: 'openai',
     primaryModel,
-    env: { ...env, MINGLORA_AI_PROVIDER: 'openai' }
+    env: {
+      ...env,
+      MINGLORA_AI_PROVIDER: 'openai',
+      MINGLORA_AI_FALLBACK_PROVIDER: '',
+      MINGLORA_AI_FALLBACK_MODEL: ''
+    }
   });
   const instructions = task.task_type === 'text.summarize'
     ? 'You are a summarization assistant for Minglora. Summarize only the supplied text, preserve material qualifications, do not invent facts, and do not take external actions.'
@@ -213,7 +220,7 @@ export async function generateOpenAITaskOutput({
   return {
     output: routed.result.output,
     provider: 'openai',
-    model: String(generation.model || routed.model).slice(0, 180),
+    model: String(routed.model).slice(0, 180),
     provider_request_id: routed.result.requestId,
     usage: {
       input_tokens: Number.isFinite(Number(usage.input_tokens)) ? Number(usage.input_tokens) : null,
