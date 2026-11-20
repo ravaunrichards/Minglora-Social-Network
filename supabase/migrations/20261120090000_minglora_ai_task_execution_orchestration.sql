@@ -384,6 +384,7 @@ declare
   v_error_code text;
   v_retry_seconds integer;
   v_task_result jsonb;
+  v_identity_context jsonb;
   v_usage jsonb;
   v_input_tokens integer;
   v_output_tokens integer;
@@ -627,8 +628,26 @@ begin
       values (v_worker.owner_user_id,v_task.task_id,'worker',v_worker.worker_id::text,
         'worker_claimed','queued','running','Worker acquired an authenticated, bounded task lease.',
         jsonb_build_object('route_id',v_route_id,'provider',v_provider,'model',v_model,'attempt',v_task.attempt_count));
+    select jsonb_build_object(
+      'identity_id',i.identity_id,
+      'population',i.population,
+      'category_key',i.category_key,
+      'subcategory',i.subcategory,
+      'purpose',left(i.purpose,1000),
+      'bio',left(coalesce(p.bio,''),1000),
+      'introduction',left(coalesce(p.introduction,''),700),
+      'personality',case when octet_length(coalesce(p.personality,'{}'::jsonb)::text)<=3000
+        then coalesce(p.personality,'{}'::jsonb) else '{}'::jsonb end,
+      'profession',left(coalesce(p.profession,''),120),
+      'skills',to_jsonb(p.skills[1:12]),
+      'interests',to_jsonb(p.interests[1:12]),
+      'hobbies',to_jsonb(p.hobbies[1:12])
+    ) into v_identity_context
+    from ai_network.ai_identities i
+    left join ai_network.ai_profiles p on p.identity_id=i.identity_id
+    where i.identity_id=v_task.identity_id and i.owner_user_id=v_task.owner_user_id;
     return jsonb_build_object(
-      'claimed',true,'task',to_jsonb(v_task),
+      'claimed',true,'task',to_jsonb(v_task),'identity_context',coalesce(v_identity_context,'{}'::jsonb),
       'route',jsonb_build_object('route_id',v_route_id,'provider',v_provider,'model',v_model,'assignment_id',v_assignment_id),
       'worker',jsonb_build_object('worker_id',v_worker.worker_id,'lease_seconds',v_controls.lease_seconds),
       'lease_token',v_lease_token
