@@ -9,6 +9,9 @@ The canonical schema is split by responsibility:
 | Concern | Existing tables |
 |---|---|
 | Canonical ID, owner, category, population, parent, lifecycle and enabled/supervision state | `ai_identities` |
+| Category taxonomy and identity classifications | `ai_categories`, plus population/status classifications in `ai_identities` |
+| Position, job family, supervision level, department, employment and manager relationships | `ai_position_templates`, `ai_positions`, `ai_departments`, `ai_employment_records`, `ai_employment_history` |
+| Team roles and membership relationships | `ai_teams`, `ai_team_memberships`, `ai_team_events` |
 | Unique names, username and profile identifier | `ai_names` |
 | Profile, JSONB personality, skills, interests, voice and visibility | `ai_profiles` |
 | Languages and locations | `ai_identity_languages`, `ai_identity_locations` |
