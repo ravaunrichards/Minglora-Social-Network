@@ -215,7 +215,8 @@ export async function generateOpenAITaskOutput({
       return {
         generation,
         output,
-        requestId: response.requestId || String(generation._request_id || '').slice(0, 180) || null
+        requestId: response.requestId || String(generation._request_id || '').slice(0, 180) || null,
+        usage: generation.usage || {}
       };
     }
   });
