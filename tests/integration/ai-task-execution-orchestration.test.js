@@ -249,6 +249,9 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
       "delete from ai_network.ai_identity_permissions where identity_id=$1::uuid and effect='deny'",
       [IDENTITY_A]
     );
+    await adminCommand('cancel_task',{
+      task_id:deniedTaskId,reason:'Permission-denial acceptance test completed.'
+    });
 
     const successTaskId=await insertTask({title:'Successful text generation task'});
     const successClaim=await workerCommand('claim_next_task');
@@ -292,6 +295,9 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
     await client.query(
       "update ai_network.ai_task_provider_limits set max_tasks_per_minute=60 where provider_name='openai' and model_identifier='*'"
     );
+    await adminCommand('cancel_task',{
+      task_id:rateLimitedTaskId,reason:'Provider quota acceptance test completed.'
+    });
 
     const grantId=randomUUID();
     await client.query(\`
@@ -394,8 +400,8 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
     const counts=Object.fromEntries(finalCounts.rows.map(row=>[row.status,row.count]));
     assert.equal(counts.succeeded,2);
     assert.equal(counts.failed,1);
-    assert.equal(counts.cancelled,2);
-    assert.equal(counts.queued,2); // explicit deny + expired lease recovery
+    assert.equal(counts.cancelled,4);
+    assert.equal(counts.queued,1); // the expired-lease task is delayed for safe recovery
     assert.equal(counts.running || 0,0);
   } finally {
     await client.query('reset role').catch(() => {});
