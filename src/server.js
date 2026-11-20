@@ -49,7 +49,7 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, getCreatorLeagueLeaderboard, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, useCreatorLeaguePowerupCard, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
-import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotConfiguration, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
@@ -1846,6 +1846,167 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const syncAIBotIdentityProfile = async bot => {
+        if (!bot?.identityId || !aiIdentityIdPattern.test(String(bot.identityId))) {
+          throw Object.assign(new Error('This Bot Lab record is not linked to a verified relational AI identity.'), { status: 409 });
+        }
+        const current = await runAIIdentityCommand('get', { identity_id: bot.identityId });
+        const identity = current?.identity;
+        if (!identity || String(identity.identity_id) !== String(bot.identityId)) {
+          throw Object.assign(new Error('The linked Minglora AI identity could not be verified for this owner.'), { status: 409 });
+        }
+        const name = current.name || {};
+        const profile = current.profile || {};
+        const languages = (Array.isArray(current.languages) && current.languages.length
+          ? current.languages
+          : (Array.isArray(bot.languages) ? bot.languages : ['en']))
+          .map(item => typeof item === 'string' ? {
+            language_tag: item, language_name: item, proficiency: 'conversational',
+            is_primary: item === bot.primaryLanguage
+          } : {
+            language_tag: item.language_tag,
+            language_name: item.language_name || item.language_tag,
+            dialect: item.dialect || '',
+            proficiency: item.proficiency || 'conversational',
+            is_primary: Boolean(item.is_primary)
+          });
+        const locations = (Array.isArray(current.locations) ? current.locations : []).map(item => ({
+          location_type: item.location_type,
+          country_code: item.country_code || '',
+          state_province: item.state_province || '',
+          parish_county: item.parish_county || '',
+          district: item.district || '',
+          city: item.city || '',
+          town: item.town || '',
+          time_zone: item.time_zone || profile.time_zone || 'UTC',
+          is_public: Boolean(item.is_public)
+        }));
+        const personality = profile.personality && typeof profile.personality === 'object' && !Array.isArray(profile.personality)
+          ? profile.personality : {};
+        const syncedProfile = {
+          bio: bot.purpose,
+          introduction: bot.purpose,
+          gender: profile.gender || 'prefer_not_to_say',
+          gender_presentation: profile.gender_presentation || '',
+          nationality: profile.nationality || '',
+          country_of_origin: profile.country_of_origin || '',
+          current_country: profile.current_country || '',
+          state_province: profile.state_province || '',
+          parish_county: profile.parish_county || '',
+          district: profile.district || '',
+          city: profile.city || '',
+          town: profile.town || '',
+          time_zone: profile.time_zone || 'UTC',
+          personality: {
+            ...personality,
+            tone: bot.tone,
+            traits: [...bot.traits],
+            expertise: bot.expertise,
+            role: bot.role,
+            capabilities: [...bot.capabilities],
+            specialized_capabilities: [...bot.specializedCapabilities],
+            behavior_instructions: bot.behaviorInstructions,
+            primary_language: bot.primaryLanguage,
+            configuration_version: bot.configurationVersion
+          },
+          interests: [...bot.traits],
+          hobbies: Array.isArray(profile.hobbies) ? profile.hobbies : [],
+          education: Array.isArray(profile.education) ? profile.education : [],
+          qualifications: Array.isArray(profile.qualifications) ? profile.qualifications : [],
+          profession: bot.expertise,
+          skills: [...new Set([...bot.capabilities, ...bot.specializedCapabilities])],
+          voice_preferences: profile.voice_preferences && typeof profile.voice_preferences === 'object'
+            ? profile.voice_preferences : {},
+          profile_visibility: profile.profile_visibility || 'private'
+        };
+        const update = await requestSupabaseState('ai_identity_profile_update', {
+          actorUserId: user.id,
+          payload: {
+            identity_id: bot.identityId,
+            name: {
+              first_name: name.first_name || bot.firstName || String(bot.name || 'AI').split(/\\s+/)[0],
+              middle_name: name.middle_name || bot.middleName || '',
+              last_name: name.last_name || bot.lastName || 'Assistant',
+              display_name: bot.name,
+              username: name.username || ('ai_' + String(bot.identityId).replaceAll('-', '').slice(0, 27))
+            },
+            profile: syncedProfile,
+            languages,
+            locations
+          }
+        });
+        if (update?.skipped) {
+          throw Object.assign(new Error('AI personality changes require the private Minglora Supabase identity gateway.'), { status: 503 });
+        }
+        return update?.result || null;
+      };
+
+      const syncAIBotIdentityStatus = async (bot, requestedStatus) => {
+        const current = await runAIIdentityCommand('get', { identity_id: bot.identityId });
+        let identityStatus = String(current?.identity?.status || '').trim().toLowerCase();
+        if (!identityStatus) throw Object.assign(new Error('The linked AI identity has no readable lifecycle status.'), { status: 409 });
+        const setStatus = async nextStatus => {
+          if (identityStatus === nextStatus) return;
+          const response = await requestSupabaseState('ai_identity_status_command', {
+            actorUserId: user.id,
+            aiAction: 'set_status',
+            payload: {
+              identity_id: bot.identityId,
+              status: nextStatus,
+              reason: 'Owner-managed Bot Personality Laboratory lifecycle update.'
+            }
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI identity lifecycle synchronization requires the private Minglora Supabase gateway.'), {
+              status: 503, aiIdentityStatus: identityStatus
+            });
+          }
+          identityStatus = nextStatus;
+        };
+        const moveToArchived = async () => {
+          if (identityStatus === 'retired' || identityStatus === 'archived') return;
+          if (identityStatus === 'proposed') await setStatus('created');
+          if (['created','under_review','approved'].includes(identityStatus)) await setStatus('suspended');
+          if (['active','restricted','suspended'].includes(identityStatus)) await setStatus('archived');
+          if (identityStatus !== 'archived' && identityStatus !== 'retired') {
+            throw Object.assign(new Error('The AI identity cannot be archived from its current lifecycle state.'), {
+              status: 409, aiIdentityStatus: identityStatus
+            });
+          }
+        };
+        try {
+          if (requestedStatus === 'active') {
+            if (identityStatus === 'active') return identityStatus;
+            if (!['approved','restricted','suspended'].includes(identityStatus)) {
+              throw Object.assign(new Error('Approve this AI identity in the Identity Registry before activating it.'), {
+                status: 409, aiIdentityStatus: identityStatus
+              });
+            }
+            await setStatus('active');
+          } else if (requestedStatus === 'paused') {
+            if (identityStatus === 'suspended') return identityStatus;
+            if (identityStatus === 'proposed') await setStatus('created');
+            if (['created','under_review','approved','active','restricted'].includes(identityStatus)) await setStatus('suspended');
+            if (identityStatus !== 'suspended') {
+              throw Object.assign(new Error('This AI identity cannot be suspended from its current lifecycle state.'), {
+                status: 409, aiIdentityStatus: identityStatus
+              });
+            }
+          } else if (requestedStatus === 'archived') {
+            await moveToArchived();
+          } else if (requestedStatus === 'retired') {
+            await moveToArchived();
+            await setStatus('retired');
+          } else {
+            throw Object.assign(new Error('Choose a supported AI identity lifecycle action.'), { status: 400, aiIdentityStatus: identityStatus });
+          }
+          return identityStatus;
+        } catch (error) {
+          if (error && typeof error === 'object') error.aiIdentityStatus = identityStatus;
+          throw error;
+        }
+      };
+
       const runAIIdentityBatchCommand = async (batchAction, payload = {}) => {
         if (!isSupabasePersistence()) {
           throw Object.assign(new Error('Durable AI identity batches require Minglora Supabase persistence.'), { status: 503 });
@@ -3243,12 +3404,16 @@ async function route(req, res) {
               profile_visibility: 'private',
               profession: bot.expertise,
               interests: bot.traits,
-              skills: bot.capabilities,
+              skills: [...new Set([...bot.capabilities, ...bot.specializedCapabilities])],
               personality: {
                 tone: bot.tone,
                 traits: bot.traits,
                 expertise: bot.expertise,
+                role: bot.role,
                 capabilities: bot.capabilities,
+                specialized_capabilities: bot.specializedCapabilities,
+                behavior_instructions: bot.behaviorInstructions,
+                configuration_version: bot.configurationVersion,
                 primary_language: bot.primaryLanguage
               },
               extra_profile_data: {
@@ -3303,6 +3468,29 @@ async function route(req, res) {
           throw error;
         }
       }
+      if (method === 'PATCH' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'configuration') {
+        const input = await body(req, 16000);
+        const bot = (db.aiBots || []).find(item => item.ownerId === user.id && item.id === parts[1]);
+        if (!bot) throw Object.assign(new Error('AI bot not found in this Minglora owner workspace.'), { status: 404 });
+        const before = structuredClone(bot);
+        const updatedBot = updateAIBotConfiguration(db, user.id, bot.id, input);
+        let profileSynced = false;
+        try {
+          const identity = await syncAIBotIdentityProfile(updatedBot);
+          profileSynced = true;
+          await saveStore();
+          return json(res, 200, { bot: updatedBot, identity });
+        } catch (error) {
+          Object.assign(bot, before);
+          if (profileSynced) {
+            try {
+              await syncAIBotIdentityProfile(bot);
+              await saveStore();
+            } catch { /* Keep the original request failure; retry can reconcile both stores. */ }
+          }
+          throw error;
+        }
+      }
       if (method === 'GET' && sub === 'schedules') {
         const result = await runAIScheduleCommand('list_schedules');
         return json(res, 200, result || { schedules: [] });
@@ -3353,10 +3541,36 @@ async function route(req, res) {
       }
       if (method === 'PATCH' && parts[0] === 'bots' && parts[2] === 'status' && parts.length === 3) {
         const input = await body(req, 4000);
+        const bot = (db.aiBots || []).find(item => item.ownerId === user.id && item.id === parts[1]);
+        if (!bot) throw Object.assign(new Error('AI bot not found in this Minglora owner workspace.'), { status: 404 });
+        if (!bot.identityId || !aiIdentityIdPattern.test(String(bot.identityId))) {
+          throw Object.assign(new Error('Bot lifecycle changes require a verified relational AI identity.'), { status: 409 });
+        }
         if (input.status === 'active') await verifyManualProviderAccess();
-        const bot = updateAIBotStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
-        await saveStore();
-        return json(res, 200, { bot });
+        const before = structuredClone(bot);
+        const requestedStatus = String(input.status || '').trim().toLowerCase();
+        try {
+          if (requestedStatus === 'retired' && bot.status !== 'archived') {
+            updateAIBotStatus(db, user.id, bot.id, 'archived', { providerConfigured: providerReady });
+          }
+          const updatedBot = updateAIBotStatus(db, user.id, bot.id, requestedStatus, { providerConfigured: providerReady });
+          const identityStatus = await syncAIBotIdentityStatus(updatedBot, requestedStatus);
+          await saveStore();
+          return json(res, 200, { bot: updatedBot, identityStatus });
+        } catch (error) {
+          Object.assign(bot, before);
+          const actualIdentityStatus = String(error?.aiIdentityStatus || '').toLowerCase();
+          const localStatus = actualIdentityStatus === 'active' ? 'active'
+            : actualIdentityStatus === 'suspended' ? 'paused'
+              : actualIdentityStatus === 'archived' ? 'archived'
+                : actualIdentityStatus === 'retired' ? 'retired' : '';
+          if (localStatus && ['active','paused','archived','retired'].includes(localStatus)) {
+            bot.status = localStatus;
+            bot.updatedAt = new Date().toISOString();
+          }
+          try { await saveStore(); } catch { /* The next authenticated retry will reconcile the same identity. */ }
+          throw error;
+        }
       }
       if (method === 'PATCH' && parts[0] === 'schedules' && parts[2] === 'status' && parts.length === 3) {
         const input = await body(req, 4000);
