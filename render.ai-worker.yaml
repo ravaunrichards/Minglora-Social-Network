@@ -1,0 +1,23 @@
+services:
+  - type: worker
+    name: minglora-ai-execution-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm ci
+    startCommand: node backend/workers/ai-execution/worker.mjs
+    autoDeploy: false
+    envVars:
+      - key: MINGLORA_RUNTIME_URL
+        sync: false
+      - key: MINGLORA_AI_WORKER_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MINGLORA_AI_TASK_TIMEOUT_MS
+        value: "45000"
+      - key: MINGLORA_AI_WORKER_POLL_MS
+        value: "2500"
+      - key: OPENAI_MAX_REQUESTS_PER_MINUTE
+        value: "30"
+      - key: OPENAI_MAX_TOKENS_PER_MINUTE
+        value: "30000"
