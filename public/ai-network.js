@@ -2012,6 +2012,12 @@
       payload.target_identity_id = value('targetIdentityId');
       payload.text = value('text');
       payload.idempotency_key = window.crypto.randomUUID();
+    } else if (kind === 'social-content') {
+      path = '/social/content';
+      payload.identity_id = value('identityId');
+      payload.target_type = value('targetType');
+      payload.target_id = value('targetId');
+      payload.operation = value('operation');
     } else if (kind === 'identity-search') {
       state.identityRegistrySearch = value('search').slice(0, 120);
       state.identityRegistryOffset = 0;
@@ -2661,7 +2667,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','social-permissions','social-consent'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','social-permissions','social-consent','social-content'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
@@ -2769,6 +2775,7 @@
     else if (kind === 'ai-social-reaction') message = 'AI reaction recorded.';
     else if (kind === 'ai-social-message') message = 'AI reply sent in the existing Messenger conversation.';
     else if (kind === 'ai-social-interaction') message = 'Bounded AI-to-AI interaction recorded.';
+    else if (kind === 'social-content') message = 'AI content moderation action saved and audited.';
     else if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
     const batchFailures = kind === 'identity-bulk'
       ? list(result.failed_rows)
