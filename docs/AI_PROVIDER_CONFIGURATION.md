@@ -76,6 +76,8 @@ POST /api/ai-network/provider-health accepts only:
 
 It never accepts an API key, token, password or secret reference. The server selects the credential from its private environment and calls the implemented provider adapter. OpenAI, Anthropic and Google Gemini can therefore be checked through the same route. A successful model-list request proves current authentication/model-list access; it does not enable inference.
 
+Persisting a health event to an account requires an owner-scoped **managed** account reference because provider checks use the Minglora platform's private environment credentials. User-managed account references are not connected to separate secret values yet; they can still be recorded as metadata, but cannot be reported as verified by the platform key. A disabled managed account may be probed and, after a successful fresh check, explicitly re-enabled. Revoked accounts cannot be probed or reactivated.
+
 When a provider account ID is supplied, the sanitized health result is persisted to ai_network.ai_provider_health_events, the account's health_status and last_checked_at are updated, and linked model assignments receive the same health state. The persisted record contains status, model identifier, response time, sanitized error code/reason and non-secret metadata only.
 
 ### Provider enable / disable
