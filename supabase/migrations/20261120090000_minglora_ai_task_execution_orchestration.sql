@@ -318,21 +318,28 @@ begin
       return jsonb_build_object('claimed',false,'reason','runtime_paused_or_disabled');
     end if;
 
-    with expired as (
+    with stale as (
+      select q.task_id,q.owner_user_id,q.active_execution_id
+      from ai_network.ai_task_queue q
+      where q.owner_user_id=v_worker.owner_user_id and q.status='running' and q.lease_expires_at<=now()
+      for update skip locked
+    ), marked as (
+      update ai_network.ai_task_execution_attempts a
+      set execution_status='timed_out',finished_at=now(),error_code='worker_lease_expired',
+          failure_reason='Worker lease expired before completion.'
+      from stale s
+      where a.execution_id=s.active_execution_id
+      returning a.execution_id
+    ), expired as (
       update ai_network.ai_task_queue q
       set status=case when q.attempt_count>=q.max_attempts then 'failed' else 'queued' end,
           worker_id=null,lease_token=null,lease_expires_at=null,active_execution_id=null,
           finished_at=case when q.attempt_count>=q.max_attempts then now() else null end,
           failure_reason='Worker lease expired before completion.',updated_at=now()
-      where q.owner_user_id=v_worker.owner_user_id and q.status='running' and q.lease_expires_at<=now()
-      returning q.task_id,q.owner_user_id,q.active_execution_id,q.status,q.worker_id
-    ), marked as (
-      update ai_network.ai_task_execution_attempts a
-      set execution_status='timed_out',finished_at=now(),error_code='worker_lease_expired',
-          failure_reason='Worker lease expired before completion.'
-      from expired e
-      where a.execution_id=e.active_execution_id
-      returning a.task_id
+      from stale s
+      where q.task_id=s.task_id
+        and (s.active_execution_id is null or exists(select 1 from marked m where m.execution_id=s.active_execution_id))
+      returning q.task_id,q.owner_user_id,q.status
     )
     insert into ai_network.ai_task_events(owner_user_id,task_id,actor_type,event_type,previous_status,new_status,reason)
     select e.owner_user_id,e.task_id,'system','task_execution_timed_out','running',e.status,
@@ -436,7 +443,7 @@ begin
       and pa.status='configured' and pa.health_status='healthy'
       and m.is_active=true and m.text_capability=true
       and (cardinality(a.assigned_capabilities)=0 or a.assigned_capabilities && array['text','text_generation']::text[])
-      and lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%'
+      and (lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%')
     order by a.routing_priority asc,a.assigned_at asc limit 1;
     if v_assignment_id is null or v_provider<>'openai' then
       return jsonb_build_object('claimed',false,'reason','provider_route_unavailable');
