@@ -216,6 +216,80 @@ begin
     return v_result;
   end if;
 
+  if v_action = 'reserve_provider_inference' then
+    if coalesce(v_payload->>'provider_account_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
+      raise exception using errcode = '22023', message = 'A valid provider account ID is required.';
+    end if;
+    v_provider_account_id := (v_payload->>'provider_account_id')::uuid;
+    v_provider_name := lower(trim(coalesce(v_payload->>'provider_name','')));
+    v_model_identifier := left(trim(coalesce(v_payload->>'model_identifier','')),200);
+    if length(v_model_identifier)<1 then
+      raise exception using errcode = '22023', message = 'A selected provider model is required.';
+    end if;
+
+    select a.provider_name,a.account_type,a.status
+      into v_account_provider_name,v_account_type,v_old_status
+    from ai_network.ai_provider_accounts a
+    where a.provider_account_id=v_provider_account_id and a.owner_user_id=p_actor_user_id
+    for update;
+    if v_account_provider_name is null then
+      raise exception using errcode = 'P0002', message = 'Provider account not found for this owner.';
+    end if;
+    if v_account_type<>'managed' then
+      raise exception using errcode = '42501', message = 'Inference verification requires a managed provider account with platform credentials.';
+    end if;
+    if v_old_status='revoked' then
+      raise exception using errcode = '22023', message = 'A revoked provider account cannot be inference-tested or reactivated.';
+    end if;
+    if v_provider_name<>v_account_provider_name then
+      raise exception using errcode = '22023', message = 'Provider name does not match the selected provider account.';
+    end if;
+
+    select h.checked_at into v_last_checked_at
+    from ai_network.ai_provider_health_events h
+    where h.provider_account_id=v_provider_account_id
+      and h.metadata->>'inference_verification_attempt'='true'
+    order by h.checked_at desc
+    limit 1;
+    if v_last_checked_at is not null and v_last_checked_at>now()-interval '30 seconds' then
+      raise exception using errcode = '22023', message = 'An inference verification was just attempted for this account. Retry after the 30-second safety interval.';
+    end if;
+
+    v_checked_at := now();
+    v_health_status := 'unknown';
+    v_metadata := jsonb_build_object(
+      'inference_verification_attempt',true,
+      'inference_verified',false,
+      'in_progress',true,
+      'verification_type','fixed_prompt'
+    );
+    insert into ai_network.ai_provider_health_events(
+      provider_account_id,actor_user_id,provider_name,health_status,model_identifier,
+      response_time_ms,error_code,reason,metadata,checked_at
+    ) values (
+      v_provider_account_id,p_actor_user_id,v_account_provider_name,v_health_status,
+      v_model_identifier,0,'',
+      'Bounded inference verification started. Generated output is not retained.',
+      v_metadata,v_checked_at
+    ) returning event_id into v_event_id;
+
+    update ai_network.ai_provider_accounts a
+    set health_status='unknown',last_checked_at=v_checked_at,updated_at=now()
+    where a.provider_account_id=v_provider_account_id and a.owner_user_id=p_actor_user_id;
+    update ai_network.ai_provider_assignments a
+    set provider_health_status='unknown',last_checked_at=v_checked_at,updated_at=now()
+    where a.provider_account_id=v_provider_account_id;
+
+    select jsonb_build_object(
+      'event_id',h.event_id,'provider_account_id',h.provider_account_id,
+      'provider_name',h.provider_name,'health_status',h.health_status,
+      'model_identifier',h.model_identifier,'checked_at',h.checked_at,
+      'metadata',h.metadata
+    ) into v_result
+    from ai_network.ai_provider_health_events h where h.event_id=v_event_id;
+    return jsonb_build_object('reservation',v_result);
+  end if;
+
   if v_action = 'record_provider_health' then
     if coalesce(v_payload->>'provider_account_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
       raise exception using errcode = '22023', message = 'A valid provider account ID is required.';
