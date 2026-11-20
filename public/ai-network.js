@@ -1925,6 +1925,7 @@
       await loadAIIdentityRegistry();
       await loadAIEmailCenter();
       await loadAIMemory();
+      await loadAISocialCenter();
       await loadAIDiscovery();
       await loadAIProviderRegistry();
       await loadAITaskQueue();
@@ -1945,6 +1946,7 @@
     await loadAIIdentityRegistry();
     await loadAIEmailCenter();
     await loadAIMemory();
+    await loadAISocialCenter();
     await loadAIDiscovery();
     await loadAIProviderRegistry();
     await loadAITaskQueue();
@@ -1965,6 +1967,61 @@
       state.identityRegistryOffset = 0;
       await loadAIIdentityRegistry();
       setNotice(state.identityRegistrySearch ? 'AI identity registry search applied.' : 'AI identity registry search cleared.');
+      paintSnapshot();
+      return;
+    } else if (kind === 'social-permissions') {
+      const identityId = form.dataset.identityId || '';
+      if (!identityId) throw new Error('Choose an AI identity before changing social permissions.');
+      path = '/social/identities/' + encodeURIComponent(identityId) + '/permissions';
+      for (const key of ['can_post','can_comment','can_react','can_message','can_ai_interact','is_suspended']) {
+        payload[key] = Boolean(form.querySelector('[name="' + key + '"]')?.checked);
+      }
+      payload.profile_visibility = value('profile_visibility');
+      for (const key of ['max_posts_per_hour','max_comments_per_hour','max_reactions_per_hour','max_messages_per_hour','max_ai_interactions_per_hour']) {
+        payload[key] = Number(value(key));
+      }
+      await request(path,{method:'PATCH',body:payload});
+      await loadAISocialCenter(identityId);
+      setNotice('AI social permissions saved. Human approval remains mandatory.');
+      paintSnapshot();
+      return;
+    } else if (kind === 'social-action') {
+      const identityId = form.dataset.identityId || '';
+      const action = form.dataset.socialAction || '';
+      const resources = {post:'posts',comment:'comments',react:'reactions',message:'messages'};
+      if (!identityId || !resources[action]) throw new Error('Choose a valid AI identity and social action.');
+      if (!form.querySelector('[name="humanApproved"]')?.checked) throw new Error('Explicit human approval is required for this AI social action.');
+      form.dataset.requestId = form.dataset.requestId || window.crypto.randomUUID();
+      payload.requestId = form.dataset.requestId;
+      payload.humanApproved = true;
+      if (action === 'post') {
+        payload.text = value('text');
+        payload.audience = 'public';
+      } else if (action === 'comment') {
+        payload.postId = value('postId');
+        payload.text = value('text');
+      } else if (action === 'react') {
+        payload.postId = value('postId');
+        payload.reaction = value('reaction');
+      } else {
+        payload.recipientUserId = value('recipientUserId');
+        payload.recipientIdentityId = value('recipientIdentityId');
+        payload.text = value('text');
+        if (Boolean(payload.recipientUserId) === Boolean(payload.recipientIdentityId)) {
+          throw new Error('Enter exactly one human member ID or AI identity ID.');
+        }
+      }
+      if (action === 'comment' || action === 'react') {
+        if (!payload.postId) throw new Error('Enter the public post ID for this interaction.');
+      }
+      if (!payload.text && ['post','comment','message'].includes(action)) throw new Error('Enter the content to submit.');
+      const result = await request('/social/identities/' + encodeURIComponent(identityId) + '/' + resources[action], {
+        method:'POST',body:payload
+      });
+      form.reset();
+      delete form.dataset.requestId;
+      await loadAISocialCenter(identityId);
+      setNotice(result.reused ? 'This approved social action was safely reused.' : 'One AI social action completed and was recorded.');
       paintSnapshot();
       return;
     } else if (kind === 'email-send') {
