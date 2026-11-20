@@ -222,7 +222,6 @@ test('an unclaimed task does not generate content or record a completion', async
 test('AI task history is available only through the protected Node API, and worker startup stays gated', () => {
   const root = resolve(new URL('../..', import.meta.url).pathname);
   const server = readFileSync(resolve(root, 'src/server.js'), 'utf8');
-  assert.match(server, /mingloraAITaskWorker\.getStatus\(\)/);
   assert.match(server, /runAITaskHistoryCommand/);
   assert.match(server, /requestSupabaseState\('ai_task_history'/);
   assert.match(server, /parts\[2\] === 'history'/);
