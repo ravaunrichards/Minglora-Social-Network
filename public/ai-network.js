@@ -1314,7 +1314,7 @@
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
       '<div><h4>Model catalogue</h4>' + modelSyncForm + modelSyncResult + modelRows + modelForm + inferenceVerificationForm + inferenceVerificationResult + '</div></div>' +
       assignmentForm + bulkAssignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
-      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Managed account enablement requires a fresh successful bounded inference verification in addition to provider health; model-list visibility alone is insufficient. New identity assignments remain pending and autonomous execution remains disabled.</p>',
+      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Managed account enablement requires a fresh successful bounded inference verification in addition to provider health; model-list visibility alone is insufficient. New identity assignments remain pending and autonomous execution remains disabled. Assigned bot chat uses OpenAI Moderation for both incoming messages and generated replies; OPENAI_API_KEY is therefore required even when Anthropic or Gemini performs generation. If moderation is unavailable or flags content, generation is blocked and the reply is not saved.</p>',
       'ai-network-span-2');
   }
 
