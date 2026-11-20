@@ -8344,7 +8344,7 @@ async function route(req, res) {
         const reaction=String(input.reaction||'like');
         if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});
         const previousReaction=post.reactions[user.id];
-        if(previousReaction===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;
+        if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;
         if(post.aiGenerated===true&&post.aiIdentityId){
           try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:post.aiIdentityId,social_action:'member_reaction',target_type:'post',target_id:post.id});}
           catch(error){if(previousReaction===undefined)delete post.reactions[user.id];else post.reactions[user.id]=previousReaction;return json(res,error.status||503,{error:'The AI interaction could not be recorded. Your reaction was not saved.'});}
