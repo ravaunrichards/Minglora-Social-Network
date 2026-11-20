@@ -6,19 +6,19 @@ Phase 6 adds a separate worker principal and an isolated Supabase Edge Function.
 
 Execution remains fail-closed. The database runtime row defaults to global_paused=true, execution_enabled=false, and max_concurrent_workers=0. The worker process defaults to disabled and will not start unless MINGLORA_AI_WORKER_ENABLED=true, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY), and a registered MINGLORA_AI_WORKER_TOKEN are provided in the private server environment.
 
-## Supported worker adapter
+## Supported worker adapters
 
 The first background adapter supports only:
 - text.generate and text.summarize
 - read_only and content action classes
-- A healthy, configured OpenAI account/model assignment
+- A healthy, configured OpenAI or Google Gemini account/model assignment
 - Identity capability text_generation enabled
 - An unexpired identity permission allowing task.execute, ai.task.execute, or the exact task type (and no matching deny permission)
 - A valid active delegation grant for delegated tasks
 
 The adapter performs input and output moderation with omni-moderation-latest, calls the Responses API with store=false and tools=[], uses request timeouts, and discards output when either moderation step is not confirmed. External actions, publishing, messaging, financial, security, moderation, email, voice, image, and arbitrary provider tools are not part of this worker's execution authority.
 
-The worker uses only the exact database-reserved provider/model route. It does not silently route to a different model. Alternate models need their own verified assignment and provider quota route before they can be considered for task failover.
+The worker uses only the exact database-reserved provider/model route. It does not silently route to a different model. Alternate models need their own verified assignment and provider quota route before they can be considered for task failover. Worker principals are restricted to `openai` and `google_gemini` provider routes; unsupported providers fail closed until a matching adapter and tests exist.
 
 ## Task lifecycle and operational limits
 
@@ -68,7 +68,7 @@ SUPABASE_URL, OPENAI_API_KEY, OPENAI_DEFAULT_MODEL, the existing Supabase runtim
 2. Deploy the worker endpoint with its custom bearer authentication enabled and Supabase JWT verification disabled: `supabase functions deploy minglora-ai-worker --no-verify-jwt`. Do not disable JWT verification for other functions.
 3. Deploy the updated runtime-state function: `supabase functions deploy minglora-runtime-state`.
 4. Restore the Render backend service and confirm it is healthy before adding any worker environment variables.
-5. Configure and live-probe OpenAI, then create a healthy provider account/model assignment.
+5. Configure the selected provider secret (`OPENAI_API_KEY` or `GEMINI_API_KEY`), run the matching read-only model-access probe, then create a healthy provider account/model assignment. For Gemini, also set `MINGLORA_AI_PROVIDER=google_gemini` and `GEMINI_DEFAULT_MODEL`.
 6. Enable text_generation and grant a narrowly scoped task.execute permission to a test identity. For AI-to-AI delegation, use a valid active delegation grant that matches the task type/action class/budget.
 7. Register a worker through the protected API, store the returned token as MINGLORA_AI_WORKER_TOKEN, start with the worker still disabled at the database runtime-control row, and confirm its last_seen_at heartbeat.
 8. Only after all prior checks pass should an administrator unpause execution and choose a small concurrency ceiling. Start with one worker/task.
@@ -81,4 +81,4 @@ The Phase 6 implementation is staged in draft PR #547 and is not merged or deplo
 - Repository CI test job: dependency audit, syntax checks and automated test suite passed.
 - Dedicated PostgreSQL 17 Phase 6 acceptance: 1 test passed, 0 failed. It executed the migration and exercised authenticated worker registration, paused-by-default activation, identity permission denial, assignment/model routing, personality context, concurrency, heartbeat, provider rate-limit rejection, valid AI-to-AI delegation, success/history, retry exhaustion, cancellation, and timeout/lease recovery.
 
-Production was not activated or represented as accepted: the Render backend was suspended for billing, the production provider connection/assignment was not configured and healthy, runtime controls remained paused with concurrency zero, and there were no enabled identity capabilities/permissions or registered workers. Therefore no genuine end-to-end request to a configured live model provider was possible during this implementation. After the production prerequisites are restored, deploy the migration and functions, configure and probe the desired provider (including Gemini if selected), register a worker, then run live provider success/failure acceptance before enabling normal task execution.
+Production was not activated or represented as accepted: the Render backend was suspended for billing, the production Gemini/OpenAI provider connection and assignment was not configured and healthy, runtime controls remained paused with concurrency zero, and there were no enabled identity capabilities/permissions or registered workers. Therefore no genuine end-to-end request to a configured live model provider was possible during this implementation. After the production prerequisites are restored, deploy the migration and functions, configure and probe OpenAI or Gemini (both adapters are included), register a worker, then run live provider success/failure acceptance before enabling normal task execution.
