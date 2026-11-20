@@ -81,7 +81,7 @@ test('a lost lease aborts provider execution and does not report success', async
       if (action === 'fail_task') return { completed: false, status: 'failed' };
       throw new Error('Unexpected worker action: ' + action);
     },
-    executeTask: async (_task, { signal }) => new Promise((resolve, reject) => {
+    executeTask: async ({ signal }) => new Promise((resolve, reject) => {
       if (signal.aborted) return reject(signal.reason);
       signal.addEventListener('abort', () => reject(signal.reason || new Error('aborted')), { once: true });
     })
@@ -103,7 +103,13 @@ test('task completion is not reported when the database refuses completion', asy
       if (action === 'fail_task') return { completed: false, status: 'failed' };
       throw new Error('Unexpected worker action: ' + action);
     },
-    executeTask: async () => ({ output: 'A result that the database did not accept.' })
+    executeTask: async () => ({
+      output: 'A result that the database did not accept.',
+      provider: 'openai',
+      model: 'gpt-test',
+      moderation: { input_flagged: false, output_flagged: false },
+      external_action_taken: false
+    })
   });
 
   assert.notEqual(result.status, 'succeeded');
