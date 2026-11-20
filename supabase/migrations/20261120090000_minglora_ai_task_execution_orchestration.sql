@@ -132,6 +132,14 @@ begin
     raise exception using errcode='22023',message='AI worker command payload must be an object.';
   end if;
 
+  if v_action in ('register_worker','revoke_worker','set_runtime_controls')
+     and not exists (
+       select 1 from public.minglora_platform_staff s
+       where s.user_id=p_actor_user_id and s.active=true and s.role in ('owner','admin')
+     ) then
+    raise exception using errcode='42501',message='Only an active platform owner or administrator can manage worker credentials or runtime activation.';
+  end if;
+
   if v_action='set_runtime_controls' then
     select * into v_runtime from ai_network.ai_task_runtime_controls c
       where c.control_key='primary' for update;
@@ -309,6 +317,24 @@ begin
       raise exception using errcode='P0002',message='Task was not found for this administrator.';
     end if;
     select jsonb_build_object(
+      'task',(select jsonb_build_object(
+        'task_id',q.task_id,
+        'status',q.status,
+        'task_type',q.task_type,
+        'action_class',q.action_class,
+        'task_result',q.task_result,
+        'failure_reason',q.failure_reason,
+        'attempt_count',q.attempt_count,
+        'max_attempts',q.max_attempts,
+        'selected_provider',q.selected_provider,
+        'selected_model',q.selected_model,
+        'selected_assignment_id',q.selected_assignment_id,
+        'execution_route_id',q.execution_route_id,
+        'scheduled_for',q.scheduled_for,
+        'started_at',q.started_at,
+        'finished_at',q.finished_at,
+        'updated_at',q.updated_at
+      ) from ai_network.ai_task_queue q where q.task_id=v_task_id and q.owner_user_id=p_actor_user_id),
       'events',coalesce((select jsonb_agg(to_jsonb(e) order by e.occurred_at asc)
         from ai_network.ai_task_events e where e.task_id=v_task_id and e.owner_user_id=p_actor_user_id),'[]'::jsonb),
       'executions',coalesce((select jsonb_agg(to_jsonb(a) order by a.attempt_number asc)
