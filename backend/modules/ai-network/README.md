@@ -126,3 +126,8 @@ The email API is restricted by the existing designated-owner/MFA gate. It uses t
 Routes: `GET /email/status`, `GET /identities/:id/email`, `POST /identities/:id/email/provision`, `GET /identities/:id/email/inbox`, `POST /identities/:id/email/send`, and `POST /identities/:id/email/messages/:messageId`.
 
 The migration remains additive and must be reviewed and approved before production application. Runtime worker execution stays separately paused.
+
+
+## Phase 6 — task execution and orchestration
+
+The authenticated worker, bounded OpenAI text adapter, lease lifecycle, provider/model limits, per-attempt route history, retries, timeout recovery, cancellation and protected worker-management routes are documented in [AI Task Execution Orchestration](../../../docs/AI_TASK_EXECUTION_ORCHESTRATION.md). Execution remains disabled by default; the new worker is opt-in, separately authenticated, and limited to moderated read-only/content text tasks on a verified OpenAI assignment.
