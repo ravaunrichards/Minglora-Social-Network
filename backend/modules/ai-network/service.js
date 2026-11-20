@@ -7,6 +7,30 @@ const fail = (status, message) => Object.assign(new Error(message), { status });
 const text = (value, max) => String(value ?? '').trim().slice(0, max);
 const ownerRows = (rows, ownerId) => (Array.isArray(rows) ? rows : []).filter(row => row?.ownerId === ownerId);
 
+export const AI_BOT_ROLES = Object.freeze([
+  'general_ai_member',
+  'social_ai_personality',
+  'business_ai_employee',
+  'corporate_ai_department',
+  'management_ai',
+  'specialized_professional_ai',
+  'customer_service_ai',
+  'creative_ai',
+  'research_ai',
+  'administrative_ai'
+]);
+export const AI_BOT_SPECIALIZED_CAPABILITIES = Object.freeze([
+  'community_engagement',
+  'business_analysis',
+  'department_coordination',
+  'management_planning',
+  'professional_explanations',
+  'customer_support_guidance',
+  'creative_ideation',
+  'research_synthesis',
+  'administrative_organization',
+  'knowledge_explanations'
+]);
 export const AI_BOT_CAPABILITIES = Object.freeze([
   'draft_content',
   'summarize_public_content',
@@ -198,7 +222,62 @@ export function updateAISettings(db, ownerId, input = {}, { providerConfigured =
 
 function botSignature(bot) {
   const traits = [...(bot.traits || [])].sort();
-  return [String(bot.purpose || '').toLowerCase(), bot.tone, traits.join(','), String(bot.expertise || '').toLowerCase()].join('|');
+  const specializations = [...(bot.specializedCapabilities || [])].sort();
+  return [
+    String(bot.purpose || '').toLowerCase(),
+    bot.tone,
+    traits.join(','),
+    String(bot.expertise || '').toLowerCase(),
+    String(bot.role || 'general_ai_member'),
+    specializations.join(',')
+  ].join('|');
+}
+
+function normalizedBotTraits(value) {
+  if (!Array.isArray(value)) throw fail(400, 'Choose two to five personality traits.');
+  const traits = [...new Set(value.map(item => text(item, 24).toLowerCase()))];
+  if (traits.length < 2 || traits.length > 5 || traits.some(item => !BOT_TRAITS.has(item))) {
+    throw fail(400, 'Choose two to five valid, distinct personality traits.');
+  }
+  return traits;
+}
+
+function normalizedBotCapabilities(value) {
+  const capabilities = [...new Set(Array.isArray(value) ? value.map(item => text(item, 50)) : [])];
+  if (!capabilities.length || capabilities.some(item => !AI_BOT_CAPABILITIES.includes(item))) {
+    throw fail(400, 'One or more requested bot capabilities are not allowed.');
+  }
+  return capabilities;
+}
+
+function normalizedBotSpecializations(value) {
+  const capabilities = [...new Set(Array.isArray(value) ? value.map(item => text(item, 50)) : [])];
+  if (capabilities.length > AI_BOT_SPECIALIZED_CAPABILITIES.length ||
+      capabilities.some(item => !AI_BOT_SPECIALIZED_CAPABILITIES.includes(item))) {
+    throw fail(400, 'One or more specialized AI capabilities are not supported.');
+  }
+  return capabilities;
+}
+
+function botConfigurationSnapshot(bot, version, now) {
+  return {
+    schemaVersion: 1,
+    version,
+    role: bot.role,
+    behaviorInstructions: bot.behaviorInstructions,
+    specializedCapabilities: [...bot.specializedCapabilities],
+    capabilities: [...bot.capabilities],
+    personality: {
+      name: bot.name,
+      purpose: bot.purpose,
+      tone: bot.tone,
+      traits: [...bot.traits],
+      expertise: bot.expertise,
+      languages: [...bot.languages],
+      primaryLanguage: bot.primaryLanguage
+    },
+    updatedAt: nowIso(now)
+  };
 }
 
 export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: requestedId } = {}) {
@@ -215,21 +294,23 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: req
   if (name.length < 2) throw fail(400, 'Give this AI bot a name with at least two characters.');
   if (purpose.length < 20) throw fail(400, 'Describe this bot’s purpose in at least 20 characters.');
   if (!BOT_TONES.has(tone)) throw fail(400, 'Choose a supported personality tone.');
-  if (!Array.isArray(input.traits)) throw fail(400, 'Choose two to five personality traits.');
-  const traits = [...new Set(input.traits.map(value => text(value, 24).toLowerCase()))];
-  if (traits.length < 2 || traits.length > 5 || traits.some(value => !BOT_TRAITS.has(value))) throw fail(400, 'Choose two to five valid, distinct personality traits.');
+  const traits = normalizedBotTraits(input.traits);
   const languages = canonicalLanguages(input.languages || ['en']);
   const primaryLanguage = canonicalLanguages([input.primaryLanguage || languages[0]])[0];
   if (!languages.includes(primaryLanguage)) throw fail(400, 'The primary language must be enabled for this bot.');
-  const capabilities = [...new Set(Array.isArray(input.capabilities) ? input.capabilities.map(value => text(value, 50)) : ['draft_content'])];
-  if (!capabilities.length || capabilities.some(value => !AI_BOT_CAPABILITIES.includes(value))) throw fail(400, 'One or more requested bot capabilities are not allowed.');
+  const capabilities = normalizedBotCapabilities(input.capabilities || ['draft_content']);
+  const role = text(input.role || 'general_ai_member', 50).toLowerCase();
+  if (!AI_BOT_ROLES.includes(role)) throw fail(400, 'Choose a supported AI role.');
+  const behaviorInstructions = text(input.behaviorInstructions, 4000);
+  const specializedCapabilities = normalizedBotSpecializations(input.specializedCapabilities || []);
   const existing = ownerRows(db.aiBots, ownerId).filter(bot => bot.status !== 'archived');
   if (existing.some(bot => bot.name.toLowerCase() === name.toLowerCase())) throw fail(409, 'You already have an AI bot with this name.');
-  const candidate = { purpose, tone, traits, expertise };
-  if (existing.some(bot => bot.personalitySignature === botSignature(candidate))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone or trait combination.');
+  const candidate = { purpose, tone, traits, expertise, role, specializedCapabilities };
+  if (existing.some(bot => bot.personalitySignature === botSignature(bot))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone, trait or specialization combination.');
   const bot = {
     id: text(requestedId, 80) || makeId(), ownerId, name, purpose, tone, traits, expertise,
-    languages, primaryLanguage, capabilities,
+    languages, primaryLanguage, capabilities, role, behaviorInstructions, specializedCapabilities,
+    configurationVersion: 1,
     ...(identityIdempotencyKey ? { identityIdempotencyKey } : {}),
     identityType: 'ai_bot',
     identityLabel: 'AI BOT', aiDisclosureRequired: true,
@@ -237,15 +318,79 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: req
     createdAt: nowIso(now), updatedAt: nowIso(now)
   };
   bot.personalitySignature = botSignature(bot);
+  bot.configuration = botConfigurationSnapshot(bot, 1, now);
+  bot.configurationHistory = [structuredClone(bot.configuration)];
   db.aiBots.push(bot);
   audit(db, ownerId, ownerId, 'bot_created', 'bot', bot.id, now);
+  return bot;
+}
+
+export function updateAIBotConfiguration(db, ownerId, botId, input = {}, { now = new Date() } = {}) {
+  ensureAICollections(db);
+  const bot = ownerRows(db.aiBots, ownerId).find(row => row.id === botId);
+  if (!bot || bot.status === 'retired') throw fail(404, 'AI bot not found or permanently retired.');
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw fail(400, 'AI personality configuration must be a JSON object.');
+
+  const next = {
+    name: input.name === undefined ? bot.name : text(input.name, 40),
+    purpose: input.purpose === undefined ? bot.purpose : text(input.purpose, 280),
+    tone: input.tone === undefined ? bot.tone : text(input.tone, 24).toLowerCase(),
+    expertise: input.expertise === undefined ? bot.expertise : text(input.expertise, 180),
+    traits: input.traits === undefined ? [...(bot.traits || [])] : normalizedBotTraits(input.traits),
+    languages: input.languages === undefined ? [...(bot.languages || ['en'])] : canonicalLanguages(input.languages),
+    primaryLanguage: input.primaryLanguage === undefined ? (bot.primaryLanguage || 'en') : canonicalLanguages([input.primaryLanguage])[0],
+    capabilities: input.capabilities === undefined ? [...(bot.capabilities || ['draft_content'])] : normalizedBotCapabilities(input.capabilities),
+    role: input.role === undefined ? (bot.role || 'general_ai_member') : text(input.role, 50).toLowerCase(),
+    behaviorInstructions: input.behaviorInstructions === undefined
+      ? text(bot.behaviorInstructions || '', 4000) : text(input.behaviorInstructions, 4000),
+    specializedCapabilities: input.specializedCapabilities === undefined
+      ? [...(bot.specializedCapabilities || [])] : normalizedBotSpecializations(input.specializedCapabilities)
+  };
+
+  if (next.name.length < 2) throw fail(400, 'Give this AI bot a name with at least two characters.');
+  if (next.purpose.length < 20) throw fail(400, 'Describe this bot’s purpose in at least 20 characters.');
+  if (!BOT_TONES.has(next.tone)) throw fail(400, 'Choose a supported personality tone.');
+  if (next.traits.length < 2 || next.traits.length > 5 || next.traits.some(item => !BOT_TRAITS.has(item))) {
+    throw fail(400, 'Choose two to five valid, distinct personality traits.');
+  }
+  if (!next.languages.includes(next.primaryLanguage)) throw fail(400, 'The primary language must be enabled for this bot.');
+  if (!AI_BOT_ROLES.includes(next.role)) throw fail(400, 'Choose a supported AI role.');
+  if (!next.capabilities.length || next.capabilities.some(item => !AI_BOT_CAPABILITIES.includes(item))) {
+    throw fail(400, 'One or more requested bot capabilities are not allowed.');
+  }
+  if (next.specializedCapabilities.some(item => !AI_BOT_SPECIALIZED_CAPABILITIES.includes(item))) {
+    throw fail(400, 'One or more specialized AI capabilities are not supported.');
+  }
+
+  const existing = ownerRows(db.aiBots, ownerId).filter(row => row.id !== bot.id && !['archived','retired'].includes(row.status));
+  if (existing.some(row => row.name.toLowerCase() === next.name.toLowerCase())) {
+    throw fail(409, 'You already have an AI bot with this name.');
+  }
+  const candidate = { ...next };
+  const nextSignature = botSignature(candidate);
+  if (existing.some(row => row.personalitySignature === nextSignature)) {
+    throw fail(409, 'This bot would duplicate another personality owned by this account.');
+  }
+
+  const version = Math.max(1, Number(bot.configurationVersion) || 1) + 1;
+  Object.assign(bot, next);
+  bot.personalitySignature = nextSignature;
+  bot.configurationVersion = version;
+  bot.configuration = botConfigurationSnapshot(bot, version, now);
+  const history = Array.isArray(bot.configurationHistory) ? bot.configurationHistory : [];
+  bot.configurationHistory = [...history, structuredClone(bot.configuration)].slice(-20);
+  bot.updatedAt = nowIso(now);
+  audit(db, ownerId, ownerId, 'bot_configuration_updated', 'bot', bot.id, now);
   return bot;
 }
 
 export function updateAIBotStatus(db, ownerId, botId, status, { providerConfigured = false, now = new Date() } = {}) {
   const bot = ownerRows((ensureAICollections(db), db.aiBots), ownerId).find(row => row.id === botId);
   if (!bot) throw fail(404, 'AI bot not found.');
-  if (!['active', 'paused', 'archived'].includes(status)) throw fail(400, 'Invalid AI bot status.');
+  if (!['active', 'paused', 'archived', 'retired'].includes(status)) throw fail(400, 'Invalid AI bot status.');
+  if (bot.status === 'retired' && status !== 'retired') throw fail(409, 'A retired AI identity cannot be resumed or edited.');
+  if (bot.status === 'archived' && status !== 'retired') throw fail(409, 'An archived AI identity can only be retired.');
+  if (status === 'retired' && bot.status !== 'archived') throw fail(409, 'Archive this AI identity before permanently retiring it.');
   if (status === 'active') {
     const settings = getAISettings(db, ownerId);
     if (settings.globalPaused) throw fail(409, 'The AI Network is globally paused.');
