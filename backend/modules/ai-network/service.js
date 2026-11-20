@@ -328,7 +328,7 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: req
 export function updateAIBotConfiguration(db, ownerId, botId, input = {}, { now = new Date() } = {}) {
   ensureAICollections(db);
   const bot = ownerRows(db.aiBots, ownerId).find(row => row.id === botId);
-  if (!bot || bot.status === 'retired') throw fail(404, 'AI bot not found or permanently retired.');
+  if (!bot || ['archived','retired'].includes(bot.status)) throw fail(404, 'AI bot not found or no longer configurable.');
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw fail(400, 'AI personality configuration must be a JSON object.');
 
   const next = {
@@ -388,7 +388,9 @@ export function updateAIBotStatus(db, ownerId, botId, status, { providerConfigur
   const bot = ownerRows((ensureAICollections(db), db.aiBots), ownerId).find(row => row.id === botId);
   if (!bot) throw fail(404, 'AI bot not found.');
   if (!['active', 'paused', 'archived', 'retired'].includes(status)) throw fail(400, 'Invalid AI bot status.');
+  if (bot.status === 'retired' && status === 'retired') return bot;
   if (bot.status === 'retired' && status !== 'retired') throw fail(409, 'A retired AI identity cannot be resumed or edited.');
+  if (bot.status === 'archived' && status === 'archived') return bot;
   if (bot.status === 'archived' && status !== 'retired') throw fail(409, 'An archived AI identity can only be retired.');
   if (status === 'retired' && bot.status !== 'archived') throw fail(409, 'Archive this AI identity before permanently retiring it.');
   if (status === 'active') {
