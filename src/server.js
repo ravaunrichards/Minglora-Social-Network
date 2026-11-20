@@ -2998,23 +2998,6 @@ async function route(req, res) {
         }
 
         const startedAt = Date.now();
-        const attemptAt = new Date(startedAt).toISOString();
-        await runAIProviderCommand('record_provider_health', {
-          provider_account_id: accountId,
-          provider_name: provider,
-          health_status: 'unknown',
-          model_identifier: selected.model_identifier,
-          response_time_ms: 0,
-          error_code: '',
-          reason: 'Bounded inference verification started. No generated output is retained.',
-          metadata: {
-            inference_verification_attempt: true,
-            inference_verified: false,
-            in_progress: true,
-            verification_type: 'fixed_prompt'
-          },
-          checked_at: attemptAt
-        });
 
         try {
           const generated = await generateAIProviderText(provider, {
