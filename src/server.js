@@ -2747,7 +2747,13 @@ async function route(req, res) {
           await runAIProviderCommand('record_provider_health', {
             provider_account_id: accountId,
             provider_name: provider,
-            health_status: health.healthStatus === 'healthy' ? 'healthy' : health.status,
+            health_status: new Set([
+              'unknown','healthy','degraded','unhealthy','unauthorized','forbidden',
+              'model_unavailable','rate_limited','provider_unavailable','network_error',
+              'timeout','invalid_response','provider_error'
+            ]).has(String(health.status || '').toLowerCase())
+              ? String(health.status).toLowerCase()
+              : 'provider_error',
             model_identifier: health.model || null,
             response_time_ms: responseTimeMs,
             error_code: health.connected ? '' : String(health.status || '').slice(0, 120),
