@@ -215,10 +215,30 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
     });
     assert.deepEqual(otherOwnerHistory,[],'Provider health history must remain owner-scoped.');
 
+    await assert.rejects(
+      command('set_provider_account_status',owner,{
+        provider_account_id:account.provider_account_id,
+        status:'enabled',
+        reason:'A model-list check alone must not enable the provider.'
+      }),
+      error => error.code==='22023'
+    );
+
+    const inferenceEvent = await command('record_provider_health',owner,{
+      provider_account_id:account.provider_account_id,
+      provider_name:'openai',
+      health_status:'healthy',
+      model_identifier:'gpt-provider-health-test',
+      response_time_ms:36,
+      reason:'Bounded static inference verification succeeded. Output was withheld.',
+      metadata:{inference_verification_attempt:true,inference_verified:true,verification_type:'fixed_prompt'}
+    });
+    assert.equal(inferenceEvent.health_event.metadata.inference_verified,true);
+
     const enabled = await command('set_provider_account_status',owner,{
       provider_account_id:account.provider_account_id,
       status:'enabled',
-      reason:'Fresh provider model-list check passed.'
+      reason:'Fresh provider inference verification passed.'
     });
     assert.equal(enabled.provider_account.status,'enabled');
 
