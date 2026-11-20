@@ -109,13 +109,13 @@ Minglora now discovers models through each implemented provider's authenticated 
 
 - **OpenAI:** GET /v1/models. Model shutdown metadata is retained for selection checks. The endpoint does not declare whether every returned model is a text-generation model, so the catalogue does not automatically claim text-generation capability for OpenAI models.
 - **Anthropic:** GET /v1/models with a maximum page size of 1000 and after_id cursor pagination. Only models in the active lifecycle are imported and selectable; deprecated and retired entries are not selected.
-- **Google Gemini:** GET /v1beta/models with pageSize up to 1000 and nextPageToken pagination. Only models advertising generateContent are imported as text-generation candidates.
+- **Google Gemini:** GET /v1beta/models with pageSize up to 1000 and nextPageToken pagination. Only models advertising generateContent are imported as text-generation candidates, and the provider's version field is preserved. Anthropic lifecycle stage is kept separate from model version; only active lifecycle models are imported. The model version field remains blank when the provider does not publish a distinct version value.
 
 Discovery follows up to five pages per provider request and processes up to 250 models into the catalogue per synchronization. Repeated synchronization reuses existing provider/model/version catalogue records instead of duplicating the same record.
 
 ### Model synchronization
 
-POST /api/ai-network/provider-models/sync accepts only a provider ID and an optional owner-scoped provider account ID. Credentials are always read from the private server environment. If an account ID is supplied, Minglora checks that the account belongs to the current administrator and matches the selected provider. Disabled and revoked accounts cannot be used for discovery.
+POST /api/ai-network/provider-models/sync accepts only a provider ID and an optional owner-scoped provider account ID. Credentials are always read from the private server environment. If an account ID is supplied, Minglora checks that the account belongs to the current administrator and matches the selected provider. Read-only discovery can be performed for disabled managed accounts, but revoked accounts are blocked; neither action enables inference.
 
 The response reports how many models were discovered, inserted, reused or failed. When a provider account is supplied, a successful authenticated model-list request also records a sanitized provider health event with its response time and model count. This is a discovery check only; it never automatically enables the provider account.
 
