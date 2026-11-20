@@ -1195,9 +1195,17 @@
           const identity = row.identity || {};
           const model = row.model || {};
           const account = row.provider_account || null;
+          const accountHealthAgeMs = account?.last_checked_at
+            ? Date.now() - new Date(account.last_checked_at).getTime() : Infinity;
+          const canActivate = account?.status === 'enabled' && account.health_status === 'healthy' &&
+            accountHealthAgeMs >= 0 && accountHealthAgeMs <= 15 * 60 * 1000 &&
+            identity.status === 'active' && identity.enabled === true && model.text_capability === true;
           const statusChoices = assignment.assignment_status === 'revoked'
             ? [{value:'revoked',label:'Revoked'}]
-            : [{value:'pending',label:'Pending'},{value:'restricted',label:'Restricted'},{value:'disabled',label:'Disabled'},{value:'revoked',label:'Revoked'}];
+            : [{value:'pending',label:'Pending'}]
+              .concat(canActivate || assignment.assignment_status === 'active'
+                ? [{value:'active',label:'Active · verified'}] : [])
+              .concat([{value:'restricted',label:'Restricted'},{value:'disabled',label:'Disabled'},{value:'revoked',label:'Revoked'}]);
           return '<article class="ai-network-list-row ai-network-provider-row"><div class="ai-network-list-main"><div><strong>' +
             esc(identity.display_name || identity.username || 'AI identity') + '</strong><div class="ai-network-meta">' +
             pill(assignment.assignment_status || 'pending') + ' ' + pill('health ' + (assignment.provider_health_status || 'unknown')) +
@@ -1205,7 +1213,7 @@
             '</small><p>Priority ' + number(assignment.routing_priority) + ' · ' +
             esc(list(assignment.assigned_capabilities).join(', ') || 'Capabilities not assigned') +
             '</p><small>' + esc(account ? account.provider_identifier + ' · ' + account.status : 'No provider account reference') +
-            '</small></div></div>' +
+            '</small><small>Activation requires a healthy, enabled account and a fresh inference verification for this exact model.</small></div></div>' +
             '<form class="ai-network-inline-form" data-ai-form="provider-assignment-status" data-assignment-id="' + esc(assignment.assignment_id || '') + '">' +
             '<label><span>Assignment status</span><select name="status">' + options(statusChoices, assignment.assignment_status || 'pending') + '</select></label>' +
             '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why is this assignment changing?"></label>' +
