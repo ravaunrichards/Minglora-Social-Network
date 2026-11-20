@@ -290,6 +290,21 @@ export async function probeAIProvider(providerId, options = {}) {
   try {
     const result = await listAIProviderModels(providerId, options);
     const requestedModel = text(options.model);
+    if (result.models.length === 0) {
+      return {
+        providerId: result.providerId,
+        status: 'no_models',
+        connected: false,
+        healthStatus: 'degraded',
+        healthProbeAvailable: true,
+        inferenceAdapterAvailable: true,
+        executionEnabled: false,
+        checkedAt,
+        model: requestedModel || null,
+        modelCount: 0,
+        note: 'Provider authentication succeeded, but the account did not return any available models. Check provider permissions and model access.'
+      };
+    }
     if (requestedModel && !result.models.some(model => model.id === requestedModel || model.resourceName === requestedModel)) {
       return {
         providerId: result.providerId,
