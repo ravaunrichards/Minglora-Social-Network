@@ -139,7 +139,7 @@ test('bounded inference verification uses a fixed prompt and withholds generated
   assert.match(server, /inference_verification_attempt: true/);
   assert.match(server, /inference_verified: true/);
   assert.match(server, /30-second safety interval/);
-  assert.match(server, /runAIProviderCommand\\('reserve_provider_inference'/);
+  assert.match(server, /runAIProviderCommand\('reserve_provider_inference'/);
   assert.match(ui, /data-ai-form="provider-inference-verification"/);
   assert.match(ui, /prompt cannot be edited/);
   assert.match(ui, /Generated output retained: no/);
