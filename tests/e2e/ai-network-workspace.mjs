@@ -946,22 +946,25 @@ try {
   await commentForm.locator('[name="identityId"]').selectOption(ownerIdentityId);
   await commentForm.locator('[name="postId"]').fill(publicHumanPost.id);
   await commentForm.locator('[name="text"]').fill('Phase 7 approved AI comment.');
+  const commentResponse=page.waitForResponse(response=>response.url().includes('/social/comment')&&response.request().method()==='POST');
   await commentForm.locator('button[type="submit"]').click();
-  await page.waitForFunction(()=>socialRequests.comments.length===1);
+  await commentResponse;
   assert.equal(socialRequests.comments[0].humanApproved,true);
 
   const reactionForm=page.locator('form[data-ai-form="social-reaction"]');
   await reactionForm.locator('[name="identityId"]').selectOption(ownerIdentityId);
   await reactionForm.locator('[name="postId"]').fill(publicHumanPost.id);
   await reactionForm.locator('[name="reaction"]').selectOption('love');
+  const reactionResponse=page.waitForResponse(response=>response.url().includes('/social/reaction')&&response.request().method()==='POST');
   await reactionForm.locator('button[type="submit"]').click();
-  await page.waitForFunction(()=>socialRequests.reactions.length===1);
+  await reactionResponse;
   assert.equal(socialRequests.reactions[0].humanApproved,true);
 
   const replyForm=page.locator('form[data-ai-form="social-message"]');
   await replyForm.locator('[name="text"]').fill('Phase 7 approved AI reply to a member-initiated conversation.');
+  const replyResponse=page.waitForResponse(response=>response.url().includes('/social/message')&&response.request().method()==='POST');
   await replyForm.locator('button[type="submit"]').click();
-  await page.waitForFunction(()=>socialRequests.messages.length===1);
+  await replyResponse;
   assert.equal(socialConversations[0].humanInitiated,true);
   assert.equal(socialRequests.messages[0].humanApproved,true);
 
@@ -969,19 +972,23 @@ try {
   await aiMessageForm.locator('[name="identityId"]').selectOption(ownerIdentityId);
   await aiMessageForm.locator('[name="targetIdentityId"]').selectOption(socialPublicProfiles[0].identityId);
   await aiMessageForm.locator('[name="text"]').fill('One approved AI-to-AI interaction.');
+  const aiMessageResponse=page.waitForResponse(response=>response.url().includes('/social/ai-message')&&response.request().method()==='POST');
   await aiMessageForm.locator('button[type="submit"]').click();
-  await page.waitForFunction(()=>socialRequests.aiMessages.length===1);
+  await aiMessageResponse;
   assert.equal(socialRequests.aiMessages[0].humanApproved,true);
 
   const managePost=page.locator('[data-ai-action="social-post-manage"][data-status="hide"]').first();
+  const hideResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
   await managePost.click();
-  await page.waitForFunction(()=>socialRequests.moderation.some(item=>item.body.action==='hide'));
+  await hideResponse;
   const restorePost=page.locator('[data-ai-action="social-post-manage"][data-status="restore"]').first();
+  const restoreResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
   await restorePost.click();
-  await page.waitForFunction(()=>socialRequests.moderation.some(item=>item.body.action==='restore'));
+  await restoreResponse;
   const deletePost=page.locator('[data-ai-action="social-post-manage"][data-status="delete"]').first();
+  const deleteResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
   await deletePost.click();
-  await page.waitForFunction(()=>socialRequests.moderation.some(item=>item.body.action==='delete'));
+  await deleteResponse;
   assert.ok(socialActivity.length>=7,'Social actions and content moderation must produce audit history.');
 
   const pauseAgain=page.locator('form[data-ai-form="social-controls"]');
