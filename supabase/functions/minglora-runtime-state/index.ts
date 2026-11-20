@@ -4696,7 +4696,7 @@ Deno.serve(async (req: Request) => {
       ? input.payload
       : {};
     const supportedWorkerAdminCommands = [
-      "register_worker", "list_workers", "revoke_worker", "cancel_task", "list_task_history"
+      "register_worker", "list_workers", "revoke_worker", "cancel_task", "list_task_history", "set_runtime_controls"
     ];
 
     if (!validUuid(actorUserId)) {
@@ -4704,6 +4704,16 @@ Deno.serve(async (req: Request) => {
     }
     if (!supportedWorkerAdminCommands.includes(aiAction)) {
       return json(400, { error: "Unsupported AI worker administration command." });
+    }
+    if (aiAction === "set_runtime_controls") {
+      const allowedFields = new Set(["global_paused", "execution_enabled", "max_concurrent_workers", "lease_seconds"]);
+      if (Object.keys(payload).some(key => !allowedFields.has(key)) ||
+          (payload.global_paused !== undefined && typeof payload.global_paused !== "boolean") ||
+          (payload.execution_enabled !== undefined && typeof payload.execution_enabled !== "boolean") ||
+          (payload.max_concurrent_workers !== undefined && (!Number.isInteger(payload.max_concurrent_workers) || payload.max_concurrent_workers < 0 || payload.max_concurrent_workers > 8)) ||
+          (payload.lease_seconds !== undefined && (!Number.isInteger(payload.lease_seconds) || payload.lease_seconds < 30 || payload.lease_seconds > 900))) {
+        return json(400, { error: "Runtime controls contain unsupported fields or out-of-range values." });
+      }
     }
     if (aiAction === "register_worker") {
       if (!/^[a-f0-9]{64}$/i.test(String(payload.credential_sha256 || "")) ||
