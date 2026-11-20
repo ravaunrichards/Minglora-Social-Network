@@ -4966,12 +4966,20 @@ async function renderCreatorSection(section){
         }
       };
       try{
-        await api("/ai-social/consent",{method:"PATCH",body:JSON.stringify({allowAIMessages:checkbox("allowAIMessages")})});
+        let aiConsentSaved=true;
+        try{
+          await api("/ai-social/consent",{method:"PATCH",body:JSON.stringify({allowAIMessages:checkbox("allowAIMessages")})});
+        }catch(error){
+          aiConsentSaved=false;
+          console.warn("[Minglora settings] AI messaging consent is unavailable in this persistence mode:",String(error?.message||error).slice(0,160));
+        }
         const result=await api("/settings",{method:"PATCH",body:JSON.stringify(patch)});
         s.settings=result;
         state.settings=result.settings;
         window.dispatchEvent(new CustomEvent("minglora:settings-loaded",{detail:result.settings}));
-        if(status)status.textContent="Your Minglora account settings have been saved.";
+        if(status)status.textContent=aiConsentSaved
+          ?"Your Minglora account settings have been saved."
+          :"Your account settings were saved. AI message consent is unavailable until the shared social service is connected.";
         toast("Creator Studio settings saved.");
         await renderCreatorSection("settings");
       }catch(error){if(status)status.textContent=error.message;toast(error.message);button.disabled=false;}
