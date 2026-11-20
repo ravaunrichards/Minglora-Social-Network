@@ -330,6 +330,40 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
     });
     assert.equal(enabled.provider_account.status,'enabled');
 
+    const unverifiedModel = await command('create_provider_model',owner,{
+      provider_name:'openai',
+      model_name:'Unverified integration model',
+      model_identifier:'gpt-unverified-provider-health-test',
+      model_version:'unverified',
+      model_capabilities:['text'],
+      supported_languages:[],
+      text_capability:false
+    });
+    const unverifiedModelId = unverifiedModel.model.model_id;
+    await client.query(
+      'update ai_network.ai_provider_models set text_capability=true where model_id=$1',
+      [unverifiedModelId]
+    );
+    const secondIdentity = await client.query(`
+      insert into ai_network.ai_identities(owner_user_id,idempotency_key,status,enabled)
+      values($1,'provider-health-unverified-model-identity','active',true)
+      returning identity_id
+    `,[owner]);
+    const secondAssignment = await client.query(`
+      insert into ai_network.ai_provider_assignments(
+        identity_id,provider_account_id,model_id,assignment_status
+      ) values($1,$2,$3,'pending')
+      returning assignment_id
+    `,[secondIdentity.rows[0].identity_id,account.provider_account_id,unverifiedModelId]);
+    await assert.rejects(
+      command('set_provider_assignment_status',owner,{
+        assignment_id:secondAssignment.rows[0].assignment_id,
+        status:'active',
+        reason:'This exact model has no successful inference event.'
+      }),
+      error => error.code==='22023'
+    );
+
     const activeAssignment = await command('set_provider_assignment_status',owner,{
       assignment_id:assignmentId,
       status:'active',
