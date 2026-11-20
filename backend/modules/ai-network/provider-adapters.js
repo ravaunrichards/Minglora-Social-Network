@@ -313,7 +313,7 @@ export async function listAIProviderModels(providerId, options = {}) {
     models,
     hasMore,
     pagesFetched,
-    truncated: hasMore && pagesFetched >= maxPages
+    truncated: hasMore
   };
 }
 
