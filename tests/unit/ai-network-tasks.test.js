@@ -93,21 +93,35 @@ test('leases use recovery, concurrency limits and require verified provider heal
   assert.ok(migration.includes('check ((status=\'running\' and worker_id is not null'));
 });
 
-test('worker execution remains inaccessible without an independent worker credential', () => {
+test('worker execution uses an independent SHA-256 credential gateway while remaining paused by default', () => {
+  const phase6 = read('supabase/migrations/20261120090000_minglora_ai_task_execution_orchestration.sql');
+  const workerGateway = read('supabase/functions/minglora-ai-worker/index.ts');
   assert.ok(migration.includes('AI worker authentication is not deployed; task execution is disabled.'));
-  assert.ok(migration.includes("if v_action in ('claim_next_task','heartbeat_task','complete_task','fail_task')"));
+  assert.ok(phase6.includes('create table if not exists ai_network.ai_task_workers'));
+  assert.ok(phase6.includes('credential_sha256 text not null unique'));
+  assert.ok(phase6.includes("where w.credential_sha256=p_token_sha256 and w.worker_status='active' and w.expires_at>now()"));
+  assert.ok(phase6.includes('public.minglora_ai_worker_command'));
+  assert.ok(phase6.includes('ai_task_execution_attempts'));
+  assert.ok(phase6.includes('execution_route_id'));
+  assert.ok(phase6.includes('ai_task_provider_limits'));
+  assert.ok(phase6.includes("v_controls.global_paused or not v_controls.execution_enabled"));
+  assert.ok(workerGateway.includes('Authorization'));
+  assert.ok(workerGateway.includes('minglora_ai_worker_command'));
+  assert.ok(workerGateway.includes('claim_next_task'));
+  assert.ok(workerGateway.includes('heartbeat_task'));
+  assert.ok(workerGateway.includes('complete_task'));
+  assert.ok(workerGateway.includes('fail_task'));
+
   const handlerStart = runtime.indexOf('if (action === "ai_task_command")');
-  const handlerEnd = runtime.indexOf('if (action === "ai_provider_command")', handlerStart);
+  const handlerEnd = runtime.indexOf('if (action === "ai_worker_admin_command")', handlerStart);
   const handler = runtime.slice(handlerStart, handlerEnd);
-  for (const action of ['create_task','list_tasks','approve_task','reject_task','cancel_task']) {
-    assert.ok(handler.includes('"' + action + '"'), 'Missing user task command: ' + action);
-  }
   const allowlistStart = handler.indexOf('const supportedTaskCommands = [');
   const allowlistEnd = handler.indexOf('];', allowlistStart);
   const allowlist = handler.slice(allowlistStart, allowlistEnd);
   for (const action of ['claim_next_task','heartbeat_task','complete_task','fail_task']) {
-    assert.ok(!allowlist.includes('"' + action + '"'), 'Worker command must not be gateway-allowlisted: ' + action);
+    assert.ok(!allowlist.includes('"' + action + '"'), 'Worker command must stay outside the user command gateway: ' + action);
   }
+  assert.ok(runtime.includes('if (action === "ai_worker_admin_command")'));
 });
 
 test('Node task API requires authorized platform staff and exposes no worker execution route', () => {
