@@ -10373,7 +10373,40 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
               messages,unreadCount,isRequest:false,messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({groupId:group.id}))},lastActivityAt:group.lastActivityAt||lastMessage?.createdAt||group.createdAt
             };
           }));
-        const all=[...conversations.filter(Boolean),...groupRows]
+        let aiRows=[];
+        try{
+          await syncPublicAISocialProfiles(user.id);
+          aiRows=(db.aiSocialConversations||[])
+            .filter(item=>item.memberUserId===user.id&&item.status!=='closed')
+            .map(item=>{
+              const profile=getAISocialProfile(item.identityId);
+              if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true||
+                blockedBetween(user.id,profile.ownerUserId))return null;
+              const raw=(db.aiSocialMessages||[]).filter(message=>message.conversationId===item.id)
+                .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+              const messages=raw.map(message=>({
+                ...message,
+                from:message.from,
+                to:message.to,
+                author:safeSocialAuthor(message.from,user.id),
+                aiDisclosureRequired:message.senderType==='ai'||String(message.from||'').startsWith('ai:')
+              })).filter(message=>message.author);
+              return {
+                id:'ai:'+item.identityId,
+                kind:'ai',
+                user:{id:'ai:'+item.identityId,name:profile.displayName,username:profile.username,
+                  avatar:'',avatarUrl:'',isAI:true,aiIdentityId:item.identityId,aiDisclosureRequired:true},
+                messages,
+                unreadCount:0,
+                isRequest:false,
+                humanInitiated:true,
+                lastActivityAt:item.lastActivityAt||item.createdAt
+              };
+            }).filter(Boolean);
+        }catch(error){
+          console.warn('[Minglora Messenger] AI conversations unavailable; human conversations remain available:',String(error?.message||error).slice(0,160));
+        }
+        const all=[...conversations.filter(Boolean),...groupRows,...aiRows]
           .sort((a,b)=>new Date(b.lastActivityAt||b.messages.at(-1)?.createdAt||0)-new Date(a.lastActivityAt||a.messages.at(-1)?.createdAt||0));
         return json(res,200,{conversations:all});
       }
@@ -10608,7 +10641,41 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,201,{message:{...msg,attachments,author:safeUser(user,user.id)}});
       }
       if(method==='POST'&&p==='/api/messages'){
-        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const to=String(input.to||''),text=String(input.text||'').trim();
+        if(to.startsWith('ai:')){
+          const identityId=to.slice(3);
+          if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId)||!text||text.length>3000||
+            input.attachmentIds?.length||input.stickerId||input.gifUrl){
+            return json(res,400,{error:'Start an AI conversation with a valid public AI identity and a text message of 1–3000 characters. Attachments, stickers and GIFs are not enabled for AI conversations.'});
+          }
+          try{await syncPublicAISocialProfiles(user.id);}catch{return json(res,503,{error:'AI member profiles are temporarily unavailable.'});}
+          const profile=getAISocialProfile(identityId);
+          if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true||
+            blockedBetween(user.id,profile.ownerUserId))return json(res,404,{error:'AI member not found.'});
+          await runAISocialCommand(user.id,'set_member_consent',{allow_ai_messages:true});
+          let conversation=(db.aiSocialConversations||[]).find(item=>item.identityId===identityId&&item.memberUserId===user.id&&item.status!=='closed');
+          const createdAt=now();
+          if(!conversation){
+            conversation={id:uid(),identityId,ownerUserId:profile.ownerUserId,memberUserId:user.id,
+              humanInitiated:true,status:'active',createdAt,lastActivityAt:createdAt};
+            db.aiSocialConversations||=[];db.aiSocialConversations.push(conversation);
+          }else{
+            conversation.humanInitiated=true;
+            conversation.lastActivityAt=createdAt;
+          }
+          await recordAISocialMemberActivity(user.id,identityId,'member_message','ai_conversation',conversation.id);
+          const msg={id:uid(),conversationId:conversation.id,identityId,from:user.id,to:'ai:'+identityId,
+            senderType:'human',senderUserId:user.id,text,createdAt,read:false,aiDisclosureRequired:false};
+          db.aiSocialMessages||=[];db.aiSocialMessages.push(msg);
+          try{await saveStore();}
+          catch(error){
+            db.aiSocialMessages=db.aiSocialMessages.filter(item=>item.id!==msg.id);
+            throw error;
+          }
+          if(profile.ownerUserId)notify(profile.ownerUserId,user.id,'message','A member started a conversation with an AI member.',{aiIdentityId:identityId,aiDisclosureRequired:true});
+          return json(res,201,{message:{...msg,author:safeUser(user,user.id)}});
+        }
+        const recipient=db.users.find(member=>member.id===to);
         const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
         const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
         const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
