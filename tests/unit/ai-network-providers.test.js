@@ -74,7 +74,7 @@ test('runtime gateway allowlists provider commands and rejects secret payload fi
     '"create_provider_account"','"create_provider_model"','"assign_provider_model"',
     '"set_provider_assignment_status"',
     'secretFields',
-    'admin.rpc("minglora_ai_provider_command"'
+    'admin.rpc(rpcName'
   ]) assert.ok(runtime.includes(token), 'Missing provider runtime control: ' + token);
 });
 
@@ -197,7 +197,7 @@ test('provider workspace uses real rows and does not offer credential or activat
     'data-ai-form="provider-assignment"',
     'data-ai-form="provider-assignment-status"',
     'Model assignment saved as pending',
-    'credentials not stored here',
+    'credentials never stored here',
     'health unknown',
     'no API key, password, token or secret reference is accepted'
   ]) assert.ok(ui.includes(token), 'Missing provider workspace behavior: ' + token);
