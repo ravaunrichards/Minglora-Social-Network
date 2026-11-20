@@ -565,46 +565,7 @@ begin
   end if;
 
   if v_action = 'record_admin_action' then
-    if coalesce(v_payload->>'identity_id', '') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
-    v_identity_id := nullif(v_payload->>'identity_id', '')::uuid;
-    select coalesce(jsonb_agg(jsonb_build_object(
-      'activity_id', q.activity_id,
-      'identity_id', q.identity_id,
-      'actor_type', q.actor_type,
-      'actor_user_id', q.actor_user_id,
-      'action', q.action,
-      'target_type', q.target_type,
-      'target_id', q.target_id,
-      'outcome', q.outcome,
-      'loop_depth', q.loop_depth,
-      'created_at', q.created_at,
-      'completed_at', q.completed_at,
-      'metadata', q.metadata
-    ) order by q.created_at desc), '[]'::jsonb)
-    into v_result
-    from (
-      select a.activity_id, a.identity_id, a.actor_type, a.actor_user_id,
-             a.action, a.target_type, a.target_id, a.outcome, a.loop_depth,
-             a.created_at, a.completed_at, a.metadata
-      from ai_network.ai_social_activity a
-      where a.owner_user_id = p_actor_user_id
-        and (v_identity_id is null or a.identity_id = v_identity_id)
-      order by a.created_at desc
-      limit 100
-    ) q;
-    return jsonb_build_object('activity', coalesce(v_result, '[]'::jsonb));
-  end if;
-
-  raise exception using errcode = '22023', message = 'Unsupported AI social command.';
-end;
-$function$;
-
-comment on function public.minglora_ai_social_command(text, uuid, jsonb)
-  is 'Private Minglora AI social permissions, consent, global pause, atomic rate limits and metadata-only interaction history. AI identities never become auth.users or public.profiles.';
-
-revoke all on function public.minglora_ai_social_command(text, uuid, jsonb) from public, anon, authenticated;
-grant execute on function public.minglora_ai_social_command(text, uuid, jsonb) to service_role;
- then
+    if coalesce(v_payload->>'identity_id', '') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
       raise exception using errcode = '22023', message = 'A valid AI identity ID is required for content management.';
     end if;
     v_identity_id := (v_payload->>'identity_id')::uuid;
