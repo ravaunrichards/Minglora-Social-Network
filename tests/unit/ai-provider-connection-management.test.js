@@ -126,9 +126,13 @@ test('bounded inference verification uses a fixed prompt and withholds generated
   const server = read('src/server.js');
   const ui = read('public/ai-network.js');
   assert.match(server, /sub === 'provider-inference-verification'/);
+  assert.ok(
+    server.indexOf('const verifyProviderModelSelection') < server.indexOf("if (method === 'POST' && sub === 'provider-inference-verification')"),
+    'Model selection verification helper must be initialized before the inference route.'
+  );
   assert.match(server, /Object\.keys\(input\)\.some\(key => !\['provider_account_id','model_id'\]\.includes\(key\)\)/);
   assert.match(server, /generateAIProviderText\(provider/);
-  assert.match(server, /prompt: 'Reply with exactly the single word READY\.'/);
+  assert.ok(server.includes("if (!/^READY[.!]?$/i.test(output))"));
   assert.match(server, /maxOutputTokens: 8/);
   assert.match(server, /timeoutMs: 20000/);
   assert.match(server, /!\/^READY\[.!\]\?\$\/i\.test\(output\)/);
