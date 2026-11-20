@@ -1,9 +1,5 @@
 const MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,179}$/;
-const RETRYABLE_CODES = new Set([
-  'timeout', 'network_error', 'rate_limited', 'provider_error',
-  'invalid_response', 'incomplete_generation', 'invalid_generation'
-]);
-const FALLBACK_CODES = new Set([...RETRYABLE_CODES, 'model_unavailable', 'circuit_open']);
+const FALLBACK_CODES = new Set(['model_unavailable', 'circuit_open']);
 const DEFAULT_MAX_RETRIES = 2;
 const MAX_RETRIES = 2;
 const FAILURE_THRESHOLD = 3;
@@ -100,6 +96,12 @@ function acquireCircuit(store, key, currentTime) {
 }
 
 function recordFailure(store, key, currentTime, error, threshold, cooldownMs) {
+  // Credential, permission and configuration errors are not transient availability
+  // failures; they must not open a circuit or later cause an automatic failover.
+  if (error?.retryable !== true && error?.code !== 'model_unavailable') {
+    store.delete(key);
+    return;
+  }
   const previous = store.get(key) || { failures: 0, openUntil: 0, halfOpen: false };
   const failures = previous.failures + 1;
   const shouldOpen = error?.code === 'model_unavailable' || failures >= threshold;
@@ -194,7 +196,7 @@ export async function runWithProviderFallback({
     const safePrimaryError = makeSafeProviderError(primaryError);
     const mayFallback = routeConfig.fallbackProvider
       && routeConfig.fallbackModel
-      && FALLBACK_CODES.has(safePrimaryError.code);
+      && (safePrimaryError.retryable === true || FALLBACK_CODES.has(safePrimaryError.code));
     if (!mayFallback) {
       safePrimaryError.provider = safePrimaryError.provider || routeConfig.primaryProvider;
       safePrimaryError.model = safePrimaryError.model || routeConfig.primaryModel;
