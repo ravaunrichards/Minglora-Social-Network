@@ -99,7 +99,7 @@ test('authentication and permission failures never trigger model fallback', asyn
 
 test('failed primary and fallback return safe, secret-free recovery metadata', async () => {
   await assert.rejects(runWithProviderFallback({
-    routeConfig: route(),
+    routeConfig: { ...route(), maxRetries: 0 },
     circuitStore: createProviderCircuitStore(),
     sleep: async () => {},
     operation: async ({ model }) => {
@@ -122,7 +122,7 @@ test('the circuit opens after exhausted failures and a configured fallback can c
   const routeConfig = resolveProviderRoute({
     primaryProvider: 'openai',
     primaryModel: 'primary-model',
-    env: { MINGLORA_AI_MAX_RETRIES: '0', ...baseEnv }
+    env: { ...baseEnv, MINGLORA_AI_MAX_RETRIES: '0' }
   });
   let callCount = 0;
 
