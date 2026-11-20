@@ -280,6 +280,7 @@ declare
   v_running integer;
   v_recent integer;
   v_recent_tokens bigint;
+  v_token_reservation integer;
   v_retryable boolean;
   v_next_status text;
   v_reason text;
@@ -289,6 +290,7 @@ declare
   v_usage jsonb;
   v_input_tokens integer;
   v_output_tokens integer;
+  v_total_tokens integer;
   v_provider_request_id text;
   v_latency integer;
   v_started_at timestamptz;
@@ -465,16 +467,49 @@ begin
     if v_recent>=v_limit.max_tasks_per_minute then
       return jsonb_build_object('claimed',false,'reason','provider_rate_limit');
     end if;
-    select coalesce(sum(coalesce(a.input_tokens,0)+coalesce(a.output_tokens,0)),0)::bigint
-      into v_recent_tokens from ai_network.ai_task_execution_attempts a
+    v_token_reservation := greatest(
+      v_task.token_budget,
+      least(100000,
+        ceil(length(coalesce(v_task.task_payload->>'prompt',v_task.task_payload->>'input_text',v_task.task_payload->>'text','')) / 3.0)::integer
+        + least(1200,greatest(128,coalesce(nullif(v_task.task_payload->>'max_output_tokens','')::integer,700)))
+        + 512
+      )
+    );
+    select coalesce(sum(
+      case when a.execution_status='running' then
+        greatest(coalesce(q.token_budget,0),
+          least(100000,
+            ceil(length(coalesce(q.task_payload->>'prompt',q.task_payload->>'input_text',q.task_payload->>'text','')) / 3.0)::integer
+            + least(1200,greatest(128,coalesce(nullif(q.task_payload->>'max_output_tokens','')::integer,700)))
+            + 512
+          )
+        )
+      else coalesce(a.input_tokens,0)+coalesce(a.output_tokens,0) end
+    ),0)::bigint
+      into v_recent_tokens
+      from ai_network.ai_task_execution_attempts a
+      left join ai_network.ai_task_queue q on q.task_id=a.task_id
       where a.provider_name=v_provider and a.model_identifier=v_model and a.started_at>=now()-interval '1 minute';
-    if v_task.token_budget>0 and v_recent_tokens+v_task.token_budget>v_limit.max_tokens_per_minute then
+    if v_recent_tokens+v_token_reservation>v_limit.max_tokens_per_minute then
       return jsonb_build_object('claimed',false,'reason','provider_token_rate_limit');
     end if;
 
     v_route_id := gen_random_uuid();
     v_execution_id := gen_random_uuid();
     v_lease_token := gen_random_uuid();
+    -- Insert the attempt before setting the queue's active_execution_id FK.
+    insert into ai_network.ai_task_execution_attempts(
+      execution_id,owner_user_id,task_id,attempt_number,route_id,worker_id,provider_name,
+      model_identifier,assignment_id,execution_status,metadata
+    ) values (
+      v_execution_id,v_worker.owner_user_id,v_task.task_id,v_task.attempt_count+1,v_route_id,
+      v_worker.worker_id,v_provider,v_model,v_assignment_id,'running',
+      jsonb_build_object(
+        'task_type',v_task.task_type,
+        'action_class',v_task.action_class,
+        'token_reservation',v_token_reservation
+      )
+    );
     update ai_network.ai_task_queue q
       set status='running',worker_id=v_worker.worker_id::text,lease_token=v_lease_token,
           lease_expires_at=now()+make_interval(secs=>v_controls.lease_seconds),
@@ -483,14 +518,6 @@ begin
           execution_route_id=v_route_id,active_execution_id=v_execution_id,updated_at=now()
       where q.task_id=v_task.task_id and q.owner_user_id=v_worker.owner_user_id
       returning q.* into v_task;
-    insert into ai_network.ai_task_execution_attempts(
-      execution_id,owner_user_id,task_id,attempt_number,route_id,worker_id,provider_name,
-      model_identifier,assignment_id,execution_status,metadata
-    ) values (
-      v_execution_id,v_worker.owner_user_id,v_task.task_id,v_task.attempt_count,v_route_id,
-      v_worker.worker_id,v_provider,v_model,v_assignment_id,'running',
-      jsonb_build_object('task_type',v_task.task_type,'action_class',v_task.action_class)
-    );
     insert into ai_network.ai_task_events(owner_user_id,task_id,actor_type,worker_id,event_type,previous_status,new_status,reason,metadata)
       values (v_worker.owner_user_id,v_task.task_id,'worker',v_worker.worker_id::text,
         'worker_claimed','queued','running','Worker acquired an authenticated, bounded task lease.',
@@ -535,13 +562,32 @@ begin
          or v_task_result::text ~* '"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"[[:space:]]*:' then
         raise exception using errcode='22023',message='Task result must be a safe JSON object no larger than 64 KB.';
       end if;
-      if jsonb_typeof(v_usage)<>'object' then raise exception using errcode='22023',message='Provider usage must be a JSON object.'; end if;
+      if v_task_result->>'provider' is distinct from v_task.selected_provider
+         or v_task_result->>'model' is distinct from v_task.selected_model then
+        raise exception using errcode='22023',message='Task result provider and model must match the assigned execution route.';
+      end if;
+      if v_task_result #>> '{moderation,input_flagged}' is distinct from 'false'
+         or v_task_result #>> '{moderation,output_flagged}' is distinct from 'false'
+         or v_task_result->>'external_action_taken' is distinct from 'false' then
+        raise exception using errcode='42501',message='The task result must pass input/output moderation and confirm no external action.';
+      end if;
+      if jsonb_typeof(v_usage)<>'object'
+         or v_usage::text ~* '"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"[[:space:]]*:' then
+        raise exception using errcode='22023',message='Provider usage must be a safe JSON object.';
+      end if;
       v_input_tokens := nullif(v_usage->>'input_tokens','')::integer;
       v_output_tokens := nullif(v_usage->>'output_tokens','')::integer;
-      if coalesce(v_input_tokens,0)<0 or coalesce(v_output_tokens,0)<0
-         or coalesce(v_input_tokens,0)>100000000 or coalesce(v_output_tokens,0)>100000000 then
+      v_total_tokens := nullif(v_usage->>'total_tokens','')::integer;
+      if coalesce(v_input_tokens,0)<0 or coalesce(v_output_tokens,0)<0 or coalesce(v_total_tokens,0)<0
+         or coalesce(v_input_tokens,0)>100000000 or coalesce(v_output_tokens,0)>100000000
+         or coalesce(v_total_tokens,0)>100000000 then
         raise exception using errcode='22023',message='Provider usage values are outside the supported range.';
       end if;
+      v_usage := jsonb_build_object(
+        'input_tokens',v_input_tokens,
+        'output_tokens',v_output_tokens,
+        'total_tokens',coalesce(v_total_tokens,coalesce(v_input_tokens,0)+coalesce(v_output_tokens,0))
+      );
       v_provider_request_id := left(trim(coalesce(v_payload->>'provider_request_id','')),180);
       update ai_network.ai_task_queue q
         set status='succeeded',task_result=v_task_result,failure_reason='',
@@ -552,7 +598,7 @@ begin
         set execution_status='succeeded',finished_at=now(),latency_ms=v_latency,
             input_tokens=v_input_tokens,output_tokens=v_output_tokens,
             provider_request_id=nullif(v_provider_request_id,''),
-            metadata=a.metadata||jsonb_build_object('usage',v_usage)
+            metadata=a.metadata||jsonb_build_object('usage',v_usage,'provider_routing',v_task_result->'provider_routing')
         where a.execution_id=v_task.active_execution_id;
       insert into ai_network.ai_task_events(owner_user_id,task_id,actor_type,worker_id,event_type,previous_status,new_status,reason,metadata)
         values (v_worker.owner_user_id,v_task_id,'worker',v_worker.worker_id::text,
@@ -565,7 +611,7 @@ begin
     v_reason := left(trim(coalesce(v_payload->>'failure_reason','AI task execution failed.')),1000);
     if length(v_reason)<3 then v_reason := 'AI task execution failed.'; end if;
     v_retryable := coalesce((v_payload->>'retryable')::boolean,false);
-    v_retry_seconds := greatest(5,least(3600,coalesce(nullif(v_payload->>'retry_after_seconds','')::integer,10*(2 ^ greatest(0,v_task.attempt_count-1))::integer)));
+    v_retry_seconds := greatest(5,least(3600,coalesce(nullif(v_payload->>'retry_after_seconds','')::integer,10*power(2,greatest(0,v_task.attempt_count-1))::integer)));
     v_next_status := case when v_retryable and v_task.attempt_count<v_task.max_attempts then 'queued' else 'failed' end;
     update ai_network.ai_task_queue q
       set status=v_next_status,failure_reason=v_reason,
