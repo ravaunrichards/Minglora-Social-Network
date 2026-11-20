@@ -4698,7 +4698,8 @@ Deno.serve(async (req: Request) => {
     const supportedProviderCommands = [
       "list_provider_accounts", "list_provider_models", "list_provider_assignments", "list_provider_health",
       "create_provider_account", "create_provider_model", "assign_provider_model",
-      "set_provider_assignment_status", "set_provider_account_status", "record_provider_health"
+      "set_provider_assignment_status", "set_provider_account_status", "record_provider_health",
+      "reserve_provider_inference"
     ];
 
     if (!validUuid(actorUserId)) {
@@ -4707,7 +4708,7 @@ Deno.serve(async (req: Request) => {
     if (!supportedProviderCommands.includes(aiAction)) {
       return json(400, { error: "Unsupported AI provider command." });
     }
-    if (["create_provider_account","create_provider_model","assign_provider_model","set_provider_assignment_status","set_provider_account_status","record_provider_health"].includes(aiAction)) {
+    if (["create_provider_account","create_provider_model","assign_provider_model","set_provider_assignment_status","set_provider_account_status","record_provider_health","reserve_provider_inference"].includes(aiAction)) {
       const secretFields = ["api_key","apiKey","access_token","accessToken","password","credential","credentials","secret","provider_secret","credential_secret_ref"];
       if (secretFields.some(field => Object.prototype.hasOwnProperty.call(payload, field))) {
         return json(400, { error: "Provider credentials must be added through an approved secrets manager, not this API." });
