@@ -121,9 +121,6 @@ export async function generateOpenAITaskOutput({
   }
 
   const providerSetting = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
-  if (providerSetting && providerSetting !== 'openai') {
-    throw providerError('provider_not_selected', 'OpenAI is not the selected Minglora provider.', 409, { retryable: false });
-  }
   const apiKey = String(env.OPENAI_API_KEY || (providerSetting === 'openai' ? env.MINGLORA_AI_API_KEY : '') || '').trim();
   if (!apiKey) throw providerError('missing_credentials', 'OpenAI is not configured in the private Minglora worker environment.', 503, { retryable: false });
 
