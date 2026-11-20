@@ -161,16 +161,16 @@ test('assigned bot generation blocks an input flagged by moderation before provi
 
 test('provider routing requires an active owner-owned assignment and does not bypass disabled or revoked assignments', () => {
   const server = read('../../src/server.js');
-  assert.match(server,/const runAIOwnedProviderCommand = async/);
-  assert.match(server,/\\['list_provider_assignments','list_provider_health','list_provider_accounts'\\]/);
-  assert.match(server,/const resolveAIBotProviderAssignment = async identityId/);
-  assert.match(server,/assignment_status === 'active'/);
-  assert.match(server,/account\\.status !== 'enabled'/);
-  assert.match(server,/account\\.health_status !== 'healthy'/);
-  assert.match(server,/const latestModelCheck = modelEvents\\[0\\]/);
-  assert.match(server,/latestModelCheck\\?\\.metadata\\?\\.inference_verified !== true/);
-  assert.match(server,/generateAssignedAIBotReply\\(/);
-  assert.match(server,/if \\(!generated\\) \\{/);
-  assert.match(server,/provider assignment, but none is active/);
-  assert.match(server,/identity_id: chatBase\\.bot\\.identityId/);
+  assert.ok(server.includes('const runAIOwnedProviderCommand = async'));
+  assert.ok(server.includes("['list_provider_assignments','list_provider_health','list_provider_accounts']"));
+  assert.ok(server.includes('const resolveAIBotProviderAssignment = async identityId'));
+  assert.ok(server.includes("assignment_status === 'active'"));
+  assert.ok(server.includes("account.status !== 'enabled'"));
+  assert.ok(server.includes("account.health_status !== 'healthy'"));
+  assert.ok(server.includes('const latestModelCheck = modelEvents[0]'));
+  assert.ok(server.includes('latestModelCheck?.metadata?.inference_verified !== true'));
+  assert.ok(server.includes('generateAssignedAIBotReply('));
+  assert.ok(server.includes('if (!generated) {'));
+  assert.ok(server.includes('provider assignment, but none is active'));
+  assert.ok(server.includes('identity_id: chatBase.bot.identityId'));
 });
