@@ -81,7 +81,7 @@ create table if not exists ai_network.ai_task_provider_limits (
   primary key (provider_name,model_identifier)
 );
 insert into ai_network.ai_task_provider_limits(provider_name,model_identifier,max_concurrent_tasks,max_tasks_per_minute,max_tokens_per_minute)
-values ('openai','*',1,10,30000)
+values ('openai','*',1,1,30000)
 on conflict (provider_name,model_identifier) do nothing;
 
 alter table ai_network.ai_task_workers enable row level security;
@@ -632,7 +632,10 @@ begin
       return jsonb_build_object('renewed',true,'lease_seconds',coalesce(v_controls.lease_seconds,120));
     end if;
 
-    v_started_at := coalesce(v_task.started_at,now());
+    select a.started_at into v_started_at
+      from ai_network.ai_task_execution_attempts a
+      where a.execution_id=v_task.active_execution_id;
+    v_started_at := coalesce(v_started_at,now());
     v_latency := greatest(0,least(3600000,(extract(epoch from (now()-v_started_at))*1000)::integer));
     if v_action='complete_task' then
       v_task_result := coalesce(v_payload->'task_result','{}'::jsonb);
