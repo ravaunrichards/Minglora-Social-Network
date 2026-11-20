@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runAIExecutionWorkerOnce } from '../../backend/workers/ai-execution/worker.mjs';
+import { runAIExecutionWorkerOnce, refreshAIProviderHealth } from '../../backend/workers/ai-execution/worker.mjs';
 import { executeOpenAITask } from '../../backend/modules/ai-network/openai-task-executor.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -16,6 +16,7 @@ const enabledEnv = {
   MINGLORA_AI_WORKER_TOKEN: 'worker-token-placeholder-that-is-long-enough-for-tests',
   MINGLORA_AI_MAX_REQUESTS_PER_MINUTE: '30',
   MINGLORA_AI_MAX_TOKENS_PER_MINUTE: '30000',
+  MINGLORA_AI_PROVIDER_HEALTH_CHECK_ENABLED: 'false',
   OPENAI_API_KEY: 'test-key-only'
 };
 
@@ -168,6 +169,35 @@ test('worker rejects an incomplete generation rather than marking it successful'
   assert.equal(actions.includes('complete_task'), false);
 });
 
+test('worker health probes record healthy and unavailable assigned OpenAI routes', async () => {
+  const calls = [];
+  const result = await refreshAIProviderHealth({
+    env: { ...enabledEnv, MINGLORA_AI_PROVIDER_HEALTH_CHECK_ENABLED: 'true' },
+    force: true,
+    now: () => 1000000000,
+    gatewayCall: async (action, payload) => {
+      calls.push({ action, payload });
+      if (action === 'list_provider_health_targets') {
+        return { targets: [
+          { provider_account_id: 'account-1', assignment_id: 'assignment-1', model_identifier: 'gpt-good' },
+          { provider_account_id: 'account-2', assignment_id: 'assignment-2', model_identifier: 'gpt-bad' }
+        ] };
+      }
+      return { recorded: true };
+    },
+    probeProvider: async ({ env }) => env.OPENAI_DEFAULT_MODEL === 'gpt-good'
+      ? { connected: true, healthStatus: 'healthy', status: 'healthy' }
+      : { connected: false, healthStatus: 'unknown', status: 'unauthorized' },
+    logger: { info() {} }
+  });
+  assert.equal(result.checked, 2);
+  assert.deepEqual(calls.map(x => x.action), [
+    'list_provider_health_targets','record_provider_health','record_provider_health'
+  ]);
+  assert.equal(calls[1].payload.health_status, 'healthy');
+  assert.equal(calls[2].payload.health_status, 'unavailable');
+});
+
 test('OpenAI task executor moderates input and output and sends no tools', async () => {
   const calls = [];
   const fetchImpl = async (url, options) => {
@@ -243,8 +273,8 @@ test('Phase 6 migration enforces worker identity, explicit permissions, leases, 
   for (const token of [
     'ai_worker_credentials','token_sha256','ai_execution_rate_buckets',
     "current_user <> 'service_role'",
-    'minglora_ai_worker_authenticate',
-    "cap.capability_key='task_execution'",
+    'minglora_ai_worker_authenticate','list_provider_health_targets','record_provider_health',
+    'minglora_ai_activate_provider_assignment', "cap.capability_key='task_execution'",
     "perm.effect='allow'",
     "deny.effect='deny'",
     'for update skip locked',
@@ -264,6 +294,7 @@ test('Phase 6 migration enforces worker identity, explicit permissions, leases, 
 test('runtime accepts worker auth only for the worker action allowlist and supports owner history/cancellation', () => {
   assert.match(runtime, /x-minglora-worker-token/);
   assert.match(runtime, /minglora_ai_worker_authenticate/);
+  assert.match(runtime, /ai_provider_activate_assignment/);
   assert.match(runtime, /Worker credentials are restricted to AI worker execution commands/);
   assert.match(runtime, /supportedWorkerCommands/);
   assert.match(runtime, /minglora_ai_cancel_task/);
