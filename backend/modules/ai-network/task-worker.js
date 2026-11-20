@@ -40,7 +40,11 @@ export async function processClaimedAITask(claim, {
   let heartbeatPending = false;
   let leaseError = null;
 
-  const abortFromParent = () => controller.abort(new Error('Worker is shutting down.'));
+  const abortFromParent = () => controller.abort(Object.assign(new Error('Worker is shutting down; task will be retried when allowed.'), {
+    code: 'worker_shutdown',
+    safeForClient: true,
+    retryable: true
+  }));
   if (parentSignal?.aborted) abortFromParent();
   else parentSignal?.addEventListener('abort', abortFromParent, { once: true });
 
@@ -78,12 +82,26 @@ export async function processClaimedAITask(claim, {
         retryable: true
       });
     }
+    if (generated.provider !== claim.route.provider || generated.model !== claim.route.model) {
+      throw Object.assign(new Error('The provider result did not match the reserved execution route.'), {
+        code: 'execution_route_mismatch',
+        safeForClient: true,
+        retryable: false
+      });
+    }
+    if (generated.moderation?.input_flagged !== false || generated.moderation?.output_flagged !== false) {
+      throw Object.assign(new Error('Both input and output moderation must pass before task completion.'), {
+        code: 'moderation_not_confirmed',
+        safeForClient: true,
+        retryable: false
+      });
+    }
 
     const taskResult = {
       output: generated.output.slice(0, 12000),
-      provider: String(generated.provider || claim.route.provider || '').slice(0, 80),
-      model: String(generated.model || claim.route.model || '').slice(0, 180),
-      moderation: generated.moderation || { verified: false },
+      provider: String(generated.provider).slice(0, 80),
+      model: String(generated.model).slice(0, 180),
+      moderation: generated.moderation,
       provider_routing: generated.provider_routing || {},
       external_action_taken: generated.external_action_taken === true
     };
