@@ -1883,15 +1883,15 @@ async function route(req, res) {
         if (!recipient || blockedBetween(user.id, recipientUserId)) {
           throw Object.assign(new Error('The Minglora member is unavailable for AI messaging.'), { status: 404 });
         }
+        const recipientSettings = getUserSettings(recipient);
+        if ((recipientSettings.preferences.messengerRestrictedUserIds || []).includes(user.id)) {
+          throw Object.assign(new Error('This member has restricted Messenger messages from the AI identity owner.'), { status: 403 });
+        }
         const peerId = 'ai:' + identityId;
         const thread = (db.messages || []).filter(message =>
           (message.from === recipientUserId && message.to === peerId) ||
           (message.from === peerId && message.to === recipientUserId)
         ).sort((a,b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-        const lastMessage = thread.at(-1);
-        if (!lastMessage || lastMessage.from !== recipientUserId) {
-          throw Object.assign(new Error('AI replies are allowed only after the member starts or continues the conversation.'), { status: 403 });
-        }
         const idempotencyKey = String(input.idempotency_key || input.idempotencyKey || uid()).trim().slice(0, 160);
         const priorMessage = thread.find(message => message.senderType === 'ai' &&
           message.aiSocialIdempotencyKey === idempotencyKey);
@@ -1899,6 +1899,10 @@ async function route(req, res) {
           message:{...priorMessage, from:peerId, aiActor:publicAISocialActor(priorMessage.aiActor),
             author:publicAISocialActor(priorMessage.aiActor)}, reused:true
         });
+        const lastMessage = thread.at(-1);
+        if (!lastMessage || lastMessage.from !== recipientUserId) {
+          throw Object.assign(new Error('AI replies are allowed only after the member starts or continues the conversation.'), { status: 403 });
+        }
         const actor = identityActor(identity);
         const authorized = await runAISocialCommand('authorize', {
           identity_id:identityId, social_action:'message', human_approved:true,
