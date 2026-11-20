@@ -2988,6 +2988,7 @@ async function route(req, res) {
           await runAIProviderCommand('reserve_provider_inference', {
             provider_account_id: accountId,
             provider_name: provider,
+            model_id: modelId,
             model_identifier: selected.model_identifier
           });
         } catch (error) {
@@ -3031,6 +3032,7 @@ async function route(req, res) {
               inference_verified: true,
               in_progress: false,
               verification_type: 'fixed_prompt',
+              model_id: modelId,
               input_tokens: inputTokens,
               output_tokens: outputTokens,
               total_tokens: totalTokens
@@ -3084,7 +3086,8 @@ async function route(req, res) {
               inference_verification_attempt: true,
               inference_verified: false,
               in_progress: false,
-              verification_type: 'fixed_prompt'
+              verification_type: 'fixed_prompt',
+              model_id: modelId
             },
             checked_at: checkedAt
           });
