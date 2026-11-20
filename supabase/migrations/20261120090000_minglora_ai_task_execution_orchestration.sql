@@ -373,6 +373,7 @@ declare
   v_task ai_network.ai_task_queue%rowtype;
   v_task_id uuid;
   v_assignment_id uuid;
+  v_route_fallback boolean := false;
   v_provider text;
   v_model text;
   v_route_id uuid;
@@ -497,7 +498,12 @@ begin
           ('google_gemini'=any(v_worker.allowed_providers)
             and (lower(pa.provider_name) like '%gemini%' or lower(m.provider_name) like '%gemini%'))
         )
-      order by a.routing_priority asc,a.assigned_at asc
+      order by
+        case when exists (
+          select 1 from ai_network.ai_task_execution_attempts prior
+          where prior.task_id=q.task_id and prior.assignment_id=a.assignment_id
+        ) then 1 else 0 end,
+        a.routing_priority asc,a.assigned_at asc
       limit 1
     ) route on true
     where q.owner_user_id=v_worker.owner_user_id and q.status='queued' and q.scheduled_for<=now()
@@ -576,10 +582,19 @@ begin
         ('google_gemini'=any(v_worker.allowed_providers)
           and (lower(pa.provider_name) like '%gemini%' or lower(m.provider_name) like '%gemini%'))
       )
-    order by a.routing_priority asc,a.assigned_at asc limit 1;
+    order by
+      case when exists (
+        select 1 from ai_network.ai_task_execution_attempts prior
+        where prior.task_id=v_task.task_id and prior.assignment_id=a.assignment_id
+      ) then 1 else 0 end,
+      a.routing_priority asc,a.assigned_at asc limit 1;
     if v_assignment_id is null or v_provider not in ('openai','google_gemini') then
       return jsonb_build_object('claimed',false,'reason','provider_route_unavailable');
     end if;
+    select exists (
+      select 1 from ai_network.ai_task_execution_attempts prior
+      where prior.task_id=v_task.task_id and prior.assignment_id=v_assignment_id
+    ) into v_route_fallback;
 
     select * into v_limit from ai_network.ai_task_provider_limits l
       where l.provider_name=v_provider and l.model_identifier in (v_model,'*')
@@ -651,7 +666,7 @@ begin
     insert into ai_network.ai_task_events(owner_user_id,task_id,actor_type,worker_id,event_type,previous_status,new_status,reason,metadata)
       values (v_worker.owner_user_id,v_task.task_id,'worker',v_worker.worker_id::text,
         'worker_claimed','queued','running','Worker acquired an authenticated, bounded task lease.',
-        jsonb_build_object('route_id',v_route_id,'provider',v_provider,'model',v_model,'attempt',v_task.attempt_count));
+        jsonb_build_object('route_id',v_route_id,'provider',v_provider,'model',v_model,'attempt',v_task.attempt_count,'fallback_used',v_route_fallback));
     select jsonb_build_object(
       'identity_id',i.identity_id,
       'population',i.population,
@@ -672,7 +687,7 @@ begin
     where i.identity_id=v_task.identity_id and i.owner_user_id=v_task.owner_user_id;
     return jsonb_build_object(
       'claimed',true,'task',to_jsonb(v_task),'identity_context',coalesce(v_identity_context,'{}'::jsonb),
-      'route',jsonb_build_object('route_id',v_route_id,'provider',v_provider,'model',v_model,'assignment_id',v_assignment_id),
+      'route',jsonb_build_object('route_id',v_route_id,'provider',v_provider,'model',v_model,'assignment_id',v_assignment_id,'fallback_used',v_route_fallback),
       'worker',jsonb_build_object('worker_id',v_worker.worker_id,'lease_seconds',v_controls.lease_seconds),
       'lease_token',v_lease_token
     );
