@@ -224,6 +224,22 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       error => error.code==='22023'
     );
 
+    const reservation = await command('reserve_provider_inference',owner,{
+      provider_account_id:account.provider_account_id,
+      provider_name:'openai',
+      model_identifier:'gpt-provider-health-test'
+    });
+    assert.equal(reservation.reservation.metadata.inference_verification_attempt,true);
+    assert.equal(reservation.reservation.metadata.in_progress,true);
+    await assert.rejects(
+      command('reserve_provider_inference',owner,{
+        provider_account_id:account.provider_account_id,
+        provider_name:'openai',
+        model_identifier:'gpt-provider-health-test'
+      }),
+      error => error.code==='22023'
+    );
+
     const inferenceEvent = await command('record_provider_health',owner,{
       provider_account_id:account.provider_account_id,
       provider_name:'openai',
@@ -280,11 +296,26 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
     });
     assert.equal(enabled.provider_account.status,'enabled');
 
-    await command('set_provider_account_status',owner,{
+    await command('record_provider_health',owner,{
       provider_account_id:account.provider_account_id,
-      status:'disabled',
-      reason:'Disable during integration test.'
+      provider_name:'openai',
+      health_status:'provider_error',
+      model_identifier:'gpt-provider-health-test',
+      response_time_ms:22,
+      error_code:'provider_error',
+      reason:'A post-enable inference verification failed.',
+      metadata:{inference_verification_attempt:true,inference_verified:false,verification_type:'fixed_prompt'}
     });
+    const autoDisabled = await client.query(`
+      select a.status, i.assignment_status
+      from ai_network.ai_provider_accounts a
+      join ai_network.ai_provider_assignments i on i.provider_account_id=a.provider_account_id
+      where a.provider_account_id=$1
+    `,[account.provider_account_id]);
+    assert.equal(autoDisabled.rows[0].status,'disabled');
+    assert.equal(autoDisabled.rows[0].assignment_status,'disabled');
+
+
 
     await command('record_provider_health',owner,{
       provider_account_id:account.provider_account_id,
@@ -341,6 +372,14 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       }),
       error => error.code==='22023'
     );
+    await assert.rejects(
+      command('reserve_provider_inference',owner,{
+        provider_account_id:account.provider_account_id,
+        provider_name:'openai',
+        model_identifier:'gpt-provider-health-test'
+      }),
+      error => error.code==='22023'
+    );
 
     const userManaged = await command('create_provider_account',owner,{
       provider_name:'anthropic',
@@ -353,6 +392,14 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
         provider_name:'anthropic',
         health_status:'healthy',
         reason:'User-managed account must not inherit platform credentials.'
+      }),
+      error => error.code==='42501'
+    );
+    await assert.rejects(
+      command('reserve_provider_inference',owner,{
+        provider_account_id:userManaged.provider_account.provider_account_id,
+        provider_name:'anthropic',
+        model_identifier:'claude-test'
       }),
       error => error.code==='42501'
     );
