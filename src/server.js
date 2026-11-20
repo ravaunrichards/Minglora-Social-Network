@@ -51,6 +51,7 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
+import { probeGeminiProvider } from '../backend/modules/ai-network/google-gemini-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { startAITaskWorker } from '../backend/modules/ai-network/task-worker.js';
@@ -61,6 +62,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
 let openAIProviderHealthState = null;
+let geminiProviderHealthState = null;
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
 const activeAIBotChatOwners = new Set();
@@ -2762,10 +2764,17 @@ async function route(req, res) {
         }
         let providerHealth = null;
         if (input.execution_enabled === true) {
-          providerHealth = await probeOpenAIProvider();
-          openAIProviderHealthState = providerHealth;
+          const selectedProvider = String(process.env.MINGLORA_AI_PROVIDER || 'openai').trim().toLowerCase();
+          providerHealth = ['google_gemini','gemini'].includes(selectedProvider)
+            ? await probeGeminiProvider()
+            : await probeOpenAIProvider();
+          if (selectedProvider === 'google_gemini' || selectedProvider === 'gemini') {
+            geminiProviderHealthState = providerHealth;
+          } else {
+            openAIProviderHealthState = providerHealth;
+          }
           if (providerHealth.connected !== true) {
-            throw Object.assign(new Error('Execution remains disabled because the live OpenAI provider probe did not pass.'), { status: 503 });
+            throw Object.assign(new Error('Execution remains disabled because the selected live AI provider model-access probe did not pass.'), { status: 503 });
           }
         }
         const result = await runAIWorkerAdminCommand('set_runtime_controls', input);
