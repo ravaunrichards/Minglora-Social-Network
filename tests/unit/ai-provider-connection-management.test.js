@@ -58,3 +58,27 @@ test('connection status cannot be presented as execution enablement in the admin
   assert.match(ui, /does not enable execution automatically/);
   assert.match(ui, /AI inference and workers remain disabled/);
 });
+
+test('model synchronization imports provider-listed models and keeps inference disabled', () => {
+  const server = read('src/server.js');
+  const ui = read('public/ai-network.js');
+  assert.match(server, /sub === 'provider-models\/sync'/);
+  assert.match(server, /listAIProviderModels\(provider\)/);
+  assert.match(server, /runAIProviderCommand\('create_provider_model'/);
+  assert.match(server, /inference_verified: false/);
+  assert.match(server, /provider_listed_only: true/);
+  assert.match(server, /model shutdown|shutdownDate/);
+  assert.match(ui, /data-ai-form="provider-model-sync"/);
+  assert.match(ui, /Discover and synchronize models/);
+  assert.match(ui, /listing access is verified; inference is not/i);
+});
+
+test('provider model selection rechecks the live provider list before assignment', () => {
+  const server = read('src/server.js');
+  assert.match(server, /verifyProviderModelSelection/);
+  assert.match(server, /listAIProviderModels\(providerId\)/);
+  assert.match(server, /selected\.model_identifier/);
+  assert.match(server, /model is not currently returned by the provider model-list API/);
+  assert.match(server, /await verifyProviderModelSelection\(String\(input\.model_id/);
+  assert.match(server, /await verifyProviderModelSelection\(String\(item\.model_id/);
+});
