@@ -46,9 +46,25 @@ The Bot Personality Lab conversation route is also implemented: `GET /api/ai-net
 
 The OpenAI entry also advertises a **read-only model-access health probe**. The designated-admin-only `POST /api/ai-network/provider-health` endpoint reads the key and model from the private server environment and calls OpenAI's model retrieval endpoint. It accepts only the provider identifier in the request body; it rejects browser-supplied credential fields. A successful probe confirms that the configured API key can retrieve the selected model, but it does **not** verify text generation, moderation, cost metering, routing, or worker execution. The result is not persisted as a connected state; a fresh probe is required to confirm current provider health.
 
+## Phase 4.2 — server-side provider adapter registry
+
+The backend now has a shared adapter interface for **OpenAI, Anthropic Claude, and Google Gemini** in `backend/modules/ai-network/provider-adapters.js`. For each of these three providers it supports:
+
+- Authenticated model discovery from the provider's native model-list endpoint.
+- A read-only connection probe that reports whether authentication and model listing succeeded.
+- A server-side text-generation transport with bounded timeouts and output-token limits.
+- Provider-specific response parsing and normalized token-usage fields.
+- Sanitized errors; response bodies, API keys and authorization headers are not returned in adapter results or error messages.
+
+The adapter contracts follow the providers' current API references: [OpenAI model listing and Responses API](https://developers.openai.com/api/reference/resources/models/methods/list), [Anthropic Models API and Messages API](https://platform.claude.com/docs/en/api/overview), and [Gemini Models API and generateContent API](https://aistudio.google.com/api-reference/models). OpenAI and Anthropic use bearer authorization; Gemini sends its API key in the `x-goog-api-key` header. All configurable provider base URLs are restricted to HTTPS and cannot include embedded credentials, query strings or fragments. Requests reject redirects and have bounded timeouts.
+
+**Important boundary:** these are backend transport adapters, not a declaration that the providers are connected or approved for production execution. Anthropic and Gemini are not yet wired to customer-facing Minglora routes. The shared generation function does not itself perform Minglora content moderation, user authorization, identity scoping, budget reservation, usage persistence or publishing controls. Any caller must pass those gates before returning generated text. The existing OpenAI human-initiated routes keep their separate moderation and owner-control protections.
+
+A successful model-list probe confirms API authentication and the ability to list models; it does not prove that a selected model can generate content, that quota is available, or that inference is production-ready. The adapter contract tests use simulated HTTP responses and do not consume provider credits. A live connection check still requires private credentials and must be run from the server environment.
+
 Owner-control behavior: the Resume action performs a fresh OpenAI model-access probe before clearing the owner's global pause. Enabling a bot for owner-initiated use also performs a fresh probe and remains subject to the global pause. This changes only owner-controlled AI availability; it does not start durable queue workers or autonomous schedules. Schedule activation stays unavailable until the separate worker claim/lease/heartbeat/completion runtime is deployed and accepted. Pause, resume and bot status controls call their server routes; provider failure is returned as an actionable API error rather than silently marking the provider connected.
 
-The provider helper reports only credential-variable presence and adapter/probe availability; it never returns secret values. OpenAI's adapter is implemented, but provider connection remains false and inference stays unavailable until private credentials and model access pass a live probe. Worker execution remains disabled independently.
+The provider helper reports only credential-variable presence and adapter/probe availability; it never returns secret values. The adapter registry now implements OpenAI, Anthropic and Google Gemini, but the presence of an adapter or a non-empty credential does not mark a provider connected. Only a successful server-side probe can report current model-list connectivity, and no such result is persisted by this stage. Anthropic and Gemini generation are not connected to user-facing routes. Existing OpenAI owner-initiated inference continues to use its separate moderation and owner-scope gates. Autonomous worker execution remains disabled independently.
 
 The existing generic MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL, and MINGLORA_AI_API_KEY triplet is retained for backwards compatibility. The generic triplet is not proof of a working adapter. Provider-specific variables are prepared for future adapters and do not independently unpause workers.
 
