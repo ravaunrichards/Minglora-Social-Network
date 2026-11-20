@@ -1981,7 +1981,22 @@ async function route(req, res) {
           runAISocialCommand('get_settings',{}),
           runAISocialCommand('history',{})
         ]);
-        return json(res,200,{...settings,activity:history?.activity||[]});
+        const conversations=(db.aiSocialConversations||[])
+          .filter(item=>item.ownerUserId===user.id&&item.status!=='closed')
+          .map(item=>{
+            const member=(db.users||[]).find(row=>row.id===item.memberUserId);
+            const messages=(db.aiSocialMessages||[])
+              .filter(message=>message.conversationId===item.id)
+              .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))
+              .map(message=>({...message,author:safeSocialAuthor(message.from,user.id)}));
+            return {
+              id:item.id,identityId:item.identityId,memberUserId:item.memberUserId,
+              member:member?safeUser(member,user.id):null,
+              humanInitiated:item.humanInitiated===true,status:item.status||'active',
+              createdAt:item.createdAt,lastActivityAt:item.lastActivityAt,messages
+            };
+          }).filter(item=>item.member);
+        return json(res,200,{...settings,activity:history?.activity||[],conversations});
       }
       if(method==='PATCH'&&sub==='social/controls'){
         if(typeof input.globalPaused!=='boolean')return json(res,400,{error:'globalPaused must be true or false.'});
