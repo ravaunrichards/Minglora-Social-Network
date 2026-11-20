@@ -13,7 +13,7 @@ The Phase 6 worker is opt-in and remains disabled by default. The worker does no
 7. A supported low-impact text task has a token budget. Current execution deliberately rejects non-zero cost-limit tasks because a verified per-model price ledger is not yet present.
 8. The worker has a separately issued credential and the supported provider secret is present in the server environment.
 
-The only task adapter enabled by this release is OpenAI text generation. Other provider catalogue entries remain non-routable until they have their own tested authentication, moderation, usage, timeout, and failure contracts.
+The only task adapter enabled by this release is OpenAI text generation. The worker periodically probes each assigned OpenAI model with a read-only authenticated model-access request and records account/assignment health. After a successful recent probe, an authorized administrator must explicitly activate the pending provider assignment; the activation RPC rechecks identity state, account ownership, model capability and probe freshness. Other provider catalogue entries remain non-routable until they have their own tested authentication, moderation, usage, timeout, and failure contracts.
 
 ## Worker authentication and configuration
 
@@ -27,7 +27,7 @@ Required worker environment:
 - `MINGLORA_AI_WORKER_TOKEN` — the private worker credential.
 - `SUPABASE_URL` or `MINGLORA_AI_WORKER_GATEWAY_URL` — the Supabase function gateway.
 - `OPENAI_API_KEY` and, optionally, `OPENAI_BASE_URL`.
-- `MINGLORA_AI_WORKER_POLL_MS`, `MINGLORA_AI_HEARTBEAT_MS`, `MINGLORA_AI_MAX_REQUESTS_PER_MINUTE`, and `MINGLORA_AI_MAX_TOKENS_PER_MINUTE` — bounded worker controls.
+- `MINGLORA_AI_WORKER_POLL_MS`, `MINGLORA_AI_HEARTBEAT_MS`, `MINGLORA_AI_MAX_REQUESTS_PER_MINUTE`, and `MINGLORA_AI_MAX_TOKENS_PER_MINUTE`, `MINGLORA_AI_PROVIDER_HEALTH_CHECK_ENABLED`, and `MINGLORA_AI_PROVIDER_HEALTH_INTERVAL_MS` — bounded worker controls.
 
 The example environment keeps the worker disabled. The web process starts the worker loop only when the explicit enable flag is true. Worker polling does not override the database runtime pause.
 
