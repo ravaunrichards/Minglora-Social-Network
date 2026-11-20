@@ -2821,10 +2821,12 @@ async function route(req, res) {
           }
         }
 
+        const discoveryStartedAt = Date.now();
         const discovery = await listAIProviderModels(provider);
+        const discoveryResponseTimeMs = Math.min(Math.max(Date.now() - discoveryStartedAt, 0), 120000);
         const discoveredAt = new Date().toISOString();
         const candidates = discovery.models.filter(model => {
-          if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(String(model.id || ''))) return false;
+          if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/.test(String(model.id || ''))) return false;
           if (model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now()) return false;
           if (model.lifecycle === 'retired') return false;
           return true;
@@ -2863,6 +2865,24 @@ async function route(req, res) {
             else created.push(outcome.modelId);
           }
         }
+        if (accountId) {
+          await runAIProviderCommand('record_provider_health', {
+            provider_account_id: accountId,
+            provider_name: provider,
+            health_status: 'healthy',
+            model_identifier: null,
+            response_time_ms: discoveryResponseTimeMs,
+            error_code: '',
+            reason: 'Authenticated provider model-list request succeeded. Text generation was not tested.',
+            metadata: {
+              discovery_only: true,
+              model_count: discovery.models.length,
+              pages_fetched: discovery.pagesFetched || 1,
+              discovery_truncated: discovery.truncated === true
+            },
+            checked_at: discoveredAt
+          });
+        }
         return json(res, failed.length ? 207 : 200, {
           provider,
           discovered_count: discovery.models.length,
@@ -2883,8 +2903,10 @@ async function route(req, res) {
         });
       }
       const providerModelVerificationCache = new Map();
+      let providerModelCatalogPromise = null;
       const verifyProviderModelSelection = async modelId => {
-        const catalog = await runAIProviderCommand('list_provider_models');
+        if (!providerModelCatalogPromise) providerModelCatalogPromise = runAIProviderCommand('list_provider_models');
+        const catalog = await providerModelCatalogPromise;
         const selected = (Array.isArray(catalog) ? catalog : []).find(item => item.model_id === modelId);
         if (!selected || selected.is_active !== true) {
           throw Object.assign(new Error('The selected provider model is missing or inactive in the Minglora model catalogue.'), { status: 409 });
