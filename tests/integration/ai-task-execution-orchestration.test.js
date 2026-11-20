@@ -320,21 +320,47 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
       identityId:IDENTITY_B,title:'Delegated task for the member identity',
       tokenBudget:1000,costLimit:0.05,grantId,delegatedFrom:IDENTITY_A
     });
+    const delegatedPrimary=await workerCommand('claim_next_task');
+    assert.equal(delegatedPrimary.claimed,true);
+    assert.equal(delegatedPrimary.task.task_id,delegatedTaskId);
+    assert.equal(delegatedPrimary.identity_context.personality.tone,'clear');
+    assert.equal(delegatedPrimary.route.provider,'openai');
+    assert.equal(delegatedPrimary.route.model,MODEL_NAME);
+    const delegatedRetry=await workerCommand('fail_task',{
+      task_id:delegatedTaskId,
+      lease_token:delegatedPrimary.lease_token,
+      error_code:'provider_503',
+      failure_reason:'Primary provider failed; a configured fallback route should be attempted.',
+      retryable:true,
+      retry_after_seconds:5
+    });
+    assert.equal(delegatedRetry.status,'queued');
+    await client.query('update ai_network.ai_task_queue set scheduled_for=now() where task_id=$1::uuid',[delegatedTaskId]);
+
     const delegatedClaim=await workerCommand('claim_next_task');
     assert.equal(delegatedClaim.claimed,true);
     assert.equal(delegatedClaim.task.task_id,delegatedTaskId);
     assert.equal(delegatedClaim.identity_context.personality.tone,'clear');
     assert.equal(delegatedClaim.route.provider,'google_gemini');
     assert.equal(delegatedClaim.route.model,GEMINI_MODEL_NAME);
+    assert.equal(delegatedClaim.route.fallback_used,true);
+    assert.notEqual(delegatedClaim.route.route_id,delegatedPrimary.route.route_id);
     const delegatedDone=await workerCommand('complete_task',{
-      task_id:delegatedTaskId,lease_token:delegatedClaim.lease_token,
+      task_id:delegatedTaskId,
+      lease_token:delegatedClaim.lease_token,
       task_result:{
-        output:'Delegated summary complete.',provider:'google_gemini',model:GEMINI_MODEL_NAME,
-        moderation:{input_flagged:false,output_flagged:false},external_action_taken:false
+        output:'Delegated summary complete.',
+        provider:'google_gemini',
+        model:GEMINI_MODEL_NAME,
+        moderation:{input_flagged:false,output_flagged:false},
+        external_action_taken:false
       },
       usage:{input_tokens:30,output_tokens:20,total_tokens:50}
     });
     assert.equal(delegatedDone.status,'succeeded');
+    const delegatedHistory=await adminCommand('list_task_history',{task_id:delegatedTaskId});
+    assert.deepEqual(delegatedHistory.executions.map(row=>row.execution_status),['retry_scheduled','succeeded']);
+    assert.equal(delegatedHistory.executions[1].metadata.fallback_used,true);
 
     const failureTaskId=await insertTask({title:'Retry and terminal failure task',maxAttempts:2});
     const failureClaim1=await workerCommand('claim_next_task');
