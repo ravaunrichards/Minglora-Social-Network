@@ -169,7 +169,7 @@ export function startAITaskWorker({
   env = process.env,
   fetchImpl = globalThis.fetch,
   logger = console,
-  executeTask = generateOpenAITaskOutput
+  executeTask = generateAITaskOutput
 } = {}) {
   if (String(env.MINGLORA_AI_WORKER_ENABLED || '').trim().toLowerCase() !== 'true') {
     return { enabled: false, stop: async () => {} };
