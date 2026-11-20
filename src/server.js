@@ -2828,7 +2828,7 @@ async function route(req, res) {
         const candidates = discovery.models.filter(model => {
           if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/.test(String(model.id || ''))) return false;
           if (model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now()) return false;
-          if (model.lifecycle === 'retired') return false;
+          if (model.lifecycle && model.lifecycle !== 'active') return false;
           return true;
         }).slice(0, 250);
         const created = [];
@@ -2919,7 +2919,7 @@ async function route(req, res) {
           const live = await providerModelVerificationCache.get(providerId);
           const listed = live.models.some(model => {
             const matches = model.id === selected.model_identifier || model.resourceName === selected.model_identifier;
-            const retired = model.lifecycle === 'retired';
+            const retired = model.lifecycle === 'retired' || model.lifecycle === 'deprecated';
             const shutdown = model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now();
             return matches && !retired && !shutdown;
           });
@@ -2939,6 +2939,7 @@ async function route(req, res) {
           throw Object.assign(new Error('Provider assignment input must be a JSON object.'), { status: 400 });
         }
         await verifyProviderModelSelection(String(input.model_id || ''));
+        if (input.fallback_model_id) await verifyProviderModelSelection(String(input.fallback_model_id));
         const result = await runAIProviderCommand('assign_provider_model', input);
         return json(res, result?.reused ? 200 : 201, result || {});
       }
@@ -2969,6 +2970,7 @@ async function route(req, res) {
                 throw Object.assign(new Error('Supported languages must be an array.'), { status: 400 });
               }
               await verifyProviderModelSelection(String(item.model_id || ''));
+              if (item.fallback_model_id) await verifyProviderModelSelection(String(item.fallback_model_id));
               const result = await runAIProviderCommand('assign_provider_model', item);
               return { ok: true, identity_id: item.identity_id, result };
             } catch (error) {
