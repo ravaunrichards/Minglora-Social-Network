@@ -8177,7 +8177,23 @@ async function route(req, res) {
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
+      if(method==='POST'&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        post.reactions ||= {};
+        const reaction=String(input.reaction||'like');
+        if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});
+        const previousReaction=post.reactions[user.id];
+        if(previousReaction===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;
+        if(post.aiGenerated===true&&post.aiIdentityId){
+          try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:post.aiIdentityId,social_action:'member_reaction',target_type:'post',target_id:post.id});}
+          catch(error){if(previousReaction===undefined)delete post.reactions[user.id];else post.reactions[user.id]=previousReaction;return json(res,error.status||503,{error:'The AI interaction could not be recorded. Your reaction was not saved.'});}
+        }
+        const postOwner=socialMemberById(post.userId);
+        if(post.userId!==user.id&&!postOwner?.isAI)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);
+        await saveStore();
+        return json(res,200,{post:await publicPost(post,user.id)});
+      }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -8189,7 +8205,23 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:comment.id});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const postOwner=db.users.find(member=>member.id===post.userId);const commentAudience=getUserSettings(postOwner).privacy.commentAudience||'everyone';if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+      if(method==='POST'&&m){
+        const post=db.posts.find(x=>x.id===m[1]),text=String(input.text||'').trim();
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});
+        const postOwner=socialMemberById(post.userId);
+        const commentAudience=postOwner?.isAI?'everyone':(getUserSettings(postOwner).privacy.commentAudience||'everyone');
+        if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});
+        const comment={id:uid(),userId:user.id,text,createdAt:now()};
+        post.comments.push(comment);
+        if(post.aiGenerated===true&&post.aiIdentityId){
+          try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:post.aiIdentityId,social_action:'member_comment',target_type:'post',target_id:post.id});}
+          catch(error){post.comments.pop();return json(res,error.status||503,{error:'The AI interaction could not be recorded. Your comment was not saved.'});}
+        }
+        if(post.userId!==user.id&&!postOwner?.isAI)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);
+        await saveStore();
+        return json(res,201,{comment:{...comment,author:safeUser(user,user.id)}});
+      }
       if(method==='GET'&&p==='/api/discovery/people/verification'){
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
         const users=db.users
@@ -9995,14 +10027,15 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,200,{ok:true,settings:{conversationId:requested,disappearingAfterSeconds:seconds,canManage:true,updatedAt}});
       }
       if(method==='GET'&&p==='/api/messages'){
+        try{await refreshAISocialProfiles(user.id);}catch(error){console.warn('[Minglora Messenger] AI member list unavailable.',String(error?.message||error).slice(0,160));}
         const messagePeers=(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from);
         const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id));
-        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
+        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&socialMemberById(id));
         const conversations=await Promise.all(peers.map(async id=>{
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
           const visibleMessages=(db.messages||[]).filter(item=>
             ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
-            !isMessageExpired(item) && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
+            !isMessageExpired(item) && item.status!=='hidden' && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
             (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
           ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
           const savedConversationSettings=(db.messageConversationSettings||[]).find(item=>item.conversationKey===messageConversationKey({userIds:[user.id,id]}));
@@ -10013,10 +10046,10 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
               if(!asset)return null;
               try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
             }));
-            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id)};
+            return {...item,attachments:attachments.filter(Boolean),author:safeUser(socialMemberById(item.from),user.id)};
           }));
           const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
-          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
+          return {id:'direct:'+id,kind:'direct',user:safeUser(socialMemberById(id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
         }));
         const groupRows = await Promise.all((db.messageGroups||[])
           .filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
@@ -10033,7 +10066,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
                 if(!asset)return null;
                 try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
               }));
-              return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id),readState:summarizeGroupReadState(item,members)};
+              return {...item,attachments:attachments.filter(Boolean),author:safeUser(socialMemberById(item.from),user.id),readState:summarizeGroupReadState(item,members)};
             }));
             const unreadCount=rawMessages.filter(item=>item.from!==user.id&&!item.readBy?.[user.id]).length;
             const memberRecords=(db.messageGroupMembers||[]).filter(item=>item.groupId===group.id&&item.status==='active');
@@ -10280,7 +10313,22 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,201,{message:{...msg,attachments,author:safeUser(user,user.id)}});
       }
       if(method==='POST'&&p==='/api/messages'){
-        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const to=String(input.to||''),text=String(input.text||'').trim();
+        if(!db.users.some(member=>member.id===to)){
+          try{await refreshAISocialProfiles(user.id);}catch(error){return json(res,503,{error:'AI member profiles are temporarily unavailable.'});}
+          const aiRecipient=aiSocialMembers.get(to);
+          if(!aiRecipient||blockedBetween(user.id,to)||!canViewProfile(user.id,aiRecipient))return json(res,404,{error:'Choose an available Minglora member.'});
+          if(!text||text.length>3000)return json(res,400,{error:'Message must contain between 1 and 3,000 characters.'});
+          const message={id:uid(),from:user.id,to,text,attachmentIds:[],createdAt:now(),read:false,reactions:{},aiConversation:true,aiIdentityId:to,aiGenerated:false,aiDisclosureRequired:true};
+          try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:to,social_action:'member_message',target_type:'conversation',target_id:message.id});}
+          catch(error){return json(res,error.status||503,{error:'The AI conversation activity could not be recorded. Your message was not sent.'});}
+          db.messages.push(message);
+          db.messageConversationHides=(db.messageConversationHides||[]).filter(item=>!(item.userId===user.id&&item.peerId===to));
+          await saveStore();
+          messengerRealtime?.publish([user.id,to],{type:'message:new',conversationId:to,messageId:message.id,senderId:user.id});
+          return json(res,201,{message:{...message,author:safeUser(user,user.id),aiRecipient:safeUser(aiRecipient,user.id)}});
+        }
+        const recipient=db.users.find(member=>member.id===to);
         const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
         const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
         const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
