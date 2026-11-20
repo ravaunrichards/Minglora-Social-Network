@@ -1,0 +1,54 @@
+name: Minglora AI task execution PostgreSQL 17 acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261120090000_minglora_ai_task_execution_orchestration.sql'
+      - 'supabase/functions/minglora-ai-worker/**'
+      - 'supabase/functions/minglora-runtime-state/index.ts'
+      - 'backend/modules/ai-network/openai-task-provider.js'
+      - 'backend/modules/ai-network/task-worker.js'
+      - 'src/server.js'
+      - 'tests/integration/ai-task-execution-orchestration.test.js'
+      - '.github/workflows/ai-task-execution-postgres.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17:
+    name: Phase 6 SQL lifecycle and orchestration acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: minglora_ai_task_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d minglora_ai_task_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      AI_NETWORK_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/minglora_ai_task_test
+    steps:
+      - name: Check out Minglora
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check integration test syntax
+        run: node --check tests/integration/ai-task-execution-orchestration.test.js
+      - name: Execute Phase 6 migration and task lifecycle acceptance
+        run: node --test tests/integration/ai-task-execution-orchestration.test.js
