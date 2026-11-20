@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerModelSync: null, providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerModelSync: null, providerInferenceVerification: null, providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -1148,6 +1148,36 @@
         number(state.providerModelSync.reused_count) + ' already catalogued · ' + number(state.providerModelSync.failed_count) + ' failed.</p>' +
         '<small>Checked: ' + esc(date(state.providerModelSync.discovered_at)) + ' · Listing only; generation remains unverified and execution disabled.</small></div>'
       : '';
+    const managedInferenceAccounts = accounts.filter(account =>
+      account.account_type === 'managed' && account.status !== 'revoked'
+    );
+    const inferenceModelChoices = models
+      .filter(model => model.is_active !== false &&
+        modelSyncProviders.some(provider => provider.value === String(model.provider_name || '').toLowerCase()))
+      .map(model => ({
+        value:model.model_id,
+        label:model.provider_name + ' · ' + model.model_name + ' · ' + model.model_identifier
+      }));
+    const inferenceVerificationForm = '<form class="ai-network-form" data-ai-form="provider-inference-verification">' +
+      '<div class="ai-network-form-title">Verify model inference before enabling a provider</div>' +
+      '<p class="ai-network-note">Runs one manual, fixed-prompt check (maximum 8 output tokens). The prompt cannot be edited, generated text is withheld and not stored, and this check does not enable inference, workers or AI identities. Provider usage may incur a small charge.</p>' +
+      '<div class="ai-network-form-grid"><label>Managed provider account<select name="providerAccountId" required>' +
+      options([{value:'',label:'Select a managed account'}].concat(managedInferenceAccounts.map(account => ({value:account.provider_account_id,label:account.provider_name + ' · ' + account.provider_identifier + ' · ' + account.status}))), '') +
+      '</select></label><label>Discovered model<select name="modelId" required>' +
+      options([{value:'',label:'Select a provider-listed model'}].concat(inferenceModelChoices), '') +
+      '</select></label></div><button class="secondary" type="submit"' +
+      (!managedInferenceAccounts.length || !inferenceModelChoices.length ? ' disabled' : '') +
+      '>Run bounded inference verification</button></form>';
+    const inferenceVerificationResult = state.providerInferenceVerification
+      ? '<div class="ai-network-alert ai-network-alert--' + (state.providerInferenceVerification.verified ? 'success' : 'warning') + '" role="status">' +
+        '<strong>' + (state.providerInferenceVerification.verified ? 'Inference verification passed' : 'Inference verification failed') + '</strong>' +
+        '<p>' + esc(state.providerInferenceVerification.provider || '') + ' · ' + esc(state.providerInferenceVerification.model_identifier || '') +
+        (state.providerInferenceVerification.responseTimeMs !== undefined ? ' · ' + number(state.providerInferenceVerification.responseTimeMs) + ' ms' : '') + '</p>' +
+        (state.providerInferenceVerification.usage ? '<small>Tokens used: ' + number(state.providerInferenceVerification.usage.inputTokens) + ' input · ' +
+          number(state.providerInferenceVerification.usage.outputTokens) + ' output · ' + number(state.providerInferenceVerification.usage.totalTokens) + ' total</small>' : '') +
+        '<small>' + esc(state.providerInferenceVerification.note || '') + '</small>' +
+        '<small>Generated output retained: no · Execution enabled: no · Checked: ' + esc(date(state.providerInferenceVerification.checked_at)) + '</small></div>'
+      : '';
     const modelRows = models.length
       ? '<div class="ai-network-list">' + models.map(model =>
           '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
@@ -1274,9 +1304,9 @@
       '<div><span>Catalogue models</span><strong>' + number(models.length) + '</strong></div>' +
       '<div><span>Identity assignments</span><strong>' + number(assignments.length) + '</strong></div></div>' +
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
-      '<div><h4>Model catalogue</h4>' + modelSyncForm + modelSyncResult + modelRows + modelForm + '</div></div>' +
+      '<div><h4>Model catalogue</h4>' + modelSyncForm + modelSyncResult + modelRows + modelForm + inferenceVerificationForm + inferenceVerificationResult + '</div></div>' +
       assignmentForm + bulkAssignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
-      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access.</p>',
+      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Managed account enablement requires a fresh successful bounded inference verification in addition to provider health; model-list visibility alone is insufficient. New identity assignments remain pending and autonomous execution remains disabled.</p>',
       'ai-network-span-2');
   }
 
@@ -2227,6 +2257,10 @@
       path = '/provider-models/sync';
       payload.provider = value('provider').toLowerCase();
       payload.provider_account_id = value('providerAccountId') || undefined;
+    } else if (kind === 'provider-inference-verification') {
+      path = '/provider-inference-verification';
+      payload.provider_account_id = value('providerAccountId');
+      payload.model_id = value('modelId');
     } else if (kind === 'provider-model') {
       path = '/provider-models';
       payload.provider_name = value('providerName').toLowerCase();
@@ -2541,6 +2575,7 @@
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
     if (kind === 'provider-model-sync') state.providerModelSync = result;
+    if (kind === 'provider-inference-verification') state.providerInferenceVerification = result;
     if (kind === 'bot-chat') {
       state.botChat = result;
       state.selectedBotChatId = result.bot?.id || form.dataset.botId || '';
@@ -2599,6 +2634,8 @@
       ? 'Provider account reference saved as unconfigured; no credentials were stored.'
       : kind === 'provider-model-sync'
         ? 'Provider model discovery completed: ' + number(result.created_count) + ' created, ' + number(result.reused_count) + ' already catalogued, ' + number(result.failed_count) + ' failed. Listing access is verified; inference is not.'
+      : kind === 'provider-inference-verification'
+        ? (result.verified ? 'Bounded inference verification passed. Generated output was withheld; provider execution remains disabled.' : 'Inference verification failed: ' + String(result.note || result.status || 'provider error'))
       : kind === 'provider-model'
         ? 'Provider model metadata saved; availability and access are not verified.'
         : kind === 'provider-assignment'
