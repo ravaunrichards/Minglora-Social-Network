@@ -1,4 +1,4 @@
--- Phase 4.3: provider connection management and persisted health history.
+-- Minglora AI Network Phase 4.3: provider connection management and persisted health history.
 -- Secrets remain outside the database. Health records contain only sanitized status metadata.
 
 create table if not exists ai_network.ai_provider_health_events (
@@ -22,7 +22,6 @@ create index if not exists ai_provider_health_events_account_time_idx
   on ai_network.ai_provider_health_events(provider_account_id, checked_at desc);
 create index if not exists ai_provider_health_events_provider_time_idx
   on ai_network.ai_provider_health_events(provider_name, checked_at desc);
-
 alter table ai_network.ai_provider_health_events enable row level security;
 grant select, insert on ai_network.ai_provider_health_events to service_role;
 
@@ -31,46 +30,8 @@ alter table ai_network.ai_provider_accounts
 alter table ai_network.ai_provider_accounts
   add constraint ai_provider_accounts_status_check
   check (status in ('unconfigured','enabled','disabled','revoked'));
-
 create index if not exists ai_provider_accounts_owner_provider_idx
   on ai_network.ai_provider_accounts(owner_user_id, provider_name);
-
--- Minglora AI Network: provider catalogue metadata and safe per-identity model assignments.
--- Source-only until reviewed/deployed. Does not accept, store or return provider credentials.
--- Every new assignment remains pending / health unknown until a real adapter verifies it.
-
-create table if not exists ai_network.ai_provider_assignment_history (
-  event_id uuid primary key default gen_random_uuid(),
-  assignment_id uuid not null references ai_network.ai_provider_assignments(assignment_id) on delete restrict,
-  identity_id uuid not null references ai_network.ai_identities(identity_id) on delete restrict,
-  actor_user_id uuid not null references public.profiles(id) on delete restrict,
-  action text not null check (action in ('assigned','status_changed')),
-  previous_status text,
-  new_status text not null check (new_status in ('pending','restricted','disabled','revoked')),
-  reason text not null default '',
-  metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata)='object'),
-  occurred_at timestamptz not null default now()
-);
-create index if not exists ai_provider_assignment_history_identity_time_idx
-  on ai_network.ai_provider_assignment_history(identity_id, occurred_at desc);
-create index if not exists ai_provider_assignment_history_assignment_time_idx
-  on ai_network.ai_provider_assignment_history(assignment_id, occurred_at desc);
-
-create unique index if not exists ai_provider_assignments_identity_model_account_uq
-  on ai_network.ai_provider_assignments(identity_id, model_id, provider_account_id)
-  where provider_account_id is not null;
-create unique index if not exists ai_provider_assignments_identity_model_no_account_uq
-  on ai_network.ai_provider_assignments(identity_id, model_id)
-  where provider_account_id is null;
-
-alter table ai_network.ai_provider_accounts enable row level security;
-alter table ai_network.ai_provider_models enable row level security;
-alter table ai_network.ai_provider_assignments enable row level security;
-alter table ai_network.ai_provider_assignment_history enable row level security;
-grant select, insert on ai_network.ai_provider_assignment_history to service_role;
-grant select, insert, update on ai_network.ai_provider_accounts to service_role;
-grant select, insert, update on ai_network.ai_provider_models to service_role;
-grant select, insert, update on ai_network.ai_provider_assignments to service_role;
 
 create or replace function public.minglora_ai_provider_command(
   p_action text,
