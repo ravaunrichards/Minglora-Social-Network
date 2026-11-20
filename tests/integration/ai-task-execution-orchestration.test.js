@@ -162,8 +162,8 @@ async function createFixture(client) {
       identity_id,provider_account_id,model_id,assignment_status,provider_health_status,assigned_capabilities,routing_priority
     ) values
       ('${IDENTITY_A}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation'],100),
-      ('${IDENTITY_B}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation'],100),
-      ('${IDENTITY_B}','${GEMINI_ACCOUNT}','${GEMINI_MODEL}','active','healthy',array['text_generation'],1);
+      ('${IDENTITY_B}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation'],1),
+      ('${IDENTITY_B}','${GEMINI_ACCOUNT}','${GEMINI_MODEL}','active','healthy',array['text_generation'],100);
 
     grant usage on schema public,ai_network to service_role;
     grant all on all tables in schema public,ai_network to service_role;
