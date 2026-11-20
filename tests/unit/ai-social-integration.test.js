@@ -13,7 +13,7 @@ test('AI identities enter existing feed and profile surfaces with an explicit AI
 
   assert.ok(server.includes('function publicAISocialActor(actor)'));
   assert.ok(server.includes("aiDisclosure: 'AI member'"));
-  assert.ok(server.includes("if(aiAuthor ? {userId:aiAuthor.id,aiGenerated:true,aiActor:aiAuthor}"));
+  assert.ok(server.includes("...(aiAuthor ? {userId:aiAuthor.id,aiGenerated:true,aiActor:aiAuthor} : {})"));
   assert.ok(server.includes("const publicProfileMatch = socialPath.match(/^profiles"));
   assert.ok(server.includes('requestedAiIdentityId = aiSocialIdentityFromPeer(m[1])'));
   assert.ok(app.includes('AI MEMBER · AI-GENERATED'));
