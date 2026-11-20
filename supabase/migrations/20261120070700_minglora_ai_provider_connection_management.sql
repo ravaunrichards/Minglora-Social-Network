@@ -248,7 +248,19 @@ begin
     if v_provider_name<>v_account_provider_name then
       raise exception using errcode = '22023', message = 'Provider name does not match the selected provider account.';
     end if;
-    if coalesce(v_payload->>'model_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
+    if coalesce(v_payload->>'model_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
+      raise exception using errcode = '22023', message = 'A valid discovered provider model ID is required.';
+    end if;
+    v_model_id := (v_payload->>'model_id')::uuid;
+    select m.model_identifier,m.is_active
+      into v_model_name,v_model_active
+    from ai_network.ai_provider_models m
+    where m.model_id=v_model_id and m.provider_name=v_provider_name;
+    if v_model_name is null or v_model_name<>v_model_identifier or not coalesce(v_model_active,false) then
+      raise exception using errcode = '22023', message = 'The selected model is not active in this provider account catalogue.';
+    end if;
+
+    select h.checked_at into v_last_checked_at
     from ai_network.ai_provider_health_events h
     where h.provider_account_id=v_provider_account_id
       and h.metadata->>'inference_verification_attempt'='true'
@@ -296,8 +308,8 @@ begin
     select jsonb_build_object(
       'event_id',h.event_id,'provider_account_id',h.provider_account_id,
       'provider_name',h.provider_name,'health_status',h.health_status,
-      'model_identifier',h.model_identifier,'checked_at',h.checked_at,
-      'metadata',h.metadata
+      'model_identifier',h.model_identifier,'model_id',h.metadata->>'model_id',
+      'checked_at',h.checked_at,'metadata',h.metadata
     ) into v_result
     from ai_network.ai_provider_health_events h where h.event_id=v_event_id;
     return jsonb_build_object('reservation',v_result);
