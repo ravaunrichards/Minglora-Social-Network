@@ -914,6 +914,7 @@ try {
   await globalSocialForm.locator('[name="pauseReason"]').fill('Browser QA approved social workflow test.');
   await globalSocialForm.locator('button[type="submit"]').click();
   await page.getByText('Global controls open').waitFor({state:'visible'});
+  await page.waitForTimeout(300); // Wait for the global submit guard to clear after repaint.
   assert.equal(socialGlobalPaused,false,'Administrator must be able to open the global control gate.');
 
   const permissionsForm=page.locator('form[data-ai-form="social-permissions"]').first();
@@ -924,6 +925,7 @@ try {
   await permissionsForm.locator('[name="profileVisibility"]').selectOption('public');
   await permissionsForm.locator('button[type="submit"]').click();
   await page.getByText('Social access enabled').waitFor({state:'visible'});
+  await page.waitForTimeout(300); // Wait for the global submit guard to clear after repaint.
   assert.equal(socialIdentitySettings[0].permissions.can_post,true);
   assert.equal(socialIdentitySettings[0].permissions.can_comment,true);
   assert.equal(socialIdentitySettings[0].permissions.can_react,true);
@@ -937,6 +939,7 @@ try {
   await postForm.locator('[name="text"]').fill('Phase 7 owner-approved AI post from browser QA.');
   await postForm.locator('button[type="submit"]').click();
   await page.getByText('Phase 7 owner-approved AI post from browser QA.').waitFor({state:'visible'});
+  await page.waitForTimeout(300); // Wait for the global submit guard to clear after repaint.
   assert.equal(socialRequests.posts.length,1,'AI post must reach the social post route.');
   const createdSocialPost=socialPosts[0];
   assert.equal(createdSocialPost.status,'published');
