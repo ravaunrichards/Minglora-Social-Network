@@ -326,16 +326,19 @@ export function createMingloraAITaskWorker({
         timeoutMs: taskTimeoutMs,
         maxOutputTokens: plan.maxOutputTokens,
         signal: controller.signal,
-        beforeGenerationRequest: async request => {
+        beforeProviderRequest: async request => {
           if (controller.signal.aborted) throw Object.assign(new Error('The task lease was lost before provider execution.'), { code: 'lease_lost', retryable: false });
           if (normalizeProvider(request?.provider || 'openai') !== 'openai') {
             throw Object.assign(new Error('The provider adapter selected an unsupported provider.'), { code: 'provider_adapter_unavailable', retryable: false });
           }
           const requestedModel = text(request?.model, 180);
-          if (![route.model, route.fallbackModel].filter(Boolean).includes(requestedModel)) {
+          const isModerationRequest = ['input_moderation', 'output_moderation'].includes(request?.phase)
+            && requestedModel === 'omni-moderation-latest';
+          if (!isModerationRequest && ![route.model, route.fallbackModel].filter(Boolean).includes(requestedModel)) {
             throw Object.assign(new Error('The provider adapter requested a model outside the database-selected route.'), { code: 'route_mismatch', retryable: false });
           }
-          await reserveCapacity(requestedModel, plan.estimatedTokens);
+          const estimatedTokens = safeNumber(request?.estimatedTokens, plan.estimatedTokens, 1, 1000000);
+          await reserveCapacity(requestedModel, estimatedTokens);
         }
       });
       if (controller.signal.aborted || heartbeatFailed) {
