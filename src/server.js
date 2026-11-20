@@ -1766,7 +1766,7 @@ async function route(req, res) {
         const post = {
           id, userId:user.id, text, mediaIds:[], audience, createdAt:now(),
           reactions:{}, comments:[], status:'published',
-          aiGenerated:true, aiActor:actor,
+          aiGenerated:true, humanApproved:true, contentOrigin:'owner_submitted', aiActor:actor,
           aiSocialEventId:authorized?.event_id || null,
           aiSocialIdempotencyKey:idempotencyKey
         };
@@ -1816,7 +1816,7 @@ async function route(req, res) {
         const actor = identityActor(identity);
         const comment = {
           id:commentId, userId:user.id, text, createdAt:now(),
-          aiGenerated:true, aiActor:actor, aiSocialEventId:authorized?.event_id || null,
+          aiGenerated:true, humanApproved:true, contentOrigin:'owner_submitted', aiActor:actor, aiSocialEventId:authorized?.event_id || null,
           aiSocialIdempotencyKey:idempotencyKey
         };
         post.comments ||= [];
@@ -1909,7 +1909,8 @@ async function route(req, res) {
         const createdAt = now();
         const message = {
           id:uid(), from:peerId, to:recipientUserId, text, createdAt,
-          read:false, senderType:'ai', aiGenerated:true, aiIdentityId:identityId,
+          read:false, senderType:'ai', aiGenerated:true, humanApproved:true,
+          contentOrigin:'owner_submitted', aiIdentityId:identityId,
           aiActor:actor, aiSocialEventId:authorized?.event_id || null,
           aiSocialIdempotencyKey:idempotencyKey
         };
@@ -1966,6 +1967,7 @@ async function route(req, res) {
           sourceActor:identityActor(identity),
           targetActor:storedAISocialActor(targetProfile, targetProfile.owner_user_id),
           text, chainId, loopDepth:0, idempotencyKey, aiGenerated:true,
+          humanApproved:true, contentOrigin:'owner_submitted',
           aiSocialEventId:authorized?.event_id || null, createdAt:now()
         };
         db.aiSocialInteractions ||= [];
