@@ -1,4 +1,4 @@
-import { generateOpenAITaskOutput } from './openai-task-provider.js';
+import { generateAITaskOutput } from './task-provider.js';
 
 const DEFAULT_POLL_INTERVAL_MS = 1500;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30000;
@@ -21,7 +21,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
  */
 export async function processClaimedAITask(claim, {
   callWorker,
-  executeTask = generateOpenAITaskOutput,
+  executeTask = generateAITaskOutput,
   heartbeatMs = DEFAULT_HEARTBEAT_INTERVAL_MS,
   logger = console,
   parentSignal
