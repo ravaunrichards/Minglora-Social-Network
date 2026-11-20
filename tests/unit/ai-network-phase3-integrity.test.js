@@ -13,6 +13,14 @@ const rollback = readFileSync(
   resolve(root, 'database/rollbacks/20261120053000_minglora_ai_identity_phase3_integrity.rollback.sql'),
   'utf8'
 );
+const fkIndexMigration = readFileSync(
+  resolve(root, 'supabase/migrations/20261120054000_minglora_ai_email_messages_email_fk_index.sql'),
+  'utf8'
+);
+const fkIndexRollback = readFileSync(
+  resolve(root, 'database/rollbacks/20261120054000_minglora_ai_email_messages_email_fk_index.rollback.sql'),
+  'utf8'
+);
 
 test('Phase 3 identity migration is additive and refuses unknown ownership', () => {
   assert.match(migration, /if exists\s*\([\s\S]*owner_user_id is null[\s\S]*\)[\s\S]*raise exception/i);
@@ -35,4 +43,10 @@ test('manual rollback documents and restores the previous constraints/privileges
   assert.equal((rollback.match(/on delete cascade/gi) || []).length, 3);
   assert.match(rollback, /alter column owner_user_id drop not null/i);
   assert.match(rollback, /grant all privileges[\s\S]*to service_role/i);
+});
+
+test('Phase 3 closes the outstanding AI email-message foreign-key index gap', () => {
+  assert.match(fkIndexMigration, /create index if not exists ai_email_messages_email_id_idx/i);
+  assert.match(fkIndexMigration, /on ai_network\.ai_email_messages\s*\(email_id\)/i);
+  assert.match(fkIndexRollback, /drop index if exists ai_network\.ai_email_messages_email_id_idx/i);
 });
