@@ -59,3 +59,16 @@ Existing live data included one AI identity with its name, profile and owner rel
 A second additive migration, `supabase/migrations/20261120054000_minglora_ai_email_messages_email_fk_index.sql`, adds the missing `ai_email_messages(email_id)` B-tree index. The live catalog audit found this as the sole remaining foreign-key index gap across `ai_network`. Its inverse is documented in `database/rollbacks/20261120054000_minglora_ai_email_messages_email_fk_index.rollback.sql`.
 
 The index migration changes no rows. The final catalog check must show zero unindexed foreign keys across the AI schema.
+
+## Applied migrations and final verification
+
+Both migrations are applied to the connected Minglora Supabase project and present in its migration ledger:
+
+- `20261120052603` — `minglora_ai_identity_phase3_integrity`
+- `20261120052647` — `minglora_ai_email_messages_email_fk_index`
+
+After application, a second live transaction passed nine checks: create, idempotent retry, owner-scoped get, disabled-by-default creation, pagination, profile/personality/language update, lifecycle/history recording, cross-owner isolation, and runtime rejection of identity DELETE plus history UPDATE/DELETE. That transaction was rolled back.
+
+Final catalog checks: 66/66 AI tables have RLS enabled; `anon` and `authenticated` have no `ai_network` schema usage; runtime cannot DELETE/TRUNCATE identities or their required name/profile rows; history tables are insert-only for runtime; the three history FKs use RESTRICT; and the AI schema has zero unindexed foreign keys. The email-message FK index is present, valid and ready.
+
+The live count remains one existing identity, one name, one profile and one primary owner relation. The test identities were transaction-scoped and rolled back. No operational history was invented for the older live row, whose pre-existing status/version/audit history was empty at inspection time.
