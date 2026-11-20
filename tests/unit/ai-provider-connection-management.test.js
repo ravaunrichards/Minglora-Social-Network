@@ -101,3 +101,10 @@ test('persisted provider checks require a managed account mapped to private plat
   assert.match(server, /account\.status \|\| ''\)\.toLowerCase\(\) === 'revoked'/);
   assert.match(ui, /accounts\.filter\(account => account\.account_type === 'managed'\)/);
 });
+
+test('provider health persistence maps adapter-only errors into supported event statuses', () => {
+  const server = read('src/server.js');
+  assert.match(server, /'model_unavailable','rate_limited','provider_unavailable','network_error'/);
+  assert.match(server, /\? String\(health\.status\)\.toLowerCase\(\)/);
+  assert.match(server, /: 'provider_error'/);
+});
