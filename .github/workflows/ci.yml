@@ -84,6 +84,8 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/ai-network.js
+          node --check tests/unit/ai-social-phase7.test.js
           node --check public/app-lock.js
           node --check public/menu-dismissal.js
           node --check public/friends-advanced.js
