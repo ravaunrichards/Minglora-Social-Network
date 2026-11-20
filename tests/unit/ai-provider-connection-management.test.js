@@ -139,7 +139,7 @@ test('bounded inference verification uses a fixed prompt and withholds generated
   assert.match(server, /inference_verification_attempt: true/);
   assert.match(server, /inference_verified: true/);
   assert.match(server, /30-second safety interval/);
-  assert.match(server, /const reservationTimestamp = aiProviderInferenceCooldown\.get\(accountId\) \|\| 0/);
+  assert.match(server, /runAIProviderCommand\\('reserve_provider_inference'/);
   assert.match(ui, /data-ai-form="provider-inference-verification"/);
   assert.match(ui, /prompt cannot be edited/);
   assert.match(ui, /Generated output retained: no/);
@@ -152,4 +152,20 @@ test('provider enablement requires a recent successful inference event in additi
   assert.match(migration, /metadata->>'inference_verified'\)='true'/);
   assert.match(migration, /v_inference_verified is distinct from true/);
   assert.match(migration, /successful inference verification must complete within the last 15 minutes/);
+});
+
+test('inference reservation is serialized by the provider row lock and is allowed through the server-only runtime', () => {
+  const migration = read('supabase/migrations/20261120070700_minglora_ai_provider_connection_management.sql');
+  const edge = read('supabase/functions/minglora-runtime-state/index.ts');
+  assert.match(migration, /v_action = 'reserve_provider_inference'/);
+  assert.match(migration, /where a\.provider_account_id=v_provider_account_id and a\.owner_user_id=p_actor_user_id[\s\S]*?for update/);
+  assert.match(migration, /An inference verification was just attempted for this account/);
+  assert.match(edge, /"reserve_provider_inference"/);
+  assert.match(edge, /"record_provider_health","reserve_provider_inference"/);
+});
+
+test('failed inference verification disables an enabled provider account and linked assignments', () => {
+  const migration = read('supabase/migrations/20261120070700_minglora_ai_provider_connection_management.sql');
+  assert.match(migration, /v_metadata->>'inference_verification_attempt'='true'[\s\S]*?v_metadata->>'inference_verified'='false'[\s\S]*?then 'disabled'/);
+  assert.match(migration, /a\.assignment_status<>'revoked'[\s\S]*?then 'disabled'/);
 });
