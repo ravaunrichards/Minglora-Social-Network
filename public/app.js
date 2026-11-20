@@ -657,6 +657,8 @@ function renderSavedControls(post){
 
 function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
+  const aiAuthor=author.aiAccount===true||author.aiGenerated===true||post.aiGenerated===true;
+  const aiAuthorLabel=aiAuthor?' · AI member':'';
   const savedControls=options.saved?renderSavedControls(post):'';
   const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
   const isVideoPost=(post.media||[]).some(media=>media.mediaType==='video');
@@ -665,7 +667,7 @@ function postCard(post,options={}){
   const collaborationAttribution=(post.collaborators||[]).length?`<div class="video-collaborator-attribution">With ${(post.collaborators||[]).map(member=>'@'+esc(member.username||'member')).join(', ')}</div>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
-      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong><small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
+      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong><small class="post-author-meta">${timeAgo(post.createdAt)} · ◉${aiAuthorLabel}</small></div>
       <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
@@ -695,7 +697,7 @@ function postCard(post,options={}){
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
     </div>
     ${savedControls}
-    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
+    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}${c.author?.aiAccount===true||c.author?.aiGenerated===true?' · AI member':''}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
     <form class="comment-form" data-comment-form="${esc(post.id)}">${thoughtAvatarMarkup(state.user)}<input name="text" maxlength="2000" placeholder="Write a comment…" aria-label="Write a comment" required><button type="submit">Send</button></form>
   </article>`;
 }
@@ -8662,7 +8664,7 @@ function renderMessageWindows(){
       :'<button class="message-window-call" type="button" data-message-audio="'+esc(win.user.id)+'" aria-label="Phone call" title="Phone call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.8 2 2 0 0 1 3.1 1.6h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L7 9.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 2 2.3z"/></svg></button><button class="message-window-call" type="button" data-message-video="'+esc(win.user.id)+'" aria-label="Video call" title="Video call"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2"/><path d="m15 10 7-4v12l-7-4z"/></svg></button><button class="message-window-call" type="button" data-message-remove="'+esc(win.user.id)+'" aria-label="Remove conversation" title="Remove conversation">···</button>';
     const profileControl=win.isGroup
       ?'<span class="message-window-profile is-group"><span class="message-group-avatar">'+messenger3dIcon('groups')+'</span><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+esc(conversation?.group?.memberCount||0)+' members</small></span></span>'
-      :'<button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+'</strong><small data-message-presence>'+(state.messengerPresence[win.user.id]===true?'Active now':'')+'</small></span></button>';
+      :'<button class="message-window-profile" type="button" data-message-profile="'+esc(win.user.id)+'" aria-label="View '+esc(win.user.name)+' profile"><img src="'+avatar(win.user)+'" alt=""><span><strong>'+esc(win.user.name)+(win.user.aiAccount===true||win.user.aiGenerated===true?' · AI member':'')+'</strong><small data-message-presence>'+(state.messengerPresence[win.user.id]===true?'Active now':'')+'</small></span></button>';
     return '<section class="message-window '+(win.minimized?'is-minimized':'')+(win.isGroup?' is-group-chat':'')+'" data-message-window="'+esc(win.user.id)+'" role="dialog" aria-label="Chat with '+esc(win.user.name)+'"><header class="message-window-header">'+profileControl+'<div class="message-window-controls"><button type="button" class="message-window-call" data-message-tools="'+esc(win.user.id)+'" title="Search messages and view shared media" aria-label="Search messages and view shared media">'+messenger3dIcon('search')+'</button>'+callControls+'<button type="button" data-message-minimize="'+esc(win.user.id)+'" aria-label="Minimize chat" title="Minimize">−</button><button type="button" data-message-close="'+esc(win.user.id)+'" aria-label="Close chat" title="Close">×</button></div></header>'+body+'</section>';
   }).join('');
   dock.querySelectorAll('[data-message-minimize]').forEach(button=>button.onclick=()=>{const win=state.messageWindows.find(item=>item.user.id===button.dataset.messageMinimize);if(win){win.minimized=!win.minimized;renderMessageWindows();}});
@@ -9043,7 +9045,7 @@ async function renderMessages(){
   const visibleConversations=state.conversations.filter(conversation=>!archivedIds.has(conversation.user.id));
   const conversationRows=visibleConversations.length?visibleConversations.map(conversation=>{
     const last=conversation.messages.at(-1),preview=last?.text||((last?.attachments||[]).length?'Attachment':last?.gifUrl?'GIF':'Open chat');
-    return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><div class="message-inbox-row-actions"><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button><button class="secondary" type="button" data-remove-inbox-chat="'+esc(conversation.user.id)+'">Remove</button></div></div>';
+    return '<div class="inbox-person-row" data-inbox-peer="'+esc(conversation.user.id)+'"><img class="avatar" src="'+avatar(conversation.user)+'" alt=""><div class="person-meta"><strong>'+esc(conversation.user.name)+(conversation.user.aiAccount===true||conversation.user.aiGenerated===true?' · AI member':'')+'</strong><small>'+esc(preview)+'</small>'+(conversation.unreadCount?'<span class="inbox-unread-badge">'+conversation.unreadCount+'</span>':'')+'</div><div class="message-inbox-row-actions"><button class="secondary" type="button" data-open-inbox-chat="'+esc(conversation.user.id)+'">Open</button><button class="secondary" type="button" data-remove-inbox-chat="'+esc(conversation.user.id)+'">Remove</button></div></div>';
   }).join(''):'<div class="message-inbox-empty"><div class="empty-icon">'+messenger3dIcon('messages')+'</div><h3>No conversations yet</h3><p>Open another member’s profile and select Message to start a private chat.</p></div>';
   setContent('<div class="page-heading"><div><h1>Messenger</h1><p class="muted">Private conversations from your Minglora account, shared across your signed-in devices.</p></div><span class="eyebrow">'+visibleConversations.length+' conversations</span></div><section class="card"><div class="inbox-people-list">'+conversationRows+'</div></section>');
   document.querySelectorAll('[data-open-inbox-chat]').forEach(button=>button.onclick=()=>{
@@ -9798,6 +9800,7 @@ async function renderSearch(q){
 }
 function renderReelCard(post,media,index){
   const author=post.author||{},comments=post.comments||[];
+  const aiAuthor=author.aiAccount===true||author.aiGenerated===true||post.aiGenerated===true;
   const likedLabel=post.myReaction?String(post.myReaction).charAt(0).toUpperCase()+String(post.myReaction).slice(1):'Like';
   return '<article class="minglora-reel" data-post="'+esc(post.id)+'" data-reel-index="'+index+'">'+
     '<div class="minglora-reel-stage">'+
@@ -9806,7 +9809,7 @@ function renderReelCard(post,media,index){
       (post.text?'<div class="minglora-reel-caption-overlay">'+esc(post.text)+'</div>':'')+
     '</div>'+
     '<div class="minglora-reel-details">'+
-      '<div class="minglora-reel-author">'+thoughtAvatarMarkup(author,'avatar',true)+'<span><strong data-profile="'+esc(author.id||'')+'">'+esc(author.name||'Minglora member')+'</strong><small>@'+esc(author.username||'')+' · '+timeAgo(post.createdAt)+'</small></span></div>'+
+      '<div class="minglora-reel-author">'+thoughtAvatarMarkup(author,'avatar',true)+'<span><strong data-profile="'+esc(author.id||'')+'">'+esc(author.name||'Minglora member')+'</strong><small>@'+esc(author.username||'')+' · '+timeAgo(post.createdAt)+(aiAuthor?' · AI member':'')+'</small></span></div>'+
       renderPostSoundtrack(post)+
       '<div class="minglora-reel-actions">'+
         '<button type="button" class="'+(post.myReaction?'liked':'')+'" data-react="'+esc(post.id)+'">♡ '+esc(likedLabel)+' · '+Number(post.reactionCount||0).toLocaleString()+'</button>'+
@@ -9816,7 +9819,7 @@ function renderReelCard(post,media,index){
         '<button type="button" data-share="'+esc(post.id)+'">Share</button>'+
         '<button type="button" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'">Gift</button>'+
       '</div>'+
-      (comments.length?'<div class="minglora-reel-comments">'+comments.slice(-2).map(comment=>'<p><strong>'+esc(comment.author?.name||'Member')+'</strong> '+esc(comment.text||'')+'</p>').join('')+'</div>':'')+
+      (comments.length?'<div class="minglora-reel-comments">'+comments.slice(-2).map(comment=>'<p><strong>'+esc(comment.author?.name||'Member')+(comment.author?.aiAccount===true||comment.author?.aiGenerated===true?' · AI member':'')+'</strong> '+esc(comment.text||'')+'</p>').join('')+'</div>':'')+
       '<form class="comment-form minglora-reel-comment-form" data-comment-form="'+esc(post.id)+'">'+thoughtAvatarMarkup(state.user)+'<input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Comment on this video" required><button type="submit">Send</button></form>'+
     '</div>'+
   '</article>';
