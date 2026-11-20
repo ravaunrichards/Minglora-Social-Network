@@ -53,6 +53,7 @@ import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISett
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { startAIExecutionWorker } from '../backend/workers/ai-execution/worker.mjs';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -2371,6 +2372,23 @@ async function route(req, res) {
         }
       };
 
+      const runAITaskHistoryCommand = async taskId => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator with the required active session can review AI task execution history.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI task execution history requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_task_history', {
+          actorUserId: user.id,
+          taskId
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI task execution history is unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result || { task_id: taskId, events: [] };
+      };
+
       const runAIProviderCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2665,6 +2683,15 @@ async function route(req, res) {
         const input = await body(req, 72000);
         const result = await runAITeamCommand('delegate_task', { ...(input || {}), delegation_grant_id: parts[1] });
         return json(res, result?.reused ? 200 : 201, result || {});
+      }
+
+      if (parts[0] === 'tasks' && parts.length === 3 && parts[2] === 'events' && method === 'GET') {
+        const taskId = parts[1];
+        if (!aiIdentityIdPattern.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required.'), { status: 400 });
+        }
+        const result = await runAITaskHistoryCommand(taskId);
+        return json(res, 200, result);
       }
 
       if (method === 'GET' && sub === 'tasks') {
@@ -10686,6 +10713,9 @@ server.listen(PORT,'0.0.0.0',async()=>{
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
   startLiveSessionCleanupSweep();
   console.log(`Minglora listening on port ${PORT}`);
+  if (String(process.env.MINGLORA_AI_WORKER_ENABLED || '').trim().toLowerCase() === 'true') {
+    startAIExecutionWorker();
+  }
   const persistence = await persistenceHealth();
   const aiReadiness = getAIProviderStatus();
   console.info('[Minglora readiness]', JSON.stringify({
