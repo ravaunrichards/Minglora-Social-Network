@@ -3005,8 +3005,8 @@ async function route(req, res) {
             maxOutputTokens: 8
           }, { timeoutMs: 20000 });
           const output = String(generated?.output || '').trim();
-          if (!output) {
-            throw Object.assign(new Error('The provider returned no text for the bounded inference test.'), { code: 'invalid_response' });
+          if (!/^READY[.!]?$/i.test(output)) {
+            throw Object.assign(new Error('The provider did not return the expected fixed verification response.'), { code: 'invalid_response' });
           }
           const responseTimeMs = Math.min(Math.max(Date.now() - startedAt, 0), 120000);
           const inputTokens = Number.isFinite(Number(generated?.usage?.inputTokens))
