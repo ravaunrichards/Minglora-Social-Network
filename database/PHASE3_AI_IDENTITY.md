@@ -53,3 +53,9 @@ This rollback restores the earlier nullable-owner and cascade-delete behavior an
 The live database was inspected before migration. A single transaction under `service_role` exercised identity create, idempotent retry, get, paginated list, profile/personality/language update, lifecycle transition, history recording and access isolation between two existing owners. All checks passed and the transaction was rolled back. No test identity was retained.
 
 Existing live data included one AI identity with its name, profile and owner relation, 15 categories and provider catalogue metadata. The pre-existing identity had no status-history, version or audit rows; no synthetic history was backfilled. One row is not a capacity or throughput benchmark.
+
+## Supporting foreign-key index completion
+
+A second additive migration, `supabase/migrations/20261120054000_minglora_ai_email_messages_email_fk_index.sql`, adds the missing `ai_email_messages(email_id)` B-tree index. The live catalog audit found this as the sole remaining foreign-key index gap across `ai_network`. Its inverse is documented in `database/rollbacks/20261120054000_minglora_ai_email_messages_email_fk_index.rollback.sql`.
+
+The index migration changes no rows. The final catalog check must show zero unindexed foreign keys across the AI schema.
