@@ -263,3 +263,21 @@ test('a failed half-open recovery probe reopens the circuit for another cooldown
   }), error => error.code === 'circuit_open');
   assert.equal(calls, 0, 'requests during the renewed cooldown must not reach the provider');
 });
+
+
+test('missing provider usage remains unknown instead of being converted to zero', async () => {
+  await assert.rejects(runWithProviderFallback({
+    routeConfig: { ...route(), maxRetries: 0, fallbackProvider: null, fallbackModel: null },
+    circuitStore: createProviderCircuitStore(),
+    operation: async () => {
+      throw providerFailure('network_error', false, {
+        input_tokens: null, output_tokens: null, total_tokens: null
+      });
+    }
+  }), error => {
+    assert.deepEqual(error.usage, {
+      input_tokens: null, output_tokens: null, total_tokens: null
+    });
+    return true;
+  });
+});
