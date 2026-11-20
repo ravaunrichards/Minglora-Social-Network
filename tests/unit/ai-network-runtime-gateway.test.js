@@ -21,7 +21,8 @@ test('AI identity, organization, HR, provider and task RPC commands are reachabl
     'ai_organization_command',
     'ai_hr_command',
     'ai_provider_command',
-    'ai_task_command'
+    'ai_task_command',
+    'ai_worker_admin_command'
   ]) {
     assert.ok(allowlist.includes('"' + action + '"'), action + ' is accepted by the global action allowlist');
     assert.ok(runtime.includes('if (action === "' + action + '")'), action + ' has a runtime handler');
@@ -59,4 +60,26 @@ test('task API calls the private runtime only after the moderator authorization 
   const auth = api.indexOf('if (!isModerator(user, req))', helper);
   const rpc = api.indexOf("requestSupabaseState('ai_task_command'", helper);
   assert.ok(helper >= 0 && auth > helper && rpc > auth, 'task RPC is behind a signed-in moderator guard');
+});
+
+
+test('worker administration uses the private runtime, while worker execution has its own bearer endpoint', () => {
+  const phase6 = read('supabase/migrations/20261120090000_minglora_ai_task_execution_orchestration.sql');
+  const workerGateway = read('supabase/functions/minglora-ai-worker/index.ts');
+  const apiStart = server.indexOf("if (p === '/api/ai-network'");
+  const apiEnd = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", apiStart);
+  const api = server.slice(apiStart, apiEnd);
+  assert.ok(api.includes("requestSupabaseState('ai_worker_admin_command'"));
+  assert.ok(api.includes("sub === 'workers'"));
+  assert.ok(api.includes("sub === 'tasks'"));
+  assert.ok(api.includes("'/history'") || api.includes("parts[2] === 'history'"));
+  assert.ok(phase6.includes("where w.credential_sha256=p_token_sha256"));
+  assert.ok(phase6.includes("w.worker_status='active' and w.expires_at>now()"));
+  assert.ok(workerGateway.includes('^Bearer ([A-Za-z0-9_-]{40,160})$'));
+  assert.ok(workerGateway.includes('await sha256(match[1])'));
+  for (const action of ['claim_next_task','heartbeat_task','complete_task','fail_task']) {
+    assert.ok(workerGateway.includes('"' + action + '"'));
+  }
+  assert.ok(!api.includes("'claim_next_task'"));
+  assert.ok(!api.includes("'complete_task'"));
 });

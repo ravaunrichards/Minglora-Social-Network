@@ -51,8 +51,10 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
+import { probeGeminiProvider } from '../backend/modules/ai-network/google-gemini-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { startAITaskWorker } from '../backend/modules/ai-network/task-worker.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -60,6 +62,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
 let openAIProviderHealthState = null;
+let geminiProviderHealthState = null;
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
 const activeAIBotChatOwners = new Set();
@@ -2371,6 +2374,32 @@ async function route(req, res) {
         }
       };
 
+      const runAIWorkerAdminCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only the designated Minglora administrator with an active MFA session may manage AI task workers.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI worker administration requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_worker_admin_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI worker records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI worker command|function .*minglora_ai_worker_admin_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The AI Phase 6 worker migration and runtime gateway must be deployed before this operation is available. No worker data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const runAIProviderCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2667,6 +2696,96 @@ async function route(req, res) {
         return json(res, result?.reused ? 200 : 201, result || {});
       }
 
+      if (method === 'GET' && sub === 'workers') {
+        const result = await runAIWorkerAdminCommand('list_workers');
+        return json(res, 200, result || { workers: [] });
+      }
+      if (method === 'POST' && sub === 'workers') {
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Worker registration input must be a JSON object.'), { status: 400 });
+        }
+        const workerLabel = String(input.worker_label || input.label || '').trim();
+        if (workerLabel.length < 2 || workerLabel.length > 80) {
+          throw Object.assign(new Error('Worker labels must contain between 2 and 80 characters.'), { status: 400 });
+        }
+        const workerToken = crypto.randomBytes(32).toString('base64url');
+        const credentialSha256 = crypto.createHash('sha256').update(workerToken).digest('hex');
+        const maxConcurrentTasks = Number(input.max_concurrent_tasks ?? 1);
+        const maxTasksPerMinute = Number(input.max_tasks_per_minute ?? 10);
+        if (!Number.isInteger(maxConcurrentTasks) || maxConcurrentTasks < 1 || maxConcurrentTasks > 8 ||
+            !Number.isInteger(maxTasksPerMinute) || maxTasksPerMinute < 1 || maxTasksPerMinute > 60) {
+          throw Object.assign(new Error('Worker concurrency must be 1–8 and its rate limit must be 1–60 tasks per minute.'), { status: 400 });
+        }
+        const result = await runAIWorkerAdminCommand('register_worker', {
+          worker_label: workerLabel,
+          credential_sha256: credentialSha256,
+          max_concurrent_tasks: maxConcurrentTasks,
+          max_tasks_per_minute: maxTasksPerMinute
+        });
+        res.setHeader('Cache-Control', 'no-store');
+        return json(res, 201, {
+          ...result,
+          worker_token: workerToken,
+          token_notice: 'This credential is shown once. Add it to the private MINGLORA_AI_WORKER_TOKEN server environment; never place it in browser code or source control.'
+        });
+      }
+      if (parts[0] === 'workers' && parts.length === 3 && parts[2] === 'revoke' && method === 'POST') {
+        const workerId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workerId)) {
+          throw Object.assign(new Error('A valid worker ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 4000);
+        const result = await runAIWorkerAdminCommand('revoke_worker', {
+          worker_id: workerId,
+          reason: String(input?.reason || 'Worker access revoked by the administrator.')
+        });
+        return json(res, 200, result || { revoked: false });
+      }
+      if (parts[0] === 'tasks' && parts.length === 3 && parts[2] === 'history' && method === 'GET') {
+        const taskId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+          throw Object.assign(new Error('A valid task ID is required.'), { status: 400 });
+        }
+        const result = await runAIWorkerAdminCommand('list_task_history', { task_id: taskId });
+        return json(res, 200, result || { events: [], executions: [] });
+      }
+
+      if (method === 'POST' && sub === 'runtime-controls') {
+        const input = await body(req, 4000);
+        const allowedFields = new Set(['global_paused','execution_enabled','max_concurrent_workers','lease_seconds']);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !allowedFields.has(key)) ||
+            (input.global_paused !== undefined && typeof input.global_paused !== 'boolean') ||
+            (input.execution_enabled !== undefined && typeof input.execution_enabled !== 'boolean') ||
+            (input.max_concurrent_workers !== undefined && (!Number.isInteger(input.max_concurrent_workers) || input.max_concurrent_workers < 0 || input.max_concurrent_workers > 8)) ||
+            (input.lease_seconds !== undefined && (!Number.isInteger(input.lease_seconds) || input.lease_seconds < 30 || input.lease_seconds > 900))) {
+          throw Object.assign(new Error('Runtime controls must use supported boolean and bounded integer values.'), { status: 400 });
+        }
+        let providerHealth = null;
+        if (input.execution_enabled === true) {
+          const selectedProvider = String(process.env.MINGLORA_AI_PROVIDER || 'openai').trim().toLowerCase();
+          providerHealth = ['google_gemini','gemini'].includes(selectedProvider)
+            ? await probeGeminiProvider()
+            : await probeOpenAIProvider();
+          if (selectedProvider === 'google_gemini' || selectedProvider === 'gemini') {
+            geminiProviderHealthState = providerHealth;
+          } else {
+            openAIProviderHealthState = providerHealth;
+          }
+          if (providerHealth.connected !== true) {
+            throw Object.assign(new Error('Execution remains disabled because the selected live AI provider model-access probe did not pass.'), { status: 503 });
+          }
+        }
+        const result = await runAIWorkerAdminCommand('set_runtime_controls', input);
+        return json(res, 200, { ...result, providerHealth: providerHealth ? {
+          connected: providerHealth.connected,
+          status: providerHealth.status,
+          model: providerHealth.model,
+          checkedAt: providerHealth.checkedAt
+        } : undefined });
+      }
+
       if (method === 'GET' && sub === 'tasks') {
         const result = await runAITaskCommand('list_tasks');
         return json(res, 200, result || { tasks: [], runtime: null });
@@ -2703,7 +2822,7 @@ async function route(req, res) {
           throw Object.assign(new Error('Task cancellation input must be a JSON object.'), { status: 400 });
         }
         input.task_id = taskId;
-        const result = await runAITaskCommand('cancel_task', input);
+        const result = await runAIWorkerAdminCommand('cancel_task', input);
         return json(res, 200, result || {});
       }
 
@@ -10685,6 +10804,26 @@ server.listen(PORT,'0.0.0.0',async()=>{
   const liveCleanup = await liveSessionCleanupReady;
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
   startLiveSessionCleanupSweep();
+  const aiTaskWorker = startAITaskWorker();
+  if (aiTaskWorker.enabled) {
+    let shuttingDown = false;
+    const shutdownAITaskWorker = async signal => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      console.info('[Minglora AI worker] Graceful shutdown requested.', { signal });
+      server.close();
+      try {
+        await aiTaskWorker.stop();
+      } catch (error) {
+        console.error('[Minglora AI worker] Shutdown did not complete cleanly.', {
+          message: String(error?.message || error).slice(0, 180)
+        });
+      }
+      process.exit(0);
+    };
+    process.once('SIGTERM', () => { void shutdownAITaskWorker('SIGTERM'); });
+    process.once('SIGINT', () => { void shutdownAITaskWorker('SIGINT'); });
+  }
   console.log(`Minglora listening on port ${PORT}`);
   const persistence = await persistenceHealth();
   const aiReadiness = getAIProviderStatus();
