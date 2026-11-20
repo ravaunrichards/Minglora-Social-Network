@@ -69,9 +69,9 @@ test('runtime gateway allowlists provider commands and rejects secret payload fi
   for (const token of [
     'if (action === "ai_provider_command")',
     'supportedProviderCommands',
-    '"list_provider_accounts"','"list_provider_models"','"list_provider_assignments"',
+    '"list_provider_accounts"','"list_provider_models"','"list_provider_assignments"','"list_provider_health"',
     '"create_provider_account"','"create_provider_model"','"assign_provider_model"',
-    '"set_provider_assignment_status"',
+    '"set_provider_assignment_status"','"set_provider_account_status"','"record_provider_health"',
     'secretFields',
     'admin.rpc("minglora_ai_provider_command"'
   ]) assert.ok(runtime.includes(token), 'Missing provider runtime control: ' + token);
@@ -90,6 +90,9 @@ test('provider API requires authorized platform staff and uses the Supabase runt
     "sub === 'provider-assignments'",
     "'create_provider_account'","'create_provider_model'",
     "'assign_provider_model'","'set_provider_assignment_status'",
+    "provider-accounts' && parts.length === 3 && parts[2] === 'status'",
+    "runAIProviderCommand('set_provider_account_status'",
+    "runAIProviderCommand('list_provider_health'",
     'No provider data was changed'
   ]) assert.ok(route.includes(token), 'Missing authorized provider API control: ' + token);
 });
