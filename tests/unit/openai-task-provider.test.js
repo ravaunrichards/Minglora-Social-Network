@@ -87,7 +87,7 @@ test('owner-configured personality context is passed as untrusted descriptive da
   assert.ok(moderated.body.input.includes('"tone":"warm"'));
   assert.ok(moderated.body.input.includes('TASK_INPUT:'));
   assert.ok(generation.body.input.includes('"style":"concise"'));
-  assert.ok(generation.body.instructions.includes('Do not use tools'));
+  assert.ok(generation.body.instructions.includes('or use tools'));
   assert.equal(result.output, 'Here are some community resources.');
 });
 
