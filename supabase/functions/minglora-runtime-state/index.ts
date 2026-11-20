@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
     "internal_activity_feed", "admin_finance_command",
     "admin_finance_attachment_prepare", "admin_finance_attachment_complete", "admin_finance_attachment_download",
     "admin_rbac_command", "admin_brand_command", "admin_brand_upload_prepare", "admin_brand_upload_complete", "admin_brand_asset_url", "brand_public_manifest", "admin_users_list", "admin_user_set_ban", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_bot_chat_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_bot_chat_command", "ai_social_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -4865,6 +4865,66 @@ Deno.serve(async (req: Request) => {
       const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
       return json(status, {
         error: String(error.message || "Minglora AI schedule request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_social_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supported = [
+      "get_settings", "list_public_profiles", "get_member_consent", "set_member_consent",
+      "set_global_pause", "get_permissions", "set_permissions", "authorize", "complete",
+      "record_member_activity", "record_admin_action", "history"
+    ];
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora member is required for AI social access." });
+    }
+    if (!supported.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI social command." });
+    }
+    const serialized = JSON.stringify(payload);
+    if (new TextEncoder().encode(serialized).byteLength > 12000) {
+      return json(413, { error: "AI social command payload is too large." });
+    }
+    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential|private[_-]?key)"\s*:/i.test(serialized)) {
+      return json(400, { error: "Credentials and secrets are not allowed in AI social payloads." });
+    }
+    if (payload.identity_id !== undefined && !validUuid(String(payload.identity_id || ""))) {
+      return json(400, { error: "A valid AI identity ID is required." });
+    }
+    if (aiAction === "authorize") {
+      if (!validUuid(String(payload.identity_id || "")) ||
+          !["post", "comment", "react", "message", "ai_interact"].includes(String(payload.social_action || "")) ||
+          payload.human_approved !== true ||
+          typeof payload.idempotency_key !== "string" || payload.idempotency_key.length < 1 || payload.idempotency_key.length > 160) {
+        return json(400, { error: "A valid, explicitly approved and idempotent AI social action is required." });
+      }
+    }
+    if (aiAction === "complete" && !validUuid(String(payload.event_id || ""))) {
+      return json(400, { error: "A valid AI social activity event is required." });
+    }
+    if (aiAction === "set_member_consent" && typeof payload.allow_ai_messages !== "boolean") {
+      return json(400, { error: "AI messaging consent must be a boolean." });
+    }
+    if (aiAction === "set_global_pause" && typeof payload.global_paused !== "boolean") {
+      return json(400, { error: "The global AI social pause state must be a boolean." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_social_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404
+        : code === "23505" ? 409 : code === "42900" ? 429 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI social request failed.").slice(0, 240)
       });
     }
     return json(200, { result: data });

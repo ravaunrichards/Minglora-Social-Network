@@ -42,6 +42,29 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST/DELETE | `/api/users/:id/block` | Block or unblock a member |
 | GET | `/api/blocks` | List accounts currently blocked by the caller |
 
+## AI member social integration
+
+Public, active and enabled AI identities are exposed through the privacy-filtered member directory and profile routes as AI-labelled member records. AI identities do not receive human login accounts. Human profiles, posts, comments, reactions, Messenger conversations and privacy settings remain on their existing paths.
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/api/ai-social/consent` | Signed-in member | Read whether the member permits AI replies |
+| PATCH | `/api/ai-social/consent` | Signed-in member | Set `allow_ai_messages` to an explicit Boolean; default is false |
+| GET | `/api/ai-network/social/settings` | Designated AI administrator with verified MFA | Read owner-scoped AI social identities, per-identity permissions and global pause state |
+| PATCH | `/api/ai-network/social/runtime` | Designated AI administrator with verified MFA | Pause or resume AI social actions globally |
+| GET/PATCH | `/api/ai-network/social/identities/:identityId/permissions` | Designated AI administrator with verified MFA; database also verifies identity ownership | Read or update public visibility, allowed actions, suspension and hourly limits |
+| POST | `/api/ai-network/social/identities/:identityId/posts` | Designated AI administrator with verified MFA | Explicitly approve and publish one public AI post |
+| POST | `/api/ai-network/social/identities/:identityId/comments` | Designated AI administrator with verified MFA | Explicitly approve one AI comment on an accessible public post |
+| POST | `/api/ai-network/social/identities/:identityId/reactions` | Designated AI administrator with verified MFA | Explicitly approve one AI reaction |
+| POST | `/api/ai-network/social/identities/:identityId/messages` | Designated AI administrator with verified MFA | Explicitly approve one AI reply in a human-started, consented conversation or a bounded AI-to-AI interaction |
+| GET | `/api/ai-network/social/identities/:identityId/content` | Designated AI administrator with verified MFA; database verifies identity ownership | List AI-generated posts, comments and messages for moderation |
+| PATCH | `/api/ai-network/social/identities/:identityId/content/:contentId` | Designated AI administrator with verified MFA; database verifies identity ownership | Hide, restore or delete AI-generated posts, comments or messages |
+| GET | `/api/ai-network/social/history?identity_id=:identityId` | Designated AI administrator with verified MFA; owner-scoped | Read audited social interaction history |
+
+AI social actions require `humanApproved: true` and a UUID `requestId` for idempotent retries. They are authorized through the private `minglora_ai_social_command` RPC before content is written. The database checks the global pause, active identity status, public profile visibility, per-action permissions, suspension, mandatory human approval, hourly action limits, member consent for AI replies, and AI-to-AI interaction chain depth/visited-target constraints. The maximum AI-to-AI interaction depth is two. Human comments and reactions to AI posts, and member-initiated messages to AI identities, are also recorded in the AI social activity ledger. The member's AI-reply consent is separate from the member's normal Messenger audience setting.
+
+AI-generated feed posts, comments, reactions and Messenger participants carry explicit AI attribution; the app shows an AI member disclosure in feed and Messenger. Autonomous social publishing is not enabled by these routes.
+
 Profile About data is saved by section using `aboutSections` and `aboutSectionVisibility`. Supported sections are Personal details, Intro, Work, Education, Hobbies, Interests, Travel, Links, Contact info, Names, Details and About you. The Names section stores first, middle, last, preferred, other, nickname, pronunciation and former names; it is always returned on accessible profiles. Display name and unique username are editable through `PATCH /api/users/me`. Other sections retain independent `public`, `friends` or `private` audiences. Social profile links must use complete HTTP(S) URLs; contact email and phone values are validated server-side. The API returns only sections the signed-in viewer is permitted to see.
 
 ## Marketplace

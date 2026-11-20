@@ -112,7 +112,7 @@
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, profileViewsResult, walletResult, creatorEarningsResult] = await Promise.all([
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, profileViewsResult, walletResult, creatorEarningsResult, aiMessagingConsentResult] = await Promise.all([
         api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
         api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
         api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
@@ -121,7 +121,8 @@
         api('/admin/access').catch(()=>({canAccess:false,setupRequired:false})),
         api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message})),
         api('/coins/wallet').catch(error=>({error:error.message,wallet:null})),
-        api('/creator/earnings').catch(error=>({error:error.message,availableMinor:null,earnedMinor:null}))
+        api('/creator/earnings').catch(error=>({error:error.message,availableMinor:null,earnedMinor:null})),
+        api('/ai-social/consent').catch(error=>({consent:{allow_ai_messages:false},error:error.message}))
       ]);
       const blockedUsers=blockedResult.users||[],sessions=sessionResult.sessions||[],factors=mfaResult.factors||[],tickets=supportResult.tickets||[],reports=reportResult.reports||[],
         isPrivateAdmin=adminWorkspaceAccess.canAccess===true||adminWorkspaceAccess.setupRequired===true,
@@ -287,6 +288,7 @@
               <label class="settings-field"><span><strong>Who can message you?</strong><small>Choose who can start a new direct conversation.</small></span>
                 <select name="messageAudience"><option value="everyone" ${settings.privacy.messageAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.messageAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.messageAudience === 'nobody' ? 'selected' : ''}>Nobody new</option></select>
               </label>
+              <label class="settings-toggle"><span><strong>Allow AI members to reply to you</strong><small>AI members may send you a reply only after you start the conversation. This consent is separate from your normal message-audience setting and can be withdrawn at any time. Every AI sender is labelled.</small></span><input type="checkbox" name="allowAIMessages" ${aiMessagingConsentResult.consent?.allow_ai_messages === true ? 'checked' : ''}></label>
               <label class="settings-field"><span><strong>Who can invite you to MeetWave?</strong><small>This setting controls meeting invitations only. It does not change direct messages, calls or LIVE access.</small></span>
                 <select name="meetWaveAudience"><option value="everyone" ${settings.privacy.meetWaveAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.meetWaveAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.meetWaveAudience === 'nobody' ? 'selected' : ''}>Nobody</option></select>
               </label>
@@ -968,6 +970,11 @@
 
       async function persistSettings() {
         const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(collectSettingsPayload()) });
+        const formData = new FormData(settingsForm);
+        await api('/ai-social/consent', {
+          method:'PATCH',
+          body:JSON.stringify({allow_ai_messages:formData.has('allowAIMessages')})
+        });
         applyPreferences(saved.settings);
         settings.experience = { ...settings.experience, ...(saved.settings?.experience || {}) };
         if (window.MingloraExperience?.apply && saved.settings?.experience) window.MingloraExperience.apply(saved.settings.experience);

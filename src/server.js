@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_EXPERIENCE_SETTINGS, validateExperienceSettingsPatch } from './domain/experience-settings.js';
+import { buildAISocialMember, performAISocialAction, validateAISocialConsent } from '../backend/modules/ai-network/social-integration.js';
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
@@ -219,6 +220,16 @@ function canViewAboutSection(viewerId,target,visibility){
 }
 function safeUser(u,viewerId=null){
   if(!u)return null;
+  if(u.isAI===true){
+    return {
+      id:u.id,name:u.name,username:u.username,bio:String(u.bio||''),introduction:String(u.introduction||''),
+      profession:String(u.profession||''),interests:Array.isArray(u.interests)?u.interests:[],
+      skills:Array.isArray(u.skills)?u.skills:[],location:'',avatar:'',avatarUrl:'',cover:'',
+      createdAt:u.createdAt||null,verificationBadge:'none',platformBadge:null,
+      aiAccount:true,aiGenerated:true,aiIdentityId:u.aiIdentityId||u.id,aiDisclosureRequired:true,
+      profileVisibility:'public'
+    };
+  }
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{}),names:'public'};
   const own=viewerId===u.id;
@@ -291,6 +302,37 @@ const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid'
 const LIVE_GUEST_LAYOUTS=['roundtable-1','roundtable-2'];
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',shareAudienceDemographics:false,friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',profileStyle:'facebook',defaultProfileStyle:'facebook',profileScreenLayout:'fluid-panel',defaultProfileScreenLayout:'fluid-panel',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!PROFILE_STYLE_IDS.includes(preferences.profileStyle))preferences.profileStyle=DEFAULT_SETTINGS.preferences.profileStyle;if(!PROFILE_STYLE_IDS.includes(preferences.defaultProfileStyle))preferences.defaultProfileStyle=DEFAULT_SETTINGS.preferences.defaultProfileStyle;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.profileScreenLayout))preferences.profileScreenLayout=DEFAULT_SETTINGS.preferences.profileScreenLayout;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.defaultProfileScreenLayout))preferences.defaultProfileScreenLayout=DEFAULT_SETTINGS.preferences.defaultProfileScreenLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
+const aiSocialMembers = new Map();
+let aiSocialMembersLoadedAt = 0;
+const AI_SOCIAL_PROFILE_CACHE_MS = 20000;
+
+function socialMemberById(memberId){
+  const id=String(memberId||'');
+  return (db.users||[]).find(member=>member.id===id)||aiSocialMembers.get(id)||null;
+}
+
+async function runAISocialCommand(actorUserId,aiAction,payload={}){
+  if(!isSupabasePersistence())throw Object.assign(new Error('AI social integration requires Minglora Supabase persistence.'),{status:503});
+  const response=await requestSupabaseState('ai_social_command',{actorUserId,aiAction,payload});
+  if(response?.skipped)throw Object.assign(new Error('AI social integration is unavailable in local-only persistence mode.'),{status:503});
+  return response?.result||{};
+}
+
+async function refreshAISocialProfiles(actorUserId,{force=false}={}){
+  if(!isSupabasePersistence())return [...aiSocialMembers.values()];
+  if(!force&&Date.now()-aiSocialMembersLoadedAt<AI_SOCIAL_PROFILE_CACHE_MS)return [...aiSocialMembers.values()];
+  const result=await runAISocialCommand(actorUserId,'list_public_profiles',{});
+  const next=new Map();
+  for(const row of Array.isArray(result?.profiles)?result.profiles:[]){
+    const member=buildAISocialMember(row);
+    if(member)next.set(member.id,member);
+  }
+  aiSocialMembers.clear();
+  for(const [id,member] of next)aiSocialMembers.set(id,member);
+  aiSocialMembersLoadedAt=Date.now();
+  return [...aiSocialMembers.values()];
+}
+
 function isFriend(firstId,secondId){const follows=activeFollows();return follows.some(item=>item.followerId===firstId&&item.followedId===secondId)&&follows.some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
 function isFriendRestricted(viewerId,ownerId){
@@ -313,7 +355,9 @@ function friendStoriesMuted(viewerId,targetId){
   return Boolean(preference?.isMutedStories||friendUpdatesSnoozed(viewerId,targetId));
 }
 function canViewProfile(viewerId,target){
-  if(!target||isAccountBlocked(target))return false;
+  if(!target)return false;
+  if(target.isAI===true)return target.profileVisibility==='public'&&!blockedBetween(viewerId,target.id);
+  if(isAccountBlocked(target))return false;
   if(viewerId===target.id)return true;
   if(blockedBetween(viewerId,target.id))return false;
   const visibility=getUserSettings(target).privacy.profileVisibility;
@@ -327,8 +371,10 @@ function readProfileSections(userId){
   return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
 }
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
-  const owner=(db.users||[]).find(member=>member.id===ownerId);
-  if(!owner||isAccountBlocked(owner))return false;
+  const owner=socialMemberById(ownerId);
+  if(!owner)return false;
+  if(owner.isAI===true)return owner.profileVisibility==='public'&&audience==='public'&&!blockedBetween(viewerId,ownerId);
+  if(isAccountBlocked(owner))return false;
   if(viewerId===ownerId)return true;
   if(blockedBetween(viewerId,ownerId))return false;
   if(audience==='public')return true;
@@ -1084,7 +1130,7 @@ async function publicSoundtrack(track,viewerId) {
   return card?{...track,sound:card}:null;
 }
 async function publicPost(p,viewerId) {
-  const author=db.users.find(u=>u.id===p.userId);
+  const author=socialMemberById(p.userId);
   const media=await Promise.all((p.mediaIds||[]).map(async id=>{
     const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===p.userId&&item.slot==='post');
     if(!asset||asset.status==='deleted')return null;
@@ -1113,10 +1159,10 @@ async function publicPost(p,viewerId) {
   const isFriend=getMutualFollowIds(currentFollows,viewerId,db.blocks||[]).includes(p.userId);
   const canRemix=canRemixVideo(p,viewerId,{isVisible:visibleVideo,isBlocked:blockedBetween(viewerId,p.userId),isFollowing,isFriend});
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author,viewerId),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>socialMemberById(id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,aiReactions:(p.aiReactionEvents||[]).map(event=>({...event,author:safeUser(socialMemberById(event.identityId),viewerId)})),
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
-    comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
+    comments:(p.comments||[]).filter(c=>c.status!=='hidden').map(c=>({...c,author:safeUser(socialMemberById(c.userId),viewerId)}))};
 }
 function isVisibleVideoPost(viewerId, post) {
   if (!post || post.status === 'hidden' || post.archivedAt || !post.userId || blockedBetween(viewerId, post.userId)) return false;
@@ -1606,6 +1652,147 @@ async function route(req, res) {
       const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
       const aiEmailIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+      const runAISocialAdminCommand=async(aiAction,payload={})=>runAISocialCommand(user.id,aiAction,payload);
+      if(sub==='social/settings'&&method==='GET'){
+        return json(res,200,await runAISocialAdminCommand('get_settings',{}));
+      }
+      if(sub==='social/runtime'&&['PATCH','PUT'].includes(method)){
+        const runtimeInput=await body(req,5000);
+        if(typeof runtimeInput.globalPaused!=='boolean')throw Object.assign(new Error('globalPaused must be a boolean.'),{status:400});
+        const result=await runAISocialAdminCommand('set_global_pause',{
+          global_paused:runtimeInput.globalPaused,
+          pause_reason:String(runtimeInput.pauseReason||'').slice(0,240)
+        });
+        aiSocialMembersLoadedAt=0;
+        return json(res,200,{runtime:result});
+      }
+      const socialPermissionParts=sub.split('/').filter(Boolean);
+      if(socialPermissionParts[0]==='social'&&socialPermissionParts[1]==='identities'&&socialPermissionParts.length===4&&socialPermissionParts[3]==='permissions'){
+        const identityId=socialPermissionParts[2];
+        if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
+        if(method==='GET')return json(res,200,await runAISocialAdminCommand('get_permissions',{identity_id:identityId}));
+        if(['PATCH','PUT'].includes(method)){
+          const permissionInput=await body(req,8000);
+          const allowedBooleans=['can_post','can_comment','can_react','can_message','can_ai_interact','is_suspended'];
+          const payload={identity_id:identityId};
+          for(const key of allowedBooleans)if(typeof permissionInput[key]==='boolean')payload[key]=permissionInput[key];
+          for(const key of ['max_posts_per_hour','max_comments_per_hour','max_reactions_per_hour','max_messages_per_hour','max_ai_interactions_per_hour']){
+            if(permissionInput[key]!==undefined)payload[key]=Number(permissionInput[key]);
+          }
+          if(permissionInput.profile_visibility!==undefined)payload.profile_visibility=String(permissionInput.profile_visibility);
+          const result=await runAISocialAdminCommand('set_permissions',payload);
+          aiSocialMembersLoadedAt=0;
+          return json(res,200,{permissions:result});
+        }
+      }
+      if(sub==='social/history'&&method==='GET'){
+        const historyUrl=new URL(req.url||'/', 'http://localhost');
+        const identityId=String(historyUrl.searchParams.get('identity_id')||'');
+        if(identityId&&!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
+        return json(res,200,await runAISocialAdminCommand('history',identityId?{identity_id:identityId}:{}));
+      }
+      const socialActionParts=sub.split('/').filter(Boolean);
+      if(socialActionParts[0]==='social'&&socialActionParts[1]==='identities'&&socialActionParts.length===4&&['posts','comments','reactions','messages'].includes(socialActionParts[3])&&method==='POST'){
+        const identityId=socialActionParts[2],resource=socialActionParts[3];
+        const action=({posts:'post',comments:'comment',reactions:'react',messages:'message'})[resource];
+        if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
+        const actionInput=await body(req,12000);
+        const profileSettings=await runAISocialAdminCommand('get_permissions',{identity_id:identityId});
+        if(profileSettings?.profile_visibility!=='public')throw Object.assign(new Error('Set the AI member profile to Public before enabling social participation.'),{status:403});
+        await refreshAISocialProfiles(user.id,{force:true});
+        if(!aiSocialMembers.has(identityId))throw Object.assign(new Error('This AI identity is not active, enabled and permitted for public social participation.'),{status:403});
+        const canViewTargetPost=async post=>{
+          if(!post||post.audience!=='public'||blockedBetween(identityId,post.userId))return false;
+          const owner=socialMemberById(post.userId);
+          if(!owner||!canViewProfile(identityId,owner)||!canViewProfileAudience(identityId,post.userId,'public'))return false;
+          if(!owner.isAI){
+            const commentAudience=getUserSettings(owner).privacy.commentAudience||'everyone';
+            if(action==='comment'&&commentAudience!=='everyone')return false;
+          }
+          return true;
+        };
+        const canMessageMember=async recipientId=>{
+          const recipient=db.users.find(member=>member.id===recipientId);
+          if(!recipient||blockedBetween(identityId,recipientId))return false;
+          const preferences=getUserSettings(recipient).preferences;
+          if((preferences.messengerRestrictedUserIds||[]).includes(identityId))return false;
+          if(getUserSettings(recipient).privacy.messageAudience!=='everyone')return false;
+          return (db.messages||[]).some(message=>message.from===recipientId&&message.to===identityId&&!message.unsent&&message.status!=='hidden'&&!isMessageExpired(message));
+        };
+        const canInteractWithAI=async targetIdentityId=>{
+          if(targetIdentityId===identityId)return false;
+          await refreshAISocialProfiles(user.id);
+          return aiSocialMembers.has(targetIdentityId);
+        };
+        const result=await performAISocialAction({
+          identityId,action,input:actionInput,db,
+          authorize:payload=>runAISocialAdminCommand('authorize',{identity_id:identityId,...payload}),
+          complete:eventId=>runAISocialAdminCommand('complete',{event_id:eventId}),
+          save:saveStore,canViewTargetPost,canMessageMember,canInteractWithAI
+        });
+        if(result.reused){
+          if(action==='post')return json(res,200,{reused:true,post:await publicPost(result.content,user.id)});
+          if(action==='comment')return json(res,200,{reused:true,comment:{...result.content.comment,author:safeUser(aiSocialMembers.get(identityId),user.id)}});
+          if(action==='react')return json(res,200,{reused:true,post:await publicPost(result.content.post,user.id)});
+          return json(res,200,{reused:true,message:{...result.content,author:safeUser(aiSocialMembers.get(identityId),user.id)}});
+        }
+        if(action==='post')return json(res,201,{post:await publicPost(result.content,user.id),aiGenerated:true,aiDisclosureRequired:true});
+        if(action==='comment')return json(res,201,{comment:{...result.content,author:safeUser(aiSocialMembers.get(identityId),user.id)},aiGenerated:true,aiDisclosureRequired:true});
+        if(action==='react')return json(res,200,{post:await publicPost(result.content.post,user.id),aiGenerated:true,aiDisclosureRequired:true});
+        return json(res,201,{message:{...result.content,author:safeUser(aiSocialMembers.get(identityId),user.id)},aiGenerated:true,aiDisclosureRequired:true});
+      }
+      const socialContentListParts=sub.split('/').filter(Boolean);
+      if(socialContentListParts[0]==='social'&&socialContentListParts[1]==='identities'&&socialContentListParts.length===3&&socialContentListParts[2]&&method==='GET'){
+        const identityId=socialContentListParts[2];
+        if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
+        await runAISocialAdminCommand('get_permissions',{identity_id:identityId});
+        const posts=(db.posts||[]).filter(item=>item.userId===identityId&&item.aiGenerated===true)
+          .map(item=>({id:item.id,type:'post',text:String(item.text||''),status:item.status||'active',createdAt:item.createdAt||null}));
+        const comments=(db.posts||[]).flatMap(parent=>(parent.comments||[])
+          .filter(item=>item.userId===identityId&&item.aiGenerated===true)
+          .map(item=>({id:item.id,type:'comment',postId:parent.id,text:String(item.text||''),status:item.status||'active',createdAt:item.createdAt||null})));
+        const messages=(db.messages||[]).filter(item=>item.from===identityId&&item.aiGenerated===true)
+          .map(item=>({id:item.id,type:'message',recipientId:item.to,text:String(item.text||''),status:item.status||(item.unsent?'unsent':'active'),createdAt:item.createdAt||null}));
+        return json(res,200,{content:[...posts,...comments,...messages].sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0))});
+      }
+      const socialContentParts=sub.split('/').filter(Boolean);
+      if(socialContentParts[0]==='social'&&socialContentParts[1]==='identities'&&socialContentParts.length===5&&socialContentParts[3]==='content'&&['PATCH','DELETE'].includes(method)){
+        const identityId=socialContentParts[2],contentId=socialContentParts[4];
+        if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
+        const contentInput=method==='PATCH'?await body(req,6000):{};
+        const targetType=String(contentInput.targetType||url.searchParams.get('targetType')||'post');
+        const operation=method==='DELETE'?'delete':String(contentInput.operation||'hide');
+        if(!['post','comment','message'].includes(targetType)||!['hide','restore','delete'].includes(operation))throw Object.assign(new Error('Choose a supported AI content type and action.'),{status:400});
+        let found=null,post=null,comment=null,message=null;
+        if(targetType==='post'){
+          post=(db.posts||[]).find(item=>item.id===contentId&&item.userId===identityId&&item.aiGenerated===true);
+          found=post;
+        }else if(targetType==='comment'){
+          for(const candidate of db.posts||[]){
+            const match=(candidate.comments||[]).find(item=>item.id===contentId&&item.userId===identityId&&item.aiGenerated===true);
+            if(match){post=candidate;comment=match;found=match;break;}
+          }
+        }else{
+          message=(db.messages||[]).find(item=>item.id===contentId&&item.from===identityId&&item.aiGenerated===true);
+          found=message;
+        }
+        if(!found)throw Object.assign(new Error('AI-generated content was not found for this identity.'),{status:404});
+        const adminAction=operation==='hide'?'content_hidden':operation==='restore'?'content_restored':'content_deleted';
+        await runAISocialAdminCommand('record_admin_action',{identity_id:identityId,admin_action:adminAction,target_type:targetType,target_id:contentId});
+        if(targetType==='post'){
+          if(operation==='delete')db.posts=db.posts.filter(item=>item.id!==contentId);
+          else post.status=operation==='hide'?'hidden':'active';
+        }else if(targetType==='comment'){
+          if(operation==='delete')post.comments=(post.comments||[]).filter(item=>item.id!==contentId);
+          else comment.status=operation==='hide'?'hidden':'active';
+        }else{
+          if(operation==='delete'){message.unsent=true;message.status='hidden';}
+          else message.status=operation==='hide'?'hidden':'active';
+        }
+        await saveStore();
+        return json(res,200,{managed:true,targetType,contentId,operation});
+      }
 
       if (method === 'GET' && sub === 'email/status') {
         const status = await inspectResendDomain();
@@ -3863,6 +4050,25 @@ async function route(req, res) {
       return json(res,404,{error:'Video processing endpoint not found.'});
     }
     const user = sessionUser(req);
+    if(p==='/api/ai-social/consent'){
+      try{
+        requireAuth(user);
+        if(!isSupabasePersistence())return json(res,503,{error:'AI messaging consent requires Minglora Supabase persistence.'});
+        if(method==='GET'){
+          const consent=await runAISocialCommand(user.id,'get_member_consent',{});
+          return json(res,200,{consent:{allow_ai_messages:consent.allow_ai_messages===true}});
+        }
+        if(['PATCH','PUT','POST'].includes(method)){
+          const consentInput=await body(req,4000);
+          const allow=validateAISocialConsent(consentInput.allow_ai_messages);
+          const consent=await runAISocialCommand(user.id,'set_member_consent',{allow_ai_messages:allow});
+          return json(res,200,{consent:{allow_ai_messages:consent.allow_ai_messages===true}});
+        }
+        return json(res,405,{error:'Method not allowed.'});
+      }catch(error){
+        return json(res,error.status||400,{error:String(error?.message||'AI messaging consent could not be updated.').slice(0,220)});
+      }
+    }
     const activeHelpSession=user?sessionFromRequest(req):null;
     const helpActor={
       actorUserId:user?.id||'',
@@ -7441,6 +7647,7 @@ async function route(req, res) {
         return json(res,200,result);
       }
       if (method==='GET' && p==='/api/feed') {
+        try{await refreshAISocialProfiles(user.id);}catch(error){console.warn('[Minglora feed] AI profiles were unavailable; human feed remains available.',String(error?.message||error).slice(0,160));}
         const scope=String(url.searchParams.get('scope')||'all');
         if(!['all','following','friends','subscribers','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, subscribers, or for-you.'});
         const followedIds=new Set(activeFollows().filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
@@ -7463,10 +7670,10 @@ async function route(req, res) {
           eligibleIds=new Set([...new Set(subscriberIds.map(value=>String(value||'')).filter(Boolean))].filter(id=>id!==user.id));
         }
         const searchQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
-        let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
+        let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,socialMemberById(x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
         if(searchQuery){
           visiblePosts=visiblePosts.filter(post=>{
-            const author=db.users.find(profile=>profile.id===post.userId);
+            const author=socialMemberById(post.userId);
             return [post.text,author?.name,author?.username].some(value=>String(value||'').toLowerCase().includes(searchQuery));
           });
         }
@@ -8130,7 +8337,23 @@ async function route(req, res) {
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
+      if(method==='POST'&&m){
+        const post=db.posts.find(x=>x.id===m[1]);
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        post.reactions ||= {};
+        const reaction=String(input.reaction||'like');
+        if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});
+        const previousReaction=post.reactions[user.id];
+        if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;
+        if(post.aiGenerated===true&&post.aiIdentityId){
+          try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:post.aiIdentityId,social_action:'member_reaction',target_type:'post',target_id:post.id});}
+          catch(error){if(previousReaction===undefined)delete post.reactions[user.id];else post.reactions[user.id]=previousReaction;return json(res,error.status||503,{error:'The AI interaction could not be recorded. Your reaction was not saved.'});}
+        }
+        const postOwner=socialMemberById(post.userId);
+        if(post.userId!==user.id&&!postOwner?.isAI)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);
+        await saveStore();
+        return json(res,200,{post:await publicPost(post,user.id)});
+      }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -8142,7 +8365,23 @@ async function route(req, res) {
         await saveStore();return json(res,200,{ok:true,id:comment.id});
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const postOwner=db.users.find(member=>member.id===post.userId);const commentAudience=getUserSettings(postOwner).privacy.commentAudience||'everyone';if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+      if(method==='POST'&&m){
+        const post=db.posts.find(x=>x.id===m[1]),text=String(input.text||'').trim();
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});
+        const postOwner=socialMemberById(post.userId);
+        const commentAudience=postOwner?.isAI?'everyone':(getUserSettings(postOwner).privacy.commentAudience||'everyone');
+        if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});
+        const comment={id:uid(),userId:user.id,text,createdAt:now()};
+        post.comments.push(comment);
+        if(post.aiGenerated===true&&post.aiIdentityId){
+          try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:post.aiIdentityId,social_action:'member_comment',target_type:'post',target_id:post.id});}
+          catch(error){post.comments=post.comments.filter(item=>item.id!==comment.id);return json(res,error.status||503,{error:'The AI interaction could not be recorded. Your comment was not saved.'});}
+        }
+        if(post.userId!==user.id&&!postOwner?.isAI)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);
+        await saveStore();
+        return json(res,201,{comment:{...comment,author:safeUser(user,user.id)}});
+      }
       if(method==='GET'&&p==='/api/discovery/people/verification'){
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
         const users=db.users
@@ -8224,8 +8463,13 @@ async function route(req, res) {
         return json(res,200,{ok:true,dismissed:false});
       }
       if(method==='GET'&&p==='/api/users'){
+        try{await refreshAISocialProfiles(user.id);}catch(error){console.warn('[Minglora members] AI member discovery unavailable.',String(error?.message||error).slice(0,160));}
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
-        return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:activeFollows().some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+        const humans=db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u))
+          .map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:activeFollows().some(f=>f.followerId===user.id&&f.followedId===u.id)}));
+        const ais=[...aiSocialMembers.values()].filter(u=>!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u))
+          .map(u=>({...safeUser(u,user.id),friendship:null,following:false,aiAccount:true,aiDisclosureRequired:true}));
+        return json(res,200,{users:[...humans,...ais],aiMemberCount:ais.length});
       }
 
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
@@ -8705,7 +8949,14 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
-        const target=db.users.find(member=>member.id===m[1]);
+        let target=db.users.find(member=>member.id===m[1]);
+        if(!target){
+          try{await refreshAISocialProfiles(user.id);}catch(error){return json(res,503,{error:'AI member profiles are temporarily unavailable.'});}
+          const aiTarget=aiSocialMembers.get(m[1]);
+          if(!aiTarget||blockedBetween(user.id,aiTarget.id)||!canViewProfile(user.id,aiTarget))return json(res,404,{error:'User not found.'});
+          const aiPosts=await Promise.all((db.posts||[]).filter(post=>post.userId===aiTarget.id&&post.status!=='hidden'&&!post.archivedAt&&post.audience==='public').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,50).map(post=>publicPost(post,user.id)));
+          return json(res,200,{user:safeUser(aiTarget,user.id),profile:safeUser(aiTarget,user.id),posts:aiPosts,aiAccount:true,aiDisclosureRequired:true});
+        }
         // Profile reads stay read-only and fast. Creator League settlement is
         // handled by the scheduled worker; it must never block a profile page
         // on a global reconciliation or persistence write.
@@ -9936,14 +10187,15 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,200,{ok:true,settings:{conversationId:requested,disappearingAfterSeconds:seconds,canManage:true,updatedAt}});
       }
       if(method==='GET'&&p==='/api/messages'){
+        try{await refreshAISocialProfiles(user.id);}catch(error){console.warn('[Minglora Messenger] AI member list unavailable.',String(error?.message||error).slice(0,160));}
         const messagePeers=(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id).map(item=>item.from===user.id?item.to:item.from);
         const settingPeers=(db.messageConversationSettings||[]).map(item=>getMessageConversationPeerId(item.conversationKey,user.id));
-        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&db.users.some(member=>member.id===id));
+        const peers=[...new Set([...messagePeers,...settingPeers].filter(Boolean))].filter(id=>!blockedBetween(user.id,id)&&socialMemberById(id));
         const conversations=await Promise.all(peers.map(async id=>{
           const hide=(db.messageConversationHides||[]).find(item=>item.userId===user.id&&item.peerId===id);
           const visibleMessages=(db.messages||[]).filter(item=>
             ((item.from===user.id&&item.to===id)||(item.from===id&&item.to===user.id)) &&
-            !isMessageExpired(item) && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
+            !isMessageExpired(item) && item.status!=='hidden' && !(Array.isArray(item.deletedFor)&&item.deletedFor.includes(user.id)) &&
             (!hide||new Date(item.createdAt)>new Date(hide.hiddenAt))
           ).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
           const savedConversationSettings=(db.messageConversationSettings||[]).find(item=>item.conversationKey===messageConversationKey({userIds:[user.id,id]}));
@@ -9954,10 +10206,10 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
               if(!asset)return null;
               try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
             }));
-            return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id)};
+            return {...item,attachments:attachments.filter(Boolean),author:safeUser(socialMemberById(item.from),user.id)};
           }));
           const unreadCount=visibleMessages.filter(item=>item.from===id&&item.to===user.id&&item.read!==true).length;
-          return {id:'direct:'+id,kind:'direct',user:safeUser(db.users.find(member=>member.id===id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
+          return {id:'direct:'+id,kind:'direct',user:safeUser(socialMemberById(id),user.id),messages,unreadCount,isRequest:!isFriend(user.id,id)&&visibleMessages.length>0&&!visibleMessages.some(item=>item.from===user.id),messageSettings:{disappearingAfterSeconds:getMessageDisappearingSeconds(db,messageConversationKey({userIds:[user.id,id]}))}};
         }));
         const groupRows = await Promise.all((db.messageGroups||[])
           .filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
@@ -9974,7 +10226,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
                 if(!asset)return null;
                 try{return {id:asset.id,name:asset.originalName||asset.fileName||'Attachment',mimeType:asset.mimeType,mediaType:asset.mediaType,byteSize:asset.byteSize,url:await resolveAssetUrl(asset)};}catch{return null;}
               }));
-              return {...item,attachments:attachments.filter(Boolean),author:safeUser(db.users.find(member=>member.id===item.from),user.id),readState:summarizeGroupReadState(item,members)};
+              return {...item,attachments:attachments.filter(Boolean),author:safeUser(socialMemberById(item.from),user.id),readState:summarizeGroupReadState(item,members)};
             }));
             const unreadCount=rawMessages.filter(item=>item.from!==user.id&&!item.readBy?.[user.id]).length;
             const memberRecords=(db.messageGroupMembers||[]).filter(item=>item.groupId===group.id&&item.status==='active');
@@ -10221,7 +10473,22 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,201,{message:{...msg,attachments,author:safeUser(user,user.id)}});
       }
       if(method==='POST'&&p==='/api/messages'){
-        const to=String(input.to||''),text=String(input.text||'').trim(),recipient=db.users.find(member=>member.id===to);
+        const to=String(input.to||''),text=String(input.text||'').trim();
+        if(!db.users.some(member=>member.id===to)){
+          try{await refreshAISocialProfiles(user.id);}catch(error){return json(res,503,{error:'AI member profiles are temporarily unavailable.'});}
+          const aiRecipient=aiSocialMembers.get(to);
+          if(!aiRecipient||blockedBetween(user.id,to)||!canViewProfile(user.id,aiRecipient))return json(res,404,{error:'Choose an available Minglora member.'});
+          if(!text||text.length>3000)return json(res,400,{error:'Message must contain between 1 and 3,000 characters.'});
+          const message={id:uid(),from:user.id,to,text,attachmentIds:[],createdAt:now(),read:false,reactions:{},aiConversation:true,aiIdentityId:to,aiGenerated:false,aiDisclosureRequired:true};
+          try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:to,social_action:'member_message',target_type:'conversation',target_id:message.id});}
+          catch(error){return json(res,error.status||503,{error:'The AI conversation activity could not be recorded. Your message was not sent.'});}
+          db.messages.push(message);
+          db.messageConversationHides=(db.messageConversationHides||[]).filter(item=>!(item.userId===user.id&&item.peerId===to));
+          await saveStore();
+          messengerRealtime?.publish([user.id,to],{type:'message:new',conversationId:to,messageId:message.id,senderId:user.id});
+          return json(res,201,{message:{...message,author:safeUser(user,user.id),aiRecipient:safeUser(aiRecipient,user.id)}});
+        }
+        const recipient=db.users.find(member=>member.id===to);
         const attachmentIds=[...new Set((Array.isArray(input.attachmentIds)?input.attachmentIds:[]).map(value=>String(value||'')))];
         const stickerId=String(input.stickerId||'').trim().toLowerCase(),stickerEmoji=stickerId?MESSAGE_STICKERS[stickerId]||'':'';
         const gifUrl=input.gifUrl?safeTenorGifUrl(input.gifUrl):null;
