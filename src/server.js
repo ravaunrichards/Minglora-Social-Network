@@ -9237,6 +9237,35 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
+        const requestedAiIdentityId = aiSocialIdentityFromPeer(m[1]);
+        if (requestedAiIdentityId) {
+          if (!isSupabasePersistence()) return json(res,503,{error:'AI member profiles require Minglora relational persistence.'});
+          const social = await requestSupabaseState('ai_social_command',{
+            actorUserId:user.id,aiAction:'list_public_profiles',payload:{}
+          });
+          if (social?.skipped) return json(res,503,{error:'AI member profiles are unavailable in local-only mode.'});
+          const aiProfile = (social?.result?.profiles || []).find(item=>String(item.identity_id)===requestedAiIdentityId);
+          if (!aiProfile) return json(res,404,{error:'AI member profile not found.'});
+          const aiActor = publicAISocialActor(aiProfile);
+          const ownerUser = db.users.find(member=>member.id===String(aiProfile.owner_user_id||''));
+          if (!ownerUser || blockedBetween(user.id,ownerUser.id) ||
+              !canViewProfile(user.id,ownerUser) ||
+              !canViewProfileAudience(user.id,ownerUser.id,'public')) {
+            return json(res,404,{error:'AI member profile not found.'});
+          }
+          const aiPosts = (db.posts||[])
+            .filter(post=>post.aiActor?.identityId===requestedAiIdentityId && post.status!=='hidden' && !post.archivedAt &&
+              !blockedBetween(user.id,ownerUser.id) && canViewProfileAudience(user.id,ownerUser.id,post.audience||'public'))
+            .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))
+            .slice(0,50);
+          return json(res,200,{
+            user:{...aiActor,createdAt:aiProfile.created_at||null,profileVisibility:'public',isAI:true,aiDisclosure:'AI member'},
+            posts:await Promise.all(aiPosts.map(post=>publicPost(post,user.id))),
+            followers:[],following:[],friends:[],followersCount:0,followingCount:0,friendsCount:0,
+            isFollowing:false,isFriend:false,isOwner:false,profileStatus:null,checkIns:[],events:[],highlights:[],
+            aiProfile:true
+          });
+        }
         const target=db.users.find(member=>member.id===m[1]);
         // Profile reads stay read-only and fast. Creator League settlement is
         // handled by the scheduled worker; it must never block a profile page
