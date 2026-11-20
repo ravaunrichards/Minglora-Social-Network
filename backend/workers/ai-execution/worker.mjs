@@ -3,9 +3,12 @@ import {
   getTaskRetryDelaySeconds,
   isRetryableTaskProviderError
 } from '../../modules/ai-network/openai-task-executor.js';
+import { probeOpenAIProvider } from '../../modules/ai-network/openai-provider-probe.js';
 
 const DEFAULT_POLL_MS = 5000;
 const DEFAULT_HEARTBEAT_MS = 20000;
+const DEFAULT_PROVIDER_HEALTH_INTERVAL_MS = 300000;
+let lastProviderHealthProbeAt = 0;
 
 function boundedInteger(value, fallback, min, max) {
   const parsed = Number(value);
@@ -75,6 +78,57 @@ function taskPromptEstimate(task) {
 }
 
 /**
+ * Re-check assigned OpenAI model access on a bounded interval. Successful
+ * read-only probes promote the account health record; provider errors never
+ * activate an assignment automatically.
+ */
+export async function refreshAIProviderHealth({
+  env = process.env,
+  gatewayCall = (action, payload) => callAIWorkerGateway(action, payload, { env }),
+  probeProvider = probeOpenAIProvider,
+  now = () => Date.now(),
+  logger = console,
+  force = false
+} = {}) {
+  if (String(env.MINGLORA_AI_PROVIDER_HEALTH_CHECK_ENABLED || '').toLowerCase() === 'false') {
+    return { checked: 0, skipped: true, reason: 'health_check_disabled' };
+  }
+  const interval = boundedInteger(
+    env.MINGLORA_AI_PROVIDER_HEALTH_INTERVAL_MS,
+    DEFAULT_PROVIDER_HEALTH_INTERVAL_MS,
+    60000,
+    3600000
+  );
+  if (!force && now() - lastProviderHealthProbeAt < interval) {
+    return { checked: 0, skipped: true, reason: 'probe_interval' };
+  }
+  const response = await gatewayCall('list_provider_health_targets', {});
+  const targets = Array.isArray(response?.targets) ? response.targets : [];
+  lastProviderHealthProbeAt = now();
+  let checked = 0;
+  for (const target of targets) {
+    const model = String(target?.model_identifier || '').trim();
+    if (!target?.provider_account_id || !target?.assignment_id || !model) continue;
+    const health = await probeProvider({ env: { ...env, OPENAI_DEFAULT_MODEL: model } });
+    const status = health?.connected === true && health?.healthStatus === 'healthy'
+      ? 'healthy'
+      : ['missing_credentials','missing_model','adapter_unavailable'].includes(String(health?.status || ''))
+        ? 'unknown'
+        : ['timeout','network_error','provider_error','invalid_response'].includes(String(health?.status || ''))
+          ? 'degraded' : 'unavailable';
+    await gatewayCall('record_provider_health', {
+      provider_account_id: target.provider_account_id,
+      assignment_id: target.assignment_id,
+      model_identifier: model,
+      health_status: status
+    });
+    checked += 1;
+  }
+  if (checked) logger.info?.('[Minglora AI worker] Provider health probes recorded.', { checked });
+  return { checked, skipped: false };
+}
+
+/**
  * Executes at most one durable task. Queue leases and provider rate reservations
  * are database-backed, so separate worker instances cannot bypass the configured
  * global concurrency and per-model limits.
@@ -93,6 +147,14 @@ export async function runAIExecutionWorkerOnce({
   }
   if (String(env.MINGLORA_AI_WORKER_TOKEN || '').trim().length < 40) {
     return { started: false, reason: 'worker_credential_missing' };
+  }
+
+  try {
+    await refreshAIProviderHealth({ env, gatewayCall, logger, now });
+  } catch (error) {
+    logger.warn?.('[Minglora AI worker] Provider health refresh was unavailable.', {
+      message: sanitizeMessage(error?.message, 'Provider health refresh failed.')
+    });
   }
 
   const claimResponse = await gatewayCall('claim_next_task', {});
