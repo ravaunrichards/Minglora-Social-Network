@@ -8929,13 +8929,30 @@ async function renderMessengerPanelList(){
     if(!Array.isArray(state.messengerComposeUsers)){
       if(state.messengerComposeLoading)return;
       state.messengerComposeLoading=true;list.innerHTML='<div class="messenger-empty-state"><span>'+messenger3dIcon('search')+'</span><strong>Find someone to message</strong><p>Search for a Minglora member by name or username.</p></div>';
-      try{state.messengerComposeUsers=(await api('/users')).users||[];}
+      try{
+        const [memberResult,aiResult]=await Promise.all([
+          api('/users'),
+          api('/ai-network/social/profiles').catch(()=>({profiles:[]}))
+        ]);
+        const humanMembers=(memberResult.users||[]).map(member=>({...member,isAI:false}));
+        const aiMembers=(aiResult.profiles||[]).map(profile=>({
+          id:'ai:'+String(profile.aiIdentityId||''),
+          name:profile.displayName||profile.name||'Minglora AI',
+          username:profile.username||'ai_member',
+          avatar:profile.avatar||'',
+          bio:profile.bio||profile.introduction||'',
+          isAI:true,
+          aiIdentityId:String(profile.aiIdentityId||''),
+          aiDisclosure:'AI member'
+        })).filter(member=>member.aiIdentityId);
+        state.messengerComposeUsers=[...humanMembers,...aiMembers];
+      }
       catch(error){list.innerHTML='<div class="messenger-empty-state"><span>'+messenger3dIcon('activity')+'</span><strong>Members could not load</strong><p>'+esc(error.message)+'</p></div>';}
       finally{state.messengerComposeLoading=false;}
       if(!Array.isArray(state.messengerComposeUsers))return;
     }
-    const members=state.messengerComposeUsers.filter(member=>member.id!==state.user?.id&&(!query||(String(member.name||'')+' '+String(member.username||'')).toLowerCase().includes(query))).slice(0,30);
-    list.innerHTML=members.length?members.map(member=>'<button type="button" class="messenger-compose-person" data-messenger-compose-to="'+esc(member.id)+'"><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></span><span class="messenger-compose-arrow">'+messenger3dIcon('arrow-right')+'</span></button>').join(''):'<div class="messenger-empty-state"><span>'+messenger3dIcon('friends')+'</span><strong>No members found</strong><p>Try a different name or username.</p></div>';
+    const members=state.messengerComposeUsers.filter(member=>member.id!==state.user?.id&&(!query||(String(member.name||'')+' '+String(member.username||'')+' '+String(member.bio||'')).toLowerCase().includes(query))).slice(0,30);
+    list.innerHTML=members.length?members.map(member=>'<button type="button" class="messenger-compose-person" data-messenger-compose-to="'+esc(member.id)+'"><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>'+(member.isAI?'<span class="ai-member-disclosure">AI MEMBER</span>':'@'+esc(member.username||'member'))+'</small></span><span class="messenger-compose-arrow">'+messenger3dIcon('arrow-right')+'</span></button>').join(''):'<div class="messenger-empty-state"><span>'+messenger3dIcon('friends')+'</span><strong>No members found</strong><p>Try a different name or username.</p></div>';
     list.querySelectorAll('[data-messenger-compose-to]').forEach(button=>button.onclick=()=>{const member=state.messengerComposeUsers.find(item=>item.id===button.dataset.messengerComposeTo);if(member){state.messengerComposeMode=false;openMessageWindow(member);}});
     return;
   }
