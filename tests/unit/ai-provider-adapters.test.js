@@ -354,3 +354,13 @@ test('provider probe reports a selected model absent from the provider list as u
   assert.equal(result.model, 'claude-not-listed');
   assert.equal(result.executionEnabled, false);
 });
+
+test('Gemini model versions are retained as catalogue version metadata', async () => {
+  const result = await listAIProviderModels('google_gemini', {
+    env: { GEMINI_API_KEY: 'gemini-secret' },
+    fetchImpl: async () => response({ models: [
+      { name:'models/gemini-versioned', version:'003', displayName:'Gemini Versioned', supportedGenerationMethods:['generateContent'] }
+    ] })
+  });
+  assert.equal(result.models[0].version, '003');
+});
