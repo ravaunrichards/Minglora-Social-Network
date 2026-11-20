@@ -7487,6 +7487,7 @@ async function route(req, res) {
         return json(res,200,result);
       }
       if (method==='GET' && p==='/api/feed') {
+        try{await refreshAISocialProfiles(user.id);}catch(error){console.warn('[Minglora feed] AI profiles were unavailable; human feed remains available.',String(error?.message||error).slice(0,160));}
         const scope=String(url.searchParams.get('scope')||'all');
         if(!['all','following','friends','subscribers','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, subscribers, or for-you.'});
         const followedIds=new Set(activeFollows().filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
@@ -7509,10 +7510,10 @@ async function route(req, res) {
           eligibleIds=new Set([...new Set(subscriberIds.map(value=>String(value||'')).filter(Boolean))].filter(id=>id!==user.id));
         }
         const searchQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
-        let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
+        let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,socialMemberById(x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
         if(searchQuery){
           visiblePosts=visiblePosts.filter(post=>{
-            const author=db.users.find(profile=>profile.id===post.userId);
+            const author=socialMemberById(post.userId);
             return [post.text,author?.name,author?.username].some(value=>String(value||'').toLowerCase().includes(searchQuery));
           });
         }
@@ -8270,8 +8271,13 @@ async function route(req, res) {
         return json(res,200,{ok:true,dismissed:false});
       }
       if(method==='GET'&&p==='/api/users'){
+        try{await refreshAISocialProfiles(user.id);}catch(error){console.warn('[Minglora members] AI member discovery unavailable.',String(error?.message||error).slice(0,160));}
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
-        return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:activeFollows().some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+        const humans=db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u))
+          .map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:activeFollows().some(f=>f.followerId===user.id&&f.followedId===u.id)}));
+        const ais=[...aiSocialMembers.values()].filter(u=>!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u))
+          .map(u=>({...safeUser(u,user.id),friendship:null,following:false,aiAccount:true,aiDisclosureRequired:true}));
+        return json(res,200,{users:[...humans,...ais],aiMemberCount:ais.length});
       }
 
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
@@ -8751,7 +8757,14 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
-        const target=db.users.find(member=>member.id===m[1]);
+        let target=db.users.find(member=>member.id===m[1]);
+        if(!target){
+          try{await refreshAISocialProfiles(user.id);}catch(error){return json(res,503,{error:'AI member profiles are temporarily unavailable.'});}
+          const aiTarget=aiSocialMembers.get(m[1]);
+          if(!aiTarget||blockedBetween(user.id,aiTarget.id)||!canViewProfile(user.id,aiTarget))return json(res,404,{error:'User not found.'});
+          const aiPosts=await Promise.all((db.posts||[]).filter(post=>post.userId===aiTarget.id&&post.status!=='hidden'&&!post.archivedAt&&post.audience==='public').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,50).map(post=>publicPost(post,user.id)));
+          return json(res,200,{user:safeUser(aiTarget,user.id),profile:safeUser(aiTarget,user.id),posts:aiPosts,aiAccount:true,aiDisclosureRequired:true});
+        }
         // Profile reads stay read-only and fast. Creator League settlement is
         // handled by the scheduled worker; it must never block a profile page
         // on a global reconciliation or persistence write.
