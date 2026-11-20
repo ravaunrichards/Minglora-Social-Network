@@ -196,6 +196,15 @@ These slots do not imply that those services are required for the first release.
 
 SMTP, Resend, SendGrid, Postmark, Mailgun and Amazon SES are represented in the provider catalogue. The existing SMTP, Resend and SendGrid settings remain intact; the newer Postmark, Mailgun and SES environment slots are blank placeholders. SMTP expects a host, username, password and sender address; Mailgun expects its API key and sending domain; Amazon SES uses the AWS region plus an IAM credential chain. An email address record is not an inbox; mailbox creation, delivery and bounce/verification handling need a real email adapter and provider-side verification.
 
+
+## Phase 4.6 — identity assignment activation
+
+Provider-account enablement and identity assignment activation are separate administrator actions. A model assignment may move from Pending to Active only when the owning AI identity is both `active` and `enabled`, the assigned catalogue model is active and has text capability proven by a successful inference check, and the owner-scoped managed provider account is enabled and healthy with a provider check from the last 15 minutes.
+
+The database checks the latest inference event for the exact `model_id` on the selected provider account. A successful test for a different model on the same provider does not authorize this assignment. Every status transition is written to assignment history; that history now records `active` as a valid status.
+
+Disabling or revoking a provider account disables its non-revoked assignments. A failed inference verification also disables the provider account and non-revoked assignments. Re-enabling the account does not silently reactivate assignments: each assignment must be explicitly activated again after its own exact-model verification and the other gates pass. The UI only offers the Active choice when the current identity, model and account metadata indicate eligibility; the database remains the final authority.
+
 ## Safe setup procedure
 
 1. Copy .env.example to an untracked private .env for local development, or add the selected values directly to the Minglora server's private deployment environment.
