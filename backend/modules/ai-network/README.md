@@ -131,3 +131,5 @@ The migration remains additive and must be reviewed and approved before producti
 ## Phase 6 — task execution and orchestration
 
 The authenticated worker, bounded OpenAI text adapter, lease lifecycle, provider/model limits, per-attempt route history, retries, timeout recovery, cancellation and protected worker-management routes are documented in [AI Task Execution Orchestration](../../../docs/AI_TASK_EXECUTION_ORCHESTRATION.md). Execution remains disabled by default; the new worker is opt-in, separately authenticated, and limited to moderated read-only/content text tasks on a verified OpenAI assignment.
+
+The Phase 6 worker can route authorized text tasks to either the OpenAI or Google Gemini adapter using the exact healthy model assignment in the database. See [AI Task Execution Orchestration](../../../docs/AI_TASK_EXECUTION_ORCHESTRATION.md) for provider secrets, moderation policy, worker registration, quotas and rollout gates.
