@@ -2749,6 +2749,34 @@ async function route(req, res) {
         return json(res, 200, result || { events: [], executions: [] });
       }
 
+      if (method === 'POST' && sub === 'runtime-controls') {
+        const input = await body(req, 4000);
+        const allowedFields = new Set(['global_paused','execution_enabled','max_concurrent_workers','lease_seconds']);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !allowedFields.has(key)) ||
+            (input.global_paused !== undefined && typeof input.global_paused !== 'boolean') ||
+            (input.execution_enabled !== undefined && typeof input.execution_enabled !== 'boolean') ||
+            (input.max_concurrent_workers !== undefined && (!Number.isInteger(input.max_concurrent_workers) || input.max_concurrent_workers < 0 || input.max_concurrent_workers > 8)) ||
+            (input.lease_seconds !== undefined && (!Number.isInteger(input.lease_seconds) || input.lease_seconds < 30 || input.lease_seconds > 900))) {
+          throw Object.assign(new Error('Runtime controls must use supported boolean and bounded integer values.'), { status: 400 });
+        }
+        let providerHealth = null;
+        if (input.execution_enabled === true) {
+          providerHealth = await probeOpenAIProvider();
+          openAIProviderHealthState = providerHealth;
+          if (providerHealth.connected !== true) {
+            throw Object.assign(new Error('Execution remains disabled because the live OpenAI provider probe did not pass.'), { status: 503 });
+          }
+        }
+        const result = await runAIWorkerAdminCommand('set_runtime_controls', input);
+        return json(res, 200, { ...result, providerHealth: providerHealth ? {
+          connected: providerHealth.connected,
+          status: providerHealth.status,
+          model: providerHealth.model,
+          checkedAt: providerHealth.checkedAt
+        } : undefined });
+      }
+
       if (method === 'GET' && sub === 'tasks') {
         const result = await runAITaskCommand('list_tasks');
         return json(res, 200, result || { tasks: [], runtime: null });
