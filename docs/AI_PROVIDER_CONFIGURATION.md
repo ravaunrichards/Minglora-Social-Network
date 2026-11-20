@@ -121,7 +121,7 @@ The response reports how many models were discovered, inserted, reused or failed
 
 ### Verified model selection
 
-Before an administrator creates a primary or fallback assignment for OpenAI, Anthropic or Gemini, Minglora checks the chosen model against the current provider model-list response. Inactive catalogue records, missing provider model IDs, OpenAI models past their shutdown date, and Anthropic models that are not in the active lifecycle are rejected. Bulk assignment performs the same live check.
+Before an administrator creates a primary or fallback assignment, Minglora rejects providers without an implemented live discovery adapter and checks the chosen model against the current provider model-list response for OpenAI, Anthropic or Gemini. Inactive catalogue records, missing provider model IDs, OpenAI models past their shutdown date, and Anthropic models that are not in the active lifecycle are rejected. Bulk assignment performs the same live check.
 
 A model returned by a provider's list API is **provider-listed**, not inference-tested. This stage does not send test prompts, establish that a model can generate content under the current account's quota, confirm all modalities, or enable inference. All newly created identity assignments remain pending; autonomous execution and provider workers remain disabled.
 
