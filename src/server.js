@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_EXPERIENCE_SETTINGS, validateExperienceSettingsPatch } from './domain/experience-settings.js';
+import { buildAISocialMember, performAISocialAction, validateAISocialConsent } from '../backend/modules/ai-network/social-integration.js';
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
@@ -219,6 +220,16 @@ function canViewAboutSection(viewerId,target,visibility){
 }
 function safeUser(u,viewerId=null){
   if(!u)return null;
+  if(u.isAI===true){
+    return {
+      id:u.id,name:u.name,username:u.username,bio:String(u.bio||''),introduction:String(u.introduction||''),
+      profession:String(u.profession||''),interests:Array.isArray(u.interests)?u.interests:[],
+      skills:Array.isArray(u.skills)?u.skills:[],location:'',avatar:'',avatarUrl:'',cover:'',
+      createdAt:u.createdAt||null,verificationBadge:'none',platformBadge:null,
+      aiAccount:true,aiGenerated:true,aiIdentityId:u.aiIdentityId||u.id,aiDisclosureRequired:true,
+      profileVisibility:'public'
+    };
+  }
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{}),names:'public'};
   const own=viewerId===u.id;
@@ -291,6 +302,37 @@ const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid'
 const LIVE_GUEST_LAYOUTS=['roundtable-1','roundtable-2'];
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',shareAudienceDemographics:false,friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',profileStyle:'facebook',defaultProfileStyle:'facebook',profileScreenLayout:'fluid-panel',defaultProfileScreenLayout:'fluid-panel',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!PROFILE_STYLE_IDS.includes(preferences.profileStyle))preferences.profileStyle=DEFAULT_SETTINGS.preferences.profileStyle;if(!PROFILE_STYLE_IDS.includes(preferences.defaultProfileStyle))preferences.defaultProfileStyle=DEFAULT_SETTINGS.preferences.defaultProfileStyle;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.profileScreenLayout))preferences.profileScreenLayout=DEFAULT_SETTINGS.preferences.profileScreenLayout;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.defaultProfileScreenLayout))preferences.defaultProfileScreenLayout=DEFAULT_SETTINGS.preferences.defaultProfileScreenLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
+const aiSocialMembers = new Map();
+let aiSocialMembersLoadedAt = 0;
+const AI_SOCIAL_PROFILE_CACHE_MS = 20000;
+
+function socialMemberById(memberId){
+  const id=String(memberId||'');
+  return (db.users||[]).find(member=>member.id===id)||aiSocialMembers.get(id)||null;
+}
+
+async function runAISocialCommand(actorUserId,aiAction,payload={}){
+  if(!isSupabasePersistence())throw Object.assign(new Error('AI social integration requires Minglora Supabase persistence.'),{status:503});
+  const response=await requestSupabaseState('ai_social_command',{actorUserId,aiAction,payload});
+  if(response?.skipped)throw Object.assign(new Error('AI social integration is unavailable in local-only persistence mode.'),{status:503});
+  return response?.result||{};
+}
+
+async function refreshAISocialProfiles(actorUserId,{force=false}={}){
+  if(!isSupabasePersistence())return [...aiSocialMembers.values()];
+  if(!force&&Date.now()-aiSocialMembersLoadedAt<AI_SOCIAL_PROFILE_CACHE_MS)return [...aiSocialMembers.values()];
+  const result=await runAISocialCommand(actorUserId,'list_public_profiles',{});
+  const next=new Map();
+  for(const row of Array.isArray(result?.profiles)?result.profiles:[]){
+    const member=buildAISocialMember(row);
+    if(member)next.set(member.id,member);
+  }
+  aiSocialMembers.clear();
+  for(const [id,member] of next)aiSocialMembers.set(id,member);
+  aiSocialMembersLoadedAt=Date.now();
+  return [...aiSocialMembers.values()];
+}
+
 function isFriend(firstId,secondId){const follows=activeFollows();return follows.some(item=>item.followerId===firstId&&item.followedId===secondId)&&follows.some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
 function isFriendRestricted(viewerId,ownerId){
@@ -313,7 +355,9 @@ function friendStoriesMuted(viewerId,targetId){
   return Boolean(preference?.isMutedStories||friendUpdatesSnoozed(viewerId,targetId));
 }
 function canViewProfile(viewerId,target){
-  if(!target||isAccountBlocked(target))return false;
+  if(!target)return false;
+  if(target.isAI===true)return target.profileVisibility==='public'&&!blockedBetween(viewerId,target.id);
+  if(isAccountBlocked(target))return false;
   if(viewerId===target.id)return true;
   if(blockedBetween(viewerId,target.id))return false;
   const visibility=getUserSettings(target).privacy.profileVisibility;
@@ -327,8 +371,10 @@ function readProfileSections(userId){
   return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
 }
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
-  const owner=(db.users||[]).find(member=>member.id===ownerId);
-  if(!owner||isAccountBlocked(owner))return false;
+  const owner=socialMemberById(ownerId);
+  if(!owner)return false;
+  if(owner.isAI===true)return owner.profileVisibility==='public'&&audience==='public'&&!blockedBetween(viewerId,ownerId);
+  if(isAccountBlocked(owner))return false;
   if(viewerId===ownerId)return true;
   if(blockedBetween(viewerId,ownerId))return false;
   if(audience==='public')return true;
@@ -1084,7 +1130,7 @@ async function publicSoundtrack(track,viewerId) {
   return card?{...track,sound:card}:null;
 }
 async function publicPost(p,viewerId) {
-  const author=db.users.find(u=>u.id===p.userId);
+  const author=socialMemberById(p.userId);
   const media=await Promise.all((p.mediaIds||[]).map(async id=>{
     const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===p.userId&&item.slot==='post');
     if(!asset||asset.status==='deleted')return null;
@@ -1113,10 +1159,10 @@ async function publicPost(p,viewerId) {
   const isFriend=getMutualFollowIds(currentFollows,viewerId,db.blocks||[]).includes(p.userId);
   const canRemix=canRemixVideo(p,viewerId,{isVisible:visibleVideo,isBlocked:blockedBetween(viewerId,p.userId),isFollowing,isFriend});
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author,viewerId),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>socialMemberById(id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,aiReactions:(p.aiReactionEvents||[]).map(event=>({...event,author:safeUser(socialMemberById(event.identityId),viewerId)})),
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
-    comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
+    comments:(p.comments||[]).filter(c=>c.status!=='hidden').map(c=>({...c,author:safeUser(socialMemberById(c.userId),viewerId)}))};
 }
 function isVisibleVideoPost(viewerId, post) {
   if (!post || post.status === 'hidden' || post.archivedAt || !post.userId || blockedBetween(viewerId, post.userId)) return false;
