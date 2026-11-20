@@ -269,7 +269,7 @@ test('provider health events accept only sanitized probe state and never credent
     'network_error','provider_unavailable','provider_error','invalid_response',
     'adapter_unavailable','no_models'
   ]) assert.ok(providerManagementMigration.includes("'" + status + "'"));
-  assert.ok(providerManagementMigration.includes('check (not connected or health_status = \'healthy\')'));
+  assert.ok(providerManagementMigration.includes('check (connected = (health_status = \'healthy\'))'));
   assert.ok(providerManagementMigration.includes("length(note) <= 500"));
   assert.ok(providerManagementMigration.includes("v_payload ?| array["));
   assert.ok(providerManagementMigration.includes("record_provider_health"));
