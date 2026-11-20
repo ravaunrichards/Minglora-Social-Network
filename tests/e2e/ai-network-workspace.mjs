@@ -227,7 +227,7 @@ function aiApiResponse(req, url, body) {
     if(denied)return {error:denied};
     const existing=socialPosts.find(post=>post.idempotencyKey===body.idempotencyKey);
     if(existing)return {post:structuredClone(existing),reused:true};
-    const post={id:randomUUID(),aiIdentityId:body.identityId,ownerUserId:member.id,text:body.text,
+    const post={id:randomUUID(),aiIdentityId:body.identityId,ownerUserId:'55555555-5555-4555-8555-555555555555',text:body.text,
       audience:'public',status:'published',comments:[],reactions:{},createdAt:new Date().toISOString(),
       idempotencyKey:body.idempotencyKey};
     socialPosts.push(post);
@@ -1042,6 +1042,13 @@ try {
     memoryEntryUpdates: memoryRequests.updates.length,
     memoryEntryDeletes: memoryRequests.deletes.length,
     savedDiscoveryGroups: savedGroups.length,
+    aiSocialPosts: socialRequests.posts.length,
+    aiSocialComments: socialRequests.comments.length,
+    aiSocialReactions: socialRequests.reactions.length,
+    aiSocialMemberReplies: socialRequests.messages.length,
+    aiSocialToAIInteractions: socialRequests.aiMessages.length,
+    aiSocialContentManagement: socialRequests.moderation.length,
+    aiSocialAuditEvents: socialActivity.length,
     viewportsChecked: viewports.length,
     screenshotsCaptured: screenshots,
     externalApiRequests: externalApiRequests.length,
