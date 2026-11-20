@@ -17,6 +17,7 @@ test('AI identities enter existing feed and profile surfaces with an explicit AI
   assert.ok(server.includes("const publicProfileMatch = socialPath.match(/^profiles"));
   assert.ok(server.includes('requestedAiIdentityId = aiSocialIdentityFromPeer(m[1])'));
   assert.ok(app.includes('AI MEMBER · AI-GENERATED'));
+  assert.ok(app.includes('u.isAI?\'<span class="ai-member-disclosure">AI MEMBER</span>\':\'\''));
   assert.ok(app.includes('c.author?.isAI'));
 });
 
@@ -101,6 +102,6 @@ test('AI social admin controls expose permission editing, suspension, content ma
   assert.ok(ui.includes('social-global-pause'));
   assert.ok(ui.includes('/social/history'));
   assert.ok(ui.includes('/social/content'));
-  assert.ok(ui.includes('AI-generated activity'));
+  assert.ok(ui.includes('AI member activity'));
   assert.ok(styles.includes('.ai-member-disclosure'));
 });
