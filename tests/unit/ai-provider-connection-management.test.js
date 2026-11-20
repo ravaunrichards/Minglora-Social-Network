@@ -79,7 +79,7 @@ test('provider model selection rechecks the live provider list before assignment
   assert.match(server, /verifyProviderModelSelection/);
   assert.match(server, /listAIProviderModels\(providerId\)/);
   assert.match(server, /selected\.model_identifier/);
-  assert.match(server, /model is not currently returned by the provider model-list API/);
+  assert.match(server, /selected model is not currently returned as active by the provider model-list API/);
   assert.match(server, /await verifyProviderModelSelection\(String\(input\.model_id/);
   assert.match(server, /await verifyProviderModelSelection\(String\(item\.model_id/);
 });
@@ -89,7 +89,7 @@ test('provider account status control uses PATCH and selected fallback models ar
   const server = read('src/server.js');
   assert.match(ui, /provider-account-status','provider-assignment-status/);
   assert.match(server, /if \(input\.fallback_model_id\) await verifyProviderModelSelection/);
-  assert.match(server, /model\.lifecycle === 'retired' \|\| model\.lifecycle === 'deprecated'/);
+  assert.match(server, /const lifecycleInvalid = providerId === 'anthropic'/);
   assert.match(server, /model\.lifecycle && model\.lifecycle !== 'active'/);
 });
 
