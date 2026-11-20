@@ -178,7 +178,7 @@ function normalizeModels(providerId, payload) {
     }
     return payload.data
       .filter(model => model && model.object === 'model' && typeof model.id === 'string')
-      .map(model => ({ id: model.id, displayName: model.id, ownedBy: text(model.owned_by) || null }));
+      .map(model => ({ id: model.id, displayName: model.id, ownedBy: text(model.owned_by) || null, shutdownDate: text(model.shutdown_date) || null }));
   }
 
   if (providerId === 'anthropic') {
@@ -190,7 +190,8 @@ function normalizeModels(providerId, payload) {
       .map(model => ({
         id: model.id,
         displayName: text(model.display_name) || model.id,
-        lifecycle: text(model.lifecycle) || null
+        lifecycle: text(model.lifecycle) || null,
+        capabilities: model.capabilities && typeof model.capabilities === 'object' ? model.capabilities : null
       }));
   }
 
@@ -268,17 +269,51 @@ export async function listAIProviderModels(providerId, options = {}) {
   const baseUrl = getBaseUrl(id, provider, env);
   const headers = requestHeaders(id, credential);
   const timeoutMs = timeoutFor(env, options.timeoutMs);
-  const url = id === 'anthropic'
-    ? baseUrl + '/models?limit=1000'
-    : id === 'google_gemini'
-      ? baseUrl + '/models?pageSize=1000'
-      : baseUrl + '/models';
-  const payload = await requestJson(id, url, { fetchImpl: options.fetchImpl || globalThis.fetch, headers, timeoutMs });
-  const models = normalizeModels(id, payload);
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  const models = [];
+  const seen = new Set();
+  let pageToken = '';
+  let hasMore = false;
+  let pagesFetched = 0;
+  const maxPages = 5;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const url = id === 'anthropic'
+      ? baseUrl + '/models?limit=1000' + (pageToken ? '&after_id=' + encodeURIComponent(pageToken) : '')
+      : id === 'google_gemini'
+        ? baseUrl + '/models?pageSize=1000' + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '')
+        : baseUrl;
+    const payload = await requestJson(id, url, { fetchImpl, headers, timeoutMs });
+    const pageModels = normalizeModels(id, payload);
+    for (const model of pageModels) {
+      if (!model?.id || seen.has(model.id)) continue;
+      seen.add(model.id);
+      models.push(model);
+    }
+    pagesFetched += 1;
+
+    if (id === 'anthropic') {
+      hasMore = payload.has_more === true;
+      const next = text(payload.last_id);
+      if (!hasMore || !next || next === pageToken) break;
+      pageToken = next;
+    } else if (id === 'google_gemini') {
+      const next = text(payload.nextPageToken);
+      hasMore = Boolean(next);
+      if (!next || next === pageToken) break;
+      pageToken = next;
+    } else {
+      hasMore = false;
+      break;
+    }
+  }
+
   return {
     providerId: id,
     models,
-    hasMore: id === 'anthropic' ? payload.has_more === true : false
+    hasMore,
+    pagesFetched,
+    truncated: hasMore && pagesFetched >= maxPages
   };
 }
 
