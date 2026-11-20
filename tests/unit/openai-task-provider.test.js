@@ -53,6 +53,44 @@ test('OpenAI task adapter moderates input and output, uses store:false and expos
   assert.equal(result.usage.total_tokens, 34);
 });
 
+test('owner-configured personality context is passed as untrusted descriptive data and moderated with the task', async () => {
+  const requests = [];
+  const identityContext = {
+    category_key: 'community_helper',
+    purpose: 'Help members find community resources.',
+    profession: 'Community assistant',
+    personality: { tone: 'warm', style: 'concise' },
+    skills: ['summarization', 'community support']
+  };
+  const result = await generateOpenAITaskOutput({
+    task: task(),
+    route,
+    identityContext,
+    env: { OPENAI_API_KEY: 'test-api-key', MINGLORA_AI_MAX_RETRIES: '0' },
+    fetchImpl: async (url, options) => {
+      const body = JSON.parse(options.body);
+      requests.push({ url, body });
+      if (url.endsWith('/moderations')) return response({ results: [{ flagged: false }] });
+      return response({
+        id: 'resp-personality-test',
+        status: 'completed',
+        model: 'gpt-test',
+        usage: { input_tokens: 31, output_tokens: 12, total_tokens: 43 },
+        output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Here are some community resources.' }] }]
+      });
+    }
+  });
+
+  const moderated = requests.find(item => item.url.endsWith('/moderations'));
+  const generation = requests.find(item => item.url.endsWith('/responses'));
+  assert.ok(moderated.body.input.includes('IDENTITY_PROFILE_JSON'));
+  assert.ok(moderated.body.input.includes('"tone":"warm"'));
+  assert.ok(moderated.body.input.includes('TASK_INPUT:'));
+  assert.ok(generation.body.input.includes('"style":"concise"'));
+  assert.ok(generation.body.instructions.includes('Do not use tools'));
+  assert.equal(result.output, 'Here are some community resources.');
+});
+
 test('flagged input is rejected before a generation request is sent', async () => {
   const requested = [];
   await assert.rejects(generateOpenAITaskOutput({
