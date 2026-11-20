@@ -123,7 +123,10 @@ export async function generateOpenAIBotReply({
   env = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs,
-  maxOutputTokens = MAX_OUTPUT_TOKENS
+  maxOutputTokens = MAX_OUTPUT_TOKENS,
+  circuitStore,
+  routingNow,
+  routingSleep
 } = {}) {
   const provider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (provider && provider !== 'openai') {
@@ -222,6 +225,9 @@ export async function generateOpenAIBotReply({
 
   const routedGeneration = await runWithProviderFallback({
     routeConfig,
+    circuitStore,
+    now: routingNow,
+    sleep: routingSleep,
     operation: async ({ model: requestedModel }) => {
       const generation = await postJson(fetchImpl, responsesEndpoint, apiKey, {
         model: requestedModel,
