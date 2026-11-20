@@ -1139,7 +1139,7 @@
       '<div class="ai-network-form-title">Discover and synchronize provider models</div>' +
       '<p class="ai-network-note">Fetches the provider\'s live model catalogue and imports only model IDs returned by its authenticated API. This verifies model-list visibility, not generation capability, quota or production execution.</p>' +
       '<div class="ai-network-form-grid"><label>Provider<select name="provider" required>' + options(modelSyncProviders, modelSyncProviders[0]?.value || '') + '</select></label>' +
-      '<label>Provider account (optional)<select name="providerAccountId">' + options([{value:'',label:'Do not store a health event'}].concat(accounts.map(account => ({value:account.provider_account_id,label:account.provider_name + ' · ' + account.provider_identifier}))), '') + '</select></label></div>' +
+      '<label>Provider account (optional)<select name="providerAccountId">' + options([{value:'',label:'Do not store a health event'}].concat(accounts.filter(account => account.account_type === 'managed').map(account => ({value:account.provider_account_id,label:account.provider_name + ' · ' + account.provider_identifier}))), '') + '</select></label></div>' +
       '<button class="secondary" type="submit">Discover and synchronize models</button></form>';
     const modelSyncResult = state.providerModelSync
       ? '<div class="ai-network-alert ai-network-alert--' + (state.providerModelSync.failed_count ? 'warning' : 'success') + '" role="status">' +
@@ -1218,7 +1218,7 @@
       : '<p class="ai-network-note">No OpenAI health probe has been run in this session.</p>';
     const probeProviders = providerCatalogue.filter(provider => provider.healthProbeAvailable && provider.adapterAvailable)
       .map(provider => ({ value: provider.providerId, label: provider.label || provider.providerId }));
-    const probeAccounts = [{ value:'', label:'Do not persist this probe' }].concat(accounts.map(account => ({
+    const probeAccounts = [{ value:'', label:'Do not persist this probe' }].concat(accounts.filter(account => account.account_type === 'managed').map(account => ({
       value: account.provider_account_id,
       label: account.provider_name + ' · ' + account.provider_identifier
     })));
