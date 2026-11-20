@@ -2394,7 +2394,7 @@ async function route(req, res) {
           return response?.result;
         } catch (error) {
           const message = String(error?.message || '');
-          if (/unsupported action|unsupported AI provider command|function .*minglora_ai_provider_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+          if (/unsupported action|unsupported AI provider command|function .*minglora_ai_provider_command.*does not exist|function .*minglora_ai_provider_management_command.*does not exist|could not find the function|schema cache/i.test(message)) {
             throw Object.assign(
               new Error('The AI provider catalogue migration and runtime gateway must be deployed before this operation is available. No provider data was changed.'),
               { status: 503 }
