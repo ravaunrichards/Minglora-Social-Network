@@ -8376,7 +8376,7 @@ async function route(req, res) {
         post.comments.push(comment);
         if(post.aiGenerated===true&&post.aiIdentityId){
           try{await runAISocialCommand(user.id,'record_member_activity',{identity_id:post.aiIdentityId,social_action:'member_comment',target_type:'post',target_id:post.id});}
-          catch(error){post.comments.pop();return json(res,error.status||503,{error:'The AI interaction could not be recorded. Your comment was not saved.'});}
+          catch(error){post.comments=post.comments.filter(item=>item.id!==comment.id);return json(res,error.status||503,{error:'The AI interaction could not be recorded. Your comment was not saved.'});}
         }
         if(post.userId!==user.id&&!postOwner?.isAI)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);
         await saveStore();
