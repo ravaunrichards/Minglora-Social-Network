@@ -2819,6 +2819,41 @@
         state.identityRegistryOffset = 0;
       }
       else if (action === 'reload') return await load();
+      else if (action === 'social-global-toggle') {
+        const wasPaused = button.dataset.paused === 'true';
+        if (wasPaused && !window.confirm('Resume AI social actions? Each identity will still need individual permission and human approval.')) return;
+        await request('/social/runtime',{method:'PATCH',body:{
+          globalPaused:!wasPaused,
+          pauseReason:wasPaused ? 'Resumed by the designated Minglora administrator.' : 'Paused by the designated Minglora administrator.'
+        }});
+        await loadAISocialCenter(state.socialHistoryIdentity);
+        setNotice(wasPaused ? 'Global AI social activity resumed; identity permissions and per-action approvals still apply.' : 'All AI social activity globally paused.');
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'social-load-history') {
+        if (!id) throw new Error('Choose an AI identity to inspect.');
+        await loadAISocialCenter(id);
+        setNotice('AI social activity history and content loaded.');
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'social-content-manage') {
+        const identityId = button.dataset.identityId || '';
+        const targetType = button.dataset.targetType || '';
+        const operation = button.dataset.operation || '';
+        if (!identityId || !id || !['post','comment','message'].includes(targetType) || !['hide','restore','delete'].includes(operation)) {
+          throw new Error('AI content management details are incomplete.');
+        }
+        if (operation === 'delete' && !window.confirm('Permanently delete this AI-generated item from Minglora?')) return;
+        await request('/social/identities/' + encodeURIComponent(identityId) + '/content/' + encodeURIComponent(id), {
+          method:'PATCH',body:{targetType,operation}
+        });
+        await loadAISocialCenter(identityId);
+        setNotice('AI-generated ' + targetType + ' ' + operation + 'd and audited.');
+        paintSnapshot();
+        return;
+      }
       else if (action === 'email-provision') {
         if (!id) throw new Error('Choose an AI identity before provisioning email.');
         const result = await request('/identities/' + encodeURIComponent(id) + '/email/provision', { method:'POST', body:{} });
