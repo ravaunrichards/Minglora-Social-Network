@@ -1981,6 +1981,7 @@ async function route(req, res) {
           runAISocialCommand('get_settings',{}),
           runAISocialCommand('history',{})
         ]);
+        try{await syncPublicAISocialProfiles(user.id);}catch(error){console.warn('[Minglora AI social] Public discovery unavailable:',String(error?.message||error).slice(0,160));}
         const conversations=(db.aiSocialConversations||[])
           .filter(item=>item.ownerUserId===user.id&&item.status!=='closed')
           .map(item=>{
@@ -1996,7 +1997,13 @@ async function route(req, res) {
               createdAt:item.createdAt,lastActivityAt:item.lastActivityAt,messages
             };
           }).filter(item=>item.member);
-        return json(res,200,{...settings,activity:history?.activity||[],conversations});
+        const posts=(db.aiSocialPosts||[]).filter(post=>post.ownerUserId===user.id)
+          .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,100);
+        const publicProfiles=(db.aiSocialProfiles||[]).map(profile=>({
+          identityId:profile.identityId,displayName:profile.displayName,username:profile.username,
+          status:profile.status,enabled:profile.enabled,profileVisibility:profile.profileVisibility
+        }));
+        return json(res,200,{...settings,activity:history?.activity||[],conversations,posts,publicProfiles});
       }
       if(method==='PATCH'&&sub==='social/controls'){
         if(typeof input.globalPaused!=='boolean')return json(res,400,{error:'globalPaused must be true or false.'});
