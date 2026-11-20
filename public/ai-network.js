@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerModelSync: null, providerInferenceVerification: null, providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -1116,13 +1116,68 @@
       label:model.provider_name + ' · ' + model.model_name + (model.model_version ? ' · ' + model.model_version : '')
     }));
     const accountRows = accounts.length
-      ? '<div class="ai-network-list">' + accounts.map(account =>
-          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
-          esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
-          pill(account.status || 'unconfigured') + ' ' + pill('health ' + (account.health_status || 'unknown')) +
-          '</div><small>Account metadata only · credentials not stored here</small></div></div></article>'
-        ).join('') + '</div>'
+      ? '<div class="ai-network-list">' + accounts.map(account => {
+          const accountStatus = account.status || 'unconfigured';
+          const statusChoices = accountStatus === 'revoked'
+            ? [{value:'revoked',label:'Revoked'}]
+            : [{value:'disabled',label:'Disabled'},{value:'enabled',label:'Enabled'},{value:'revoked',label:'Revoked'}];
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
+            pill(accountStatus) + ' ' + pill('health ' + (account.health_status || 'unknown')) +
+            '</div><small>Account metadata only · credentials not stored here</small>' +
+            '<small>Last checked: ' + esc(date(account.last_checked_at)) + '</small></div></div>' +
+            '<form class="ai-network-inline-form" data-ai-form="provider-account-status" data-account-id="' + esc(account.provider_account_id || '') + '">' +
+            '<label><span>Connection status</span><select name="status">' + options(statusChoices, accountStatus === 'unconfigured' ? 'disabled' : accountStatus) + '</select></label>' +
+            '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why is this status changing?"></label>' +
+            '<button class="secondary" type="submit">Save connection status</button></form></article>';
+        }).join('') + '</div>'
       : empty('No provider account references registered.');
+    const modelSyncProviders = providerCatalogue
+      .filter(provider => provider.healthProbeAvailable && provider.adapterAvailable)
+      .map(provider => ({ value:provider.providerId, label:provider.label || provider.providerId }));
+    const modelSyncForm = '<form class="ai-network-form" data-ai-form="provider-model-sync">' +
+      '<div class="ai-network-form-title">Discover and synchronize provider models</div>' +
+      '<p class="ai-network-note">Fetches the provider\'s live model catalogue and imports only model IDs returned by its authenticated API. This verifies model-list visibility, not generation capability, quota or production execution.</p>' +
+      '<div class="ai-network-form-grid"><label>Provider<select name="provider" required>' + options(modelSyncProviders, modelSyncProviders[0]?.value || '') + '</select></label>' +
+      '<label>Provider account (optional)<select name="providerAccountId">' + options([{value:'',label:'Do not store a health event'}].concat(accounts.filter(account => account.account_type === 'managed').map(account => ({value:account.provider_account_id,label:account.provider_name + ' · ' + account.provider_identifier}))), '') + '</select></label></div>' +
+      '<button class="secondary" type="submit">Discover and synchronize models</button></form>';
+    const modelSyncResult = state.providerModelSync
+      ? '<div class="ai-network-alert ai-network-alert--' + (state.providerModelSync.failed_count ? 'warning' : 'success') + '" role="status">' +
+        '<strong>' + esc(state.providerModelSync.provider || 'Provider') + ' model discovery</strong>' +
+        '<p>' + number(state.providerModelSync.discovered_count) + ' returned · ' + number(state.providerModelSync.created_count) + ' added · ' +
+        number(state.providerModelSync.reused_count) + ' already catalogued · ' + number(state.providerModelSync.failed_count) + ' failed.</p>' +
+        '<small>Checked: ' + esc(date(state.providerModelSync.discovered_at)) + ' · Listing only; generation remains unverified and execution disabled.</small></div>'
+      : '';
+    const managedInferenceAccounts = accounts.filter(account =>
+      account.account_type === 'managed' && account.status !== 'revoked'
+    );
+    const inferenceModelChoices = models
+      .filter(model => model.is_active !== false &&
+        modelSyncProviders.some(provider => provider.value === String(model.provider_name || '').toLowerCase()))
+      .map(model => ({
+        value:model.model_id,
+        label:model.provider_name + ' · ' + model.model_name + ' · ' + model.model_identifier
+      }));
+    const inferenceVerificationForm = '<form class="ai-network-form" data-ai-form="provider-inference-verification">' +
+      '<div class="ai-network-form-title">Verify model inference before enabling a provider</div>' +
+      '<p class="ai-network-note">Runs one manual, fixed-prompt check (maximum 8 output tokens). The prompt cannot be edited, generated text is withheld and not stored, and this check does not enable inference, workers or AI identities. Provider usage may incur a small charge.</p>' +
+      '<div class="ai-network-form-grid"><label>Managed provider account<select name="providerAccountId" required>' +
+      options([{value:'',label:'Select a managed account'}].concat(managedInferenceAccounts.map(account => ({value:account.provider_account_id,label:account.provider_name + ' · ' + account.provider_identifier + ' · ' + account.status}))), '') +
+      '</select></label><label>Discovered model<select name="modelId" required>' +
+      options([{value:'',label:'Select a provider-listed model'}].concat(inferenceModelChoices), '') +
+      '</select></label></div><button class="secondary" type="submit"' +
+      (!managedInferenceAccounts.length || !inferenceModelChoices.length ? ' disabled' : '') +
+      '>Run bounded inference verification</button></form>';
+    const inferenceVerificationResult = state.providerInferenceVerification
+      ? '<div class="ai-network-alert ai-network-alert--' + (state.providerInferenceVerification.verified ? 'success' : 'warning') + '" role="status">' +
+        '<strong>' + (state.providerInferenceVerification.verified ? 'Inference verification passed' : 'Inference verification failed') + '</strong>' +
+        '<p>' + esc(state.providerInferenceVerification.provider || '') + ' · ' + esc(state.providerInferenceVerification.model_identifier || '') +
+        (state.providerInferenceVerification.responseTimeMs !== undefined ? ' · ' + number(state.providerInferenceVerification.responseTimeMs) + ' ms' : '') + '</p>' +
+        (state.providerInferenceVerification.usage ? '<small>Tokens used: ' + number(state.providerInferenceVerification.usage.inputTokens) + ' input · ' +
+          number(state.providerInferenceVerification.usage.outputTokens) + ' output · ' + number(state.providerInferenceVerification.usage.totalTokens) + ' total</small>' : '') +
+        '<small>' + esc(state.providerInferenceVerification.note || '') + '</small>' +
+        '<small>Generated output retained: no · Execution enabled: no · Checked: ' + esc(date(state.providerInferenceVerification.checked_at)) + '</small></div>'
+      : '';
     const modelRows = models.length
       ? '<div class="ai-network-list">' + models.map(model =>
           '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
@@ -1140,9 +1195,17 @@
           const identity = row.identity || {};
           const model = row.model || {};
           const account = row.provider_account || null;
+          const accountHealthAgeMs = account?.last_checked_at
+            ? Date.now() - new Date(account.last_checked_at).getTime() : Infinity;
+          const canActivate = account?.status === 'enabled' && account.health_status === 'healthy' &&
+            accountHealthAgeMs >= 0 && accountHealthAgeMs <= 15 * 60 * 1000 &&
+            identity.status === 'active' && identity.enabled === true && model.text_capability === true;
           const statusChoices = assignment.assignment_status === 'revoked'
             ? [{value:'revoked',label:'Revoked'}]
-            : [{value:'pending',label:'Pending'},{value:'restricted',label:'Restricted'},{value:'disabled',label:'Disabled'},{value:'revoked',label:'Revoked'}];
+            : [{value:'pending',label:'Pending'}]
+              .concat(canActivate || assignment.assignment_status === 'active'
+                ? [{value:'active',label:'Active · verified'}] : [])
+              .concat([{value:'restricted',label:'Restricted'},{value:'disabled',label:'Disabled'},{value:'revoked',label:'Revoked'}]);
           return '<article class="ai-network-list-row ai-network-provider-row"><div class="ai-network-list-main"><div><strong>' +
             esc(identity.display_name || identity.username || 'AI identity') + '</strong><div class="ai-network-meta">' +
             pill(assignment.assignment_status || 'pending') + ' ' + pill('health ' + (assignment.provider_health_status || 'unknown')) +
@@ -1150,7 +1213,7 @@
             '</small><p>Priority ' + number(assignment.routing_priority) + ' · ' +
             esc(list(assignment.assigned_capabilities).join(', ') || 'Capabilities not assigned') +
             '</p><small>' + esc(account ? account.provider_identifier + ' · ' + account.status : 'No provider account reference') +
-            '</small></div></div>' +
+            '</small><small>Activation requires a healthy, enabled account and a fresh inference verification for this exact model.</small></div></div>' +
             '<form class="ai-network-inline-form" data-ai-form="provider-assignment-status" data-assignment-id="' + esc(assignment.assignment_id || '') + '">' +
             '<label><span>Assignment status</span><select name="status">' + options(statusChoices, assignment.assignment_status || 'pending') + '</select></label>' +
             '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why is this assignment changing?"></label>' +
@@ -1191,10 +1254,19 @@
         ' · HTTP: ' + esc(providerHealth.httpStatus || 'Not reached') +
         ' · Checked: ' + esc(date(providerHealth.checkedAt)) + '</small></div>'
       : '<p class="ai-network-note">No OpenAI health probe has been run in this session.</p>';
+    const probeProviders = providerCatalogue.filter(provider => provider.healthProbeAvailable && provider.adapterAvailable)
+      .map(provider => ({ value: provider.providerId, label: provider.label || provider.providerId }));
+    const probeAccounts = [{ value:'', label:'Do not persist this probe' }].concat(accounts.filter(account => account.account_type === 'managed').map(account => ({
+      value: account.provider_account_id,
+      label: account.provider_name + ' · ' + account.provider_identifier
+    })));
     const providerProbeForm = '<form class="ai-network-form" data-ai-form="provider-health-probe">' +
-      '<div class="ai-network-form-title">OpenAI API connection check</div>' +
-      '<p class="ai-network-note">Runs a read-only model-access check using OPENAI_API_KEY and OPENAI_DEFAULT_MODEL from the private Minglora server environment. No key is entered here, sent by the browser, or returned to the page. It does not generate content or activate AI execution.</p>' +
-      '<button class="secondary" type="submit">Check OpenAI API connection</button></form>';
+      '<div class="ai-network-form-title">Provider connection check</div>' +
+      '<p class="ai-network-note">Runs a read-only model-list request using credentials from the private Minglora server environment. No key is entered here, sent by the browser, or returned. A successful probe can be persisted to a selected provider account; it does not enable execution automatically.</p>' +
+      '<div class="ai-network-form-grid"><label>Provider<select name="provider" required>' + options(probeProviders, probeProviders[0]?.value || '') + '</select></label>' +
+      '<label>Provider account<select name="providerAccountId">' + options(probeAccounts, '') + '</select></label>' +
+      '<label>Model check (optional)<input name="model" maxlength="200" placeholder="Selected model identifier"></label></div>' +
+      '<button class="secondary" type="submit">Check provider connection</button></form>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
       : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
@@ -1240,9 +1312,9 @@
       '<div><span>Catalogue models</span><strong>' + number(models.length) + '</strong></div>' +
       '<div><span>Identity assignments</span><strong>' + number(assignments.length) + '</strong></div></div>' +
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
-      '<div><h4>Model catalogue</h4>' + modelRows + modelForm + '</div></div>' +
+      '<div><h4>Model catalogue</h4>' + modelSyncForm + modelSyncResult + modelRows + modelForm + inferenceVerificationForm + inferenceVerificationResult + '</div></div>' +
       assignmentForm + bulkAssignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
-      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access.</p>',
+      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Managed account enablement requires a fresh successful bounded inference verification in addition to provider health; model-list visibility alone is insufficient. New identity assignments remain pending and autonomous execution remains disabled. Assigned bot chat uses OpenAI Moderation for both incoming messages and generated replies; OPENAI_API_KEY is therefore required even when Anthropic or Gemini performs generation. If moderation is unavailable or flags content, generation is blocked and the reply is not saved.</p>',
       'ai-network-span-2');
   }
 
@@ -2183,6 +2255,20 @@
       payload.provider_name = value('providerName').toLowerCase();
       payload.provider_identifier = value('providerIdentifier');
       payload.account_type = value('accountType');
+    } else if (kind === 'provider-account-status') {
+      const accountId = form.dataset.accountId;
+      if (!accountId) throw new Error('Provider account details are missing.');
+      path = '/provider-accounts/' + encodeURIComponent(accountId) + '/status';
+      payload.status = value('status');
+      payload.reason = value('reason');
+    } else if (kind === 'provider-model-sync') {
+      path = '/provider-models/sync';
+      payload.provider = value('provider').toLowerCase();
+      payload.provider_account_id = value('providerAccountId') || undefined;
+    } else if (kind === 'provider-inference-verification') {
+      path = '/provider-inference-verification';
+      payload.provider_account_id = value('providerAccountId');
+      payload.model_id = value('modelId');
     } else if (kind === 'provider-model') {
       path = '/provider-models';
       payload.provider_name = value('providerName').toLowerCase();
@@ -2219,7 +2305,9 @@
       payload.items = items;
     } else if (kind === 'provider-health-probe') {
       path = '/provider-health';
-      payload.provider = 'openai';
+      payload.provider = value('provider').toLowerCase();
+      payload.provider_account_id = value('providerAccountId') || undefined;
+      payload.model = value('model') || undefined;
     } else if (kind === 'provider-assignment-status') {
       const assignmentId = form.dataset.assignmentId;
       if (!assignmentId) throw new Error('Provider assignment details are missing.');
@@ -2490,10 +2578,12 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-account-status','provider-assignment-status','task-approval','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
+    if (kind === 'provider-model-sync') state.providerModelSync = result;
+    if (kind === 'provider-inference-verification') state.providerInferenceVerification = result;
     if (kind === 'bot-chat') {
       state.botChat = result;
       state.selectedBotChatId = result.bot?.id || form.dataset.botId || '';
@@ -2550,6 +2640,10 @@
           ? 'Task cancellation recorded.'
           : kind === 'provider-account'
       ? 'Provider account reference saved as unconfigured; no credentials were stored.'
+      : kind === 'provider-model-sync'
+        ? 'Provider model discovery completed: ' + number(result.created_count) + ' created, ' + number(result.reused_count) + ' already catalogued, ' + number(result.failed_count) + ' failed. Listing access is verified; inference is not.'
+      : kind === 'provider-inference-verification'
+        ? (result.verified ? 'Bounded inference verification passed. Generated output was withheld; provider execution remains disabled.' : 'Inference verification failed: ' + String(result.note || result.status || 'provider error'))
       : kind === 'provider-model'
         ? 'Provider model metadata saved; availability and access are not verified.'
         : kind === 'provider-assignment'

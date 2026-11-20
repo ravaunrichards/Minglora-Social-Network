@@ -69,9 +69,9 @@ test('runtime gateway allowlists provider commands and rejects secret payload fi
   for (const token of [
     'if (action === "ai_provider_command")',
     'supportedProviderCommands',
-    '"list_provider_accounts"','"list_provider_models"','"list_provider_assignments"',
+    '"list_provider_accounts"','"list_provider_models"','"list_provider_assignments"','"list_provider_health"',
     '"create_provider_account"','"create_provider_model"','"assign_provider_model"',
-    '"set_provider_assignment_status"',
+    '"set_provider_assignment_status"','"set_provider_account_status"','"record_provider_health"',
     'secretFields',
     'admin.rpc("minglora_ai_provider_command"'
   ]) assert.ok(runtime.includes(token), 'Missing provider runtime control: ' + token);
@@ -90,11 +90,14 @@ test('provider API requires authorized platform staff and uses the Supabase runt
     "sub === 'provider-assignments'",
     "'create_provider_account'","'create_provider_model'",
     "'assign_provider_model'","'set_provider_assignment_status'",
+    "provider-accounts' && parts.length === 3 && parts[2] === 'status'",
+    "runAIProviderCommand('set_provider_account_status'",
+    "runAIProviderCommand('list_provider_health'",
     'No provider data was changed'
   ]) assert.ok(route.includes(token), 'Missing authorized provider API control: ' + token);
 });
 
-test('OpenAI provider-health endpoint remains behind owner MFA and never accepts a key in the request', () => {
+test('provider-health endpoint remains behind owner MFA and never accepts credentials', () => {
   const start = server.indexOf("if (p === '/api/ai-network'");
   const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
   const route = server.slice(start, end);
@@ -103,23 +106,22 @@ test('OpenAI provider-health endpoint remains behind owner MFA and never accepts
     '!isDesignatedCreatorHubAdmin(user)',
     '!hasActiveReviewerSession(user)',
     "if (method === 'POST' && sub === 'provider-health')",
-    "input.provider !== 'openai'",
-    "Object.keys(input).some(key => key !== 'provider')",
-    'await probeOpenAIProvider()',
-    'Credentials must be configured in the private server environment'
+    "allowedKeys = new Set(['provider','provider_account_id','model'])",
+    'SUPPORTED_AI_PROVIDER_ADAPTERS.includes(provider)',
+    "runAIProviderCommand('record_provider_health'",
+    'Credentials must remain in the private server environment'
   ]) assert.ok(route.includes(token), 'Missing provider health route safety control: ' + token);
 });
 
-test('provider UI offers a secret-free OpenAI connection probe and no browser key input', () => {
+test('provider UI offers secret-free connection checks and account controls', () => {
   for (const token of [
     'data-ai-form="provider-health-probe"',
     "path = '/provider-health'",
-    "payload.provider = 'openai'",
-    'OPENAI_API_KEY',
-    'Latest OpenAI probe:',
-    'read-only probe',
+    "payload.provider = value('provider').toLowerCase()",
+    'name="providerAccountId"',
+    'data-ai-form="provider-account-status"',
     'AI inference and workers remain disabled'
-  ]) assert.ok(ui.includes(token), 'Missing OpenAI probe workspace behavior: ' + token);
+  ]) assert.ok(ui.includes(token), 'Missing provider connection workspace behavior: ' + token);
   assert.ok(!ui.includes('name="openaiApiKey"'));
   assert.ok(!ui.includes('name="OPENAI_API_KEY"'));
 });

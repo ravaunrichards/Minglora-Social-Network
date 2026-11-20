@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'supabase/migrations/20261118075901_minglora_ai_durable_identity_batches.sql'
+      - 'supabase/migrations/20261120070700_minglora_ai_provider_connection_management.sql'
       - 'supabase/functions/minglora-runtime-state/index.ts'
       - 'src/server.js'
       - 'public/ai-network.js'
       - 'tests/unit/ai-network-batches.test.js'
       - 'tests/integration/ai-network-identity-batches.test.js'
+      - 'tests/integration/ai-provider-connection-management.test.js'
       - '.github/workflows/ai-network-identity-batches.yml'
   push:
     branches: [feat/ai-network-durable-identity-batches-20261118]
@@ -51,7 +53,13 @@ jobs:
         run: |
           node --check tests/unit/ai-network-batches.test.js
           node --check tests/integration/ai-network-identity-batches.test.js
+          node --check tests/integration/ai-provider-connection-management.test.js
       - name: Execute migration and failed-row recovery contract
         env:
           AI_NETWORK_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/minglora_ai_test
         run: node --test tests/integration/ai-network-identity-batches.test.js
+
+      - name: Execute provider connection migration and database command contract
+        env:
+          AI_NETWORK_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/minglora_ai_test
+        run: node --test tests/integration/ai-provider-connection-management.test.js
