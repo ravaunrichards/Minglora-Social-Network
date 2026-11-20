@@ -53,7 +53,7 @@ import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISett
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateAIProviderText, listAIProviderModels, probeAIProvider, SUPPORTED_AI_PROVIDER_ADAPTERS } from '../backend/modules/ai-network/provider-adapters.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
-import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { generateAssignedAIBotReply, generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -2404,6 +2404,95 @@ async function route(req, res) {
         }
       };
 
+      const runAIOwnedProviderCommand = async (aiAction, payload = {}) => {
+        if (!['list_provider_assignments','list_provider_health','list_provider_accounts'].includes(aiAction)) {
+          throw Object.assign(new Error('This owner-scoped AI provider query is not permitted.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI provider assignments require Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_provider_command', {
+          actorUserId: user.id,
+          aiAction,
+          payload
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI provider assignments are unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+
+      const resolveAIBotProviderAssignment = async identityId => {
+        const assignmentRows = await runAIOwnedProviderCommand('list_provider_assignments');
+        const ownedRows = (Array.isArray(assignmentRows) ? assignmentRows : [])
+          .filter(row => row?.identity?.identity_id === identityId && row?.assignment?.assignment_status !== 'revoked')
+          .sort((left, right) => Number(left?.assignment?.routing_priority || 100) - Number(right?.assignment?.routing_priority || 100));
+        if (!ownedRows.length) return null;
+
+        const row = ownedRows.find(item => item?.assignment?.assignment_status === 'active');
+        if (!row) {
+          throw Object.assign(new Error('This AI identity has a provider assignment, but none is active. An administrator must verify and activate the selected provider assignment first.'), { status: 409 });
+        }
+        const assignment = row.assignment || {};
+        const model = row.model || {};
+        const identity = row.identity || {};
+        const accountId = String(assignment.provider_account_id || '').trim();
+        const modelId = String(assignment.model_id || '').trim();
+        const provider = String(model.provider_name || '').trim().toLowerCase();
+        const modelIdentifier = String(model.model_identifier || '').trim();
+
+        if (identity.status !== 'active' || identity.enabled !== true) {
+          throw Object.assign(new Error('The assigned AI identity is disabled or inactive. Provider chat was not started.'), { status: 409 });
+        }
+        if (!accountId || !modelId || !modelIdentifier || !SUPPORTED_AI_PROVIDER_ADAPTERS.includes(provider)) {
+          throw Object.assign(new Error('The active provider assignment is incomplete or has no implemented runtime adapter.'), { status: 409 });
+        }
+        if (model.is_active !== true || model.text_capability !== true) {
+          throw Object.assign(new Error('The assigned model is inactive or has not passed text-generation verification.'), { status: 409 });
+        }
+
+        const accountRows = await runAIOwnedProviderCommand('list_provider_accounts');
+        const account = (Array.isArray(accountRows) ? accountRows : []).find(item => item.provider_account_id === accountId);
+        if (!account || String(account.provider_name || '').toLowerCase() !== provider ||
+            account.account_type !== 'managed' || account.status !== 'enabled' || account.health_status !== 'healthy') {
+          throw Object.assign(new Error('The assigned provider account is not enabled and healthy for this model. Provider chat was not started.'), { status: 409 });
+        }
+        const checkedAt = Date.parse(account.last_checked_at || '');
+        if (!Number.isFinite(checkedAt) || Date.now() - checkedAt < 0 || Date.now() - checkedAt > 15 * 60 * 1000) {
+          throw Object.assign(new Error('The provider account health check is missing or older than 15 minutes. Run provider verification again before chatting.'), { status: 409 });
+        }
+
+        const liveModels = await listAIProviderModels(provider);
+        const listed = liveModels.models.some(candidate => {
+          const matches = candidate.id === modelIdentifier || candidate.resourceName === modelIdentifier;
+          const lifecycleInvalid = provider === 'anthropic'
+            ? candidate.lifecycle !== 'active'
+            : Boolean(candidate.lifecycle && candidate.lifecycle !== 'active');
+          const shutdown = candidate.shutdownDate && Date.parse(candidate.shutdownDate) <= Date.now();
+          return matches && !lifecycleInvalid && !shutdown;
+        });
+        if (!listed) {
+          throw Object.assign(new Error('The assigned model is no longer returned as active by the provider model-list API. Synchronize models and verify a current model before chatting.'), { status: 409 });
+        }
+
+        const events = await runAIOwnedProviderCommand('list_provider_health', { provider_account_id: accountId });
+        const modelEvents = (Array.isArray(events) ? events : [])
+          .filter(event => event?.metadata?.inference_verification_attempt === true &&
+            String(event?.metadata?.model_id || '') === modelId)
+          .sort((left, right) => Date.parse(right.checked_at || 0) - Date.parse(left.checked_at || 0));
+        const latestModelCheck = modelEvents[0];
+        const inferenceCheckedAt = Date.parse(latestModelCheck?.checked_at || '');
+        if (latestModelCheck?.metadata?.inference_verified !== true ||
+            latestModelCheck?.health_status !== 'healthy' ||
+            !Number.isFinite(inferenceCheckedAt) ||
+            Date.now() - inferenceCheckedAt < 0 ||
+            Date.now() - inferenceCheckedAt > 15 * 60 * 1000) {
+          throw Object.assign(new Error('This exact model lacks a successful inference verification within the last 15 minutes. Run the bounded model verification before chatting.'), { status: 409 });
+        }
+
+        return { provider, model, modelId, modelIdentifier, account, assignment };
+      };
+
       const runAIHRCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -3500,18 +3589,37 @@ async function route(req, res) {
           }
 
           try {
-            const currentProviderStatus = getAIProviderStatus();
-            if (!currentProviderStatus.botChatAvailable) {
-              throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'), { status: 503 });
+            let generated;
+            if (relationalPersistence) {
+              const assignedProvider = await resolveAIBotProviderAssignment(chatBase.bot.identityId);
+              if (assignedProvider) {
+                generated = await generateAssignedAIBotReply({
+                  provider: assignedProvider.provider,
+                  model: assignedProvider.modelIdentifier,
+                  bot: chatBase.bot,
+                  identity: verifiedIdentity.identity,
+                  message: input.message,
+                  history,
+                  memoryContext,
+                  env: process.env,
+                  maxOutputTokens: allowedOutputTokens
+                });
+              }
             }
-            const providerHealth = await probeOpenAIProvider();
-            if (!providerHealth.connected) {
-              throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+            if (!generated) {
+              const currentProviderStatus = getAIProviderStatus();
+              if (!currentProviderStatus.botChatAvailable) {
+                throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment, or activate a verified identity provider assignment.'), { status: 503 });
+              }
+              const providerHealth = await probeOpenAIProvider();
+              if (!providerHealth.connected) {
+                throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+              }
+              generated = await generateOpenAIBotReply({
+                bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
+                history, memoryContext, env: process.env, maxOutputTokens: allowedOutputTokens
+              });
             }
-            const generated = await generateOpenAIBotReply({
-              bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
-              history, memoryContext, env: process.env, maxOutputTokens: allowedOutputTokens
-            });
             let saved;
             if (relationalPersistence) {
               const completed = await runAIBotChatCommand('complete_request', {
