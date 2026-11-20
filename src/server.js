@@ -2917,7 +2917,12 @@ async function route(req, res) {
             providerModelVerificationCache.set(providerId, listAIProviderModels(providerId));
           }
           const live = await providerModelVerificationCache.get(providerId);
-          const listed = live.models.some(model => model.id === selected.model_identifier || model.resourceName === selected.model_identifier);
+          const listed = live.models.some(model => {
+            const matches = model.id === selected.model_identifier || model.resourceName === selected.model_identifier;
+            const retired = model.lifecycle === 'retired';
+            const shutdown = model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now();
+            return matches && !retired && !shutdown;
+          });
           if (!listed) {
             throw Object.assign(new Error('The selected model is not currently returned by the provider model-list API. Run model synchronization and select a currently listed model.'), { status: 409 });
           }
