@@ -197,6 +197,8 @@ export async function executeOpenAITask({
   const timeout = Number(timeoutMs ?? env.MINGLORA_AI_REQUEST_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
   const requestTimeoutMs = Number.isFinite(timeout)
     ? Math.min(Math.max(Math.trunc(timeout), 1000), MAX_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
+  const timeoutSignal = AbortSignal.timeout(requestTimeoutMs);
+  const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
   const endpoint = buildEndpoint(env.OPENAI_BASE_URL);
   const moderationEndpoint = endpoint + '/moderations';
   const responsesEndpoint = endpoint + '/responses';
@@ -204,7 +206,7 @@ export async function executeOpenAITask({
   const inputModeration = await postJson(fetchImpl, moderationEndpoint, apiKey, {
     model: 'omni-moderation-latest',
     input: prompt
-  }, requestTimeoutMs, signal);
+  }, requestTimeoutMs, requestSignal);
   const inputCheck = Array.isArray(inputModeration?.results) ? inputModeration.results[0] : null;
   if (!inputCheck || typeof inputCheck.flagged !== 'boolean') {
     throw taskError('moderation_unavailable', 'Task input moderation was unavailable. No generation was requested.', 502);
@@ -230,7 +232,7 @@ export async function executeOpenAITask({
         max_output_tokens: maxOutputTokens,
         store: false,
         tools: []
-      }, requestTimeoutMs, signal);
+      }, requestTimeoutMs, requestSignal);
       const output = extractOutputText(generation);
       const usage = readUsage(generation?.usage);
       if (generation?.status !== 'completed' || !output || output.length > MAX_OUTPUT_CHARACTERS) {
@@ -251,7 +253,7 @@ export async function executeOpenAITask({
   const outputModeration = await postJson(fetchImpl, moderationEndpoint, apiKey, {
     model: 'omni-moderation-latest',
     input: output
-  }, requestTimeoutMs, signal);
+  }, requestTimeoutMs, requestSignal);
   const outputCheck = Array.isArray(outputModeration?.results) ? outputModeration.results[0] : null;
   if (!outputCheck || typeof outputCheck.flagged !== 'boolean') {
     throw taskError('moderation_unavailable', 'Generated output moderation was unavailable. The result was not saved.', 502, {
