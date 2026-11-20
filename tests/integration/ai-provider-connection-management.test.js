@@ -245,6 +245,15 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       reason:'A newer inference verification attempt failed.',
       metadata:{inference_verification_attempt:true,inference_verified:false,verification_type:'fixed_prompt'}
     });
+    // Restore fresh general provider health without superseding the failed inference attempt.
+    await command('record_provider_health',owner,{
+      provider_account_id:account.provider_account_id,
+      provider_name:'openai',
+      health_status:'healthy',
+      response_time_ms:15,
+      reason:'Model-list health recovered; the latest inference attempt is still failed.',
+      metadata:{discovery_only:true}
+    });
     await assert.rejects(
       command('set_provider_account_status',owner,{
         provider_account_id:account.provider_account_id,
