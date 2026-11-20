@@ -70,7 +70,8 @@ export async function processClaimedAITask(claim, {
 
   try {
     if (controller.signal.aborted) throw leaseError || controller.signal.reason;
-    const generated = await executeTask(claim.task, {
+    const generated = await executeTask({
+      task: claim.task,
       route: claim.route,
       signal: controller.signal
     });
