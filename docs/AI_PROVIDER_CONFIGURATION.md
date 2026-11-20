@@ -46,6 +46,43 @@ The Bot Personality Lab conversation route is also implemented: `GET /api/ai-net
 
 The OpenAI entry also advertises a **read-only model-access health probe**. The designated-admin-only `POST /api/ai-network/provider-health` endpoint reads the key and model from the private server environment and calls OpenAI's model retrieval endpoint. It accepts only the provider identifier in the request body; it rejects browser-supplied credential fields. A successful probe confirms that the configured API key can retrieve the selected model, but it does **not** verify text generation, moderation, cost metering, routing, or worker execution. The result is not persisted as a connected state; a fresh probe is required to confirm current provider health.
 
+## Phase 4.3 — provider connection management
+
+The provider registry now has an explicit connection-management layer.
+
+### Provider health checks
+
+POST /api/ai-network/provider-health accepts only:
+
+- provider
+- optional provider_account_id
+- optional model
+
+It never accepts an API key, token, password or secret reference. The server selects the credential from its private environment and calls the implemented provider adapter. OpenAI, Anthropic and Google Gemini can therefore be checked through the same route. A successful model-list request proves current authentication/model-list access; it does not enable inference.
+
+When a provider account ID is supplied, the sanitized health result is persisted to ai_network.ai_provider_health_events, the account's health_status and last_checked_at are updated, and linked model assignments receive the same health state. The persisted record contains status, model identifier, response time, sanitized error code/reason and non-secret metadata only.
+
+### Provider enable / disable
+
+Provider account references now support these administrative states:
+
+- unconfigured — initial account reference; no successful health verification recorded.
+- enabled — administrator explicitly enabled the account after a recent successful health check.
+- disabled — administrator explicitly disabled the account; no inference should route through it.
+- revoked — permanently disabled and cannot be reactivated through this control.
+
+An account cannot be changed to enabled unless its health is healthy and its last successful health check is no more than 15 minutes old. A health check never auto-enables an account.
+
+The admin Provider & Model Assignment Center now exposes provider selection, account selection, connection checks, and account status controls. It still does not expose credentials.
+
+### Health history
+
+GET /api/ai-network/provider-accounts/:accountId/health returns the recent sanitized health events for an owner-scoped provider account. This creates an auditable connection history without storing provider secrets.
+
+The database function remains restricted to the server runtime and continues to reject raw credentials. Supabase's current security guidance recommends keeping elevated database access server-side and explicitly controlling function execution privileges; the new health-event table is RLS-enabled and granted only to service_role. citeturn345135search0turn345135search9
+
+**Deployment boundary:** the Phase 4.3 migration is included in the feature branch but is not applied to the live Supabase project until the PR is reviewed/merged. This avoids schema drift between the deployed application and the migration history. Supabase's migration guidance likewise recommends versioning schema changes and deploying them through the migration workflow. citeturn345135search2
+
 ## Phase 4.2 — server-side provider adapter registry
 
 The backend now has a shared adapter interface for **OpenAI, Anthropic Claude, and Google Gemini** in `backend/modules/ai-network/provider-adapters.js`. For each of these three providers it supports:
