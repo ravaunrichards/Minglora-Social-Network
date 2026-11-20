@@ -46,10 +46,13 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
         identity_id uuid primary key default gen_random_uuid(),
         owner_user_id uuid not null references public.profiles(id),
         idempotency_key text not null unique,
-        status text not null default 'active'
+        status text not null default 'active',
+        enabled boolean not null default true
       );
       alter table ai_network.ai_identities
         add column if not exists status text not null default 'active';
+      alter table ai_network.ai_identities
+        add column if not exists enabled boolean not null default true;
 
       create table if not exists ai_network.ai_provider_accounts (
         provider_account_id uuid primary key default gen_random_uuid(),
@@ -108,11 +111,24 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
         last_checked_at timestamptz,
         updated_at timestamptz not null default now()
       );
+      create table if not exists ai_network.ai_provider_assignment_history (
+        event_id uuid primary key default gen_random_uuid(),
+        assignment_id uuid not null references ai_network.ai_provider_assignments(assignment_id) on delete restrict,
+        identity_id uuid not null references ai_network.ai_identities(identity_id) on delete restrict,
+        actor_user_id uuid not null references public.profiles(id) on delete restrict,
+        action text not null check (action in ('assigned','status_changed')),
+        previous_status text,
+        new_status text not null constraint ai_provider_assignment_history_new_status_check
+          check (new_status in ('pending','restricted','disabled','revoked')),
+        reason text not null default '',
+        metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata)='object'),
+        occurred_at timestamptz not null default now()
+      );
 
       grant usage on schema public,ai_network to service_role;
       grant select,insert,update on public.profiles,ai_network.ai_identities,
         ai_network.ai_provider_accounts,ai_network.ai_provider_models,
-        ai_network.ai_provider_assignments to service_role;
+        ai_network.ai_provider_assignments,ai_network.ai_provider_assignment_history to service_role;
     `);
 
     // Preserve pre-existing account states while the migration replaces the status constraint.
@@ -171,11 +187,13 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       text_capability:true
     });
     const modelId = model.model.model_id;
-    await client.query(`
+    const assignment = await client.query(`
       insert into ai_network.ai_provider_assignments(
         identity_id,provider_account_id,model_id,assignment_status
       ) values($1,$2,$3,'pending')
+      returning assignment_id
     `,[identity.rows[0].identity_id,account.provider_account_id,modelId]);
+    const assignmentId = assignment.rows[0].assignment_id;
 
     const health = await command('record_provider_health',owner,{
       provider_account_id:account.provider_account_id,
@@ -227,6 +245,7 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
     const reservation = await command('reserve_provider_inference',owner,{
       provider_account_id:account.provider_account_id,
       provider_name:'openai',
+      model_id:modelId,
       model_identifier:'gpt-provider-health-test'
     });
     assert.equal(reservation.reservation.metadata.inference_verification_attempt,true);
@@ -247,9 +266,15 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       model_identifier:'gpt-provider-health-test',
       response_time_ms:36,
       reason:'Bounded static inference verification succeeded. Output was withheld.',
-      metadata:{inference_verification_attempt:true,inference_verified:true,verification_type:'fixed_prompt'}
+      metadata:{inference_verification_attempt:true,inference_verified:true,verification_type:'fixed_prompt',model_id:modelId}
     });
     assert.equal(inferenceEvent.health_event.metadata.inference_verified,true);
+    const textCapability = await client.query(
+      'select text_capability from ai_network.ai_provider_models where model_id=$1',
+      [modelId]
+    );
+    assert.equal(textCapability.rows[0].text_capability,true);
+
 
     await command('record_provider_health',owner,{
       provider_account_id:account.provider_account_id,
@@ -259,7 +284,7 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       response_time_ms:20,
       error_code:'provider_error',
       reason:'A newer inference verification attempt failed.',
-      metadata:{inference_verification_attempt:true,inference_verified:false,verification_type:'fixed_prompt'}
+      metadata:{inference_verification_attempt:true,inference_verified:false,verification_type:'fixed_prompt',model_id:modelId}
     });
     // Restore fresh general provider health without superseding the failed inference attempt.
     await command('record_provider_health',owner,{
@@ -286,8 +311,17 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       model_identifier:'gpt-provider-health-test',
       response_time_ms:30,
       reason:'A newer bounded inference verification succeeded. Output was withheld.',
-      metadata:{inference_verification_attempt:true,inference_verified:true,verification_type:'fixed_prompt'}
+      metadata:{inference_verification_attempt:true,inference_verified:true,verification_type:'fixed_prompt',model_id:modelId}
     });
+
+    await assert.rejects(
+      command('set_provider_assignment_status',owner,{
+        assignment_id:assignmentId,
+        status:'active',
+        reason:'Account must be enabled before assignment activation.'
+      }),
+      error => error.code==='22023'
+    );
 
     const enabled = await command('set_provider_account_status',owner,{
       provider_account_id:account.provider_account_id,
@@ -295,6 +329,14 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       reason:'Fresh provider inference verification passed.'
     });
     assert.equal(enabled.provider_account.status,'enabled');
+
+    const activeAssignment = await command('set_provider_assignment_status',owner,{
+      assignment_id:assignmentId,
+      status:'active',
+      reason:'Exact model inference verified and provider account enabled.'
+    });
+    assert.equal(activeAssignment.assignment.assignment_status,'active');
+
 
     await command('record_provider_health',owner,{
       provider_account_id:account.provider_account_id,
@@ -304,7 +346,7 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       response_time_ms:22,
       error_code:'provider_error',
       reason:'A post-enable inference verification failed.',
-      metadata:{inference_verification_attempt:true,inference_verified:false,verification_type:'fixed_prompt'}
+      metadata:{inference_verification_attempt:true,inference_verified:false,verification_type:'fixed_prompt',model_id:modelId}
     });
     const autoDisabled = await client.query(`
       select a.status, i.assignment_status
@@ -314,6 +356,14 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
     `,[account.provider_account_id]);
     assert.equal(autoDisabled.rows[0].status,'disabled');
     assert.equal(autoDisabled.rows[0].assignment_status,'disabled');
+    await assert.rejects(
+      command('set_provider_assignment_status',owner,{
+        assignment_id:assignmentId,
+        status:'active',
+        reason:'A failed model-specific inference must block assignment reactivation.'
+      }),
+      error => error.code==='22023'
+    );
 
 
 
