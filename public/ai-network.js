@@ -1137,7 +1137,7 @@
       .map(provider => ({ value:provider.providerId, label:provider.label || provider.providerId }));
     const modelSyncForm = '<form class="ai-network-form" data-ai-form="provider-model-sync">' +
       '<div class="ai-network-form-title">Discover and synchronize provider models</div>' +
-      '<p class="ai-network-note">Fetches the provider's live model catalogue and imports only model IDs returned by its authenticated API. This verifies model-list visibility, not generation capability, quota or production execution.</p>' +
+      '<p class="ai-network-note">Fetches the provider\\'s live model catalogue and imports only model IDs returned by its authenticated API. This verifies model-list visibility, not generation capability, quota or production execution.</p>' +
       '<div class="ai-network-form-grid"><label>Provider<select name="provider" required>' + options(modelSyncProviders, modelSyncProviders[0]?.value || '') + '</select></label>' +
       '<label>Provider account (optional)<select name="providerAccountId">' + options([{value:'',label:'Do not store a health event'}].concat(accounts.map(account => ({value:account.provider_account_id,label:account.provider_name + ' · ' + account.provider_identifier}))), '') + '</select></label></div>' +
       '<button class="secondary" type="submit">Discover and synchronize models</button></form>';
