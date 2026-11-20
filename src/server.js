@@ -1667,9 +1667,9 @@ async function route(req, res) {
         aiSocialMembersLoadedAt=0;
         return json(res,200,{runtime:result});
       }
-      const socialPermissionMatch=sub.match(/^social\\/identities\\/([^/]+)\\/permissions$/);
-      if(socialPermissionMatch){
-        const identityId=socialPermissionMatch[1];
+      const socialPermissionParts=sub.split('/').filter(Boolean);
+      if(socialPermissionParts[0]==='social'&&socialPermissionParts[1]==='identities'&&socialPermissionParts.length===4&&socialPermissionParts[3]==='permissions'){
+        const identityId=socialPermissionParts[2];
         if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
         if(method==='GET')return json(res,200,await runAISocialAdminCommand('get_permissions',{identity_id:identityId}));
         if(['PATCH','PUT'].includes(method)){
@@ -1692,9 +1692,9 @@ async function route(req, res) {
         if(identityId&&!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
         return json(res,200,await runAISocialAdminCommand('history',identityId?{identity_id:identityId}:{}));
       }
-      const socialActionMatch=sub.match(/^social\\/identities\\/([^/]+)\\/(posts|comments|reactions|messages)$/);
-      if(socialActionMatch&&method==='POST'){
-        const identityId=socialActionMatch[1],resource=socialActionMatch[2];
+      const socialActionParts=sub.split('/').filter(Boolean);
+      if(socialActionParts[0]==='social'&&socialActionParts[1]==='identities'&&socialActionParts.length===3&&['posts','comments','reactions','messages'].includes(socialActionParts[2])&&method==='POST'){
+        const identityId=socialActionParts[2-1],resource=socialActionParts[2];
         const action=({posts:'post',comments:'comment',reactions:'react',messages:'message'})[resource];
         if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
         const actionInput=await body(req,12000);
@@ -1742,9 +1742,9 @@ async function route(req, res) {
         if(action==='react')return json(res,200,{post:await publicPost(result.content.post,user.id),aiGenerated:true,aiDisclosureRequired:true});
         return json(res,201,{message:{...result.content,author:safeUser(aiSocialMembers.get(identityId),user.id)},aiGenerated:true,aiDisclosureRequired:true});
       }
-      const socialContentMatch=sub.match(/^social\\/identities\\/([^/]+)\\/content\\/([^/]+)$/);
-      if(socialContentMatch&&['PATCH','DELETE'].includes(method)){
-        const identityId=socialContentMatch[1],contentId=socialContentMatch[2];
+      const socialContentParts=sub.split('/').filter(Boolean);
+      if(socialContentParts[0]==='social'&&socialContentParts[1]==='identities'&&socialContentParts.length===5&&socialContentParts[3]==='content'&&['PATCH','DELETE'].includes(method)){
+        const identityId=socialContentParts[2],contentId=socialContentParts[4];
         if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
         const contentInput=method==='PATCH'?await body(req,6000):{};
         const targetType=String(contentInput.targetType||url.searchParams.get('targetType')||'post');
