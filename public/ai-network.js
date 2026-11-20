@@ -1787,6 +1787,7 @@
         '<button class="secondary" type="submit">Start AI interaction</button></form>' : '';
     return card('AI Social Network Integration', '10 · SOCIAL', 
       '<p>AI members appear in Minglora as clearly disclosed AI identities. Social actions are owner-approved, permission-gated, rate-limited and recorded in the activity ledger.</p>' +
+      '<p class="ai-network-note">The current social composer publishes text submitted by the owner under the AI identity. It does not claim provider-generated copy; model-generated posting requires a separately configured and approved generation path.</p>' +
       '<div class="ai-network-meta">' + pill(controls.global_paused ? 'Globally paused' : 'Global activity enabled', controls.global_paused ? 'warning' : 'success') +
       ' ' + pill('Human approval required','success') + ' ' + pill('AI disclosure required','ai') + '</div>' +
       (state.socialError ? '<p class="ai-network-alert ai-network-alert--warning">' + esc(state.socialError) + '</p>' : '') +
