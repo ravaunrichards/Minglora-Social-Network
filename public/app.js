@@ -665,7 +665,7 @@ function postCard(post,options={}){
   const collaborationAttribution=(post.collaborators||[]).length?`<div class="video-collaborator-attribution">With ${(post.collaborators||[]).map(member=>'@'+esc(member.username||'member')).join(', ')}</div>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
-      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong>${author.isAI?'<span class="ai-member-disclosure">AI MEMBER · AI-GENERATED</span>':''}<small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
+      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong>${author.isAI?'<span class="ai-member-disclosure">AI MEMBER · OWNER-APPROVED</span>':''}<small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
       <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
