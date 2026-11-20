@@ -400,12 +400,30 @@ begin
     if (v_payload->'task_result')::text ~* '"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential|private[_-]?key)"[[:space:]]*:' then
       raise exception using errcode='22023',message='Task results cannot contain credentials or secrets.';
     end if;
+    if not exists (
+      select 1 from ai_network.ai_task_events ev
+      where ev.task_id=(v_payload->>'task_id')::uuid
+        and ev.owner_user_id=p_owner_user_id
+        and ev.event_type='execution_route_selected'
+        and lower(replace(ev.metadata->'route'->>'provider_name',' api',''))=
+          lower(v_payload->'task_result'->'route'->>'provider')
+        and (
+          ev.metadata->'route'->>'model_identifier'=v_payload->'task_result'->'route'->>'model'
+          or ev.metadata->'route'->'fallback_model'->>'model_identifier'=v_payload->'task_result'->'route'->>'model'
+        )
+    ) then
+      raise exception using errcode='42501',message='The reported provider/model route does not match the route selected for this task.';
+    end if;
     update ai_network.ai_task_queue q
     set status='succeeded',task_result=v_payload->'task_result',failure_reason='',
         worker_id=null,lease_token=null,lease_expires_at=null,finished_at=now(),updated_at=now()
     where q.task_id=(v_payload->>'task_id')::uuid and q.owner_user_id=p_owner_user_id
       and q.worker_id=p_worker_id and q.lease_token=(v_payload->>'lease_token')::uuid
-      and q.status='running' and q.lease_expires_at>now();
+      and q.status='running' and q.lease_expires_at>now()
+      and exists (
+        select 1 from ai_network.ai_task_runtime_controls ctl
+        where ctl.control_key='primary' and ctl.execution_enabled=true and ctl.global_paused=false
+      );
     if not found then return jsonb_build_object('completed',false,'reason','lease_invalid_or_task_cancelled'); end if;
     insert into ai_network.ai_task_events(
       owner_user_id,task_id,actor_type,worker_id,event_type,previous_status,new_status,reason,metadata
