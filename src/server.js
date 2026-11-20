@@ -8763,7 +8763,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
       if(method==='GET'&&m){
         await syncRefundedGiftActivity();
-        const target=db.users.find(member=>member.id===m[1]);
+        const target=db.users.find(member=>member.id===requestedUserId);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const relationshipType=m[2];
         const listPrivacyKey={followers:'followersListAudience',following:'followingListAudience',subscribers:'subscribersListAudience'}[relationshipType];
@@ -9237,7 +9237,8 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
-        const requestedAiIdentityId = aiSocialIdentityFromPeer(m[1]);
+        const requestedUserId = decodeURIComponent(m[1]);
+        const requestedAiIdentityId = aiSocialIdentityFromPeer(requestedUserId);
         if (requestedAiIdentityId) {
           if (!isSupabasePersistence()) return json(res,503,{error:'AI member profiles require Minglora relational persistence.'});
           const social = await requestSupabaseState('ai_social_command',{
