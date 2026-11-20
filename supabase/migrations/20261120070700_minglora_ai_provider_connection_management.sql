@@ -269,10 +269,10 @@ begin
       else 'unavailable'
     end;
     update ai_network.ai_provider_accounts a
-    set health_status=v_account_health_status,last_checked_at=v_checked_at
+    set health_status=v_account_health_status,last_checked_at=v_checked_at,updated_at=now()
     where a.provider_account_id=v_provider_account_id and a.owner_user_id=p_actor_user_id;
     update ai_network.ai_provider_assignments a
-    set provider_health_status=v_account_health_status,last_checked_at=v_checked_at
+    set provider_health_status=v_account_health_status,last_checked_at=v_checked_at,updated_at=now()
     where a.provider_account_id=v_provider_account_id;
     select jsonb_build_object(
       'event_id',h.event_id,'provider_account_id',h.provider_account_id,
@@ -319,7 +319,7 @@ begin
       end if;
     end if;
     update ai_network.ai_provider_accounts a
-    set status=v_new_status
+    set status=v_new_status,updated_at=now()
     where a.provider_account_id=v_provider_account_id and a.owner_user_id=p_actor_user_id;
     select jsonb_build_object(
       'provider_account_id',a.provider_account_id,'provider_name',a.provider_name,
