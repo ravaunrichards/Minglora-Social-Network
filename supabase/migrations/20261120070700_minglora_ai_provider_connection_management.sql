@@ -239,13 +239,16 @@ begin
     if v_response_time_ms is not null and (v_response_time_ms<0 or v_response_time_ms>120000) then
       raise exception using errcode = '22023', message = 'Provider response time must be between 0 and 120000 milliseconds.';
     end if;
-    select a.provider_name,a.account_type
-      into v_account_provider_name,v_account_type
+    select a.provider_name,a.account_type,a.status
+      into v_account_provider_name,v_account_type,v_old_status
     from ai_network.ai_provider_accounts a
     where a.provider_account_id=v_provider_account_id and a.owner_user_id=p_actor_user_id
     for update;
     if v_account_provider_name is null then
       raise exception using errcode = 'P0002', message = 'Provider account not found for this owner.';
+    end if;
+    if v_old_status='revoked' then
+      raise exception using errcode = '22023', message = 'A revoked provider account cannot be probed or reactivated.';
     end if;
     if v_account_type<>'managed' then
       raise exception using errcode = '42501', message = 'Only managed provider accounts can be linked to platform environment credentials.';
