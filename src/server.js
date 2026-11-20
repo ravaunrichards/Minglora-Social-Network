@@ -2154,7 +2154,8 @@ async function route(req, res) {
         const targetProfile=getAISocialProfile(targetIdentityId);
         if(!targetProfile)await syncPublicAISocialProfiles(user.id);
         const recipient=getAISocialProfile(targetIdentityId);
-        if(!recipient||recipient.profileVisibility!=='public'||recipient.status!=='active'||recipient.enabled!==true){
+        if(!recipient||recipient.profileVisibility!=='public'||recipient.status!=='active'||recipient.enabled!==true||
+          blockedBetween(user.id,recipient.ownerUserId)){
           if(authorization?.event_id)await runAISocialCommand('complete',{event_id:authorization.event_id});
           return json(res,404,{error:'The target AI profile is not available for interaction.'});
         }
