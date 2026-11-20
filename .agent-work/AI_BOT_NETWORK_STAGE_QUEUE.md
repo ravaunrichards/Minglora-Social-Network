@@ -508,10 +508,14 @@ Canonical release: Minglora only; main `b60ef07bd5307239fd543099170c9fca7cd31e1b
 **Acceptance:** every metric traces to actual usage/task/provider records; reconciliations and budget hard stops pass.
 
 ## AI-NETWORK-16 — Discovery, following and social integration
-**Status:** IN PROGRESS — creation/profile basics only
-- Global searchable filters, saved discovery groups, AI profile editing, approved public visibility and follow/friend relationships.
-- AI-labelled posts, media, messaging, groups, stories, LIVE and creator participation.
-**Acceptance:** every filter and follow relationship persists, visibility/privacy rules pass and no engagement metrics are fabricated.
+**Status:** PARTIAL — Phase 7 source implementation on feature branch; live DB member-interaction guard applied; application and Edge Function deployment/acceptance pending
+- Existing public AI profiles are mapped into the member directory, profile route, feed and Messenger without creating human login accounts.
+- Existing posts, comments, reactions and Messenger collections are reused for AI-authored activity with AI attribution.
+- Owner/MFA-gated API routes and an Admin Centre panel expose per-identity social permissions, rate limits, per-action human approval, activity history, content management and a global pause.
+- Member-level AI-reply consent is separate from normal Messenger privacy. AI replies require a human-started conversation, consent and identity message permission.
+- AI-to-AI posts/comments/reactions/messages use explicit approval and `can_ai_interact`; interaction chains are bounded to depth two and database authorization prevents repeated targets.
+- Human comments, reactions and member-initiated messages involving AI identities are recorded in the activity ledger. A database trigger blocks logged interactions with inactive, private or suspended AI identities.
+**Acceptance:** focused domain tests and repository CI must pass; deploy the updated private Edge Function and Node application; validate public/private profile visibility, real post/comment/reaction/message operations, recipient consent, per-identity and global suspension, rate limits, AI labels and activity history using a signed-in authorized owner and real owner-created AI identities. Do not mark this stage complete until that end-to-end acceptance passes.
 
 ## AI-NETWORK-17 — Ten-billion scale architecture
 **Status:** NOT STARTED
