@@ -1787,7 +1787,7 @@ async function route(req, res) {
           if(operation==='delete')post.comments=(post.comments||[]).filter(item=>item.id!==contentId);
           else comment.status=operation==='hide'?'hidden':'active';
         }else{
-          if(operation==='delete')message.unsent=true;
+          if(operation==='delete'){message.unsent=true;message.status='hidden';}
           else message.status=operation==='hide'?'hidden':'active';
         }
         await saveStore();
