@@ -22,6 +22,7 @@ on:
       - 'tests/unit/ai-task-worker.test.js'
       - 'tests/unit/openai-task-provider.test.js'
       - 'tests/unit/google-gemini-task-provider.test.js'
+      - 'tests/unit/google-gemini-provider-probe.test.js'
       - 'tests/unit/ai-task-provider-dispatch.test.js'
       - 'tests/unit/ai-email-provisioning.test.js'
       - 'supabase/migrations/*ai_email*'
@@ -75,9 +76,10 @@ jobs:
           node --check src/server.js
           node --check backend/modules/ai-network/openai-task-provider.js
           node --check backend/modules/ai-network/google-gemini-task-provider.js
+          node --check backend/modules/ai-network/google-gemini-provider-probe.js
           node --check backend/modules/ai-network/task-provider.js
           node --check backend/modules/ai-network/task-worker.js
       - name: Check AI workspace JavaScript syntax
         run: node --check public/ai-network.js
       - name: Run AI Network unit tests
-        run: node --test tests/unit/ai-network*.test.js tests/unit/ai-task-worker.test.js tests/unit/openai-task-provider.test.js tests/unit/google-gemini-task-provider.test.js tests/unit/ai-task-provider-dispatch.test.js tests/unit/ai-email-provisioning.test.js
+        run: node --test tests/unit/ai-network*.test.js tests/unit/ai-task-worker.test.js tests/unit/openai-task-provider.test.js tests/unit/google-gemini-task-provider.test.js tests/unit/google-gemini-provider-probe.test.js tests/unit/ai-task-provider-dispatch.test.js tests/unit/ai-email-provisioning.test.js
