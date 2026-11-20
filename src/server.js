@@ -10411,7 +10411,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
                 from:message.from,
                 to:message.to,
                 author:safeSocialAuthor(message.from,user.id),
-                aiDisclosureRequired:message.senderType==='ai'||String(message.from||'').startsWith('ai:')
+                aiDisclosureRequired:message.senderType==='ai'||String(message.from||'').startsWith('ai:'),
+                isAISocialMessage:true
               })).filter(message=>message.author);
               return {
                 id:'ai:'+item.identityId,
