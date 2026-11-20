@@ -2849,7 +2849,22 @@ async function route(req, res) {
           throw Object.assign(new Error('Provider assignment status input must be a JSON object.'), { status: 400 });
         }
         input.assignment_id = assignmentId;
-        const result = await runAIProviderCommand('set_provider_assignment_status', input);
+        let result;
+        if (String(input.status || '').trim().toLowerCase() === 'active') {
+          const response = await requestSupabaseState('ai_provider_activate_assignment', {
+            actorUserId: user.id,
+            payload: {
+              assignment_id: assignmentId,
+              reason: String(input.reason || 'Provider health was verified and the administrator activated this route.')
+            }
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('Provider assignment activation requires the deployed Phase 6 orchestration migration and runtime gateway.'), { status: 503 });
+          }
+          result = response?.result;
+        } else {
+          result = await runAIProviderCommand('set_provider_assignment_status', input);
+        }
         return json(res, 200, result || {});
       }
 
