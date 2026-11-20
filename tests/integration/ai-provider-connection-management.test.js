@@ -235,6 +235,35 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
     });
     assert.equal(inferenceEvent.health_event.metadata.inference_verified,true);
 
+    await command('record_provider_health',owner,{
+      provider_account_id:account.provider_account_id,
+      provider_name:'openai',
+      health_status:'provider_error',
+      model_identifier:'gpt-provider-health-test',
+      response_time_ms:20,
+      error_code:'provider_error',
+      reason:'A newer inference verification attempt failed.',
+      metadata:{inference_verification_attempt:true,inference_verified:false,verification_type:'fixed_prompt'}
+    });
+    await assert.rejects(
+      command('set_provider_account_status',owner,{
+        provider_account_id:account.provider_account_id,
+        status:'enabled',
+        reason:'A newer failed inference attempt must block enabling.'
+      }),
+      error => error.code==='22023'
+    );
+
+    await command('record_provider_health',owner,{
+      provider_account_id:account.provider_account_id,
+      provider_name:'openai',
+      health_status:'healthy',
+      model_identifier:'gpt-provider-health-test',
+      response_time_ms:30,
+      reason:'A newer bounded inference verification succeeded. Output was withheld.',
+      metadata:{inference_verification_attempt:true,inference_verified:true,verification_type:'fixed_prompt'}
+    });
+
     const enabled = await command('set_provider_account_status',owner,{
       provider_account_id:account.provider_account_id,
       status:'enabled',
