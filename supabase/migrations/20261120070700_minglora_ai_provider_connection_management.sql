@@ -969,9 +969,13 @@ grant execute on function public.minglora_ai_provider_command(text,uuid,jsonb) t
       'checked_at',h.checked_at
     ) order by h.checked_at desc),'[]'::jsonb)
     into v_result
-    from ai_network.ai_provider_health_events h
-    where h.provider_account_id=v_provider_account_id
-    limit 50;
+    from (
+      select h.*
+      from ai_network.ai_provider_health_events h
+      where h.provider_account_id=v_provider_account_id
+      order by h.checked_at desc
+      limit 50
+    ) h;
     return v_result;
   end if;
 
