@@ -110,7 +110,7 @@ export async function generateOpenAICreatorDraft({
   routingNow,
   routingSleep,
   signal,
-  beforeGenerationRequest
+  beforeProviderRequest
 } = {}) {
   const selectedProvider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (selectedProvider && selectedProvider !== 'openai') {
@@ -155,6 +155,14 @@ export async function generateOpenAICreatorDraft({
     'This output is an AI-generated draft and must be reviewed by a human before any use.'
   ].join(' ');
 
+  if (typeof beforeProviderRequest === 'function') {
+    await beforeProviderRequest({
+      provider: 'openai',
+      model: 'omni-moderation-latest',
+      phase: 'input_moderation',
+      estimatedTokens: Math.max(1, Math.ceil(normalizedBrief.length / 3.2))
+    });
+  }
   const inputModeration = await postOpenAIJson({
     fetchImpl,
     endpoint: moderationEndpoint,
@@ -181,8 +189,15 @@ export async function generateOpenAICreatorDraft({
     sleep: routingSleep,
     operation: async ({ model: requestedModel, isFallback, attempt }) => {
       if (signal?.aborted) throw providerError('lease_lost', 'The task execution lease was lost before provider execution.', 409, { retryable: false });
-      if (typeof beforeGenerationRequest === 'function') {
-        await beforeGenerationRequest({ provider: 'openai', model: requestedModel, isFallback, attempt });
+      if (typeof beforeProviderRequest === 'function') {
+        await beforeProviderRequest({
+          provider: 'openai',
+          model: requestedModel,
+          phase: 'generation',
+          estimatedTokens: Math.max(1, Math.ceil(normalizedBrief.length / 3.2) + boundedTokens),
+          isFallback,
+          attempt
+        });
       }
       const generation = await postOpenAIJson({
         fetchImpl,
@@ -243,6 +258,14 @@ export async function generateOpenAICreatorDraft({
   // Fail closed: no generated output is stored when the moderation service is unavailable.
   let moderation;
   try {
+    if (typeof beforeProviderRequest === 'function') {
+      await beforeProviderRequest({
+        provider: 'openai',
+        model: 'omni-moderation-latest',
+        phase: 'output_moderation',
+        estimatedTokens: Math.max(1, Math.ceil(output.length / 3.2))
+      });
+    }
     moderation = await postOpenAIJson({
       fetchImpl,
       endpoint: moderationEndpoint,
