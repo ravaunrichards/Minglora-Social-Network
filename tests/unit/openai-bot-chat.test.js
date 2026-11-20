@@ -195,3 +195,83 @@ test('chat validates message length and refuses insecure endpoints before networ
   }), error => error.code === 'invalid_endpoint');
   assert.equal(calls, 0);
 });
+
+
+test('bot chat falls back to the configured alternate OpenAI model after primary model unavailability', async () => {
+  const calls = [];
+  const result = await generateOpenAIBotReply({
+    bot, identity, message: 'Please explain a simple topic.', env: {
+      ...env,
+      MINGLORA_AI_FALLBACK_PROVIDER: 'openai',
+      MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
+      MINGLORA_AI_MAX_RETRIES: '0'
+    },
+    fetchImpl: async (url, options) => {
+      const payload = JSON.parse(options.body);
+      calls.push({ url, payload });
+      if (url.endsWith('/responses')) {
+        if (payload.model === 'test-model') return response(404, {});
+        return response(200, {
+          id: 'resp_backup',
+          status: 'completed',
+          model: 'backup-model',
+          output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Recovered on the fallback model.' }] }],
+          usage: { input_tokens: 30, output_tokens: 10, total_tokens: 40 }
+        });
+      }
+      return clear();
+    }
+  });
+  const generationModels = calls.filter(call => call.url.endsWith('/responses')).map(call => call.payload.model);
+  assert.deepEqual(generationModels, ['test-model', 'backup-model']);
+  assert.equal(result.model, 'backup-model');
+  assert.equal(result.providerRouting.fallbackUsed, true);
+  assert.equal(result.output, 'Recovered on the fallback model.');
+  assert.equal(result.externalActionsTaken, false);
+});
+
+test('bot chat does not fall back on authentication failure or moderation failure', async () => {
+  let generationCalls = 0;
+  await assert.rejects(generateOpenAIBotReply({
+    bot, identity, message: 'Please explain a simple topic.', env: {
+      ...env,
+      MINGLORA_AI_FALLBACK_PROVIDER: 'openai',
+      MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
+      MINGLORA_AI_MAX_RETRIES: '0'
+    },
+    fetchImpl: async url => {
+      if (url.endsWith('/responses')) {
+        generationCalls += 1;
+        return response(401, {});
+      }
+      return clear();
+    }
+  }), error => error.code === 'unauthorized' && error.providerRouting.fallbackUsed === false);
+  assert.equal(generationCalls, 1);
+
+  let responseCalls = 0;
+  await assert.rejects(generateOpenAIBotReply({
+    bot, identity, message: 'Please explain a simple topic.', env: {
+      ...env,
+      MINGLORA_AI_FALLBACK_PROVIDER: 'openai',
+      MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
+      MINGLORA_AI_MAX_RETRIES: '0'
+    },
+    fetchImpl: async url => {
+      if (url.endsWith('/responses')) {
+        responseCalls += 1;
+        return response(200, {
+          id: 'resp_backup_moderation_test',
+          status: 'completed',
+          model: 'test-model',
+          output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Generated but not approved.' }] }],
+          usage: { input_tokens: 5, output_tokens: 4, total_tokens: 9 }
+        });
+      }
+      return responseCalls === 0
+        ? clear()
+        : response(200, { results: [{ flagged: true }] });
+    }
+  }), error => error.code === 'moderation_blocked');
+  assert.equal(responseCalls, 1, 'moderation failure must not invoke a fallback model');
+});
