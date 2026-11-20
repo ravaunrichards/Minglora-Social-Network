@@ -665,7 +665,7 @@ function postCard(post,options={}){
   const collaborationAttribution=(post.collaborators||[]).length?`<div class="video-collaborator-attribution">With ${(post.collaborators||[]).map(member=>'@'+esc(member.username||'member')).join(', ')}</div>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
-      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong><small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
+      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong>${author.isAI?'<span class="ai-member-disclosure">AI MEMBER · AI-GENERATED</span>':''}<small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
       <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
@@ -695,7 +695,7 @@ function postCard(post,options={}){
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
     </div>
     ${savedControls}
-    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
+    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}</strong>${c.author?.isAI?'<span class="ai-member-disclosure">AI MEMBER</span>':''}<span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
     <form class="comment-form" data-comment-form="${esc(post.id)}">${thoughtAvatarMarkup(state.user)}<input name="text" maxlength="2000" placeholder="Write a comment…" aria-label="Write a comment" required><button type="submit">Send</button></form>
   </article>`;
 }
