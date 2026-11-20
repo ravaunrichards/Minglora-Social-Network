@@ -116,6 +116,11 @@ declare
   v_expiry timestamptz;
   v_status text;
   v_result jsonb;
+  v_runtime ai_network.ai_task_runtime_controls%rowtype;
+  v_global_paused boolean;
+  v_execution_enabled boolean;
+  v_max_workers integer;
+  v_lease_seconds integer;
 begin
   if current_user <> 'service_role' then
     raise exception using errcode='42501',message='AI worker administration is restricted to the Minglora server runtime.';
@@ -125,6 +130,67 @@ begin
   end if;
   if jsonb_typeof(v_payload)<>'object' then
     raise exception using errcode='22023',message='AI worker command payload must be an object.';
+  end if;
+
+  if v_action='set_runtime_controls' then
+    select * into v_runtime from ai_network.ai_task_runtime_controls c
+      where c.control_key='primary' for update;
+    if not found then raise exception using errcode='P0002',message='AI task runtime controls are not initialized.'; end if;
+    v_global_paused := coalesce(nullif(v_payload->>'global_paused','')::boolean,v_runtime.global_paused);
+    v_execution_enabled := coalesce(nullif(v_payload->>'execution_enabled','')::boolean,v_runtime.execution_enabled);
+    v_max_workers := coalesce(nullif(v_payload->>'max_concurrent_workers','')::integer,v_runtime.max_concurrent_workers);
+    v_lease_seconds := coalesce(nullif(v_payload->>'lease_seconds','')::integer,v_runtime.lease_seconds);
+    if v_max_workers<0 or v_max_workers>8 or v_lease_seconds<30 or v_lease_seconds>900 then
+      raise exception using errcode='22023',message='Global worker concurrency must be 0–8 and lease duration must be 30–900 seconds.';
+    end if;
+    if v_execution_enabled and (v_global_paused or v_max_workers<1) then
+      raise exception using errcode='42501',message='Execution cannot be enabled while paused or with a zero concurrency limit.';
+    end if;
+    if v_execution_enabled then
+      if not exists (
+        select 1 from ai_network.ai_task_workers w
+        where w.owner_user_id=p_actor_user_id and w.worker_status='active'
+          and w.expires_at>now() and w.last_seen_at>=now()-interval '2 minutes'
+      ) then
+        raise exception using errcode='42501',message='A registered worker must heartbeat successfully within the last two minutes before execution can be enabled.';
+      end if;
+      if not exists (
+        select 1
+        from ai_network.ai_provider_assignments a
+        join ai_network.ai_provider_accounts pa on pa.provider_account_id=a.provider_account_id
+        join ai_network.ai_provider_models m on m.model_id=a.model_id
+        join ai_network.ai_identities i on i.identity_id=a.identity_id and i.owner_user_id=pa.owner_user_id
+        where pa.owner_user_id=p_actor_user_id
+          and pa.status='configured' and pa.health_status='healthy'
+          and a.assignment_status='active' and a.provider_health_status='healthy'
+          and m.is_active=true and m.text_capability=true
+          and (lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%')
+          and i.status='active' and i.enabled=true
+          and exists (
+            select 1 from ai_network.ai_identity_capabilities cap
+            where cap.identity_id=i.identity_id and cap.capability_key='text_generation'
+              and cap.is_enabled=true
+          )
+          and exists (
+            select 1 from ai_network.ai_identity_permissions perm
+            where perm.identity_id=i.identity_id and perm.effect='allow'
+              and perm.permission_key in ('task.execute','ai.task.execute','text.generate','text.summarize')
+              and perm.resource_scope in ('*','text.generate','text.summarize')
+              and (perm.expires_at is null or perm.expires_at>now())
+          )
+      ) then
+        raise exception using errcode='42501',message='At least one active identity needs a healthy OpenAI assignment, text_generation capability and an unexpired text task execute permission.';
+      end if;
+    end if;
+    update ai_network.ai_task_runtime_controls c
+      set global_paused=v_global_paused,
+          execution_enabled=v_execution_enabled,
+          max_concurrent_workers=v_max_workers,
+          lease_seconds=v_lease_seconds,
+          updated_at=now()
+      where c.control_key='primary'
+      returning to_jsonb(c) into v_result;
+    return jsonb_build_object('runtime',v_result,'execution_enabled',v_execution_enabled);
   end if;
 
   if v_action='register_worker' then
