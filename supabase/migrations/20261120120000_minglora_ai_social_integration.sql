@@ -173,6 +173,7 @@ begin
   if v_action = 'list_public_profiles' then
     select coalesce(jsonb_agg(jsonb_build_object(
       'identity_id', i.identity_id,
+      'owner_user_id', i.owner_user_id,
       'display_name', n.display_name,
       'username', n.username,
       'bio', p.bio,
@@ -563,27 +564,100 @@ begin
     return jsonb_build_object('recorded', true, 'event_id', v_event_id);
   end if;
 
+  if v_action = 'record_admin_action' then
+    if coalesce(v_payload->>'identity_id', '') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
+    v_identity_id := nullif(v_payload->>'identity_id', '')::uuid;
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'activity_id', q.activity_id,
+      'identity_id', q.identity_id,
+      'actor_type', q.actor_type,
+      'actor_user_id', q.actor_user_id,
+      'action', q.action,
+      'target_type', q.target_type,
+      'target_id', q.target_id,
+      'outcome', q.outcome,
+      'loop_depth', q.loop_depth,
+      'created_at', q.created_at,
+      'completed_at', q.completed_at,
+      'metadata', q.metadata
+    ) order by q.created_at desc), '[]'::jsonb)
+    into v_result
+    from (
+      select a.activity_id, a.identity_id, a.actor_type, a.actor_user_id,
+             a.action, a.target_type, a.target_id, a.outcome, a.loop_depth,
+             a.created_at, a.completed_at, a.metadata
+      from ai_network.ai_social_activity a
+      where a.owner_user_id = p_actor_user_id
+        and (v_identity_id is null or a.identity_id = v_identity_id)
+      order by a.created_at desc
+      limit 100
+    ) q;
+    return jsonb_build_object('activity', coalesce(v_result, '[]'::jsonb));
+  end if;
+
+  raise exception using errcode = '22023', message = 'Unsupported AI social command.';
+end;
+$function$;
+
+comment on function public.minglora_ai_social_command(text, uuid, jsonb)
+  is 'Private Minglora AI social permissions, consent, global pause, atomic rate limits and metadata-only interaction history. AI identities never become auth.users or public.profiles.';
+
+revoke all on function public.minglora_ai_social_command(text, uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.minglora_ai_social_command(text, uuid, jsonb) to service_role;
+ then
+      raise exception using errcode = '22023', message = 'A valid AI identity ID is required for content management.';
+    end if;
+    v_identity_id := (v_payload->>'identity_id')::uuid;
+    v_action_name := lower(coalesce(v_payload->>'admin_action', ''));
+    if v_action_name not in ('content_hidden', 'content_restored', 'content_deleted', 'ai_message_sent', 'ai_ai_message_sent') then
+      raise exception using errcode = '22023', message = 'Unsupported AI social administration action.';
+    end if;
+    if not exists (
+      select 1 from ai_network.ai_identities i
+      where i.identity_id = v_identity_id and i.owner_user_id = p_actor_user_id
+    ) then
+      raise exception using errcode = '42501', message = 'Only the AI identity owner may manage this AI social content.';
+    end if;
+    insert into ai_network.ai_social_activity (
+      identity_id, owner_user_id, actor_user_id, actor_type, action,
+      target_type, target_id, outcome, metadata
+    ) values (
+      v_identity_id, p_actor_user_id, p_actor_user_id, 'admin', v_action_name,
+      left(coalesce(v_payload->>'target_type', ''), 40),
+      left(coalesce(v_payload->>'target_id', ''), 180),
+      'completed',
+      jsonb_build_object('human_approved', true)
+    ) returning activity_id into v_event_id;
+    return jsonb_build_object('recorded', true, 'event_id', v_event_id);
+  end if;
+
   if v_action = 'history' then
     v_identity_id := nullif(v_payload->>'identity_id', '')::uuid;
     select coalesce(jsonb_agg(jsonb_build_object(
-      'activity_id', a.activity_id,
-      'identity_id', a.identity_id,
-      'actor_type', a.actor_type,
-      'actor_user_id', a.actor_user_id,
-      'action', a.action,
-      'target_type', a.target_type,
-      'target_id', a.target_id,
-      'outcome', a.outcome,
-      'loop_depth', a.loop_depth,
-      'created_at', a.created_at,
-      'completed_at', a.completed_at,
-      'metadata', a.metadata
-    ) order by a.created_at desc), '[]'::jsonb)
+      'activity_id', q.activity_id,
+      'identity_id', q.identity_id,
+      'actor_type', q.actor_type,
+      'actor_user_id', q.actor_user_id,
+      'action', q.action,
+      'target_type', q.target_type,
+      'target_id', q.target_id,
+      'outcome', q.outcome,
+      'loop_depth', q.loop_depth,
+      'created_at', q.created_at,
+      'completed_at', q.completed_at,
+      'metadata', q.metadata
+    ) order by q.created_at desc), '[]'::jsonb)
     into v_result
-    from ai_network.ai_social_activity a
-    where a.owner_user_id = p_actor_user_id
-      and (v_identity_id is null or a.identity_id = v_identity_id)
-    limit 100;
+    from (
+      select a.activity_id, a.identity_id, a.actor_type, a.actor_user_id,
+             a.action, a.target_type, a.target_id, a.outcome, a.loop_depth,
+             a.created_at, a.completed_at, a.metadata
+      from ai_network.ai_social_activity a
+      where a.owner_user_id = p_actor_user_id
+        and (v_identity_id is null or a.identity_id = v_identity_id)
+      order by a.created_at desc
+      limit 100
+    ) q;
     return jsonb_build_object('activity', coalesce(v_result, '[]'::jsonb));
   end if;
 
