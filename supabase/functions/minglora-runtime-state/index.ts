@@ -38,19 +38,35 @@ Deno.serve(async (req: Request) => {
   if (!admin) return json(503, { error: "Supabase runtime is not configured." });
 
   const supplied = req.headers.get("x-minglora-api-key") || "";
-  if (!supplied || supplied.length < 40) return json(401, { error: "Unauthorized." });
+  const suppliedWorkerToken = req.headers.get("x-minglora-worker-token") || "";
+  let runtimeAuthenticated = false;
+  let workerCredential: { worker_id: string; owner_user_id: string } | null = null;
 
-  const { data: credential, error: credentialError } = await admin
-    .from("minglora_runtime_api_secrets")
-    .select("secret_sha256")
-    .eq("name", "render_runtime")
-    .maybeSingle();
-
-  if (credentialError || !credential?.secret_sha256) {
-    return json(503, { error: "Runtime authorization is unavailable." });
+  if (supplied.length >= 40) {
+    const { data: credential, error: credentialError } = await admin
+      .from("minglora_runtime_api_secrets")
+      .select("secret_sha256")
+      .eq("name", "render_runtime")
+      .maybeSingle();
+    if (!credentialError && credential?.secret_sha256) {
+      runtimeAuthenticated = constantTimeEqual(await sha256(supplied), credential.secret_sha256);
+    }
   }
-  const suppliedHash = await sha256(supplied);
-  if (!constantTimeEqual(suppliedHash, credential.secret_sha256)) {
+
+  if (suppliedWorkerToken.length >= 40) {
+    const workerHash = await sha256(suppliedWorkerToken);
+    const { data, error } = await admin.rpc("minglora_ai_worker_authenticate", {
+      p_token_sha256: workerHash
+    });
+    if (!error && data?.worker_id && data?.owner_user_id) {
+      workerCredential = {
+        worker_id: String(data.worker_id),
+        owner_user_id: String(data.owner_user_id)
+      };
+    }
+  }
+
+  if (!runtimeAuthenticated && !workerCredential) {
     return json(401, { error: "Unauthorized." });
   }
 
@@ -74,11 +90,43 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = input.action;
+  if (workerCredential) {
+    if (action !== "ai_worker_command") {
+      return json(403, { error: "Worker credentials are restricted to AI worker execution commands." });
+    }
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload as Record<string, unknown> : {};
+    const supportedWorkerCommands = [
+      "claim_next_task","heartbeat_task","reserve_provider_capacity","complete_task","fail_task","list_provider_health_targets","record_provider_health"
+    ];
+    if (!supportedWorkerCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI worker command." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_worker_command", {
+      p_action: aiAction,
+      p_worker_id: workerCredential.worker_id,
+      p_owner_user_id: workerCredential.owner_user_id,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403
+        : ["22023","22P02","23514"].includes(code) ? 400
+          : code === "55000" ? 409 : 503;
+      return json(status, { error: String(error.message || "Minglora AI worker command failed.").slice(0, 240) });
+    }
+    return json(200, { result: data });
+  }
+  if (action === "ai_worker_command") {
+    return json(403, { error: "A dedicated authenticated AI worker credential is required." });
+  }
+
   const supportedActions = [
     "internal_activity_feed", "admin_finance_command",
     "admin_finance_attachment_prepare", "admin_finance_attachment_complete", "admin_finance_attachment_download",
     "admin_rbac_command", "admin_brand_command", "admin_brand_upload_prepare", "admin_brand_upload_complete", "admin_brand_asset_url", "brand_public_manifest", "admin_users_list", "admin_user_set_ban", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_bot_chat_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_provider_activate_assignment", "ai_task_command", "ai_task_history", "ai_worker_command", "ai_bot_chat_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -4674,17 +4722,63 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { data, error } = await admin.rpc("minglora_ai_task_command", {
-      p_action: aiAction,
-      p_actor_user_id: actorUserId,
-      p_payload: payload
-    });
+    const { data, error } = aiAction === "cancel_task"
+      ? await admin.rpc("minglora_ai_cancel_task", {
+          p_actor_user_id: actorUserId,
+          p_task_id: String(payload.task_id || ""),
+          p_reason: String(payload.reason || "")
+        })
+      : await admin.rpc("minglora_ai_task_command", {
+          p_action: aiAction,
+          p_actor_user_id: actorUserId,
+          p_payload: payload
+        });
     if (error) {
       const code = String(error.code || "");
       const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
       return json(status, {
         error: String(error.message || "Minglora AI task request failed.").slice(0, 240)
       });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_task_history") {
+    const actorUserId = String(input.actorUserId || "");
+    const taskId = String(input.taskId || "");
+    if (!validUuid(actorUserId) || !validUuid(taskId)) {
+      return json(400, { error: "A valid signed-in Minglora user and task ID are required." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_task_history_command", {
+      p_actor_user_id: actorUserId,
+      p_task_id: taskId
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404
+        : ["22023","22P02"].includes(code) ? 400 : 503;
+      return json(status, { error: String(error.message || "Minglora AI task history could not be loaded.").slice(0, 240) });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_provider_activate_assignment") {
+    const actorUserId = String(input.actorUserId || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload as Record<string, unknown> : {};
+    if (!validUuid(actorUserId) || !validUuid(String(payload.assignment_id || ""))) {
+      return json(400, { error: "A valid signed-in Minglora user and provider assignment are required." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_activate_provider_assignment", {
+      p_actor_user_id: actorUserId,
+      p_assignment_id: String(payload.assignment_id),
+      p_reason: String(payload.reason || "Provider health was verified and the administrator activated this route.")
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404
+        : code === "55000" ? 409 : ["22023","22P02"].includes(code) ? 400 : 503;
+      return json(status, { error: String(error.message || "AI provider assignment activation failed.").slice(0, 240) });
     }
     return json(200, { result: data });
   }
