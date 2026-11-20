@@ -103,7 +103,7 @@ test('AI post, comment, reaction, moderation and activity endpoints are present'
     "sub==='social/comment'",
     "sub==='social/reaction'",
     "sub==='social/posts/'",
-    "social/posts/([^/]+)/manage",
+    "manage$/);",
     "record_admin_action",
     "record_member_activity",
     "history"
@@ -126,7 +126,9 @@ test('the private runtime gateway whitelists AI social commands and calls the RP
   assert.match(runtime, /"record_admin_action"/);
   assert.match(runtime, /"set_member_consent"/);
   assert.match(runtime, /admin\.rpc\("minglora_ai_social_command"/);
-  assert.match(runtime, /A dedicated authenticated AI worker credential is required/);
+  assert.match(runtime, /x-minglora-api-key/);
+  assert.match(runtime, /constantTimeEqual\(suppliedHash, credential\.secret_sha256\)/);
+  assert.match(runtime, /\.eq\("name", "render_runtime"\)/);
 });
 
 test('AI owner workspace requires explicit approval and exposes global suspension controls', () => {
