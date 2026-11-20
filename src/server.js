@@ -51,7 +51,7 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
-import { probeAIProvider, SUPPORTED_AI_PROVIDER_ADAPTERS } from '../backend/modules/ai-network/provider-adapters.js';
+import { listAIProviderModels, probeAIProvider, SUPPORTED_AI_PROVIDER_ADAPTERS } from '../backend/modules/ai-network/provider-adapters.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
@@ -2796,6 +2796,112 @@ async function route(req, res) {
         const result = await runAIProviderCommand('create_provider_model', input);
         return json(res, result?.reused ? 200 : 201, result || {});
       }
+      if (method === 'POST' && sub === 'provider-models/sync') {
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !['provider','provider_account_id'].includes(key))) {
+          throw Object.assign(new Error('Model sync accepts only provider and optional provider_account_id.'), { status: 400 });
+        }
+        const provider = String(input.provider || '').trim().toLowerCase();
+        if (!SUPPORTED_AI_PROVIDER_ADAPTERS.includes(provider)) {
+          throw Object.assign(new Error('This provider does not have an implemented Minglora model discovery adapter.'), { status: 501 });
+        }
+        const accountId = String(input.provider_account_id || '').trim();
+        if (accountId) {
+          if (!aiIdentityIdPattern.test(accountId)) {
+            throw Object.assign(new Error('A valid provider account ID is required.'), { status: 400 });
+          }
+          const accounts = await runAIProviderCommand('list_provider_accounts');
+          const account = (Array.isArray(accounts) ? accounts : []).find(item => item.provider_account_id === accountId);
+          if (!account || String(account.provider_name || '').toLowerCase() !== provider) {
+            throw Object.assign(new Error('Provider account was not found for this owner or does not match the selected provider.'), { status: 404 });
+          }
+          if (['disabled','revoked'].includes(String(account.status || '').toLowerCase())) {
+            throw Object.assign(new Error('Model discovery is blocked for a disabled or revoked provider account.'), { status: 409 });
+          }
+        }
+
+        const discovery = await listAIProviderModels(provider);
+        const discoveredAt = new Date().toISOString();
+        const candidates = discovery.models.filter(model => {
+          if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(String(model.id || ''))) return false;
+          if (model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now()) return false;
+          if (model.lifecycle === 'retired') return false;
+          return true;
+        }).slice(0, 250);
+        const created = [];
+        const reused = [];
+        const failed = [];
+        for (let offset = 0; offset < candidates.length; offset += 5) {
+          const batch = candidates.slice(offset, offset + 5);
+          const outcomes = await Promise.all(batch.map(async model => {
+            const textGeneration = provider !== 'openai';
+            const modelVersion = String(model.version || model.lifecycle || '').slice(0, 80);
+            try {
+              const result = await runAIProviderCommand('create_provider_model', {
+                provider_name: provider,
+                model_name: String(model.displayName || model.id).slice(0, 160),
+                model_identifier: String(model.id).slice(0, 180),
+                model_version: modelVersion,
+                model_capabilities: textGeneration ? ['text'] : [],
+                supported_languages: [],
+                text_capability: textGeneration,
+                image_capability: false,
+                audio_capability: false,
+                video_capability: false,
+                voice_capability: false,
+                tool_capability: false
+              });
+              return { ok: true, modelId: model.id, result };
+            } catch (error) {
+              return { ok: false, modelId: model.id, error: String(error?.message || 'Model catalog synchronization failed.').slice(0, 240) };
+            }
+          }));
+          for (const outcome of outcomes) {
+            if (!outcome.ok) failed.push({ model_id: outcome.modelId, error: outcome.error });
+            else if (outcome.result?.reused) reused.push(outcome.modelId);
+            else created.push(outcome.modelId);
+          }
+        }
+        return json(res, failed.length ? 207 : 200, {
+          provider,
+          discovered_count: discovery.models.length,
+          processed_count: candidates.length,
+          created_count: created.length,
+          reused_count: reused.length,
+          failed_count: failed.length,
+          created_model_ids: created.slice(0, 100),
+          reused_model_ids: reused.slice(0, 100),
+          failed: failed.slice(0, 50),
+          discovered_at: discoveredAt,
+          pages_fetched: discovery.pagesFetched || 1,
+          discovery_truncated: discovery.truncated === true || discovery.models.length > candidates.length,
+          provider_listed_only: true,
+          inference_verified: false,
+          execution_enabled: false,
+          note: 'Models were imported from the provider model-list API. This verifies provider listing access only; it does not prove text generation, capability support, quota or production readiness.'
+        });
+      }
+      const providerModelVerificationCache = new Map();
+      const verifyProviderModelSelection = async modelId => {
+        const catalog = await runAIProviderCommand('list_provider_models');
+        const selected = (Array.isArray(catalog) ? catalog : []).find(item => item.model_id === modelId);
+        if (!selected || selected.is_active !== true) {
+          throw Object.assign(new Error('The selected provider model is missing or inactive in the Minglora model catalogue.'), { status: 409 });
+        }
+        const providerId = String(selected.provider_name || '').toLowerCase();
+        if (SUPPORTED_AI_PROVIDER_ADAPTERS.includes(providerId)) {
+          if (!providerModelVerificationCache.has(providerId)) {
+            providerModelVerificationCache.set(providerId, listAIProviderModels(providerId));
+          }
+          const live = await providerModelVerificationCache.get(providerId);
+          const listed = live.models.some(model => model.id === selected.model_identifier || model.resourceName === selected.model_identifier);
+          if (!listed) {
+            throw Object.assign(new Error('The selected model is not currently returned by the provider model-list API. Run model synchronization and select a currently listed model.'), { status: 409 });
+          }
+        }
+        return selected;
+      };
       if (method === 'GET' && sub === 'provider-assignments') {
         const result = await runAIProviderCommand('list_provider_assignments');
         return json(res, 200, { assignments: Array.isArray(result) ? result : [] });
@@ -2805,6 +2911,7 @@ async function route(req, res) {
         if (!input || typeof input !== 'object' || Array.isArray(input)) {
           throw Object.assign(new Error('Provider assignment input must be a JSON object.'), { status: 400 });
         }
+        await verifyProviderModelSelection(String(input.model_id || ''));
         const result = await runAIProviderCommand('assign_provider_model', input);
         return json(res, result?.reused ? 200 : 201, result || {});
       }
@@ -2834,6 +2941,7 @@ async function route(req, res) {
               if (item.supported_languages !== undefined && !Array.isArray(item.supported_languages)) {
                 throw Object.assign(new Error('Supported languages must be an array.'), { status: 400 });
               }
+              await verifyProviderModelSelection(String(item.model_id || ''));
               const result = await runAIProviderCommand('assign_provider_model', item);
               return { ok: true, identity_id: item.identity_id, result };
             } catch (error) {
