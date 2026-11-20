@@ -1857,18 +1857,19 @@ async function route(req, res) {
         }
         const name = current.name || {};
         const profile = current.profile || {};
-        const languages = (Array.isArray(current.languages) && current.languages.length
-          ? current.languages
-          : (Array.isArray(bot.languages) ? bot.languages : ['en']))
-          .map(item => typeof item === 'string' ? {
-            language_tag: item, language_name: item, proficiency: 'conversational',
-            is_primary: item === bot.primaryLanguage
-          } : {
-            language_tag: item.language_tag,
-            language_name: item.language_name || item.language_tag,
-            dialect: item.dialect || '',
-            proficiency: item.proficiency || 'conversational',
-            is_primary: Boolean(item.is_primary)
+        const existingLanguages = Array.isArray(current.languages) ? current.languages : [];
+        const languages = (Array.isArray(bot.languages) && bot.languages.length ? bot.languages : ['en'])
+          .map(tag => {
+            const previous = existingLanguages.find(item =>
+              String(item.language_tag || '').toLowerCase() === String(tag).toLowerCase()
+            ) || {};
+            return {
+              language_tag: String(tag),
+              language_name: previous.language_name || String(tag),
+              dialect: previous.dialect || '',
+              proficiency: previous.proficiency || 'conversational',
+              is_primary: String(tag).toLowerCase() === String(bot.primaryLanguage || '').toLowerCase()
+            };
           });
         const locations = (Array.isArray(current.locations) ? current.locations : []).map(item => ({
           location_type: item.location_type,
