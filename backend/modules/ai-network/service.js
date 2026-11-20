@@ -306,7 +306,7 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: req
   const existing = ownerRows(db.aiBots, ownerId).filter(bot => !['archived','retired'].includes(bot.status));
   if (existing.some(bot => bot.name.toLowerCase() === name.toLowerCase())) throw fail(409, 'You already have an AI bot with this name.');
   const candidate = { purpose, tone, traits, expertise, role, specializedCapabilities };
-  if (existing.some(bot => bot.personalitySignature === botSignature(candidate))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone, trait or specialization combination.');
+  if (existing.some(bot => botSignature(bot) === botSignature(candidate))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone, trait or specialization combination.');
   const bot = {
     id: text(requestedId, 80) || makeId(), ownerId, name, purpose, tone, traits, expertise,
     languages, primaryLanguage, capabilities, role, behaviorInstructions, specializedCapabilities,
@@ -368,7 +368,7 @@ export function updateAIBotConfiguration(db, ownerId, botId, input = {}, { now =
   }
   const candidate = { ...next };
   const nextSignature = botSignature(candidate);
-  if (existing.some(row => row.personalitySignature === nextSignature)) {
+  if (existing.some(row => botSignature(row) === nextSignature)) {
     throw fail(409, 'This bot would duplicate another personality owned by this account.');
   }
 
