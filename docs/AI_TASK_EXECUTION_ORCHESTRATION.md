@@ -64,9 +64,9 @@ SUPABASE_URL, OPENAI_API_KEY, OPENAI_DEFAULT_MODEL, the existing Supabase runtim
 
 ## Deployment and acceptance sequence
 
-1. Review and apply supabase/migrations/20261120090000_minglora_ai_task_execution_orchestration.sql.
-2. Deploy supabase/functions/minglora-ai-worker/index.ts with JWT verification disabled.
-3. Deploy the updated minglora-runtime-state Edge Function containing the ai_worker_admin_command gateway.
+1. Review the migration, then apply it with `supabase db push` against the intended project. The Phase 6 PostgreSQL 17 integration test is `tests/integration/ai-task-execution-orchestration.test.js`.
+2. Deploy the worker endpoint with its custom bearer authentication enabled and Supabase JWT verification disabled: `supabase functions deploy minglora-ai-worker --no-verify-jwt`. Do not disable JWT verification for other functions.
+3. Deploy the updated runtime-state function: `supabase functions deploy minglora-runtime-state`.
 4. Restore the Render backend service and confirm it is healthy before adding any worker environment variables.
 5. Configure and live-probe OpenAI, then create a healthy provider account/model assignment.
 6. Enable text_generation and grant a narrowly scoped task.execute permission to a test identity. For AI-to-AI delegation, use a valid active delegation grant that matches the task type/action class/budget.
