@@ -30,7 +30,7 @@ The existing UUID primary key is retained. Names, profile identifiers, username 
 
 ## Phase 3 integrity migration
 
-`supabase/migrations/20261120053000_minglora_ai_identity_phase3_integrity.sql`:
+`supabase/migrations/20261120052603_minglora_ai_identity_phase3_integrity.sql`:
 
 1. Stops if any existing AI identity is missing an owner; it does not guess or backfill owners.
 2. Makes `ai_identities.owner_user_id` NOT NULL.
@@ -44,7 +44,7 @@ No identity or social-network rows are inserted, updated, deleted or re-keyed by
 
 The manual inverse is stored outside the Supabase migration directory at:
 
-`database/rollbacks/20261120053000_minglora_ai_identity_phase3_integrity.rollback.sql`
+`database/rollbacks/20261120052603_minglora_ai_identity_phase3_integrity.rollback.sql`
 
 This rollback restores the earlier nullable-owner and cascade-delete behavior and re-grants broad table permissions. It deliberately requires an operator to execute it manually. Before doing so, verify a recoverable backup and review any identity/history records created since the migration. Do not run it automatically as an application release rollback.
 
@@ -56,7 +56,7 @@ Existing live data included one AI identity with its name, profile and owner rel
 
 ## Supporting foreign-key index completion
 
-A second additive migration, `supabase/migrations/20261120054000_minglora_ai_email_messages_email_fk_index.sql`, adds the missing `ai_email_messages(email_id)` B-tree index. The live catalog audit found this as the sole remaining foreign-key index gap across `ai_network`. Its inverse is documented in `database/rollbacks/20261120054000_minglora_ai_email_messages_email_fk_index.rollback.sql`.
+A second additive migration, `supabase/migrations/20261120052647_minglora_ai_email_messages_email_fk_index.sql`, adds the missing `ai_email_messages(email_id)` B-tree index. The live catalog audit found this as the sole remaining foreign-key index gap across `ai_network`. Its inverse is documented in `database/rollbacks/20261120052647_minglora_ai_email_messages_email_fk_index.rollback.sql`.
 
 The index migration changes no rows. The final catalog check must show zero unindexed foreign keys across the AI schema.
 
