@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261114022049_minglora_ai_provider_catalog_and_assignments.sql');
+const providerManagementMigration = read('supabase/migrations/20261120120000_minglora_ai_provider_connection_management.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -236,4 +237,92 @@ test('pause, resume and owner-use bot buttons are connected to server actions an
   assert.ok(ui.includes('Enable for owner use'));
   assert.ok(!ui.includes('data-ai-action="emergency-resume" disabled'));
   assert.ok(!ui.includes('data-status="active" disabled title="Autonomous execution remains disabled"'));
+});
+
+
+test('provider health history and account status audit are private and service-role-only', () => {
+  for (const table of ['ai_provider_health_events','ai_provider_account_status_history']) {
+    assert.ok(providerManagementMigration.includes('create table if not exists ai_network.' + table));
+    assert.ok(providerManagementMigration.includes('alter table ai_network.' + table + ' enable row level security'));
+    assert.ok(providerManagementMigration.includes('revoke all on ai_network.' + table + ' from public, anon, authenticated'));
+  }
+  assert.ok(providerManagementMigration.includes('grant select, insert on ai_network.ai_provider_health_events to service_role'));
+  assert.ok(providerManagementMigration.includes('grant select, insert on ai_network.ai_provider_account_status_history to service_role'));
+  assert.ok(providerManagementMigration.includes('minglora_ai_provider_management_command'));
+  assert.ok(providerManagementMigration.includes('current_user <> \'service_role\''));
+  assert.ok(providerManagementMigration.includes("from public, anon, authenticated"));
+});
+
+test('provider accounts cannot be enabled without a fresh successful probe', () => {
+  assert.ok(providerManagementMigration.includes("v_new_status not in ('configured','disabled')"));
+  assert.ok(providerManagementMigration.includes("v_old_status='revoked'"));
+  assert.ok(providerManagementMigration.includes("v_old_status='restricted'"));
+  assert.ok(providerManagementMigration.includes("v_health_status<>'healthy' or v_last_checked_at is null or v_last_checked_at < now()-interval '15 minutes'"));
+  assert.ok(providerManagementMigration.includes('ai_provider_account_status_history'));
+  assert.ok(providerManagementMigration.includes('A reason of at least three characters is required.'));
+});
+
+test('provider health events accept only sanitized probe state and never credential material', () => {
+  for (const status of [
+    'healthy','missing_credentials','missing_model','invalid_model','invalid_endpoint',
+    'unauthorized','forbidden','model_unavailable','rate_limited','timeout',
+    'network_error','provider_unavailable','provider_error','invalid_response',
+    'adapter_unavailable','no_models'
+  ]) assert.ok(providerManagementMigration.includes("'" + status + "'"));
+  assert.ok(providerManagementMigration.includes('check (not connected or health_status = \'healthy\')'));
+  assert.ok(providerManagementMigration.includes("length(note) <= 500"));
+  assert.ok(providerManagementMigration.includes("v_payload ?| array["));
+  assert.ok(providerManagementMigration.includes("record_provider_health"));
+});
+
+test('provider runtime gateway routes health, model sync and status commands to the private management RPC', () => {
+  for (const token of [
+    '"list_provider_health_events"',
+    '"record_provider_health"',
+    '"set_provider_account_status"',
+    '"sync_provider_models"',
+    'providerManagementCommands',
+    '"minglora_ai_provider_management_command"',
+    'secretFields'
+  ]) assert.ok(runtime.includes(token), 'Missing provider management gateway control: ' + token);
+});
+
+test('provider account routes require the existing designated-admin MFA gate and use server-side credentials', () => {
+  const start = server.indexOf("if (p === '/api/ai-network'");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  for (const token of [
+    'getOwnedAIProviderAccount',
+    'probeAIProvider(providerId',
+    'listAIProviderModels(providerId',
+    "runAIProviderCommand('record_provider_health'",
+    "runAIProviderCommand('sync_provider_models'",
+    "runAIProviderCommand('set_provider_account_status'",
+    "sub === 'provider-health-events'",
+    "parts[2] === 'probe'",
+    "parts[3] === 'refresh'",
+    "parts[2] === 'status'",
+    'env: process.env'
+  ]) assert.ok(route.includes(token), 'Missing provider management API control: ' + token);
+  assert.ok(route.includes("!isDesignatedCreatorHubAdmin(user)"));
+  assert.ok(route.includes("!hasActiveReviewerSession(user)"));
+});
+
+test('provider management UI exposes real probe, model refresh and audited enable/disable controls', () => {
+  for (const token of [
+    "request('/provider-health-events')",
+    'data-ai-form="provider-account-probe"',
+    'data-ai-form="provider-account-models"',
+    'data-ai-form="provider-account-status"',
+    "'/provider-accounts/' + encodeURIComponent(accountId) + '/probe'",
+    "'/provider-accounts/' + encodeURIComponent(accountId) + '/models/refresh'",
+    "'/provider-accounts/' + encodeURIComponent(accountId) + '/status'",
+    'Enable provider',
+    'Disable provider',
+    'less than 15 minutes old',
+    'credentials never stored here'
+  ]) assert.ok(ui.includes(token), 'Missing provider management UI: ' + token);
+  assert.ok(!ui.includes('name="apiKey"'));
+  assert.ok(!ui.includes('name="OPENAI_API_KEY"'));
+  assert.ok(!ui.includes('name="secret"'));
 });
