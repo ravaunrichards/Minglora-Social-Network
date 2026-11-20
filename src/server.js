@@ -51,6 +51,7 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
+import { listAIProviderModels, probeAIProvider, SUPPORTED_AI_PROVIDER_ADAPTERS } from '../backend/modules/ai-network/provider-adapters.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
@@ -2393,7 +2394,7 @@ async function route(req, res) {
           return response?.result;
         } catch (error) {
           const message = String(error?.message || '');
-          if (/unsupported action|unsupported AI provider command|function .*minglora_ai_provider_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+          if (/unsupported action|unsupported AI provider command|function .*minglora_ai_provider_command.*does not exist|function .*minglora_ai_provider_management_command.*does not exist|could not find the function|schema cache/i.test(message)) {
             throw Object.assign(
               new Error('The AI provider catalogue migration and runtime gateway must be deployed before this operation is available. No provider data was changed.'),
               { status: 503 }
@@ -2402,6 +2403,60 @@ async function route(req, res) {
           throw error;
         }
       };
+      
+      const providerAccountStatusForHealth = probe => {
+        if (probe?.connected === true) return 'healthy';
+        const status = String(probe?.status || '').toLowerCase();
+        if (['missing_credentials','missing_model','invalid_model','invalid_endpoint','adapter_unavailable'].includes(status)) return 'unknown';
+        if (['unauthorized','forbidden','network_error','timeout','provider_unavailable'].includes(status)) return 'unavailable';
+        return 'degraded';
+      };
+      const providerModelFromEnvironment = providerId => {
+        const envName = ({
+          openai: 'OPENAI_DEFAULT_MODEL',
+          anthropic: 'ANTHROPIC_DEFAULT_MODEL',
+          google_gemini: 'GEMINI_DEFAULT_MODEL'
+        })[providerId];
+        const providerSpecific = envName ? String(process.env[envName] || '').trim() : '';
+        if (providerSpecific) return providerSpecific;
+        if (providerId === 'openai' && String(process.env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase() === 'openai') {
+          return String(process.env.MINGLORA_AI_MODEL || '').trim();
+        }
+        return '';
+      };
+      const getOwnedAIProviderAccount = async accountId => {
+        if (!aiIdentityIdPattern.test(String(accountId || ''))) {
+          throw Object.assign(new Error('A valid provider account ID is required.'), { status: 400 });
+        }
+        const rows = await runAIProviderCommand('list_provider_accounts');
+        const account = (Array.isArray(rows) ? rows : []).find(item => String(item.provider_account_id || '') === accountId);
+        if (!account) throw Object.assign(new Error('Provider account not found for this administrator.'), { status: 404 });
+        return account;
+      };
+      const recordAIProviderHealth = async (account, probe) => {
+        const providerId = String(account.provider_identifier || '').trim().toLowerCase();
+        const healthStatus = providerAccountStatusForHealth(probe);
+        const supportedStatuses = new Set([
+          'healthy','missing_credentials','missing_model','invalid_model','invalid_endpoint',
+          'unauthorized','forbidden','model_unavailable','rate_limited','timeout',
+          'network_error','provider_unavailable','provider_error','invalid_response',
+          'adapter_unavailable','no_models'
+        ]);
+        const probeStatus = supportedStatuses.has(String(probe?.status || ''))
+          ? String(probe.status)
+          : 'provider_error';
+        return await runAIProviderCommand('record_provider_health', {
+          provider_account_id: account.provider_account_id,
+          probe_status: probeStatus,
+          connected: probe?.connected === true && healthStatus === 'healthy',
+          health_status: healthStatus,
+          model_identifier: String(probe?.model || '').slice(0,200) || null,
+          model_count: Number.isInteger(probe?.modelCount) ? probe.modelCount : null,
+          http_status: Number.isInteger(probe?.httpStatus) ? probe.httpStatus : null,
+          note: String(probe?.note || 'Provider check completed without a diagnostic note.').slice(0,500)
+        });
+      };
+
 
       const runAIHRCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
@@ -2721,6 +2776,102 @@ async function route(req, res) {
         return json(res, 200, health);
       }
 
+      if (method === 'GET' && sub === 'provider-health-events') {
+        const result = await runAIProviderCommand('list_provider_health_events');
+        return json(res, 200, { events: Array.isArray(result) ? result : [] });
+      }
+      if (parts[0] === 'provider-accounts' && parts.length === 3 && parts[2] === 'probe' && method === 'POST') {
+        const account = await getOwnedAIProviderAccount(parts[1]);
+        const providerId = String(account.provider_identifier || '').trim().toLowerCase();
+        const selectedModel = providerModelFromEnvironment(providerId);
+        const probe = await probeAIProvider(providerId, {
+          env: process.env,
+          model: selectedModel || undefined
+        });
+        const healthEvent = await recordAIProviderHealth(account, probe);
+        return json(res, 200, { provider_account: account, probe, health_event: healthEvent });
+      }
+      if (parts[0] === 'provider-accounts' && parts.length === 4 &&
+          parts[2] === 'models' && parts[3] === 'refresh' && method === 'POST') {
+        const account = await getOwnedAIProviderAccount(parts[1]);
+        const providerId = String(account.provider_identifier || '').trim().toLowerCase();
+        if (!SUPPORTED_AI_PROVIDER_ADAPTERS.includes(providerId)) {
+          throw Object.assign(new Error('Model discovery is not implemented for this provider yet.'), { status: 501 });
+        }
+        try {
+          const discovered = await listAIProviderModels(providerId, { env: process.env });
+          const modelRows = discovered.models.slice(0,200).map(model => ({
+            model_identifier: String(model.id || '').slice(0,200),
+            model_name: String(model.displayName || model.id || '').slice(0,160),
+            model_version: String(model.version || '').slice(0,80)
+          }));
+          const synced = await runAIProviderCommand('sync_provider_models', {
+            provider_account_id: account.provider_account_id,
+            models: modelRows
+          });
+          const selectedModel = providerModelFromEnvironment(providerId);
+          const selectedAvailable = !selectedModel || discovered.models.some(model =>
+            model.id === selectedModel || model.resourceName === selectedModel
+          );
+          const probe = {
+            providerId,
+            status: selectedAvailable ? 'healthy' : 'model_unavailable',
+            connected: selectedAvailable,
+            healthStatus: selectedAvailable ? 'healthy' : 'degraded',
+            model: selectedModel || null,
+            modelCount: discovered.models.length,
+            note: selectedAvailable
+              ? 'Provider authentication and model discovery succeeded. No text-generation request was made.'
+              : 'Provider authentication succeeded, but the configured default model was not returned in the available model list.'
+          };
+          const healthEvent = await recordAIProviderHealth(account, probe);
+          return json(res, 200, {
+            provider_account: account,
+            provider_models: synced,
+            discovered_count: discovered.models.length,
+            synced_count: modelRows.length,
+            truncated: discovered.models.length > modelRows.length,
+            probe,
+            health_event: healthEvent
+          });
+        } catch (error) {
+          const code = String(error?.code || 'provider_error');
+          const allowed = new Set([
+            'missing_credentials','missing_model','invalid_model','invalid_endpoint',
+            'unauthorized','forbidden','model_unavailable','rate_limited','timeout',
+            'network_error','provider_unavailable','provider_error','invalid_response',
+            'adapter_unavailable','no_models'
+          ]);
+          const status = allowed.has(code) ? code : 'provider_error';
+          const healthStatus = ['missing_credentials','missing_model','invalid_model','invalid_endpoint','adapter_unavailable'].includes(status)
+            ? 'unknown'
+            : ['unauthorized','forbidden','network_error','timeout','provider_unavailable'].includes(status)
+              ? 'unavailable' : 'degraded';
+          await recordAIProviderHealth(account, {
+            status,
+            connected: false,
+            healthStatus,
+            model: providerModelFromEnvironment(providerId) || null,
+            modelCount: null,
+            httpStatus: Number.isInteger(error?.httpStatus) ? error.httpStatus : null,
+            note: String(error?.message || 'Provider model discovery failed.').slice(0,500)
+          });
+          throw error;
+        }
+      }
+      if (parts[0] === 'provider-accounts' && parts.length === 3 && parts[2] === 'status' && method === 'POST') {
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !['status','reason'].includes(key))) {
+          throw Object.assign(new Error('Provider account status input must contain only status and reason.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('set_provider_account_status', {
+          provider_account_id: parts[1],
+          status: input.status,
+          reason: input.reason
+        });
+        return json(res, 200, result || {});
+      }
       if (method === 'GET' && sub === 'provider-accounts') {
         const result = await runAIProviderCommand('list_provider_accounts');
         return json(res, 200, { provider_accounts: Array.isArray(result) ? result : [] });

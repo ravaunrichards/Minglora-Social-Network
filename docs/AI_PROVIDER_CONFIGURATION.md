@@ -62,6 +62,21 @@ The adapter contracts follow the providers' current API references: [OpenAI mode
 
 A successful model-list probe confirms API authentication and the ability to list models; it does not prove that a selected model can generate content, that quota is available, or that inference is production-ready. The adapter contract tests use simulated HTTP responses and do not consume provider credits. A live connection check still requires private credentials and must be run from the server environment.
 
+## Phase 4.3 — provider connection management
+
+The provider workspace now has server-side operations for accounts whose `provider_identifier` matches an implemented adapter:
+
+- **Test connection** calls the selected provider's authenticated model-list endpoint using private environment credentials. The result and a sanitized note are stored in `ai_network.ai_provider_health_events`.
+- **Discover models** refreshes up to 200 provider model catalogue records per request. Only conservative text capability metadata is recorded; additional modalities are not inferred from a model name.
+- **Enable / disable** changes the provider account status through a service-role-only database command. Disabling is available without a healthy connection. Enabling requires a successful, healthy connection probe from the previous 15 minutes. Restricted and revoked accounts cannot be silently re-enabled.
+- **Health history** shows recent probe outcomes, model counts, selected model references, HTTP status where available, diagnostic notes, and timestamps. Health and account-status history tables have RLS enabled and browser roles have no grants.
+
+Account state and provider health are separate. `configured` means the administrator enabled the account after a recent passing check; `disabled`, `restricted`, and `revoked` remain distinct states. A failed or missing-credential probe never marks an account connected. Probe history is not proof that text generation, moderation, usage metering, fallback, budgets, or worker execution passed acceptance.
+
+The additive migration source is `supabase/migrations/20261120120000_minglora_ai_provider_connection_management.sql`. It creates the health and status-history tables and the service-role-only `minglora_ai_provider_management_command` RPC. The migration is included in the Phase 4.3 pull request; **it has not been applied to the live Supabase project in this stage**. The server routes and UI are likewise source changes in the stacked PR and are not yet deployed.
+
+The current live OpenAI account remains `unconfigured` with health `unknown`; no provider credentials were submitted, no provider probe was run against a live account, and no account status was changed by this source implementation.
+
 Owner-control behavior: the Resume action performs a fresh OpenAI model-access probe before clearing the owner's global pause. Enabling a bot for owner-initiated use also performs a fresh probe and remains subject to the global pause. This changes only owner-controlled AI availability; it does not start durable queue workers or autonomous schedules. Schedule activation stays unavailable until the separate worker claim/lease/heartbeat/completion runtime is deployed and accepted. Pause, resume and bot status controls call their server routes; provider failure is returned as an actionable API error rather than silently marking the provider connected.
 
 The provider helper reports only credential-variable presence and adapter/probe availability; it never returns secret values. The adapter registry now implements OpenAI, Anthropic and Google Gemini, but the presence of an adapter or a non-empty credential does not mark a provider connected. Only a successful server-side probe can report current model-list connectivity, and no such result is persisted by this stage. Anthropic and Gemini generation are not connected to user-facing routes. Existing OpenAI owner-initiated inference continues to use its separate moderation and owner-scope gates. Autonomous worker execution remains disabled independently.
