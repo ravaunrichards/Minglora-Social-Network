@@ -288,7 +288,7 @@ export async function listAIProviderModels(providerId, options = {}) {
       ? baseUrl + '/models?limit=1000' + (pageToken ? '&after_id=' + encodeURIComponent(pageToken) : '')
       : id === 'google_gemini'
         ? baseUrl + '/models?pageSize=1000' + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '')
-        : baseUrl;
+        : baseUrl + '/models';
     const payload = await requestJson(id, url, { fetchImpl, headers, timeoutMs });
     const pageModels = normalizeModels(id, payload);
     for (const model of pageModels) {
