@@ -71,8 +71,11 @@ export function createRuntimeClient(env = process.env, fetchImpl = fetch) {
   return { command, timeoutMs };
 }
 
-async function openAIRequest({ apiKey, model, input, maxOutputTokens, timeoutMs, fetchImpl, endpoint = 'https://api.openai.com/v1/responses' }) {
+async function openAIRequest({ apiKey, model, input, maxOutputTokens, timeoutMs, fetchImpl, signal, endpoint = 'https://api.openai.com/v1/responses' }) {
   const controller = new AbortController();
+  const abortFromLease = () => controller.abort(signal?.reason || new Error('Task lease was lost.'));
+  if (signal?.aborted) abortFromLease();
+  else signal?.addEventListener('abort', abortFromLease, { once: true });
   const timer = setTimeout(() => controller.abort(new Error('Provider request timed out.')), timeoutMs);
   try {
     const response = await fetchImpl(endpoint, {
@@ -93,6 +96,7 @@ async function openAIRequest({ apiKey, model, input, maxOutputTokens, timeoutMs,
     return { output, usage: body.usage || null };
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', abortFromLease);
   }
 }
 
@@ -123,7 +127,7 @@ export function createExecutionWorker({ env = process.env, fetchImpl = fetch, lo
     }
     return openAIRequest({
       apiKey, model, input, maxOutputTokens: Math.min(tokenBudget, 8192),
-      timeoutMs: taskTimeoutMs, fetchImpl
+      timeoutMs: taskTimeoutMs, fetchImpl, signal: activeController?.signal
     });
   }
 
@@ -200,7 +204,34 @@ export function createExecutionWorker({ env = process.env, fetchImpl = fetch, lo
     }
   }
 
+  let lastHealthCheck = 0;
+  async function checkProviderHealth() {
+    const now = Date.now();
+    if (now - lastHealthCheck < 300000) return;
+    lastHealthCheck = now;
+    const result = await runtime.command('list_provider_health_targets');
+    for (const target of result?.targets || []) {
+      let healthStatus = 'unavailable';
+      try {
+        const response = await fetchImpl(`https://api.openai.com/v1/models/${encodeURIComponent(target.model_identifier)}`, {
+          headers: { authorization: `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10000)
+        });
+        healthStatus = response.ok ? 'healthy' : response.status === 429 || response.status >= 500 ? 'degraded' : 'unavailable';
+      } catch {
+        healthStatus = 'unavailable';
+      }
+      await runtime.command('record_provider_health', {
+        provider_account_id: target.provider_account_id,
+        assignment_id: target.assignment_id,
+        model_identifier: target.model_identifier,
+        health_status: healthStatus
+      });
+    }
+  }
+
   async function runOnce() {
+    await checkProviderHealth();
     const claim = await runtime.command('claim_next_task');
     if (!claim?.claimed) return { claimed: false, reason: claim?.reason || 'no_task' };
     await executeClaim(claim);
