@@ -326,6 +326,108 @@ function readProfileSections(userId){
   const saved=(db.profileSections||[]).find(item=>item.userId===userId);
   return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
 }
+function getAISocialProfile(identityId) {
+  const wanted=String(identityId||'').trim();
+  return (db.aiSocialProfiles||[]).find(profile=>String(profile.identityId||profile.identity_id||'')===wanted)||null;
+}
+function safeSocialAuthor(userId,viewerId=null) {
+  const id=String(userId||'');
+  if(id.startsWith('ai:')){
+    const identityId=id.slice(3);
+    const profile=getAISocialProfile(identityId);
+    if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true)return null;
+    return {
+      id,
+      name:String(profile.displayName||profile.display_name||'AI member'),
+      username:String(profile.username||'ai_member'),
+      bio:String(profile.bio||''),
+      avatar:'',
+      avatarUrl:'',
+      isAI:true,
+      aiIdentityId:identityId,
+      aiDisclosureRequired:true
+    };
+  }
+  return safeUser((db.users||[]).find(member=>member.id===id),viewerId);
+}
+async function syncPublicAISocialProfiles(actorUserId) {
+  if(!isSupabasePersistence())return Array.isArray(db.aiSocialProfiles)?db.aiSocialProfiles:[];
+  const response=await requestSupabaseState('ai_social_command',{
+    actorUserId,
+    aiAction:'list_public_profiles',
+    payload:{}
+  });
+  const profiles=Array.isArray(response?.result?.profiles)?response.result.profiles:[];
+  db.aiSocialProfiles=profiles.map(profile=>({
+    identityId:String(profile.identity_id||''),
+    ownerUserId:String(profile.owner_user_id||''),
+    displayName:String(profile.display_name||'AI member'),
+    username:String(profile.username||'ai_member'),
+    bio:String(profile.bio||''),
+    introduction:String(profile.introduction||''),
+    profession:String(profile.profession||''),
+    interests:Array.isArray(profile.interests)?profile.interests:[],
+    skills:Array.isArray(profile.skills)?profile.skills:[],
+    avatarStorageRef:String(profile.avatar_storage_ref||''),
+    profileVisibility:String(profile.profile_visibility||'private'),
+    aiDisclosureRequired:true,
+    status:String(profile.status||'created'),
+    enabled:profile.enabled===true
+  }));
+  return db.aiSocialProfiles;
+}
+async function runAISocialCommand(actorUserId,aiAction,payload={}) {
+  if(!isSupabasePersistence()){
+    throw Object.assign(new Error('AI social permissions and activity history require Minglora Supabase persistence.'),{status:503});
+  }
+  const response=await requestSupabaseState('ai_social_command',{actorUserId,aiAction,payload});
+  if(response?.skipped)throw Object.assign(new Error('AI social actions are unavailable in local-only persistence mode.'),{status:503});
+  return response?.result;
+}
+function isVisibleAISocialPost(viewerId,post) {
+  if(!post||post.status!=='published'||post.archivedAt||post.audience!=='public')return false;
+  const profile=getAISocialProfile(post.aiIdentityId);
+  if(!profile||profile.profileVisibility!=='public'||profile.status!=='active'||profile.enabled!==true)return false;
+  const ownerId=String(post.ownerUserId||profile.ownerUserId||'');
+  return !ownerId||!blockedBetween(viewerId,ownerId);
+}
+async function publicAISocialPost(post,viewerId) {
+  const author=safeSocialAuthor('ai:'+post.aiIdentityId,viewerId);
+  if(!author||!isVisibleAISocialPost(viewerId,post))return null;
+  const comments=(post.comments||[]).map(comment=>({...comment,author:safeSocialAuthor(comment.userId,viewerId)}))
+    .filter(comment=>comment.author);
+  const reactions=post.reactions&&typeof post.reactions==='object'?post.reactions:{};
+  return {
+    id:post.id,
+    userId:'ai:'+post.aiIdentityId,
+    authorType:'ai',
+    aiIdentityId:post.aiIdentityId,
+    text:String(post.text||''),
+    audience:'public',
+    createdAt:post.createdAt,
+    updatedAt:post.updatedAt||post.createdAt,
+    comments,
+    reactions,
+    reactionCount:Object.keys(reactions).length,
+    myReaction:reactions[viewerId]||null,
+    isSaved:false,
+    isWatchLater:false,
+    following:false,
+    media:[],
+    aiDisclosureRequired:true,
+    aiContentMode:'human-reviewed',
+    author
+  };
+}
+async function recordAISocialMemberActivity(actorUserId,identityId,action,targetType,targetId) {
+  return runAISocialCommand(actorUserId,'record_member_activity',{
+    identity_id:identityId,
+    social_action:action,
+    target_type:targetType,
+    target_id:String(targetId||'')
+  });
+}
+
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
   const owner=(db.users||[]).find(member=>member.id===ownerId);
   if(!owner||isAccountBlocked(owner))return false;
@@ -1084,7 +1186,7 @@ async function publicSoundtrack(track,viewerId) {
   return card?{...track,sound:card}:null;
 }
 async function publicPost(p,viewerId) {
-  const author=db.users.find(u=>u.id===p.userId);
+  const author=safeSocialAuthor(p.userId,viewerId);
   const media=await Promise.all((p.mediaIds||[]).map(async id=>{
     const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===p.userId&&item.slot==='post');
     if(!asset||asset.status==='deleted')return null;
@@ -1116,7 +1218,7 @@ async function publicPost(p,viewerId) {
   return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
-    comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
+    comments:(p.comments||[]).map(c=>({...c,author:safeSocialAuthor(c.userId,viewerId)})).filter(c=>c.author)};
 }
 function isVisibleVideoPost(viewerId, post) {
   if (!post || post.status === 'hidden' || post.archivedAt || !post.userId || blockedBetween(viewerId, post.userId)) return false;
@@ -1240,6 +1342,7 @@ async function publicDiscoveryPost(post) {
 }
 
 function findReportedPost(targetId){
+  const aiPost=(db.aiSocialPosts||[]).find(item=>item.id===targetId);if(aiPost)return {collection:'aiSocialPosts',post:aiPost,ownerId:aiPost.ownerUserId};
   const post=(db.posts||[]).find(item=>item.id===targetId);if(post)return {collection:'posts',post,ownerId:post.userId};
   const groupPost=(db.groupPosts||[]).find(item=>item.id===targetId);if(groupPost)return {collection:'groupPosts',post:groupPost,ownerId:groupPost.userId};
   const pagePost=(db.pagePosts||[]).find(item=>item.id===targetId);if(pagePost)return {collection:'pagePosts',post:pagePost,ownerId:pagePost.publishedBy};
@@ -7463,6 +7566,7 @@ async function route(req, res) {
           eligibleIds=new Set([...new Set(subscriberIds.map(value=>String(value||'')).filter(Boolean))].filter(id=>id!==user.id));
         }
         const searchQuery=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        try{await syncPublicAISocialProfiles(user.id);}catch(error){db.aiSocialProfiles=[];console.warn('[Minglora feed] Public AI profile lookup failed closed:',String(error?.message||error).slice(0,160));}
         let visiblePosts=db.posts.filter(x=>x.status!=='hidden'&&!x.archivedAt&&!blockedBetween(user.id,x.userId)&&canViewProfile(user.id,db.users.find(profile=>profile.id===x.userId))&&canViewProfileAudience(user.id,x.userId,x.audience||'public')&&!friendPostsMuted(user.id,x.userId)&&(!eligibleIds||eligibleIds.has(x.userId)));
         if(searchQuery){
           visiblePosts=visiblePosts.filter(post=>{
@@ -7473,7 +7577,16 @@ async function route(req, res) {
         const orderedPosts=scope==='for-you'
           ?rankForYouFeed(visiblePosts,user.id,activeFollows(),db.savedPosts||[])
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-        const posts=(await Promise.all(orderedPosts.map(x=>publicPost(x,user.id)))).map(post=>({...post,following:followedIds.has(post.userId)}));
+        const humanPosts=(await Promise.all(orderedPosts.map(x=>publicPost(x,user.id)))).map(post=>({...post,following:followedIds.has(post.userId)}));
+        const includePublicAI=['all','for-you'].includes(scope);
+        const aiPosts=includePublicAI
+          ?(await Promise.all((db.aiSocialPosts||[])
+            .filter(post=>isVisibleAISocialPost(user.id,post))
+            .filter(post=>!searchQuery||[post.text,getAISocialProfile(post.aiIdentityId)?.displayName,getAISocialProfile(post.aiIdentityId)?.username]
+              .some(value=>String(value||'').toLowerCase().includes(searchQuery)))
+            .map(post=>publicAISocialPost(post,user.id)))).filter(Boolean)
+          :[];
+        const posts=[...humanPosts,...aiPosts].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
         if(!url.searchParams.has('limit')&&!url.searchParams.has('cursor'))return json(res,200,{posts,scope});
         if(scope==='for-you'){
           const limit=url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20;
