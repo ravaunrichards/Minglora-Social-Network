@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateOpenAICreatorDraft } from '../../backend/modules/ai-network/openai-creator-drafts.js';
+import { createProviderCircuitStore } from '../../backend/modules/ai-network/provider-routing.js';
 
 const env = {
   OPENAI_API_KEY: 'private-openai-test-key',
@@ -160,4 +161,89 @@ test('invalid briefs, unsupported draft types and insecure endpoints are rejecte
     fetchImpl: async () => { calls++; }
   }), error => error.code === 'invalid_endpoint');
   assert.equal(calls, 0);
+});
+
+
+test('Creator Studio uses the configured alternate OpenAI model after a retryable primary failure', async () => {
+  const calls = [];
+  const result = await generateOpenAICreatorDraft({
+    taskType: 'caption_draft',
+    brief: 'Create three short captions for a Minglora technology event.',
+    env: {
+      ...env,
+      MINGLORA_AI_FALLBACK_PROVIDER: 'openai',
+      MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
+      MINGLORA_AI_MAX_RETRIES: '0'
+    },
+    circuitStore: createProviderCircuitStore(),
+    fetchImpl: async (url, options) => {
+      const payload = JSON.parse(options.body);
+      calls.push({ url, payload });
+      if (url.endsWith('/responses')) {
+        if (payload.model === 'test-model') return response(503, {});
+        return response(200, {
+          id: 'resp_creator_backup',
+          status: 'completed',
+          model: 'backup-model',
+          output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Fallback caption draft.' }] }],
+          usage: { input_tokens: 25, output_tokens: 15, total_tokens: 40 }
+        });
+      }
+      return clearModeration();
+    }
+  });
+  assert.deepEqual(calls.filter(call => call.url.endsWith('/responses')).map(call => call.payload.model), ['test-model', 'backup-model']);
+  assert.equal(result.model, 'backup-model');
+  assert.equal(result.providerRouting.fallbackUsed, true);
+  assert.equal(result.output, 'Fallback caption draft.');
+  assert.equal(result.published, false);
+  assert.equal(result.externalActionTaken, false);
+});
+
+test('Creator Studio does not fall back on authentication or moderation failures', async () => {
+  let generationCalls = 0;
+  await assert.rejects(generateOpenAICreatorDraft({
+    taskType: 'caption_draft',
+    brief: 'Create three short captions for a Minglora technology event.',
+    env: {
+      ...env,
+      MINGLORA_AI_FALLBACK_PROVIDER: 'openai',
+      MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
+      MINGLORA_AI_MAX_RETRIES: '0'
+    },
+    fetchImpl: async url => {
+      if (url.endsWith('/responses')) {
+        generationCalls += 1;
+        return response(401, {});
+      }
+      return clearModeration();
+    }
+  }), error => error.code === 'unauthorized' && error.providerRouting.fallbackUsed === false);
+  assert.equal(generationCalls, 1);
+
+  let responseCalls = 0;
+  await assert.rejects(generateOpenAICreatorDraft({
+    taskType: 'caption_draft',
+    brief: 'Create three short captions for a Minglora technology event.',
+    env: {
+      ...env,
+      MINGLORA_AI_FALLBACK_PROVIDER: 'openai',
+      MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
+      MINGLORA_AI_MAX_RETRIES: '0'
+    },
+    fetchImpl: async url => {
+      if (url.endsWith('/responses')) {
+        responseCalls += 1;
+        return response(200, {
+          id: 'resp_creator_moderation_test',
+          status: 'completed',
+          model: 'test-model',
+          output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Generated but not approved.' }] }],
+          usage: { input_tokens: 5, output_tokens: 4, total_tokens: 9 }
+        });
+      }
+      return responseCalls === 0 ? clearModeration() : response(200, { results: [{ flagged: true }] });
+    }
+  }), error => error.code === 'moderation_blocked');
+  assert.equal(responseCalls, 1, 'moderation failure must not invoke a fallback model');
 });

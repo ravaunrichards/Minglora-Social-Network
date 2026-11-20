@@ -9,6 +9,7 @@ const MAX_MEMORY_ENTRIES = 6;
 const MAX_MEMORY_SUMMARY_CHARACTERS = 700;
 const MAX_MEMORY_PROMPT_CHARACTERS = 3600;
 const MEMORY_SENSITIVE_TEXT_PATTERN = /\b(?:api[_ -]?key|access[_ -]?token|password|secret|authorization|cookie|credential|private[_ -]?key)\b/i;
+import { resolveProviderRoute, runWithProviderFallback } from './provider-routing.js';
 
 const providerError = (code, message, status = 502, metadata = {}) =>
   Object.assign(new Error(message), { code, status, safeForClient: true, ...metadata });
@@ -77,11 +78,12 @@ async function postJson(fetchImpl, endpoint, apiKey, payload, timeoutMs) {
     throw providerError(
       timedOut ? 'timeout' : 'network_error',
       timedOut ? 'The OpenAI chat request timed out.' : 'The OpenAI chat request could not reach the configured API.',
-      502
+      502,
+      { retryable: true }
     );
   }
   if (!response || typeof response.status !== 'number') {
-    throw providerError('invalid_response', 'OpenAI returned an invalid response.', 502);
+    throw providerError('invalid_response', 'OpenAI returned an invalid response.', 502, { retryable: true });
   }
   if (!response.ok) {
     const status = response.status;
@@ -99,10 +101,13 @@ async function postJson(fetchImpl, endpoint, apiKey, payload, timeoutMs) {
           : status === 429
             ? 'OpenAI rate-limited this chat request. Try again after the provider limit resets.'
             : 'OpenAI could not complete the chat request. No provider response body or credential was exposed.';
-    throw providerError(code, message, status === 429 ? 429 : 502);
+    throw providerError(code, message, status === 429 ? 429 : 502, {
+      httpStatus: status,
+      retryable: status === 408 || status === 425 || status === 429 || status >= 500
+    });
   }
   try { return await response.json(); }
-  catch { throw providerError('invalid_response', 'OpenAI returned unreadable JSON.', 502); }
+  catch { throw providerError('invalid_response', 'OpenAI returned unreadable JSON.', 502, { retryable: true }); }
 }
 
 /**
@@ -118,7 +123,10 @@ export async function generateOpenAIBotReply({
   env = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs,
-  maxOutputTokens = MAX_OUTPUT_TOKENS
+  maxOutputTokens = MAX_OUTPUT_TOKENS,
+  circuitStore,
+  routingNow,
+  routingSleep
 } = {}) {
   const provider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (provider && provider !== 'openai') {
@@ -130,6 +138,7 @@ export async function generateOpenAIBotReply({
   if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,179}$/.test(model)) {
     throw providerError('missing_model', 'Set OPENAI_DEFAULT_MODEL in the private Minglora server environment.', 503);
   }
+  const routeConfig = resolveProviderRoute({ primaryProvider: 'openai', primaryModel: model, env });
   if (typeof fetchImpl !== 'function') throw providerError('adapter_unavailable', 'This server runtime does not provide HTTP fetch.', 503);
   if (!bot || !identity || String(bot.identityId || '') !== String(identity.identity_id || '')) {
     throw providerError('identity_unlinked', 'The selected bot is not linked to its verified Minglora AI identity.', 409);
@@ -214,30 +223,52 @@ export async function generateOpenAIBotReply({
     });
   }
 
-  const generation = await postJson(fetchImpl, responsesEndpoint, apiKey, {
-    model,
-    instructions,
-    input,
-    max_output_tokens: boundedOutputTokens,
-    store: false,
-    tools: []
-  }, requestTimeoutMs);
-
-  const usage = readUsage(generation.usage);
+  const routedGeneration = await runWithProviderFallback({
+    routeConfig,
+    circuitStore,
+    now: routingNow,
+    sleep: routingSleep,
+    operation: async ({ model: requestedModel }) => {
+      const generation = await postJson(fetchImpl, responsesEndpoint, apiKey, {
+        model: requestedModel,
+        instructions,
+        input,
+        max_output_tokens: boundedOutputTokens,
+        store: false,
+        tools: []
+      }, requestTimeoutMs);
+      const usage = readUsage(generation.usage);
+      const metadata = {
+        provider: 'openai',
+        model: String(generation.model || requestedModel).slice(0, 180),
+        responseId: String(generation.id || '').slice(0, 180) || null,
+        requestId: String(generation._request_id || '').slice(0, 180) || null,
+        usage
+      };
+      if (generation.status !== 'completed') {
+        throw providerError('incomplete_generation', 'OpenAI did not complete the reply. No message was saved.', 502, {
+          ...metadata, retryable: true
+        });
+      }
+      const output = extractOutputText(generation);
+      if (!output || output.length > 8000) {
+        throw providerError('invalid_generation', 'OpenAI did not return a usable reply. No message was saved.', 502, {
+          ...metadata, retryable: true
+        });
+      }
+      return generation;
+    }
+  });
+  const generation = routedGeneration.result;
+  const output = extractOutputText(generation);
   const generatedMetadata = {
     provider: 'openai',
-    model: String(generation.model || model).slice(0, 180),
+    model: String(generation.model || routedGeneration.model).slice(0, 180),
     responseId: String(generation.id || '').slice(0, 180) || null,
     requestId: String(generation._request_id || '').slice(0, 180) || null,
-    usage
+    usage: routedGeneration.usage || readUsage(generation.usage),
+    providerRouting: routedGeneration.providerRouting
   };
-  if (generation.status !== 'completed') {
-    throw providerError('incomplete_generation', 'OpenAI did not complete the reply. No message was saved.', 502, generatedMetadata);
-  }
-  const output = extractOutputText(generation);
-  if (!output || output.length > 8000) {
-    throw providerError('invalid_generation', 'OpenAI did not return a usable reply. No message was saved.', 502, generatedMetadata);
-  }
 
   let outputModeration;
   try {

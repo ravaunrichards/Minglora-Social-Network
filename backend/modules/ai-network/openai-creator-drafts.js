@@ -3,6 +3,7 @@ const DEFAULT_TIMEOUT_MS = 25000;
 const MAX_TIMEOUT_MS = 45000;
 const MAX_BRIEF_CHARACTERS = 4000;
 const MAX_OUTPUT_TOKENS = 1200;
+import { resolveProviderRoute, runWithProviderFallback } from './provider-routing.js';
 const TASK_LABELS = Object.freeze({
   content_outline: 'a practical, well-structured content outline',
   caption_draft: 'three distinct social media caption options',
@@ -44,11 +45,15 @@ const buildEndpoint = (baseUrl, path) => {
 };
 
 const safeProviderFailure = status => {
-  if (status === 401) return providerError('unauthorized', 'OpenAI rejected the configured API credential. Check the private server key.', 502);
-  if (status === 403) return providerError('forbidden', 'The configured OpenAI project is not permitted to use the selected model or moderation service.', 502);
-  if (status === 404) return providerError('model_unavailable', 'The configured OpenAI model is not available to this API project.', 502);
-  if (status === 429) return providerError('rate_limited', 'OpenAI rate-limited this draft request. Try again after the provider limit resets.', 429);
-  return providerError('provider_error', 'OpenAI could not complete the draft request. No provider response body or credential was exposed.', 502);
+  const metadata = {
+    httpStatus: status,
+    retryable: status === 408 || status === 425 || status === 429 || status >= 500
+  };
+  if (status === 401) return providerError('unauthorized', 'OpenAI rejected the configured API credential. Check the private server key.', 502, metadata);
+  if (status === 403) return providerError('forbidden', 'The configured OpenAI project is not permitted to use the selected model or moderation service.', 502, metadata);
+  if (status === 404) return providerError('model_unavailable', 'The configured OpenAI model is not available to this API project.', 502, metadata);
+  if (status === 429) return providerError('rate_limited', 'OpenAI rate-limited this draft request. Try again after the provider limit resets.', 429, metadata);
+  return providerError('provider_error', 'OpenAI could not complete the draft request. No provider response body or credential was exposed.', 502, metadata);
 };
 
 async function postOpenAIJson({ fetchImpl, endpoint, apiKey, payload, timeoutMs }) {
@@ -72,15 +77,16 @@ async function postOpenAIJson({ fetchImpl, endpoint, apiKey, payload, timeoutMs 
       timedOut
         ? 'The OpenAI draft request timed out. No draft was saved as complete.'
         : 'The OpenAI draft request could not reach the configured API. No draft was saved as complete.',
-      502
+      502,
+      { retryable: true }
     );
   }
   if (!response || typeof response.status !== 'number') {
-    throw providerError('invalid_response', 'OpenAI returned an invalid response. No draft was saved as complete.', 502);
+    throw providerError('invalid_response', 'OpenAI returned an invalid response. No draft was saved as complete.', 502, { retryable: true });
   }
   if (!response.ok) throw safeProviderFailure(response.status);
   try { return await response.json(); }
-  catch { throw providerError('invalid_response', 'OpenAI returned an unreadable response. No draft was saved as complete.', 502); }
+  catch { throw providerError('invalid_response', 'OpenAI returned an unreadable response. No draft was saved as complete.', 502, { retryable: true }); }
 }
 
 /**
@@ -93,7 +99,10 @@ export async function generateOpenAICreatorDraft({
   env = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs,
-  maxOutputTokens = MAX_OUTPUT_TOKENS
+  maxOutputTokens = MAX_OUTPUT_TOKENS,
+  circuitStore,
+  routingNow,
+  routingSleep
 } = {}) {
   const selectedProvider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (selectedProvider && selectedProvider !== 'openai') {
@@ -110,6 +119,7 @@ export async function generateOpenAICreatorDraft({
   if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,179}$/.test(model)) {
     throw providerError('missing_model', 'Set OPENAI_DEFAULT_MODEL to a valid model identifier in the private Minglora server environment.', 503);
   }
+  const routeConfig = resolveProviderRoute({ primaryProvider: 'openai', primaryModel: model, env });
   if (typeof fetchImpl !== 'function') throw providerError('adapter_unavailable', 'This server runtime does not provide an HTTP fetch implementation.', 503);
 
   const normalizedBrief = String(brief ?? '').trim();
@@ -155,42 +165,66 @@ export async function generateOpenAICreatorDraft({
     throw providerError('moderation_blocked', 'The submitted brief was flagged by content moderation. Revise it before requesting a draft.', 422);
   }
 
-  const generation = await postOpenAIJson({
-    fetchImpl,
-    endpoint: responsesEndpoint,
-    apiKey,
-    timeoutMs: requestTimeoutMs,
-    payload: {
-      model,
-      instructions,
-      input: normalizedBrief,
-      max_output_tokens: boundedTokens,
-      store: false,
-      tools: []
+  const routedGeneration = await runWithProviderFallback({
+    routeConfig,
+    circuitStore,
+    now: routingNow,
+    sleep: routingSleep,
+    operation: async ({ model: requestedModel }) => {
+      const generation = await postOpenAIJson({
+        fetchImpl,
+        endpoint: responsesEndpoint,
+        apiKey,
+        timeoutMs: requestTimeoutMs,
+        payload: {
+          model: requestedModel,
+          instructions,
+          input: normalizedBrief,
+          max_output_tokens: boundedTokens,
+          store: false,
+          tools: []
+        }
+      });
+      const usage = generation.usage && typeof generation.usage === 'object' ? {
+        input_tokens: Number.isFinite(Number(generation.usage.input_tokens)) ? Number(generation.usage.input_tokens) : null,
+        output_tokens: Number.isFinite(Number(generation.usage.output_tokens)) ? Number(generation.usage.output_tokens) : null,
+        total_tokens: Number.isFinite(Number(generation.usage.total_tokens)) ? Number(generation.usage.total_tokens) : null
+      } : { input_tokens: null, output_tokens: null, total_tokens: null };
+      const metadata = {
+        provider: 'openai',
+        model: String(generation.model || requestedModel).slice(0, 180),
+        responseId: String(generation.id || '').slice(0, 180) || null,
+        requestId: String(generation._request_id || '').slice(0, 180) || null,
+        usage
+      };
+      if (generation.status !== 'completed') {
+        throw providerError('incomplete_generation', 'OpenAI did not complete the draft. No partial output was saved.', 502, {
+          ...metadata, retryable: true
+        });
+      }
+      const output = extractOutputText(generation);
+      if (!output || output.length > 12000) {
+        throw providerError('invalid_generation', 'OpenAI did not return a usable draft within the allowed output length.', 502, {
+          ...metadata, retryable: true
+        });
+      }
+      return generation;
     }
   });
-
-  // Record provider usage even when an incomplete response or later moderation failure prevents saving the draft.
-  const usage = generation.usage && typeof generation.usage === 'object' ? {
-    input_tokens: Number.isFinite(Number(generation.usage.input_tokens)) ? Number(generation.usage.input_tokens) : null,
-    output_tokens: Number.isFinite(Number(generation.usage.output_tokens)) ? Number(generation.usage.output_tokens) : null,
-    total_tokens: Number.isFinite(Number(generation.usage.total_tokens)) ? Number(generation.usage.total_tokens) : null
-  } : { input_tokens: null, output_tokens: null, total_tokens: null };
+  const generation = routedGeneration.result;
+  // Provider usage from failed/incomplete generation attempts is included when the API returned it.
+  const usage = routedGeneration.usage || {
+    input_tokens: null, output_tokens: null, total_tokens: null
+  };
   const generatedMetadata = {
     provider: 'openai',
-    model: String(generation.model || model).slice(0, 180),
+    model: String(generation.model || routedGeneration.model).slice(0, 180),
     responseId: String(generation.id || '').slice(0, 180) || null,
     requestId: String(generation._request_id || '').slice(0, 180) || null,
-    usage
+    usage,
+    providerRouting: routedGeneration.providerRouting
   };
-
-  if (generation.status !== 'completed') {
-    throw providerError('incomplete_generation', 'OpenAI did not complete the draft. No partial output was saved.', 502, generatedMetadata);
-  }
   const output = extractOutputText(generation);
-  if (!output || output.length > 12000) {
-    throw providerError('invalid_generation', 'OpenAI did not return a usable draft within the allowed output length.', 502, generatedMetadata);
-  }
 
   // Fail closed: no generated output is stored when the moderation service is unavailable.
   let moderation;

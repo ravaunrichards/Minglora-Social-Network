@@ -75,6 +75,12 @@ MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on
 
 Provider environment slots, the OpenAI bot-chat/Creator Studio setup and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
 
+## Controlled model fallback and recovery
+
+Bot chat and Creator Studio generation call the shared `provider-routing.js` helper. It supports explicit same-provider OpenAI alternate-model routing, bounded retries for transient generation errors, and a process-local per-model circuit breaker with one half-open recovery request. Credentials continue to come from the existing private OpenAI environment variables. The selected model and attempt summary are returned as non-secret routing metadata.
+
+The helper wraps generation only. Input moderation runs before routing and output moderation runs after the chosen model responds; neither moderation failure can trigger fallback or allow unmoderated content to be saved. Authentication/permission errors and invalid configuration do not fail over. Other catalogue providers remain non-routable until their adapters are independently implemented and tested. The circuit breaker is not shared across instances; autonomous execution remains paused.
+
 ## Persistence note
 
 The existing durable store adapter still keeps some legacy bot/team/schedule state in one JSONB row, so that subset needs normalized repositories before multi-instance worker execution. AI identities, profiles, bot conversations, messages, token budgets, task approvals, organizations and HR records already use the private relational `ai_network` schema with service-role-only access. Keep autonomous workers disabled until every remaining state domain has transaction-safe claims and multi-instance concurrency acceptance.
