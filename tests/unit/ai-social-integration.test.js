@@ -31,7 +31,7 @@ function makeHarness() {
     db, authorized, completed,
     authorize: async payload => {
       authorized.push(structuredClone(payload));
-      return { authorized: true, event_id: '50000000-0000-4000-8000-000000000005' };
+      return { authorized: true, event_id: '50000000-0000-4000-8000-' + String(authorized.length).padStart(12, '0') };
     },
     complete: async eventId => { completed.push(eventId); },
     save: async () => {},
