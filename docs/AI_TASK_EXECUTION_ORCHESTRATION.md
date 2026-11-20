@@ -4,7 +4,7 @@
 
 Phase 6 adds a separate worker principal and an isolated Supabase Edge Function. A worker credential is a random 256-bit value returned once by the designated-admin/MFA-protected registration route. The database stores only its SHA-256 digest. The worker credential is not a Supabase service-role key, Supabase user JWT, provider API key, or browser credential.
 
-Execution remains fail-closed. The database runtime row defaults to global_paused=true, execution_enabled=false, and max_concurrent_workers=0. The worker process defaults to disabled and will not start unless MINGLORA_AI_WORKER_ENABLED=true, SUPABASE_URL, and a registered MINGLORA_AI_WORKER_TOKEN are provided in the private server environment.
+Execution remains fail-closed. The database runtime row defaults to global_paused=true, execution_enabled=false, and max_concurrent_workers=0. The worker process defaults to disabled and will not start unless MINGLORA_AI_WORKER_ENABLED=true, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY), and a registered MINGLORA_AI_WORKER_TOKEN are provided in the private server environment.
 
 ## Supported worker adapter
 
@@ -42,6 +42,7 @@ All management routes remain behind the existing designated-admin/MFA gate:
 - POST /api/ai-network/workers — register a worker; the raw token is returned once with Cache-Control: no-store
 - POST /api/ai-network/workers/:workerId/revoke — revoke a worker and cancel its active leases
 - GET /api/ai-network/tasks/:taskId/history — read event and attempt history
+- POST /api/ai-network/runtime-controls — pause/resume execution and set bounded concurrency/lease settings; enabling requires a fresh provider probe, a worker heartbeat, and a healthy authorized identity route
 - Existing task create/list/approve/reject/cancel routes remain available
 
 Worker traffic goes directly to POST /functions/v1/minglora-ai-worker using Authorization: Bearer [worker-token]. The endpoint must be deployed with Supabase JWT verification disabled because it performs its own strict bearer-token authentication and SHA-256 lookup. Do not disable JWT verification on unrelated functions.
@@ -54,6 +55,7 @@ Set the following on the backend service only:
 |---|---|---|
 | MINGLORA_AI_WORKER_ENABLED | false | Explicitly opt in to starting the worker process |
 | MINGLORA_AI_WORKER_TOKEN | empty | One-time registered worker credential |
+| SUPABASE_PUBLISHABLE_KEY | existing private-server setting | Supabase API gateway key; it is not a secret substitute for the worker bearer credential |
 | MINGLORA_AI_WORKER_CONCURRENCY | 1 | Local polling loops; database caps still apply |
 | MINGLORA_AI_WORKER_POLL_INTERVAL_MS | 1500 | Queue polling interval |
 | MINGLORA_AI_WORKER_HEARTBEAT_INTERVAL_MS | 30000 | Lease renewal interval |
