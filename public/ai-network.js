@@ -2603,6 +2603,12 @@
           ? 'Model assignment saved as pending; provider execution remains disabled.'
           : kind === 'provider-health-probe'
         ? (result.connected ? 'OpenAI model access verified by a read-only probe. AI inference and workers remain disabled.' : 'OpenAI probe completed: ' + String(result.status || 'unknown') + '. AI inference and workers remain disabled.')
+      : kind === 'provider-account-probe'
+        ? (result.probe?.connected ? 'Provider authentication and model listing succeeded. Account is not automatically enabled.' : 'Provider check completed: ' + String(result.probe?.status || 'unknown') + '. Review the saved diagnostic.')
+      : kind === 'provider-account-models'
+        ? number(result.synced_count) + ' provider models discovered and synchronized. ' + (result.truncated ? 'Only the first 200 were saved. ' : '') + 'Model listing does not test generation.'
+      : kind === 'provider-account-status'
+        ? 'Provider account status updated and recorded in the audit history.'
       : kind === 'provider-assignment-status'
             ? 'Provider assignment status updated.'
             : kind === 'identity'
