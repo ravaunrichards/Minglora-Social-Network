@@ -104,7 +104,10 @@ function recordFailure(store, key, currentTime, error, threshold, cooldownMs) {
   }
   const previous = store.get(key) || { failures: 0, openUntil: 0, halfOpen: false };
   const failures = previous.failures + 1;
-  const shouldOpen = error?.code === 'model_unavailable' || failures >= threshold;
+  // A failed half-open probe must reopen the circuit for a fresh cooldown.
+  const shouldOpen = previous.halfOpen === true
+    || error?.code === 'model_unavailable'
+    || failures >= threshold;
   store.set(key, {
     failures,
     openUntil: shouldOpen ? currentTime + cooldownMs : 0,
