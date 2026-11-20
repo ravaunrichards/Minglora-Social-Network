@@ -6,19 +6,19 @@ import test from 'node:test';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const migration = readFileSync(
-  resolve(root, 'supabase/migrations/20261120053000_minglora_ai_identity_phase3_integrity.sql'),
+  resolve(root, 'supabase/migrations/20261120052603_minglora_ai_identity_phase3_integrity.sql'),
   'utf8'
 );
 const rollback = readFileSync(
-  resolve(root, 'database/rollbacks/20261120053000_minglora_ai_identity_phase3_integrity.rollback.sql'),
+  resolve(root, 'database/rollbacks/20261120052603_minglora_ai_identity_phase3_integrity.rollback.sql'),
   'utf8'
 );
 const fkIndexMigration = readFileSync(
-  resolve(root, 'supabase/migrations/20261120054000_minglora_ai_email_messages_email_fk_index.sql'),
+  resolve(root, 'supabase/migrations/20261120052647_minglora_ai_email_messages_email_fk_index.sql'),
   'utf8'
 );
 const fkIndexRollback = readFileSync(
-  resolve(root, 'database/rollbacks/20261120054000_minglora_ai_email_messages_email_fk_index.rollback.sql'),
+  resolve(root, 'database/rollbacks/20261120052647_minglora_ai_email_messages_email_fk_index.rollback.sql'),
   'utf8'
 );
 
