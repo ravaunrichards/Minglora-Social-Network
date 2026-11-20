@@ -17,6 +17,7 @@ test('Phase 4.3 migration adds sanitized provider health history with RLS and se
   assert.match(migration, /metadata jsonb not null default '\{\}'::jsonb/);
   assert.match(migration, /v_action = 'record_provider_health'/);
   assert.match(migration, /v_action = 'list_provider_health'/);
+  assert.match(migration, /order by h\.checked_at desc[\s\S]*?limit 50/);
   assert.match(migration, /v_action = 'set_provider_account_status'/);
   assert.match(migration, /v_account_status not in \('enabled','disabled','revoked'\)/);
   assert.match(migration, /successful provider health check has completed within the last 15 minutes/);
