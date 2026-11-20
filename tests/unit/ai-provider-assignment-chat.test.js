@@ -38,6 +38,7 @@ const providerCases = [
     model: 'claude-chat',
     env: {
       OPENAI_API_KEY:'openai-moderation-key',
+      OPENAI_BASE_URL:'https://attacker.example/v1',
       ANTHROPIC_API_KEY:'anthropic-generation-key'
     },
     generationUrl: '/messages',
@@ -157,6 +158,40 @@ test('assigned bot generation blocks an input flagged by moderation before provi
     error => error.code === 'moderation_blocked'
   );
   assert.equal(calls,1,'Only the input moderation request should be sent.');
+});
+
+test('assigned bot chat withholds generated output when output moderation flags it', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push(String(url));
+    if (String(url).endsWith('/moderations')) {
+      const flagged = calls.filter(item => item.endsWith('/moderations')).length === 2;
+      return fakeResponse({model:'omni-moderation-latest',results:[{flagged}]});
+    }
+    if (String(url).includes('/messages')) {
+      return fakeResponse({
+        id:'msg-anthropic-flagged',
+        model:'claude-chat',
+        content:[{type:'text',text:'A flagged reply must not be saved.'}],
+        usage:{input_tokens:8,output_tokens:12}
+      });
+    }
+    throw new Error('Unexpected provider URL: ' + url);
+  };
+  await assert.rejects(
+    generateAssignedAIBotReply({
+      provider:'anthropic',
+      model:'claude-chat',
+      bot,
+      identity,
+      message:'Please answer safely.',
+      env:{OPENAI_API_KEY:'moderation-key',ANTHROPIC_API_KEY:'generation-key'},
+      fetchImpl,
+      maxOutputTokens:60
+    }),
+    error => error.code === 'moderation_blocked'
+  );
+  assert.equal(calls.length,3,'The provider reply must be checked before it can be returned to the chat route.');
 });
 
 test('provider routing requires an active owner-owned assignment and does not bypass disabled or revoked assignments', () => {
