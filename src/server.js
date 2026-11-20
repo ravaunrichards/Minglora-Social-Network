@@ -2928,6 +2928,34 @@ async function route(req, res) {
       }
       const providerModelVerificationCache = new Map();
       let providerModelCatalogPromise = null;
+      const verifyProviderModelSelection = async modelId => {
+        if (!providerModelCatalogPromise) providerModelCatalogPromise = runAIProviderCommand('list_provider_models');
+        const catalog = await providerModelCatalogPromise;
+        const selected = (Array.isArray(catalog) ? catalog : []).find(item => item.model_id === modelId);
+        if (!selected || selected.is_active !== true) {
+          throw Object.assign(new Error('The selected provider model is missing or inactive in the Minglora model catalogue.'), { status: 409 });
+        }
+        const providerId = String(selected.provider_name || '').toLowerCase();
+        if (!SUPPORTED_AI_PROVIDER_ADAPTERS.includes(providerId)) {
+          throw Object.assign(new Error('Model assignment is blocked because this provider has no implemented live model-discovery adapter in Minglora yet.'), { status: 501 });
+        }
+        if (!providerModelVerificationCache.has(providerId)) {
+          providerModelVerificationCache.set(providerId, listAIProviderModels(providerId));
+        }
+        const live = await providerModelVerificationCache.get(providerId);
+        const listed = live.models.some(model => {
+          const matches = model.id === selected.model_identifier || model.resourceName === selected.model_identifier;
+          const lifecycleInvalid = providerId === 'anthropic'
+            ? model.lifecycle !== 'active'
+            : Boolean(model.lifecycle && model.lifecycle !== 'active');
+          const shutdown = model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now();
+          return matches && !lifecycleInvalid && !shutdown;
+        });
+        if (!listed) {
+          throw Object.assign(new Error('The selected model is not currently returned as active by the provider model-list API. Run model synchronization and select a currently active model.'), { status: 409 });
+        }
+        return selected;
+      };
       if (method === 'POST' && sub === 'provider-inference-verification') {
         const input = await body(req, 8000);
         if (!input || typeof input !== 'object' || Array.isArray(input) ||
@@ -3094,34 +3122,6 @@ async function route(req, res) {
           });
         }
       }
-      const verifyProviderModelSelection = async modelId => {
-        if (!providerModelCatalogPromise) providerModelCatalogPromise = runAIProviderCommand('list_provider_models');
-        const catalog = await providerModelCatalogPromise;
-        const selected = (Array.isArray(catalog) ? catalog : []).find(item => item.model_id === modelId);
-        if (!selected || selected.is_active !== true) {
-          throw Object.assign(new Error('The selected provider model is missing or inactive in the Minglora model catalogue.'), { status: 409 });
-        }
-        const providerId = String(selected.provider_name || '').toLowerCase();
-        if (!SUPPORTED_AI_PROVIDER_ADAPTERS.includes(providerId)) {
-          throw Object.assign(new Error('Model assignment is blocked because this provider has no implemented live model-discovery adapter in Minglora yet.'), { status: 501 });
-        }
-        if (!providerModelVerificationCache.has(providerId)) {
-          providerModelVerificationCache.set(providerId, listAIProviderModels(providerId));
-        }
-        const live = await providerModelVerificationCache.get(providerId);
-        const listed = live.models.some(model => {
-          const matches = model.id === selected.model_identifier || model.resourceName === selected.model_identifier;
-          const lifecycleInvalid = providerId === 'anthropic'
-            ? model.lifecycle !== 'active'
-            : Boolean(model.lifecycle && model.lifecycle !== 'active');
-          const shutdown = model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now();
-          return matches && !lifecycleInvalid && !shutdown;
-        });
-        if (!listed) {
-          throw Object.assign(new Error('The selected model is not currently returned as active by the provider model-list API. Run model synchronization and select a currently active model.'), { status: 409 });
-        }
-        return selected;
-      };
       if (method === 'GET' && sub === 'provider-assignments') {
         const result = await runAIProviderCommand('list_provider_assignments');
         return json(res, 200, { assignments: Array.isArray(result) ? result : [] });
