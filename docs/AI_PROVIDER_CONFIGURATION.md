@@ -115,6 +115,17 @@ The provider center now exposes an explicit administrator-triggered inference ve
 The check proves only that the selected model returned the fixed response under the current platform credential and account at that time. It does not authorize customer-facing Anthropic/Gemini inference, autonomous workers, social publishing or any external side effect. AI worker execution remains disabled.
 
 ## Phase 4.4 — model discovery and verified model selection
+## Phase 4.5 — bounded inference verification
+
+Provider model-list visibility is not treated as proof that a model can generate text. The admin-only `POST /api/ai-network/provider-inference-verification` route accepts only a managed provider account ID and an already-discovered model ID. Minglora supplies the fixed prompt itself; the browser cannot change the prompt or send arbitrary inference content through this endpoint.
+
+The check is bounded to a maximum of eight output tokens and a 15-second adapter timeout. It accepts only the expected `READY` response, withholds the generated text from the response and does not persist it. Only provider/model IDs, a result flag, latency, token counts, status and sanitized reason metadata are written to the provider health history. A visible warning notes that the provider may charge for this small request.
+
+Inference verification is manually triggered, limited to one reservation per provider account every 30 seconds and serialized under a provider-account row lock. Concurrent or repeated requests are rejected. A reservation is recorded before contacting the provider, so an interrupted request remains unverified and cannot enable the account. A successful result records `inference_verified=true`; a failed result records `inference_verified=false` and automatically disables an enabled account and its non-revoked assignments.
+
+Enabling a managed provider account now requires both a healthy provider health check and a successful inference-verification event within the last 15 minutes. A later failed inference-verification attempt supersedes the earlier success and blocks re-enabling until a new check succeeds. User-managed and revoked account references cannot run this verification. Execution, workers and identity assignments are not activated by the verification action.
+
+
 
 Minglora now discovers models through each implemented provider's authenticated native model-list API and imports the returned model IDs into the existing provider model catalogue.
 
