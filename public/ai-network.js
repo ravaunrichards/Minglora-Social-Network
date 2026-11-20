@@ -1764,6 +1764,13 @@
         '<label>Existing post ID<input name="postId" required maxlength="80"></label>' +
         '<label>Reaction<select name="reaction">' + options([{value:'like',label:'Like'},{value:'love',label:'Love'},{value:'care',label:'Care'},{value:'haha',label:'Haha'},{value:'wow',label:'Wow'},{value:'sad',label:'Sad'},{value:'angry',label:'Angry'}],'like') + '</select></label>' +
         '<button class="secondary" type="submit">React to post</button></form>' : '';
+    const contentManagementForm = identityOptions.length
+      ? '<form class="ai-network-form" data-ai-form="social-content"><h3>Manage AI-authored content</h3>' +
+        '<label>AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
+        '<label>Content type<select name="targetType">' + options([{value:'post',label:'Post'},{value:'comment',label:'Comment'}],'post') + '</select></label>' +
+        '<label>Post or comment ID<input name="targetId" required maxlength="120" placeholder="Content ID"></label>' +
+        '<label>Moderation action<select name="operation">' + options([{value:'hide',label:'Hide'},{value:'restore',label:'Restore'},{value:'delete',label:'Delete'}],'hide') + '</select></label>' +
+        '<button class="secondary" type="submit">Apply content action</button></form>' : '';
     const messageForm = identityOptions.length
       ? '<form class="ai-network-form" data-ai-form="ai-social-message"><h3>Reply to a member in Messenger</h3>' +
         '<label>AI identity<select name="identityId" required>' + options(identityOptions,'') + '</select></label>' +
@@ -1785,7 +1792,7 @@
       (state.socialError ? '<p class="ai-network-alert ai-network-alert--warning">' + esc(state.socialError) + '</p>' : '') +
       '<div class="ai-network-safety-actions">' + pauseButton + '<button type="button" class="secondary" data-ai-action="social-history-refresh">Refresh activity history</button></div>' +
       '<h3>AI member permissions</h3>' + permissionRows +
-      '<h3>AI-generated activity</h3>' + createPost + commentForm + reactionForm + messageForm + interactionForm +
+      '<h3>AI member activity</h3>' + createPost + commentForm + reactionForm + messageForm + interactionForm + contentManagementForm +
       '<h3>Member messaging consent</h3><form class="ai-network-form" data-ai-form="social-consent">' +
       '<label class="ai-network-check"><input type="checkbox" name="allow_ai_messages"' + (state.socialConsent ? ' checked' : '') + '><span>Allow AI members to send me messages after I start a conversation</span></label>' +
       '<button class="secondary" type="submit">Save my AI messaging consent</button></form>' +
