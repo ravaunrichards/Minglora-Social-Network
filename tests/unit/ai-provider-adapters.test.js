@@ -270,3 +270,78 @@ test('unsupported provider requests fail explicitly instead of using a placehold
     error => error instanceof AIProviderAdapterError && error.code === 'adapter_unavailable'
   );
 });
+
+test('Anthropic model discovery follows after_id pagination and combines unique results', async () => {
+  const urls = [];
+  const result = await listAIProviderModels('anthropic', {
+    env: { ANTHROPIC_API_KEY: 'anthropic-secret' },
+    fetchImpl: async url => {
+      urls.push(url);
+      if (urls.length === 1) return response({
+        data: [{ id: 'claude-one', display_name: 'Claude One' }],
+        has_more: true,
+        last_id: 'claude-one'
+      });
+      return response({
+        data: [{ id: 'claude-two', display_name: 'Claude Two' }],
+        has_more: false,
+        last_id: 'claude-two'
+      });
+    }
+  });
+  assert.equal(urls.length, 2);
+  assert.match(urls[1], /after_id=claude-one/);
+  assert.deepEqual(result.models.map(model => model.id), ['claude-one','claude-two']);
+  assert.equal(result.pagesFetched, 2);
+  assert.equal(result.hasMore, false);
+  assert.equal(result.truncated, false);
+});
+
+test('Gemini model discovery follows nextPageToken pagination and keeps generateContent models only', async () => {
+  const urls = [];
+  const result = await listAIProviderModels('google_gemini', {
+    env: { GEMINI_API_KEY: 'gemini-secret' },
+    fetchImpl: async url => {
+      urls.push(url);
+      if (urls.length === 1) return response({
+        models: [{ name:'models/gemini-one', displayName:'Gemini One', supportedGenerationMethods:['generateContent'] }],
+        nextPageToken: 'page-token-2'
+      });
+      return response({
+        models: [
+          { name:'models/gemini-two', displayName:'Gemini Two', supportedGenerationMethods:['generateContent'] },
+          { name:'models/embed-two', displayName:'Embedding Two', supportedGenerationMethods:['embedContent'] }
+        ]
+      });
+    }
+  });
+  assert.equal(urls.length, 2);
+  assert.match(urls[1], /pageToken=page-token-2/);
+  assert.deepEqual(result.models.map(model => model.id), ['gemini-one','gemini-two']);
+  assert.equal(result.pagesFetched, 2);
+  assert.equal(result.hasMore, false);
+});
+
+test('OpenAI model listing preserves shutdown metadata for conservative catalogue filtering', async () => {
+  const result = await listAIProviderModels('openai', {
+    env: { OPENAI_API_KEY: 'openai-secret' },
+    fetchImpl: async () => response({ data: [
+      { object:'model', id:'gpt-active', owned_by:'openai', shutdown_date:null },
+      { object:'model', id:'gpt-shutdown', owned_by:'openai', shutdown_date:'2026-10-01' }
+    ] })
+  });
+  assert.equal(result.models[0].shutdownDate, null);
+  assert.equal(result.models[1].shutdownDate, '2026-10-01');
+});
+
+test('provider probe reports a selected model absent from the provider list as unavailable', async () => {
+  const result = await probeAIProvider('anthropic', {
+    env: { ANTHROPIC_API_KEY: 'anthropic-secret' },
+    model: 'claude-not-listed',
+    fetchImpl: async () => response({ data: [{ id:'claude-current', display_name:'Claude Current' }] })
+  });
+  assert.equal(result.status, 'model_unavailable');
+  assert.equal(result.connected, false);
+  assert.equal(result.model, 'claude-not-listed');
+  assert.equal(result.executionEnabled, false);
+});
