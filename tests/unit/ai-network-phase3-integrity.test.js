@@ -25,15 +25,14 @@ test('identity cannot be physically deleted by the runtime and history is append
   assert.match(migration, /revoke delete, truncate[\s\S]*ai_network\.ai_identities[\s\S]*from service_role/i);
   assert.match(migration, /revoke update, delete, truncate[\s\S]*ai_identity_status_history[\s\S]*ai_identity_versions[\s\S]*ai_identity_audit_logs[\s\S]*from service_role/i);
   for (const table of ['ai_identity_status_history', 'ai_identity_versions', 'ai_identity_audit_logs']) {
-    const escaped = table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(migration, new RegExp('foreign key \\(identity_id\\)[\\s\\S]*?references ai_network\\.ai_identities\\(identity_id\\)[\\s\\S]*?on delete restrict', 'i'));
-    assert.ok(migration.includes(escaped));
+    assert.ok(migration.includes(`alter table ai_network.${table}`));
   }
+  assert.equal((migration.match(/on delete restrict/gi) || []).length, 3);
 });
 
 test('manual rollback documents and restores the previous constraints/privileges', () => {
   assert.match(rollback, /operator-reviewed only/i);
-  assert.match(rollback, /on delete cascade/gi);
+  assert.equal((rollback.match(/on delete cascade/gi) || []).length, 3);
   assert.match(rollback, /alter column owner_user_id drop not null/i);
   assert.match(rollback, /grant all privileges[\s\S]*to service_role/i);
 });
