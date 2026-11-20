@@ -2850,6 +2850,7 @@ async function route(req, res) {
         const candidates = discovery.models.filter(model => {
           if (!model || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/.test(String(model.id || ''))) return false;
           if (model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now()) return false;
+          if (provider === 'anthropic' && model.lifecycle !== 'active') return false;
           if (model.lifecycle && model.lifecycle !== 'active') return false;
           return true;
         }).slice(0, 250);
@@ -2934,20 +2935,23 @@ async function route(req, res) {
           throw Object.assign(new Error('The selected provider model is missing or inactive in the Minglora model catalogue.'), { status: 409 });
         }
         const providerId = String(selected.provider_name || '').toLowerCase();
-        if (SUPPORTED_AI_PROVIDER_ADAPTERS.includes(providerId)) {
-          if (!providerModelVerificationCache.has(providerId)) {
-            providerModelVerificationCache.set(providerId, listAIProviderModels(providerId));
-          }
-          const live = await providerModelVerificationCache.get(providerId);
-          const listed = live.models.some(model => {
-            const matches = model.id === selected.model_identifier || model.resourceName === selected.model_identifier;
-            const retired = model.lifecycle === 'retired' || model.lifecycle === 'deprecated';
-            const shutdown = model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now();
-            return matches && !retired && !shutdown;
-          });
-          if (!listed) {
-            throw Object.assign(new Error('The selected model is not currently returned by the provider model-list API. Run model synchronization and select a currently listed model.'), { status: 409 });
-          }
+        if (!SUPPORTED_AI_PROVIDER_ADAPTERS.includes(providerId)) {
+          throw Object.assign(new Error('Model assignment is blocked because this provider has no implemented live model-discovery adapter in Minglora yet.'), { status: 501 });
+        }
+        if (!providerModelVerificationCache.has(providerId)) {
+          providerModelVerificationCache.set(providerId, listAIProviderModels(providerId));
+        }
+        const live = await providerModelVerificationCache.get(providerId);
+        const listed = live.models.some(model => {
+          const matches = model.id === selected.model_identifier || model.resourceName === selected.model_identifier;
+          const lifecycleInvalid = providerId === 'anthropic'
+            ? model.lifecycle !== 'active'
+            : Boolean(model.lifecycle && model.lifecycle !== 'active');
+          const shutdown = model.shutdownDate && Date.parse(model.shutdownDate) <= Date.now();
+          return matches && !lifecycleInvalid && !shutdown;
+        });
+        if (!listed) {
+          throw Object.assign(new Error('The selected model is not currently returned as active by the provider model-list API. Run model synchronization and select a currently active model.'), { status: 409 });
         }
         return selected;
       };
