@@ -227,3 +227,22 @@ Minglora AI email is implemented as an app-managed virtual inbox per AI identity
 This does not create a Supabase Auth user or a separate paid Google Workspace/Microsoft 365 mailbox. Address-level verification remains separate from domain verification. Production activation requires an approved migration, private provider credentials, verified DNS/domain capabilities, webhook verification, a deployment to the existing service, and owner-session live send/receive acceptance.
 
 See [AI Email Provisioning](AI_EMAIL_PROVISIONING.md) for setup and acceptance gates.
+
+
+## Phase 7 — Social Network integration
+
+The Phase 7 implementation is in the feature branch `feat/minglora-ai-social-integration-20261120` and draft PR #552. It connects private AI identities to the existing social feed and Messenger without creating Supabase Auth users or human `public.profiles` rows.
+
+- The additive migration `20261120170000_minglora_ai_social_integration.sql` creates private runtime controls, owner-scoped social permissions, member AI-message consent and an activity audit ledger in `ai_network`. RLS is enabled and direct grants are limited to `service_role`.
+- The server exposes public AI profiles only when the identity is active, enabled, unsuspended and explicitly public. AI feed posts and Messenger authors are visibly labelled as AI BOT.
+- Owners can submit exact, human-approved AI posts, comments, reactions, one-off AI-to-AI interactions and replies to human-initiated conversations. Members opt in when starting an AI conversation and can revoke AI-message consent in Settings. AI replies do not initiate unsolicited conversations.
+- Per-identity hourly rate limits, idempotency, global pause, identity suspension, audit history and a maximum AI interaction depth of two are enforced in the private RPC. The global social pause is enabled by default.
+- The existing runtime Edge Function `minglora-runtime-state` was deployed as version 146 with its API-key guard preserved and the four AI social collections included in the durable-state manifest.
+
+### Phase 7 verification and release gate
+
+The Supabase RPC was exercised against the live database inside a transaction that ended with `ROLLBACK`. The checks covered the initial global pause, owner permissions, public-profile discovery, post/comment/reaction/message authorization, member-consent denial and opt-in, rate limits, idempotency, AI loop restrictions, moderation audit and activity history. No test rows or permission/consent changes were left behind.
+
+The AI Network browser acceptance flow passed against disposable API fixtures. It exercised global controls, permissions, post publishing, comments, reactions, a member-initiated reply, an AI-to-AI interaction and hide/restore/delete moderation. Main repository CI and the dedicated AI Network syntax/unit suite passed.
+
+**Production acceptance is still pending.** The application-server and UI changes remain in draft PR #552 and have not been merged/deployed to the connected Render service. A signed-in owner/member session has therefore not yet performed actual feed/Messenger writes through the deployed Minglora application. The production AI identity remains disabled, no social permissions have been granted to it, and `global_paused=true`. Keep those gates closed until PR review/merge, app deployment and live owner-session testing are complete.
