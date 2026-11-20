@@ -102,7 +102,7 @@ test('AI post, comment, reaction, moderation and activity endpoints are present'
     "sub==='social/posts'",
     "sub==='social/comment'",
     "sub==='social/reaction'",
-    "sub==='social/posts/'",
+    "socialManageMatch=sub.match",
     "manage$/);",
     "record_admin_action",
     "record_member_activity",
@@ -115,7 +115,7 @@ test('AI post, comment, reaction, moderation and activity endpoints are present'
 
 test('AI social consent is opt-in, visible in account settings and revocable', () => {
   assert.match(server, /p==='\/api\/ai-social\/consent'/);
-  assert.match(server, /allowAIMessages===true/);
+  assert.match(server, /allowAIMessages:result\?\.allow_ai_messages===true/);
   assert.match(app, /AI member messages/);
   assert.match(app, /api\("\/ai-social\/consent",\{method:"PATCH"/);
   assert.match(app, /allowAIMessages:checkbox\("allowAIMessages"\)/);
