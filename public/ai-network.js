@@ -1953,7 +1953,61 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'identity-search') {
+    if (kind === 'social-controls') {
+      path = '/social/controls';
+      payload.globalPaused = form.querySelector('[name="globalPaused"]').checked;
+      payload.pauseReason = value('pauseReason');
+    } else if (kind === 'social-permissions') {
+      path = '/social/permissions';
+      payload.identityId = form.dataset.identityId || '';
+      if (!payload.identityId) throw new Error('Select an AI identity before changing social permissions.');
+      for (const [field,key] of [['canPost','canPost'],['canComment','canComment'],['canReact','canReact'],['canMessage','canMessage'],['canAIInteract','canAIInteract']]) {
+        payload[key] = form.querySelector('[name="' + field + '"]').checked;
+      }
+      payload.isSuspended = form.querySelector('[name="isSuspended"]').checked;
+      payload.profileVisibility = value('profileVisibility');
+      for (const key of ['maxPostsPerHour','maxCommentsPerHour','maxReactionsPerHour','maxMessagesPerHour','maxAIInteractionsPerHour']) {
+        payload[key] = Number(value(key));
+      }
+    } else if (kind === 'social-post') {
+      path = '/social/posts';
+      payload.identityId = value('identityId');
+      payload.text = value('text');
+      payload.audience = 'public';
+      payload.humanApproved = true;
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.idempotencyKey = form.dataset.idempotencyKey;
+      if (!payload.identityId || !payload.text) throw new Error('Choose an AI identity and enter the post text.');
+      if (!window.confirm('Publish this exact text as an AI member? It will be visibly labelled AI BOT and owner-reviewed.')) return;
+    } else if (kind === 'social-comment') {
+      path = '/social/comment';
+      payload.identityId = form.dataset.identityId || value('identityId');
+      payload.postId = value('postId');
+      payload.text = value('text');
+      payload.humanApproved = true;
+      if (!window.confirm('Submit this comment under the selected AI identity?')) return;
+    } else if (kind === 'social-reaction') {
+      path = '/social/reaction';
+      payload.identityId = form.dataset.identityId || value('identityId');
+      payload.postId = value('postId');
+      payload.reaction = value('reaction');
+      payload.humanApproved = true;
+      if (!window.confirm('Submit this reaction under the selected AI identity?')) return;
+    } else if (kind === 'social-message') {
+      path = '/social/message';
+      payload.identityId = form.dataset.identityId || '';
+      payload.memberUserId = form.dataset.memberUserId || '';
+      payload.text = value('text');
+      payload.humanApproved = true;
+      if (!window.confirm('Send this exact message as the AI member? The human member initiated the conversation and consented to AI replies.')) return;
+    } else if (kind === 'social-ai-message') {
+      path = '/social/ai-message';
+      payload.identityId = value('identityId');
+      payload.targetIdentityId = value('targetIdentityId');
+      payload.text = value('text');
+      payload.humanApproved = true;
+      if (!window.confirm('Send one human-approved interaction between these two AI identities? This does not start an autonomous conversation.')) return;
+    } else if (kind === 'identity-search') {
       state.identityRegistrySearch = value('search').slice(0, 120);
       state.identityRegistryOffset = 0;
       await loadAIIdentityRegistry();
@@ -2602,7 +2656,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','social-controls','social-permissions'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
@@ -2749,6 +2803,19 @@
         const offset = Number(button.dataset.offset);
         if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Choose a valid AI identity registry page.');
         state.identityRegistryOffset = offset;
+      }
+      else if (action === 'social-reload') {
+        await loadAISocialSettings();
+        setNotice('AI social settings refreshed.');
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'social-post-manage') {
+        if (!id || !['hide','restore','delete'].includes(button.dataset.status)) throw new Error('Choose a valid AI social post action.');
+        if (!window.confirm((button.dataset.status === 'delete' ? 'Permanently delete' : button.dataset.status === 'hide' ? 'Hide' : 'Restore') + ' this AI post? The action will be audited.')) return;
+        await request('/social/posts/' + encodeURIComponent(id) + '/manage', {
+          method:'POST', body:{ action:button.dataset.status }
+        });
       }
       else if (action === 'identity-search-clear') {
         state.identityRegistrySearch = '';
