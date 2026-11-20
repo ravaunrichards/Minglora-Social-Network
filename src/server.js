@@ -4036,6 +4036,25 @@ async function route(req, res) {
       return json(res,404,{error:'Video processing endpoint not found.'});
     }
     const user = sessionUser(req);
+    if(p==='/api/ai-social/consent'){
+      try{
+        requireAuth(user);
+        if(!isSupabasePersistence())return json(res,503,{error:'AI messaging consent requires Minglora Supabase persistence.'});
+        if(method==='GET'){
+          const consent=await runAISocialCommand(user.id,'get_member_consent',{});
+          return json(res,200,{consent:{allow_ai_messages:consent.allow_ai_messages===true}});
+        }
+        if(['PATCH','PUT','POST'].includes(method)){
+          const consentInput=await body(req,4000);
+          const allow=validateAISocialConsent(consentInput.allow_ai_messages);
+          const consent=await runAISocialCommand(user.id,'set_member_consent',{allow_ai_messages:allow});
+          return json(res,200,{consent:{allow_ai_messages:consent.allow_ai_messages===true}});
+        }
+        return json(res,405,{error:'Method not allowed.'});
+      }catch(error){
+        return json(res,error.status||400,{error:String(error?.message||'AI messaging consent could not be updated.').slice(0,220)});
+      }
+    }
     const activeHelpSession=user?sessionFromRequest(req):null;
     const helpActor={
       actorUserId:user?.id||'',
