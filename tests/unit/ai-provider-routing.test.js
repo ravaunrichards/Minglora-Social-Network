@@ -153,7 +153,7 @@ test('the circuit opens after exhausted failures and a configured fallback can c
     }
   }), error => error.code === 'network_error');
 
-  await assert.rejects(runWithProviderFallback({
+  await assert.doesNotReject(runWithProviderFallback({
     routeConfig,
     circuitStore,
     operation: async ({ model }) => {
@@ -161,7 +161,7 @@ test('the circuit opens after exhausted failures and a configured fallback can c
       assert.equal(model, 'backup-model', 'open circuit skips primary model and tries configured fallback');
       return { text: 'recovered' };
     }
-  }), undefined, 'a healthy fallback succeeds even while the primary circuit is open');
+  }));
 
   assert.equal(callCount, 4);
 });
@@ -202,5 +202,5 @@ test('fallback stays disabled when no alternate model is configured', async () =
       throw providerFailure('timeout', true);
     }
   }), error => error.code === 'timeout' && error.providerRouting.fallbackUsed === false);
-  assert.equal(calls, 2, 'default retry count is bounded to two retries');
+  assert.equal(calls, 3, 'default retry count is bounded to two retries');
 });
