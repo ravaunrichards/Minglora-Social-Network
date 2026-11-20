@@ -4698,8 +4698,13 @@ Deno.serve(async (req: Request) => {
     const supportedProviderCommands = [
       "list_provider_accounts", "list_provider_models", "list_provider_assignments",
       "create_provider_account", "create_provider_model", "assign_provider_model",
-      "set_provider_assignment_status"
+      "set_provider_assignment_status", "list_provider_health_events",
+      "record_provider_health", "set_provider_account_status", "sync_provider_models"
     ];
+    const providerManagementCommands = new Set([
+      "list_provider_health_events", "record_provider_health",
+      "set_provider_account_status", "sync_provider_models"
+    ]);
 
     if (!validUuid(actorUserId)) {
       return json(400, { error: "A valid signed-in Minglora user is required for AI provider access." });
@@ -4707,14 +4712,21 @@ Deno.serve(async (req: Request) => {
     if (!supportedProviderCommands.includes(aiAction)) {
       return json(400, { error: "Unsupported AI provider command." });
     }
-    if (["create_provider_account","create_provider_model","assign_provider_model","set_provider_assignment_status"].includes(aiAction)) {
+    if ([
+      "create_provider_account","create_provider_model","assign_provider_model",
+      "set_provider_assignment_status","record_provider_health",
+      "set_provider_account_status","sync_provider_models"
+    ].includes(aiAction)) {
       const secretFields = ["api_key","apiKey","access_token","accessToken","password","credential","credentials","secret","provider_secret","credential_secret_ref"];
       if (secretFields.some(field => Object.prototype.hasOwnProperty.call(payload, field))) {
         return json(400, { error: "Provider credentials must be added through an approved secrets manager, not this API." });
       }
     }
 
-    const { data, error } = await admin.rpc("minglora_ai_provider_command", {
+    const rpcName = providerManagementCommands.has(aiAction)
+      ? "minglora_ai_provider_management_command"
+      : "minglora_ai_provider_command";
+    const { data, error } = await admin.rpc(rpcName, {
       p_action: aiAction,
       p_actor_user_id: actorUserId,
       p_payload: payload
