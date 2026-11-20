@@ -212,6 +212,7 @@ function normalizeModels(providerId, payload) {
       id: text(model.baseModelId) || model.name.replace(/^models\//, ''),
       resourceName: model.name,
       displayName: text(model.displayName) || model.name,
+      version: text(model.version) || null,
       inputTokenLimit: Number.isFinite(model.inputTokenLimit) ? model.inputTokenLimit : null,
       outputTokenLimit: Number.isFinite(model.outputTokenLimit) ? model.outputTokenLimit : null
     }));
