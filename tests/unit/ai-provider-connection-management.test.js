@@ -181,7 +181,7 @@ test('identity provider assignment activation is model-specific and requires ena
   assert.ok(action.includes("v_identity_status<>'active' or v_identity_enabled is distinct from true"));
   assert.ok(action.includes("(m.is_active and m.text_capability)"));
   assert.ok(action.includes("h.metadata->>'model_id'=v_model_id::text"));
-  assert.ok(action.includes("h.checked_at<now()-interval '15 minutes'"));
+  assert.ok(action.includes("v_inference_verified_at<now()-interval '15 minutes'"));
   assert.ok(migration.includes("check (new_status in ('pending','active','restricted','disabled','revoked'))"));
   assert.ok(server.includes("model_id: modelId"));
   assert.ok(ui.includes("model.text_capability === true"));
