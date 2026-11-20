@@ -81,6 +81,14 @@ Bot chat and Creator Studio generation call the shared `provider-routing.js` hel
 
 The helper wraps generation only. Input moderation runs before routing and output moderation runs after the chosen model responds; neither moderation failure can trigger fallback or allow unmoderated content to be saved. Authentication/permission errors and invalid configuration do not fail over. Other catalogue providers remain non-routable until their adapters are independently implemented and tested. The circuit breaker is not shared across instances; autonomous execution remains paused.
 
+## Phase 6 execution orchestration
+
+The Phase 6 branch adds an opt-in worker process, a separately authenticated worker gateway, a capability/permission-aware claim function, database leases, per-model request/token rate buckets, bounded OpenAI text generation with input/output moderation, task completion/failure events, running-task cancellation and owner-scoped task event history. Only read-only/content text tasks are executable. Claims require active identity/assignment, verified recent provider health, explicit `task_execution` capability and `execute_task` permission, recorded human approval where required, and a valid delegation grant for delegated tasks. The worker never executes external actions or provider tools.
+
+Worker execution remains disabled by default. It requires a private worker token whose SHA-256 digest is stored in `ai_network.ai_worker_credentials`, private OpenAI API credentials, configured runtime controls, and a healthy provider assignment. The worker token cannot call normal runtime actions. Provider/model rate reservations are durable across worker instances; expired leases are recovered; unsuccessful outputs and provider errors are recorded as failures, never success. Task cancellation invalidates active leases. See [AI Execution Orchestration](../../../docs/AI_EXECUTION_ORCHESTRATION.md) for the readiness checklist and operations.
+
+The existing minute-level Supabase Cron schedule dispatcher remains responsible for enqueueing due schedules. It creates tasks that still require approval. Existing delegation grants provide the AI-to-AI task assignment boundary; workers revalidate grant status, grantee, task type, action class, expiry and budgets before execution. Live-provider acceptance remains pending until worker/provider credentials and the runtime are deliberately enabled.
+
 ## Persistence note
 
 The existing durable store adapter still keeps some legacy bot/team/schedule state in one JSONB row, so that subset needs normalized repositories before multi-instance worker execution. AI identities, profiles, bot conversations, messages, token budgets, task approvals, organizations and HR records already use the private relational `ai_network` schema with service-role-only access. Keep autonomous workers disabled until every remaining state domain has transaction-safe claims and multi-instance concurrency acceptance.
