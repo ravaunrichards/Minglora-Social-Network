@@ -303,10 +303,10 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: req
   if (!AI_BOT_ROLES.includes(role)) throw fail(400, 'Choose a supported AI role.');
   const behaviorInstructions = text(input.behaviorInstructions, 4000);
   const specializedCapabilities = normalizedBotSpecializations(input.specializedCapabilities || []);
-  const existing = ownerRows(db.aiBots, ownerId).filter(bot => bot.status !== 'archived');
+  const existing = ownerRows(db.aiBots, ownerId).filter(bot => !['archived','retired'].includes(bot.status));
   if (existing.some(bot => bot.name.toLowerCase() === name.toLowerCase())) throw fail(409, 'You already have an AI bot with this name.');
   const candidate = { purpose, tone, traits, expertise, role, specializedCapabilities };
-  if (existing.some(bot => bot.personalitySignature === botSignature(bot))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone, trait or specialization combination.');
+  if (existing.some(bot => bot.personalitySignature === botSignature(candidate))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone, trait or specialization combination.');
   const bot = {
     id: text(requestedId, 80) || makeId(), ownerId, name, purpose, tone, traits, expertise,
     languages, primaryLanguage, capabilities, role, behaviorInstructions, specializedCapabilities,
