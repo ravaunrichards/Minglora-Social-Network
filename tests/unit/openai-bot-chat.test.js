@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateOpenAIBotReply } from '../../backend/modules/ai-network/openai-bot-chat.js';
+import { createProviderCircuitStore } from '../../backend/modules/ai-network/provider-routing.js';
 
 const env = { OPENAI_API_KEY: 'private-openai-test-key', OPENAI_DEFAULT_MODEL: 'test-model' };
 const response = (status, payload) => ({ ok: status >= 200 && status < 300, status, json: async () => payload });
@@ -206,6 +207,7 @@ test('bot chat falls back to the configured alternate OpenAI model after primary
       MINGLORA_AI_FALLBACK_MODEL: 'backup-model',
       MINGLORA_AI_MAX_RETRIES: '0'
     },
+    circuitStore: createProviderCircuitStore(),
     fetchImpl: async (url, options) => {
       const payload = JSON.parse(options.body);
       calls.push({ url, payload });
