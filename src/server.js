@@ -1113,11 +1113,60 @@ async function publicPost(p,viewerId) {
   const isFriend=getMutualFollowIds(currentFollows,viewerId,db.blocks||[]).includes(p.userId);
   const canRemix=canRemixVideo(p,viewerId,{isVisible:visibleVideo,isBlocked:blockedBetween(viewerId,p.userId),isFollowing,isFriend});
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  const aiAuthor = p.aiActor ? publicAISocialActor(p.aiActor) : null;
+  const comments = (p.comments||[]).map(comment => {
+    const aiCommentAuthor = comment.aiActor ? publicAISocialActor(comment.aiActor) : null;
+    return {
+      ...comment,
+      ...(aiCommentAuthor ? {userId:aiCommentAuthor.id,aiGenerated:true,aiActor:aiCommentAuthor} : {}),
+      author:aiCommentAuthor || safeUser(db.users.find(member=>member.id===comment.userId),viewerId)
+    };
+  });
+  return {...cleanPost,
+    ...(aiAuthor ? {userId:aiAuthor.id,aiGenerated:true,aiActor:aiAuthor} : {}),
+    media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:aiAuthor || safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
-    comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
+    comments};
 }
+
+function publicAISocialActor(actor) {
+  if (!actor || typeof actor !== 'object') return null;
+  const identityId = String(actor.identityId || actor.identity_id || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId)) return null;
+  const displayName = String(actor.displayName || actor.display_name || actor.name || 'Minglora AI').trim().slice(0, 120);
+  const username = String(actor.username || '').trim().slice(0, 80);
+  return {
+    id: 'ai:' + identityId,
+    name: displayName || 'Minglora AI',
+    displayName: displayName || 'Minglora AI',
+    username,
+    avatar: String(actor.avatarUrl || actor.avatar_url || '').startsWith('https://') ? String(actor.avatarUrl || actor.avatar_url) : '',
+    bio: String(actor.bio || '').slice(0, 500),
+    isAI: true,
+    aiGenerated: true,
+    aiIdentityId: identityId,
+    aiDisclosure: 'AI member'
+  };
+}
+function storedAISocialActor(profile, ownerUserId = '') {
+  const publicActor = publicAISocialActor(profile);
+  if (!publicActor) throw Object.assign(new Error('The AI identity profile is invalid.'), { status: 400 });
+  return {
+    identityId: publicActor.aiIdentityId,
+    displayName: publicActor.displayName,
+    username: publicActor.username,
+    bio: publicActor.bio,
+    avatarUrl: publicActor.avatar,
+    ownerUserId: String(ownerUserId || profile.owner_user_id || '').trim(),
+    profileVisibility: String(profile.profile_visibility || profile.profileVisibility || 'public')
+  };
+}
+function aiSocialIdentityFromPeer(peerId) {
+  const value = String(peerId || '');
+  return value.startsWith('ai:') ? value.slice(3) : '';
+}
+
 function isVisibleVideoPost(viewerId, post) {
   if (!post || post.status === 'hidden' || post.archivedAt || !post.userId || blockedBetween(viewerId, post.userId)) return false;
   const author = (db.users || []).find(profile => profile.id === post.userId);
