@@ -114,7 +114,7 @@ for (const item of providerCases) {
     assert.equal(generation.options.redirect,'error');
     assert.ok(generation.options.signal);
     assert.equal(String(generation.options.body).includes('The owner prefers short explanations.'),true);
-    assert.equal(String(generation.options.body).includes('You have no tools'),false);
+    assert.equal(String(generation.options.body).includes('You have no tools'),true);
     if (item.provider === 'openai') {
       assert.equal(request.store,false);
       assert.deepEqual(request.tools,[]);
