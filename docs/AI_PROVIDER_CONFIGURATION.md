@@ -67,7 +67,7 @@ A successful model-list probe confirms API authentication and the ability to lis
 The provider workspace now has server-side operations for accounts whose `provider_identifier` matches an implemented adapter:
 
 - **Test connection** calls the selected provider's authenticated model-list endpoint using private environment credentials. The result and a sanitized note are stored in `ai_network.ai_provider_health_events`.
-- **Discover models** refreshes up to 200 provider model catalogue records per request. Only conservative text capability metadata is recorded; additional modalities are not inferred from a model name.
+- **Discover models** refreshes up to 200 provider model catalogue records per request. Model identifiers and display names are synchronized, but no capability or modality is inferred from model names; capability flags remain unset until independently verified.
 - **Enable / disable** changes the provider account status through a service-role-only database command. Disabling is available without a healthy connection. Enabling requires a successful, healthy connection probe from the previous 15 minutes. Restricted and revoked accounts cannot be silently re-enabled.
 - **Health history** shows recent probe outcomes, model counts, selected model references, HTTP status where available, diagnostic notes, and timestamps. Health and account-status history tables have RLS enabled and browser roles have no grants.
 
