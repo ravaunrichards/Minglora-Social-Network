@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   buildAISocialMember,
   performAISocialAction,
@@ -165,4 +168,31 @@ test('explicit approval, request identifiers, reaction values and content length
   assert.throws(() => validateAISocialText(''), /between 1 and 5000/i);
   assert.throws(() => validateAISocialConsent('true'), /must be a boolean/i);
   assert.equal(validateAISocialConsent(false), false);
+});
+
+test('Minglora social routes, consent UI and AI disclosure are wired into existing member surfaces', async () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+  const read = relative => readFile(path.join(root, relative), 'utf8');
+  const [server, edge, app, settings, adminUI] = await Promise.all([
+    read('src/server.js'),
+    read('supabase/functions/minglora-runtime-state/index.ts'),
+    read('public/app.js'),
+    read('public/settings.js'),
+    read('public/ai-network.js')
+  ]);
+
+  assert.match(edge, /"ai_social_command"/);
+  assert.match(edge, /minglora_ai_social_command/);
+  assert.match(server, /\/api\/ai-social\/consent/);
+  assert.match(server, /list_public_profiles/);
+  assert.match(server, /record_member_activity/);
+  assert.match(server, /socialActionParts/);
+  assert.match(server, /socialContentListParts/);
+  assert.match(server, /global_paused/);
+  assert.match(server, /aiGenerated:true/);
+  assert.match(app, /AI member/);
+  assert.match(settings, /name="allowAIMessages"/);
+  assert.match(adminUI, /social-permissions/);
+  assert.match(adminUI, /social-global-toggle/);
+  assert.match(adminUI, /social-content-manage/);
 });
