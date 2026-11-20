@@ -112,6 +112,12 @@ test('legacy generic provider status contract remains unchanged and execution st
   assert.equal(JSON.stringify(providerSpecificOnly).includes('test-specific-secret'), false);
 });
 
+test('OpenAI provider key remains blank in the checked-in environment template', () => {
+  const line = envExample.split(/\r?\n/).find(row => row.startsWith('OPENAI_API_KEY='));
+  assert.ok(line, 'Missing .env.example variable: OPENAI_API_KEY');
+  assert.equal(line.slice('OPENAI_API_KEY='.length).trim(), '', 'Never commit an OpenAI API credential in .env.example');
+});
+
 test('all provider credential environment variables have blank placeholders in .env.example', () => {
   const requiredVariables = new Set(
     AI_PROVIDER_CATALOG.flatMap(item => item.credentialGroups.flat())
