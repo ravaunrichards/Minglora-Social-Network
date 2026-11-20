@@ -159,6 +159,7 @@ export async function generateOpenAITaskOutput({
     env: {
       ...env,
       MINGLORA_AI_PROVIDER: 'openai',
+      MINGLORA_AI_MAX_RETRIES: '0',
       MINGLORA_AI_FALLBACK_PROVIDER: '',
       MINGLORA_AI_FALLBACK_MODEL: ''
     }
