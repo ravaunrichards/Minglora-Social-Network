@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerModelSync: null, providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -1132,6 +1132,22 @@
             '<button class="secondary" type="submit">Save connection status</button></form></article>';
         }).join('') + '</div>'
       : empty('No provider account references registered.');
+    const modelSyncProviders = providerCatalogue
+      .filter(provider => provider.healthProbeAvailable && provider.adapterAvailable)
+      .map(provider => ({ value:provider.providerId, label:provider.label || provider.providerId }));
+    const modelSyncForm = '<form class="ai-network-form" data-ai-form="provider-model-sync">' +
+      '<div class="ai-network-form-title">Discover and synchronize provider models</div>' +
+      '<p class="ai-network-note">Fetches the provider's live model catalogue and imports only model IDs returned by its authenticated API. This verifies model-list visibility, not generation capability, quota or production execution.</p>' +
+      '<div class="ai-network-form-grid"><label>Provider<select name="provider" required>' + options(modelSyncProviders, modelSyncProviders[0]?.value || '') + '</select></label>' +
+      '<label>Provider account (optional)<select name="providerAccountId">' + options([{value:'',label:'Do not store a health event'}].concat(accounts.map(account => ({value:account.provider_account_id,label:account.provider_name + ' · ' + account.provider_identifier}))), '') + '</select></label></div>' +
+      '<button class="secondary" type="submit">Discover and synchronize models</button></form>';
+    const modelSyncResult = state.providerModelSync
+      ? '<div class="ai-network-alert ai-network-alert--' + (state.providerModelSync.failed_count ? 'warning' : 'success') + '" role="status">' +
+        '<strong>' + esc(state.providerModelSync.provider || 'Provider') + ' model discovery</strong>' +
+        '<p>' + number(state.providerModelSync.discovered_count) + ' returned · ' + number(state.providerModelSync.created_count) + ' added · ' +
+        number(state.providerModelSync.reused_count) + ' already catalogued · ' + number(state.providerModelSync.failed_count) + ' failed.</p>' +
+        '<small>Checked: ' + esc(date(state.providerModelSync.discovered_at)) + ' · Listing only; generation remains unverified and execution disabled.</small></div>'
+      : '';
     const modelRows = models.length
       ? '<div class="ai-network-list">' + models.map(model =>
           '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
@@ -1258,7 +1274,7 @@
       '<div><span>Catalogue models</span><strong>' + number(models.length) + '</strong></div>' +
       '<div><span>Identity assignments</span><strong>' + number(assignments.length) + '</strong></div></div>' +
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
-      '<div><h4>Model catalogue</h4>' + modelRows + modelForm + '</div></div>' +
+      '<div><h4>Model catalogue</h4>' + modelSyncForm + modelSyncResult + modelRows + modelForm + '</div></div>' +
       assignmentForm + bulkAssignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
       '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access.</p>',
       'ai-network-span-2');
@@ -2207,6 +2223,10 @@
       path = '/provider-accounts/' + encodeURIComponent(accountId) + '/status';
       payload.status = value('status');
       payload.reason = value('reason');
+    } else if (kind === 'provider-model-sync') {
+      path = '/provider-models/sync';
+      payload.provider = value('provider').toLowerCase();
+      payload.provider_account_id = value('providerAccountId') || undefined;
     } else if (kind === 'provider-model') {
       path = '/provider-models';
       payload.provider_name = value('providerName').toLowerCase();
@@ -2520,6 +2540,7 @@
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
+    if (kind === 'provider-model-sync') state.providerModelSync = result;
     if (kind === 'bot-chat') {
       state.botChat = result;
       state.selectedBotChatId = result.bot?.id || form.dataset.botId || '';
@@ -2576,6 +2597,8 @@
           ? 'Task cancellation recorded.'
           : kind === 'provider-account'
       ? 'Provider account reference saved as unconfigured; no credentials were stored.'
+      : kind === 'provider-model-sync'
+        ? 'Provider model discovery completed: ' + number(result.created_count) + ' created, ' + number(result.reused_count) + ' already catalogued, ' + number(result.failed_count) + ' failed. Listing access is verified; inference is not.'
       : kind === 'provider-model'
         ? 'Provider model metadata saved; availability and access are not verified.'
         : kind === 'provider-assignment'
