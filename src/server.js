@@ -1925,7 +1925,7 @@ async function route(req, res) {
           payload: {
             identity_id: bot.identityId,
             name: {
-              first_name: name.first_name || bot.firstName || String(bot.name || 'AI').split(/\\s+/)[0],
+              first_name: name.first_name || bot.firstName || String(bot.name || 'AI').split(/\s+/)[0],
               middle_name: name.middle_name || bot.middleName || '',
               last_name: name.last_name || bot.lastName || 'Assistant',
               display_name: bot.name,
@@ -1965,6 +1965,11 @@ async function route(req, res) {
           identityStatus = nextStatus;
         };
         const moveToArchived = async () => {
+          if (requestedStatus === 'archived' && identityStatus === 'retired') {
+            throw Object.assign(new Error('A permanently retired AI identity cannot be changed back to archived.'), {
+              status: 409, aiIdentityStatus: identityStatus
+            });
+          }
           if (identityStatus === 'retired' || identityStatus === 'archived') return;
           if (identityStatus === 'proposed') await setStatus('created');
           if (['created','under_review','approved'].includes(identityStatus)) await setStatus('suspended');
