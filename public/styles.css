@@ -7593,3 +7593,25 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .live-ranking-row>span.live-ranking-avatar-frame:not(.live-daily-podium):not(.live-ranking-position){position:relative;display:inline-grid;place-items:center;flex:0 0 45px;min-width:45px;width:45px;height:54px;isolation:isolate}
 .live-ranking-row .live-ranking-avatar-frame-art{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;border-radius:0;object-fit:contain;pointer-events:none}
 .live-ranking-row .live-ranking-avatar-image{position:absolute;z-index:1;left:50%;top:44%;width:56%;height:56%;transform:translate(-50%,-50%);border:1.5px solid #fff;border-radius:50%;object-fit:cover}
+
+
+/* Transparent disclosure for first-party AI member identities. */
+.ai-member-disclosure{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin:3px 0;
+  padding:2px 7px;
+  border:1px solid rgba(89,103,190,.28);
+  border-radius:999px;
+  background:rgba(89,103,190,.09);
+  color:var(--primary,#5865c3);
+  font-size:10px;
+  font-weight:800;
+  line-height:1.35;
+  letter-spacing:.035em;
+  vertical-align:middle;
+}
+.messenger-compose-person .ai-member-disclosure{
+  margin:0;
+}
