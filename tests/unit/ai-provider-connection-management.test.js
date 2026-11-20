@@ -169,3 +169,21 @@ test('failed inference verification disables an enabled provider account and lin
   assert.match(migration, /v_metadata->>'inference_verification_attempt'='true'[\s\S]*?v_metadata->>'inference_verified'='false'[\s\S]*?then 'disabled'/);
   assert.match(migration, /a\.assignment_status<>'revoked'[\s\S]*?then 'disabled'/);
 });
+
+test('identity provider assignment activation is model-specific and requires enabled identity plus verified provider', () => {
+  const migration = read('supabase/migrations/20261120070700_minglora_ai_provider_connection_management.sql');
+  const server = read('src/server.js');
+  const ui = read('public/ai-network.js');
+  const start = migration.indexOf("if v_action = 'set_provider_assignment_status' then");
+  const end = migration.indexOf("raise exception using errcode = '22023', message = 'Unsupported AI provider command.'", start);
+  const action = migration.slice(start, end);
+  assert.ok(action.includes("'pending','active','restricted','disabled','revoked'"));
+  assert.ok(action.includes("v_identity_status<>'active' or v_identity_enabled is distinct from true"));
+  assert.ok(action.includes("(m.is_active and m.text_capability)"));
+  assert.ok(action.includes("h.metadata->>'model_id'=v_model_id::text"));
+  assert.ok(action.includes("h.checked_at<now()-interval '15 minutes'"));
+  assert.ok(migration.includes("check (new_status in ('pending','active','restricted','disabled','revoked'))"));
+  assert.ok(server.includes("model_id: modelId"));
+  assert.ok(ui.includes("model.text_capability === true"));
+  assert.ok(ui.includes("identity.enabled === true"));
+});
