@@ -544,7 +544,8 @@ begin
       and a.actor_user_id = p_actor_user_id
       and a.action = v_action_name
       and a.created_at > now() - interval '10 minutes';
-    if v_recent_count >= case when v_action_name = 'member_message' then 10 else 30 end then
+    if (v_action_name = 'member_message' and v_recent_count >= 10)
+      or (v_action_name <> 'member_message' and v_recent_count >= 30) then
       raise exception using errcode = '42900', message = 'Member-to-AI interaction rate limit reached.';
     end if;
     insert into ai_network.ai_social_activity (
