@@ -433,6 +433,8 @@ begin
     ), expired as (
       update ai_network.ai_task_queue q
       set status=case when q.attempt_count>=q.max_attempts then 'failed' else 'queued' end,
+          scheduled_for=case when q.attempt_count>=q.max_attempts then q.scheduled_for
+            else now()+make_interval(secs=>least(3600,10*power(2,greatest(0,q.attempt_count-1))::integer)) end,
           worker_id=null,lease_token=null,lease_expires_at=null,active_execution_id=null,
           finished_at=case when q.attempt_count>=q.max_attempts then now() else null end,
           failure_reason='Worker lease expired before completion.',updated_at=now()
@@ -447,7 +449,7 @@ begin
     from expired e;
 
     select count(*)::integer into v_running from ai_network.ai_task_queue q
-      where q.owner_user_id=v_worker.owner_user_id and q.status='running' and q.lease_expires_at>now();
+      where q.status='running' and q.lease_expires_at>now();
     if v_running>=v_controls.max_concurrent_workers then
       return jsonb_build_object('claimed',false,'reason','global_concurrency_limit');
     end if;
