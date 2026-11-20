@@ -203,7 +203,7 @@ begin
     v_account_id := (v_payload->>'provider_account_id')::uuid;
     v_new_status := lower(coalesce(v_payload->>'status',''));
     v_reason := left(trim(coalesce(v_payload->>'reason','')),1000);
-    if v_new_status not in ('configured','disabled') then
+    if v_new_status is null or v_new_status not in ('configured','disabled') then
       raise exception using errcode = '22023', message = 'Provider accounts may only be enabled or disabled through this control.';
     end if;
     if length(v_reason)<3 then
