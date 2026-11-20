@@ -1910,12 +1910,12 @@ async function route(req, res) {
             primary_language: bot.primaryLanguage,
             configuration_version: bot.configurationVersion
           },
-          interests: [...bot.traits],
+          interests: [...new Set([...(Array.isArray(profile.interests) ? profile.interests : []), ...bot.traits])],
           hobbies: Array.isArray(profile.hobbies) ? profile.hobbies : [],
           education: Array.isArray(profile.education) ? profile.education : [],
           qualifications: Array.isArray(profile.qualifications) ? profile.qualifications : [],
-          profession: bot.expertise,
-          skills: [...new Set([...bot.capabilities, ...bot.specializedCapabilities])],
+          profession: bot.expertise || profile.profession || '',
+          skills: [...new Set([...(Array.isArray(profile.skills) ? profile.skills : []), ...bot.capabilities, ...bot.specializedCapabilities])],
           voice_preferences: profile.voice_preferences && typeof profile.voice_preferences === 'object'
             ? profile.voice_preferences : {},
           profile_visibility: profile.profile_visibility || 'private'
