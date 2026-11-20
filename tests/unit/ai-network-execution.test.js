@@ -7,7 +7,7 @@ import { runAIExecutionWorkerOnce, refreshAIProviderHealth } from '../../backend
 import { executeOpenAITask } from '../../backend/modules/ai-network/openai-task-executor.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const migration = readFileSync(resolve(root, 'supabase/migrations/20261120100000_minglora_ai_execution_orchestration.sql'), 'utf8');
+const migration = readFileSync(resolve(root, 'supabase/migrations/20261120110000_minglora_ai_execution_orchestration.sql'), 'utf8');
 const runtime = readFileSync(resolve(root, 'supabase/functions/minglora-runtime-state/index.ts'), 'utf8');
 const server = readFileSync(resolve(root, 'src/server.js'), 'utf8');
 
