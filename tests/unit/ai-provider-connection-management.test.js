@@ -19,10 +19,15 @@ test('Phase 4.3 migration adds sanitized provider health history with RLS and se
   assert.match(migration, /v_action = 'list_provider_health'/);
   assert.match(migration, /order by h\.checked_at desc[\s\S]*?limit 50/);
   assert.match(migration, /v_action = 'set_provider_account_status'/);
-  assert.match(migration, /v_account_status not in \('enabled','disabled','revoked'\)/);
+  assert.match(migration, /v_new_status not in \('enabled','disabled','revoked'\)/);
   assert.match(migration, /successful provider health check has completed within the last 15 minutes/);
   assert.match(migration, /Raw credentials and secret references cannot be submitted/);
   assert.match(migration, /revoke all on function public\.minglora_ai_provider_command/);
+  assert.match(migration, /check \(status in \('unconfigured','configured','restricted','enabled','disabled','revoked'\)\)/);
+  assert.match(migration, /when v_health_status='degraded' then 'degraded'[\s\S]*else 'unavailable'/);
+  assert.match(migration, /if v_action = 'record_provider_health' then[\s\S]*insert into ai_network\.ai_provider_health_events/);
+  assert.match(migration, /if v_action = 'set_provider_account_status' then[\s\S]*for update[\s\S]*successful provider health check must complete within the last 15 minutes/);
+
 });
 
 test('provider health route supports implemented adapters but accepts no credentials', () => {
