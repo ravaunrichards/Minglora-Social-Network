@@ -38,11 +38,13 @@ test('the provider registry returns safe readiness for every catalogued model an
   assert.equal(inventory.find(item => item.providerId === 'openai').credentialsPresent, true);
   assert.equal(inventory.find(item => item.providerId === 'openai').healthProbeAvailable, true);
   assert.equal(inventory.find(item => item.providerId === 'openai').adapterAvailable, true);
+  assert.equal(inventory.find(item => item.providerId === 'google_gemini').adapterAvailable, true);
+  assert.equal(inventory.find(item => item.providerId === 'google_gemini').healthProbeAvailable, true);
   assert.equal(inventory.find(item => item.providerId === 'anthropic').healthProbeAvailable, false);
   assert.equal(inventory.find(item => item.providerId === 'resend').credentialsPresent, true);
   assert.equal(inventory.find(item => item.providerId === 'chatgpt_guest').serverSelectable, false);
   assert.ok(inventory.every(item => item.connected === false && item.executionEnabled === false));
-  assert.ok(inventory.filter(item => item.providerId !== 'openai').every(item => item.adapterAvailable === false));
+  assert.ok(inventory.filter(item => !['openai','google_gemini'].includes(item.providerId)).every(item => item.adapterAvailable === false));
   const serialized = JSON.stringify(inventory);
   assert.equal(serialized.includes('private-openai-test-key'), false);
   assert.equal(serialized.includes('private-resend-test-key'), false);
@@ -57,6 +59,20 @@ test('ChatGPT guest is explicitly non-routable and cannot be marked connected', 
   assert.equal(guest.connected, false);
   assert.equal(guest.executionEnabled, false);
   assert.match(guest.note, /not a server API endpoint/i);
+});
+
+test('Gemini task provider reports credential presence and tested adapter readiness without enabling execution', () => {
+  const status = getAIProviderCredentialStatus('google_gemini', {
+    GEMINI_API_KEY: 'private-gemini-test-key',
+    GEMINI_DEFAULT_MODEL: 'gemini-test-model'
+  });
+  assert.equal(status.credentialsPresent, true);
+  assert.equal(status.adapterAvailable, true);
+  assert.equal(status.healthProbeAvailable, true);
+  assert.equal(status.connected, false);
+  assert.equal(status.executionEnabled, false);
+  assert.ok(status.presentEnvironmentVariables.includes('GEMINI_API_KEY'));
+  assert.equal(JSON.stringify(status).includes('private-gemini-test-key'), false);
 });
 
 test('provider-specific credential presence reports the bot chat and Creator Studio adapters but never enables execution', () => {
