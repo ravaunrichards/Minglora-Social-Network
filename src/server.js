@@ -1693,8 +1693,8 @@ async function route(req, res) {
         return json(res,200,await runAISocialAdminCommand('history',identityId?{identity_id:identityId}:{}));
       }
       const socialActionParts=sub.split('/').filter(Boolean);
-      if(socialActionParts[0]==='social'&&socialActionParts[1]==='identities'&&socialActionParts.length===3&&['posts','comments','reactions','messages'].includes(socialActionParts[2])&&method==='POST'){
-        const identityId=socialActionParts[2-1],resource=socialActionParts[2];
+      if(socialActionParts[0]==='social'&&socialActionParts[1]==='identities'&&socialActionParts.length===4&&['posts','comments','reactions','messages'].includes(socialActionParts[3])&&method==='POST'){
+        const identityId=socialActionParts[2],resource=socialActionParts[3];
         const action=({posts:'post',comments:'comment',reactions:'react',messages:'message'})[resource];
         if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
         const actionInput=await body(req,12000);
