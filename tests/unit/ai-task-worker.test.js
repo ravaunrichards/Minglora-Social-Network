@@ -229,3 +229,16 @@ test('AI task history is available only through the protected Node API, and work
   assert.match(server, /mingloraAITaskWorker\.start\(\)/);
   assert.match(server, /requestSupabaseWorkerState/);
 });
+
+test('running task cancellation invalidates the lease and aborts any in-flight provider request', () => {
+  const migration = read('supabase/migrations/20261120161400_minglora_ai_running_task_cancellation.sql');
+  const worker = read('backend/modules/ai-network/ai-task-worker.js');
+  const provider = read('backend/modules/ai-network/openai-creator-drafts.js');
+
+  assert.match(migration, /select q\\.status into v_previous_status[\\s\\S]*for update/);
+  assert.match(migration, /q\\.status in \\('pending_approval','queued','observation_only','running'\\)/);
+  assert.match(migration, /status='cancelled',worker_id=null,lease_token=null,lease_expires_at=null/);
+  assert.match(migration, /previous_status,new_status,reason/);
+  assert.match(worker, /heartbeat\\?\\.renewed !== true[\\s\\S]*controller\\.abort/);
+  assert.match(provider, /AbortSignal\\.any\\(\\[AbortSignal\\.timeout\\(timeoutMs\\), signal\\]\\)/);
+});
