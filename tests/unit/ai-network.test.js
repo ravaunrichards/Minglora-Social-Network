@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AI_BOT_CAPABILITIES,
+  AI_BOT_ROLES,
+  AI_BOT_SPECIALIZED_CAPABILITIES,
   AI_BLOCKED_ACTIONS,
   createAIBot,
   createAIBotSchedule,
@@ -22,6 +24,7 @@ import {
   getAISettings,
   setAICompanionConsent,
   updateAIBotScheduleStatus,
+  updateAIBotConfiguration,
   updateAIBotStatus,
   updateAISettings
 } from '../../backend/modules/ai-network/service.js';
@@ -465,4 +468,112 @@ test('command center returns only the requesting owner’s bots and retains all 
   assert.equal(panel.safeguards.aiIdentityLabelRequired, true);
   assert.equal(panel.safeguards.highImpactActionsExecutedAutomatically, false);
   assert.equal(panel.safeguards.companionshipRequiresOptIn, true);
+});
+
+
+test('Phase 5 creates independent role and personality configurations with versioned snapshots', () => {
+  const db = state();
+  const first = makeBot(db, 'owner-1');
+  const second = makeBot(db, 'owner-1', {
+    name: 'Research Companion',
+    purpose: 'Helps the owner organize evidence and frame careful research questions.',
+    tone: 'professional',
+    traits: ['analytical', 'precise'],
+    expertise: 'Research planning'
+  });
+  const otherOwner = makeBot(db, 'owner-2');
+
+  assert.equal(first.configurationVersion, 1);
+  assert.equal(first.configuration.schemaVersion, 1);
+  assert.equal(first.configuration.role, 'general_ai_member');
+  assert.deepEqual(first.configurationHistory.map(item => item.version), [1]);
+
+  const updated = updateAIBotConfiguration(db, 'owner-1', first.id, {
+    name: 'Community Research Guide',
+    purpose: 'Helps the owner organize evidence and explain community research findings.',
+    tone: 'educational',
+    traits: ['analytical', 'helpful'],
+    expertise: 'Community research and education',
+    role: 'research_ai',
+    behaviorInstructions: 'Explain uncertainty, distinguish evidence from assumptions, and ask before widening the task.',
+    specializedCapabilities: ['research_synthesis', 'knowledge_explanations'],
+    capabilities: ['draft_content', 'summarize_public_content'],
+    languages: ['en', 'ht'],
+    primaryLanguage: 'ht'
+  }, { now });
+
+  assert.equal(updated.id, first.id);
+  assert.equal(updated.configurationVersion, 2);
+  assert.equal(updated.configuration.version, 2);
+  assert.equal(updated.role, 'research_ai');
+  assert.equal(updated.behaviorInstructions.includes('distinguish evidence'), true);
+  assert.deepEqual(updated.specializedCapabilities, ['research_synthesis', 'knowledge_explanations']);
+  assert.deepEqual(updated.configurationHistory.map(item => item.version), [1, 2]);
+  assert.equal(second.role, 'general_ai_member');
+  assert.equal(second.name, 'Research Companion');
+  assert.equal(second.configurationVersion, 1);
+  assert.equal(otherOwner.name, 'Minglora Guide');
+  assert.equal(otherOwner.role, 'general_ai_member');
+  assert.ok(AI_BOT_ROLES.includes(updated.role));
+  assert.ok(updated.specializedCapabilities.every(item => AI_BOT_SPECIALIZED_CAPABILITIES.includes(item)));
+});
+
+test('Phase 5 validates roles, specialized capabilities, languages and duplicate edits without touching other identities', () => {
+  const db = state();
+  const bot = makeBot(db, 'owner-1');
+  const other = makeBot(db, 'owner-1', {
+    name: 'Support Companion',
+    purpose: 'Helps the owner organize customer support responses and service information.',
+    tone: 'supportive',
+    traits: ['patient', 'helpful'],
+    expertise: 'Customer support'
+  });
+  const original = structuredClone(bot);
+
+  assert.throws(() => updateAIBotConfiguration(db, 'owner-1', bot.id, { role: 'super_admin' }), { status: 400 });
+  assert.throws(() => updateAIBotConfiguration(db, 'owner-1', bot.id, { specializedCapabilities: ['issue_refunds'] }), { status: 400 });
+  assert.throws(() => updateAIBotConfiguration(db, 'owner-1', bot.id, { primaryLanguage: 'fr' }), { status: 400 });
+  assert.throws(() => updateAIBotConfiguration(db, 'owner-1', bot.id, { name: other.name }), { status: 409 });
+  assert.throws(() => updateAIBotConfiguration(db, 'owner-2', bot.id, { role: 'research_ai' }), { status: 404 });
+
+  assert.deepEqual(bot, original);
+  assert.equal(other.name, 'Support Companion');
+  assert.equal(other.configurationVersion, 1);
+});
+
+test('Phase 5 personality configuration persists through a durable state serialization round trip', () => {
+  const db = state();
+  const bot = makeBot(db, 'owner-1', {
+    role: 'creative_ai',
+    behaviorInstructions: 'Offer multiple original concepts and explain the trade-offs.',
+    specializedCapabilities: ['creative_ideation']
+  });
+  const persisted = JSON.parse(JSON.stringify(db));
+  const restored = ensureAICollections(persisted).aiBots.find(item => item.id === bot.id && item.ownerId === 'owner-1');
+
+  assert.ok(restored);
+  assert.equal(restored.configurationVersion, 1);
+  assert.equal(restored.configuration.role, 'creative_ai');
+  assert.equal(restored.behaviorInstructions, 'Offer multiple original concepts and explain the trade-offs.');
+  assert.deepEqual(restored.specializedCapabilities, ['creative_ideation']);
+  assert.deepEqual(restored.configurationHistory[0], restored.configuration);
+});
+
+test('Phase 5 individual identity lifecycle supports activation, suspension, resumption and retirement', () => {
+  const db = state();
+  const bot = makeBot(db, 'owner-1');
+  updateAISettings(db, 'owner-1', { globalPaused: false }, { providerConfigured: true, now });
+  updateAIBotStatus(db, 'owner-1', bot.id, 'active', { providerConfigured: true, now });
+  assert.equal(bot.status, 'active');
+
+  updateAIBotStatus(db, 'owner-1', bot.id, 'paused', { providerConfigured: true, now });
+  assert.equal(bot.status, 'paused');
+  updateAIBotStatus(db, 'owner-1', bot.id, 'active', { providerConfigured: true, now });
+  assert.equal(bot.status, 'active');
+
+  updateAIBotStatus(db, 'owner-1', bot.id, 'archived', { providerConfigured: true, now });
+  assert.equal(bot.status, 'archived');
+  updateAIBotStatus(db, 'owner-1', bot.id, 'retired', { providerConfigured: true, now });
+  assert.equal(bot.status, 'retired');
+  assert.throws(() => updateAIBotStatus(db, 'owner-1', bot.id, 'active', { providerConfigured: true, now }), { status: 409 });
 });
