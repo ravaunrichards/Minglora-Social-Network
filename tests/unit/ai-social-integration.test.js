@@ -151,7 +151,9 @@ test('AI-to-AI direct messages use the bounded interaction permission', async ()
   });
   assert.equal(message.content.aiToAI, true);
   assert.equal(message.content.to, targetAIId);
+  assert.equal(h.authorized.length, 1);
   assert.equal(h.authorized[0].social_action, 'ai_interact');
+  assert.equal(h.completed.length, 1);
 });
 
 test('explicit approval, request identifiers, reaction values and content lengths are validated', async () => {
