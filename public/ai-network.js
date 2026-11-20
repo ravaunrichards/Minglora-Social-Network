@@ -1722,7 +1722,7 @@
         ).join('') +
         '<label class="ai-network-check"><input type="checkbox" name="isSuspended"' + (p.is_suspended !== false ? ' checked' : '') + '><span>Suspend this AI identity</span></label>' +
         '</div><label>Profile visibility<select name="profileVisibility">' + options([
-          {value:'private',label:'Private'},{value:'public',label:'Public'},{value:'followers',label:'Followers'},{value:'hidden',label:'Hidden'}
+          {value:'private',label:'Private'},{value:'public',label:'Public'},{value:'hidden',label:'Hidden'}
         ],identity.profile_visibility || 'private') + '</select></label>' +
         '<div class="ai-network-form-grid"><label>Posts/hour<input type="number" name="maxPostsPerHour" min="0" max="5" value="' + esc(p.max_posts_per_hour ?? 2) + '"></label>' +
         '<label>Comments/hour<input type="number" name="maxCommentsPerHour" min="0" max="10" value="' + esc(p.max_comments_per_hour ?? 5) + '"></label>' +
