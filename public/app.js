@@ -657,6 +657,8 @@ function renderSavedControls(post){
 
 function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
+  const isAI=author.isAI===true||post.authorType==='ai'||post.aiDisclosureRequired===true;
+  const aiIdentityId=String(post.aiIdentityId||author.aiIdentityId||String(post.userId||'').replace(/^ai:/,''));
   const savedControls=options.saved?renderSavedControls(post):'';
   const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
   const isVideoPost=(post.media||[]).some(media=>media.mediaType==='video');
@@ -665,8 +667,8 @@ function postCard(post,options={}){
   const collaborationAttribution=(post.collaborators||[]).length?`<div class="video-collaborator-attribution">With ${(post.collaborators||[]).map(member=>'@'+esc(member.username||'member')).join(', ')}</div>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
-      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong><small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
-      <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
+      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong ${isAI?'':'data-profile="'+esc(author.id||'')+'"'}>${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong>${isAI?'<span class="ai-member-disclosure">AI BOT · OWNER-REVIEWED</span>':''}<small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
+      ${isAI?'<button type="button" class="post-ai-message" data-message-ai="'+esc(aiIdentityId)+'" data-ai-name="'+esc(author.name||'AI member')+'">Message AI</button>':'<button class="post-menu" aria-label="Post options" data-post-menu="'+esc(post.id)+'">···</button>'}
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
     ${remixAttribution}${collaborationAttribution}
@@ -690,12 +692,12 @@ function postCard(post,options={}){
       <button data-focus-comment="${esc(post.id)}">▢ &nbsp; Comment</button>
       ${remixControls}
       ${watchLaterControl}
-      <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
+      ${isAI?'':'<button data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'">'+(post.isSaved?'▣ Saved':'▢ Save')+'</button>'}
       <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
-      <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
+      ${isAI?'':'<button type="button" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'">🎁 Gift</button>'}
     </div>
     ${savedControls}
-    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
+    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" ${c.author?.isAI?'':'data-profile="'+esc(c.author?.id||'')+'" role="link" tabindex="0"'}>@${esc(c.author?.username||'')}</small><strong ${c.author?.isAI?'':'data-profile="'+esc(c.author?.id||'')+'" role="link" tabindex="0"'}>${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}${c.author?.isAI?'<span class="ai-member-disclosure">AI BOT</span>':''}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
     <form class="comment-form" data-comment-form="${esc(post.id)}">${thoughtAvatarMarkup(state.user)}<input name="text" maxlength="2000" placeholder="Write a comment…" aria-label="Write a comment" required><button type="submit">Send</button></form>
   </article>`;
 }
@@ -732,6 +734,21 @@ function bindFeed(root=document){
     storyRail.scrollBy({left:direction*Math.max(220,storyRail.clientWidth*.72),behavior:'smooth'});
   }));
   bindProfileLinks(root);
+  root.querySelectorAll('[data-message-ai]').forEach(button=>button.addEventListener('click',()=>{
+    const identityId=String(button.dataset.messageAi||'');
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId)){
+      toast('This AI profile cannot be opened right now.');return;
+    }
+    openMessageWindow({
+      id:'ai:'+identityId,
+      name:button.dataset.aiName||'AI member',
+      username:'ai_member',
+      avatar:'',
+      isAI:true,
+      aiIdentityId:identityId,
+      aiDisclosureRequired:true
+    });
+  }));
   root.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
     el.disabled=true;
     try{await api(`/posts/${el.dataset.react}/reactions`,{method:'POST',body:JSON.stringify({reaction:el.dataset.currentReaction||'like'})});await refreshVisiblePosts();}
