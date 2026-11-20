@@ -4566,8 +4566,12 @@ function creatorMonetizationMarkup(){
     "<section class='creator-studio-panel creator-ledger-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>EARNINGS LEDGER</span><h3>Gift earnings history</h3></div><small>Creator and platform shares are settled separately.</small></div>"+history+"</section>";
 }
 async function creatorSettingsMarkup(){
-  const result=await api("/settings");
+  const [result,aiConsent]=await Promise.all([
+    api("/settings"),
+    api("/ai-social/consent").catch(()=>({allowAIMessages:false}))
+  ]);
   const s=result.settings||{},privacy=s.privacy||{},notifications=s.notifications||{},preferences=s.preferences||{};
+  const allowAIMessages=aiConsent.allowAIMessages===true;
   state.creatorStudio.settings=result;
   const themes=["minglora","ocean","tropical","royal","emerald","rose","golden","lavender","midnight","graphite"];
   const themeOptions=themes.map(value=>"<option value='"+value+"' "+(preferences.colorTheme===value?"selected":"")+">"+value.charAt(0).toUpperCase()+value.slice(1)+"</option>").join("");
@@ -4576,7 +4580,8 @@ async function creatorSettingsMarkup(){
     "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>PRIVACY</span><h3>Who can reach you?</h3></div></div>"+
     "<label class='creator-field-label' for='creator-privacy-visibility'>Profile visibility</label><select id='creator-privacy-visibility' name='profileVisibility' class='creator-select'><option value='public' "+(privacy.profileVisibility==="public"?"selected":"")+">Public</option><option value='friends' "+(privacy.profileVisibility==="friends"?"selected":"")+">Friends only</option><option value='private' "+(privacy.profileVisibility==="private"?"selected":"")+">Private</option></select>"+
     "<label class='creator-field-label' for='creator-message-audience'>Who can message you?</label><select id='creator-message-audience' name='messageAudience' class='creator-select'><option value='everyone' "+(privacy.messageAudience==="everyone"?"selected":"")+">Everyone</option><option value='friends' "+(privacy.messageAudience==="friends"?"selected":"")+">Friends only</option><option value='nobody' "+(privacy.messageAudience==="nobody"?"selected":"")+">Nobody</option></select>"+
-    "<label class='creator-toggle-row'><span><strong>Friend requests</strong><small>Allow members to send you friend requests.</small></span><input type='checkbox' name='allowFriendRequests' "+(privacy.allowFriendRequests?"checked":"")+"></label></section>"+
+    "<label class='creator-toggle-row'><span><strong>Friend requests</strong><small>Allow members to send you friend requests.</small></span><input type='checkbox' name='allowFriendRequests' "+(privacy.allowFriendRequests?"checked":"")+"></label>"+
+    "<label class='creator-toggle-row'><span><strong>AI member messages</strong><small>Allow approved AI identities to reply only after you start the conversation. Sending your first message to an AI opts you in; you can turn this off here at any time.</small></span><input type='checkbox' name='allowAIMessages' "+(allowAIMessages?"checked":"")+"></label></section>"+
     "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>NOTIFICATIONS</span><h3>Stay informed</h3></div></div>"+
     [["inApp","In-app notifications","Notifications inside Minglora."],["friendRequests","Friend requests","Requests and friendship updates."],["messages","Messages","New direct messages."],["interactions","Post interactions","Reactions and comments."],["push","Browser push","Push delivery when configured on this device."]].map(([key,label,help])=>"<label class='creator-toggle-row'><span><strong>"+label+"</strong><small>"+help+"</small></span><input type='checkbox' name='notification-"+key+"' "+(notifications[key]?"checked":"")+"></label>").join("")+"</section>"+
     "<section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>APPEARANCE</span><h3>Studio & app appearance</h3></div></div>"+
@@ -4961,6 +4966,7 @@ async function renderCreatorSection(section){
         }
       };
       try{
+        await api("/ai-social/consent",{method:"PATCH",body:JSON.stringify({allowAIMessages:checkbox("allowAIMessages")})});
         const result=await api("/settings",{method:"PATCH",body:JSON.stringify(patch)});
         s.settings=result;
         state.settings=result.settings;
