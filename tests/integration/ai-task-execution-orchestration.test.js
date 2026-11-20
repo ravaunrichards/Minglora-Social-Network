@@ -15,6 +15,9 @@ const IDENTITY_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const ACCOUNT = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const MODEL = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const MODEL_NAME = 'gpt-4.1-mini';
+const GEMINI_ACCOUNT = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const GEMINI_MODEL = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+const GEMINI_MODEL_NAME = 'gemini-2.5-flash';
 const PROMPT = 'Prepare a concise welcome note for a new Minglora community member.';
 
 async function createFixture(client) {
@@ -148,14 +151,19 @@ async function createFixture(client) {
       values ('${IDENTITY_A}','task.execute','*','allow',now()+interval '1 day'),
              ('${IDENTITY_B}','task.execute','*','allow',now()+interval '1 day');
     insert into ai_network.ai_provider_accounts(provider_account_id,owner_user_id,provider_name,status,health_status)
-      values ('${ACCOUNT}','${OWNER}','openai','configured','healthy');
+      values
+        ('${ACCOUNT}','${OWNER}','openai','configured','healthy'),
+        ('${GEMINI_ACCOUNT}','${OWNER}','Google Gemini Developer API','configured','healthy');
     insert into ai_network.ai_provider_models(model_id,provider_name,model_identifier,is_active,text_capability)
-      values ('${MODEL}','openai','${MODEL_NAME}',true,true);
+      values
+        ('${MODEL}','openai','${MODEL_NAME}',true,true),
+        ('${GEMINI_MODEL}','google_gemini','${GEMINI_MODEL_NAME}',true,true);
     insert into ai_network.ai_provider_assignments(
-      identity_id,provider_account_id,model_id,assignment_status,provider_health_status,assigned_capabilities
+      identity_id,provider_account_id,model_id,assignment_status,provider_health_status,assigned_capabilities,routing_priority
     ) values
-      ('${IDENTITY_A}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation']),
-      ('${IDENTITY_B}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation']);
+      ('${IDENTITY_A}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation'],100),
+      ('${IDENTITY_B}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation'],100),
+      ('${IDENTITY_B}','${GEMINI_ACCOUNT}','${GEMINI_MODEL}','active','healthy',array['text_generation'],1);
 
     grant usage on schema public,ai_network to service_role;
     grant all on all tables in schema public,ai_network to service_role;
@@ -184,7 +192,8 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
     const worker = register.rows[0].result.worker;
     assert.ok(worker.worker_id);
     assert.equal(worker.worker_status,'active');
-    assert.equal(worker.allowed_providers[0],'openai');
+    assert.ok(worker.allowed_providers.includes('openai'));
+    assert.ok(worker.allowed_providers.includes('google_gemini'));
     const storedHash = await client.query(
       'select credential_sha256 from ai_network.ai_task_workers where worker_id=$1::uuid',[worker.worker_id]
     );
@@ -315,10 +324,12 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
     assert.equal(delegatedClaim.claimed,true);
     assert.equal(delegatedClaim.task.task_id,delegatedTaskId);
     assert.equal(delegatedClaim.identity_context.personality.tone,'clear');
+    assert.equal(delegatedClaim.route.provider,'google_gemini');
+    assert.equal(delegatedClaim.route.model,GEMINI_MODEL_NAME);
     const delegatedDone=await workerCommand('complete_task',{
       task_id:delegatedTaskId,lease_token:delegatedClaim.lease_token,
       task_result:{
-        output:'Delegated summary complete.',provider:'openai',model:MODEL_NAME,
+        output:'Delegated summary complete.',provider:'google_gemini',model:GEMINI_MODEL_NAME,
         moderation:{input_flagged:false,output_flagged:false},external_action_taken:false
       },
       usage:{input_tokens:30,output_tokens:20,total_tokens:50}
