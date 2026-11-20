@@ -274,6 +274,16 @@ test('PostgreSQL 17: provider health history, account gates and owner isolation'
       error => error.code==='22023'
     );
 
+    await assert.rejects(
+      command('record_provider_health',owner,{
+        provider_account_id:account.provider_account_id,
+        provider_name:'openai',
+        health_status:'healthy',
+        reason:'Revoked accounts cannot accept health writes.'
+      }),
+      error => error.code==='22023'
+    );
+
     const userManaged = await command('create_provider_account',owner,{
       provider_name:'anthropic',
       provider_identifier:'user-managed-integration-test',
