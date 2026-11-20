@@ -579,3 +579,17 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - Applied live migration `20261120190000_minglora_ai_social_member_interaction_guard` to Supabase project `gzycobgbasnqqhnympkr`. It adds a database trigger to reject member-interaction activity records for inactive, disabled, non-public or suspended AI identities; member-message activity also requires `can_message`.
 - Production AI social controls remain paused. No AI identities, human Auth users, test content, messages, fake engagement records or test consent rows were created.
 - **Not yet verified:** focused tests have been authored but not yet run in repository CI; Node application and private Edge Function have not been deployed; no signed-in owner/MFA end-to-end test of real posting, commenting, reacting, messaging, permissions, abuse/rate limits or history has been completed. The stage is partial, not complete.
+
+
+## Phase 7 CI verification checkpoint — 2026-11-20
+
+- Validation PR: #555, branch `feat/minglora-ai-social-integration-phase7-validation`, head `48401e569ffb6961657553829e7445bf015155a0`. Superseded PR #554 was closed to avoid duplicate review paths.
+- Full repository CI: **PASS — 1,438 tests, 0 failures**.
+- AI Network syntax/regression workflow: **PASS — 187 tests, 0 failures**; this includes AI social domain/route/UI static regression assertions.
+- AI identity/discovery browser acceptance: **PASS**.
+- PostgreSQL 17 migration/retry acceptance: **PASS**.
+- Nine-layout Audio Only LIVE visual QA: **PASS**.
+- Live Supabase remains protected: the social runtime row reports `global_paused=true`; current live counts show 1 existing AI identity, 0 social permission rows, 0 activity rows and 0 member-consent rows. No social test content or consent was inserted.
+- Live `minglora-runtime-state` Edge Function is ACTIVE v146 and its deployed source already contains `ai_social_command`. The stricter source validation added in this branch is not deployed separately.
+- **Still pending before Phase 7 completion:** merge/release the Node server and Admin Centre changes, deploy to the existing Minglora app service, then perform signed-in designated-owner/MFA end-to-end tests for real AI post/comment/reaction/message flows, human-started consented replies, per-identity permission denial, global pause, hourly limits, content hide/restore/delete and audit history. Unit tests and existing AI discovery browser acceptance are not substitutes for those live social round trips.
+- Runtime stays paused; do not grant identity permissions, enable social activity or insert synthetic activity until the owner explicitly configures and tests a real identity.
