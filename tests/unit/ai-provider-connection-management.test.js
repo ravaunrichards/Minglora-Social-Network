@@ -121,3 +121,31 @@ test('provider assignments fail closed for unimplemented providers and require a
   assert.match(server, /model\.lifecycle !== 'active'/);
   assert.match(server, /if \(provider === 'anthropic' && model\.lifecycle !== 'active'\) return false/);
 });
+
+test('bounded inference verification uses a fixed prompt and withholds generated output', () => {
+  const server = read('src/server.js');
+  const ui = read('public/ai-network.js');
+  assert.match(server, /sub === 'provider-inference-verification'/);
+  assert.match(server, /Object\.keys\(input\)\.some\(key => !\['provider_account_id','model_id'\]\.includes\(key\)\)/);
+  assert.match(server, /generateAIProviderText\(provider/);
+  assert.match(server, /prompt: 'Reply with exactly the single word READY\.'/);
+  assert.match(server, /maxOutputTokens: 8/);
+  assert.match(server, /timeoutMs: 20000/);
+  assert.match(server, /!\/^READY\[.!\]\?\$\/i\.test\(output\)/);
+  assert.match(server, /output_retained: false/);
+  assert.match(server, /inference_verification_attempt: true/);
+  assert.match(server, /inference_verified: true/);
+  assert.match(server, /30-second safety interval/);
+  assert.match(ui, /data-ai-form="provider-inference-verification"/);
+  assert.match(ui, /prompt cannot be edited/);
+  assert.match(ui, /Generated output retained: no/);
+  assert.match(ui, /provider-inference-verification/);
+});
+
+test('provider enablement requires a recent successful inference event in addition to health', () => {
+  const migration = read('supabase/migrations/20261120070700_minglora_ai_provider_connection_management.sql');
+  assert.match(migration, /metadata->>'inference_verification_attempt'='true'/);
+  assert.match(migration, /metadata->>'inference_verified'\)='true'/);
+  assert.match(migration, /v_inference_verified is distinct from true/);
+  assert.match(migration, /successful inference verification must complete within the last 15 minutes/);
+});
