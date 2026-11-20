@@ -40,4 +40,10 @@ grant all privileges on table
   ai_network.ai_identity_audit_logs
 to service_role;
 
+-- Restore the tables' prior no-comment state.
+comment on table ai_network.ai_identities is null;
+comment on table ai_network.ai_identity_status_history is null;
+comment on table ai_network.ai_identity_versions is null;
+comment on table ai_network.ai_identity_audit_logs is null;
+
 commit;
