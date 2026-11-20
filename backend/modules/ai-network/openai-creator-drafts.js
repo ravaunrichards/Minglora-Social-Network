@@ -99,7 +99,10 @@ export async function generateOpenAICreatorDraft({
   env = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs,
-  maxOutputTokens = MAX_OUTPUT_TOKENS
+  maxOutputTokens = MAX_OUTPUT_TOKENS,
+  circuitStore,
+  routingNow,
+  routingSleep
 } = {}) {
   const selectedProvider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (selectedProvider && selectedProvider !== 'openai') {
@@ -164,6 +167,9 @@ export async function generateOpenAICreatorDraft({
 
   const routedGeneration = await runWithProviderFallback({
     routeConfig,
+    circuitStore,
+    now: routingNow,
+    sleep: routingSleep,
     operation: async ({ model: requestedModel }) => {
       const generation = await postOpenAIJson({
         fetchImpl,
