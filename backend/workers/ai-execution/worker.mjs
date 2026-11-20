@@ -125,6 +125,15 @@ export async function runAIExecutionWorkerOnce({
     Number(task.token_budget),
     Math.max(192, Math.min(50000, Math.ceil(taskPromptEstimate(task) / 4) + 1000))
   );
+  if (estimatedTokens > tpm) {
+    await gatewayCall('fail_task', {
+      task_id: taskId, lease_token: leaseToken, failure_code: 'task_exceeds_provider_rate_budget',
+      failure_reason: 'The task token allowance exceeds the worker provider-per-minute limit. Reduce the task budget or raise the server-side provider limit.',
+      retryable: false,
+      failure_metadata: { provider: providerName, model: route.model_identifier, estimated_tokens: estimatedTokens, provider_token_limit: tpm }
+    });
+    return { started: true, claimed: true, succeeded: false, taskId, failure: 'task_exceeds_provider_rate_budget' };
+  }
   const reservation = await gatewayCall('reserve_provider_capacity', {
     provider_name: providerName,
     model_identifier: route.model_identifier,
