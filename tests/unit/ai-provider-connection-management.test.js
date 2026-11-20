@@ -135,7 +135,6 @@ test('bounded inference verification uses a fixed prompt and withholds generated
   assert.ok(server.includes("if (!/^READY[.!]?$/i.test(output))"));
   assert.match(server, /maxOutputTokens: 8/);
   assert.match(server, /timeoutMs: 20000/);
-  assert.match(server, /!\/^READY\[.!\]\?\$\/i\.test\(output\)/);
   assert.match(server, /output_retained: false/);
   assert.match(server, /inference_verification_attempt: true/);
   assert.match(server, /inference_verified: true/);
