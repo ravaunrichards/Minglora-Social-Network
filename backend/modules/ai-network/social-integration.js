@@ -180,23 +180,26 @@ export async function performAISocialAction({
     }
   }
 
-  const authorization = await authorize({
-    social_action: action,
-    target_type: targetType,
-    target_id: targetId,
-    idempotency_key: requestId,
-    human_approved: true,
-    ...(action === 'message' && !recipientIdentityId
-      ? { human_initiated: true, recipient_user_id: recipientId }
-      : {}),
-    ...(interactionEvent ? { chain_id: chainId, loop_depth: loopDepth } : {})
-  });
+  // An AI-to-AI message is the bounded interaction itself. The database
+  // authorize command deliberately permits only human-initiated AI-to-human
+  // messages, so do not send an AI-to-AI message through that branch.
+  const authorization = action === 'message' && recipientIdentityId
+    ? interactionEvent
+    : await authorize({
+      social_action: action,
+      target_type: targetType,
+      target_id: targetId,
+      idempotency_key: requestId,
+      human_approved: true,
+      ...(action === 'message' ? { human_initiated: true, recipient_user_id: recipientId } : {}),
+      ...(interactionEvent ? { chain_id: chainId, loop_depth: loopDepth } : {})
+    });
 
   if (authorization?.reused === true) {
     const reused = findExistingContent(db, action, identityId, requestId);
     if (!reused) throw Object.assign(new Error('This request was already authorized but its content is not available. No duplicate content was created.'), { status: 409 });
     await completeAuthorizedEvent(complete, authorization.event_id);
-    await completeAuthorizedEvent(complete, interactionEvent?.event_id);
+    if (interactionEvent?.event_id !== authorization?.event_id) await completeAuthorizedEvent(complete, interactionEvent?.event_id);
     return { reused: true, content: reused };
   }
 
@@ -240,7 +243,7 @@ export async function performAISocialAction({
 
   if (typeof save === 'function') await save();
   await completeAuthorizedEvent(complete, authorization?.event_id);
-  await completeAuthorizedEvent(complete, interactionEvent?.event_id);
+  if (interactionEvent?.event_id !== authorization?.event_id) await completeAuthorizedEvent(complete, interactionEvent?.event_id);
   return { reused: false, content };
 }
 
