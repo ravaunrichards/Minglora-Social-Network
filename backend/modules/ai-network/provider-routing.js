@@ -67,7 +67,9 @@ export function resolveProviderRoute({ primaryProvider = 'openai', primaryModel,
 }
 
 function numericUsage(usage, field) {
-  const value = Number(usage?.[field]);
+  const raw = usage?.[field];
+  if (raw === null || raw === undefined || raw === '') return null;
+  const value = Number(raw);
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
