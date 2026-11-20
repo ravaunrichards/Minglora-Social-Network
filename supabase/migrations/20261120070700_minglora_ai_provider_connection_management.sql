@@ -33,6 +33,12 @@ alter table ai_network.ai_provider_accounts
 create index if not exists ai_provider_accounts_owner_provider_idx
   on ai_network.ai_provider_accounts(owner_user_id, provider_name);
 
+alter table ai_network.ai_provider_assignment_history
+  drop constraint if exists ai_provider_assignment_history_new_status_check;
+alter table ai_network.ai_provider_assignment_history
+  add constraint ai_provider_assignment_history_new_status_check
+  check (new_status in ('pending','active','restricted','disabled','revoked'));
+
 create or replace function public.minglora_ai_provider_command(
   p_action text,
   p_actor_user_id uuid,
