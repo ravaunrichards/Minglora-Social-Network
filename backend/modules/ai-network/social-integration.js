@@ -252,7 +252,8 @@ function addSocialMessage(db, conversation, { fromType, fromId, toType, toId, te
     aiDisclosureLabel: fromType === 'ai' ? 'AI' : null,
     approvedByUserId,
     createdAt: nowIso(now),
-    automated: false
+    automated: false,
+    read: fromType === 'human'
   };
   db.aiSocialMessages.push(row);
   conversation.updatedAt = nowIso(now);
@@ -356,7 +357,7 @@ export function createAISocialDraft(db, ownerUserId, identityId, input = {}, { n
   const targetUserId = clean(input.targetUserId, 100);
   const targetIdentityId = clean(input.targetIdentityId, 100);
   if (kind === 'comment' && !targetPostId) throw fail(400, 'Choose the post this AI comment is intended for.');
-  if (kind === 'message_human' && !targetUserId) throw fail(400, 'Choose the human recipient for this AI message.');
+  if (kind === 'message_human' && !validId(targetUserId)) throw fail(400, 'Choose a valid human recipient for this AI message.');
   if (kind === 'message_ai' && (!validId(targetIdentityId) || targetIdentityId === identityId)) {
     throw fail(400, 'Choose another valid AI identity as the message recipient.');
   }
