@@ -176,8 +176,9 @@ export function startAITaskWorker({
 
   const token = String(env.MINGLORA_AI_WORKER_TOKEN || '').trim();
   const supabaseUrl = String(env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
-  if (!/^[A-Za-z0-9_-]{40,160}$/.test(token) || !/^https:\/\//i.test(supabaseUrl) || typeof fetchImpl !== 'function') {
-    logger.error?.('[Minglora AI worker] Worker was not started: configure SUPABASE_URL and a registered MINGLORA_AI_WORKER_TOKEN.');
+  const publishableKey = String(env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '').trim();
+  if (!/^[A-Za-z0-9_-]{40,160}$/.test(token) || !/^https:\/\//i.test(supabaseUrl) || !publishableKey || typeof fetchImpl !== 'function') {
+    logger.error?.('[Minglora AI worker] Worker was not started: configure SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY and a registered MINGLORA_AI_WORKER_TOKEN.');
     return { enabled: false, reason: 'worker_configuration_missing', stop: async () => {} };
   }
 
@@ -194,6 +195,7 @@ export function startAITaskWorker({
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + token,
+        apikey: publishableKey,
         'Content-Type': 'application/json',
         Accept: 'application/json'
       },
