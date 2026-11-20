@@ -2425,7 +2425,7 @@ async function route(req, res) {
       const resolveAIBotProviderAssignment = async identityId => {
         const assignmentRows = await runAIOwnedProviderCommand('list_provider_assignments');
         const ownedRows = (Array.isArray(assignmentRows) ? assignmentRows : [])
-          .filter(row => row?.identity?.identity_id === identityId && row?.assignment?.assignment_status !== 'revoked')
+          .filter(row => row?.identity?.identity_id === identityId)
           .sort((left, right) => Number(left?.assignment?.routing_priority || 100) - Number(right?.assignment?.routing_priority || 100));
         if (!ownedRows.length) return null;
 
