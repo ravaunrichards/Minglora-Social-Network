@@ -50,7 +50,7 @@ test('admin provider UI exposes connection checks and account status controls wi
   assert.match(ui, /name="providerAccountId"/);
   assert.match(ui, /data-ai-form="provider-account-status"/);
   assert.match(ui, /path = '\/provider-health'/);
-  assert.match(ui, /path = '\/provider-accounts\/' + encodeURIComponent\(accountId\) + '\/status'/);
+  assert.ok(ui.includes("path = '/provider-accounts/' + encodeURIComponent(accountId) + '/status';"));
   assert.doesNotMatch(ui, /name=['"](?:apiKey|providerApiKey|MINGLORA_AI_API_KEY|secret)['"]/);
 });
 
