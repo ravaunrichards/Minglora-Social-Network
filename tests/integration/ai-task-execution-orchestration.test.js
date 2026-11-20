@@ -31,9 +31,9 @@ async function createFixture(client) {
       user_id uuid primary key references public.profiles(id),
       active boolean not null, role text not null
     );
-    insert into public.profiles(id) values ('\${OWNER}') on conflict do nothing;
+    insert into public.profiles(id) values ('${OWNER}') on conflict do nothing;
     insert into public.minglora_platform_staff(user_id,active,role)
-      values ('\${OWNER}',true,'owner') on conflict do nothing;
+      values ('${OWNER}',true,'owner') on conflict do nothing;
 
     create table ai_network.ai_identities (
       identity_id uuid primary key,
@@ -134,28 +134,28 @@ async function createFixture(client) {
     insert into ai_network.ai_identities(
       identity_id,owner_user_id,population,category_key,subcategory,purpose,status,enabled,supervision_level
     ) values
-      ('\${IDENTITY_A}','\${OWNER}','test','community_helper','welcome','Support community members with concise, useful drafts.','active',true,'autonomous_within_limits'),
-      ('\${IDENTITY_B}','\${OWNER}','test','community_helper','delegate','Summarize approved delegated work for the lead identity.','active',true,'autonomous_within_limits');
+      ('${IDENTITY_A}','${OWNER}','test','community_helper','welcome','Support community members with concise, useful drafts.','active',true,'autonomous_within_limits'),
+      ('${IDENTITY_B}','${OWNER}','test','community_helper','delegate','Summarize approved delegated work for the lead identity.','active',true,'autonomous_within_limits');
     insert into ai_network.ai_profiles(identity_id,bio,introduction,personality,profession,skills,interests,hobbies)
     values
-      ('\${IDENTITY_A}','A community welcome assistant.','I help new members get oriented.',
+      ('${IDENTITY_A}','A community welcome assistant.','I help new members get oriented.',
         '{"tone":"warm","style":"concise"}','Community assistant',array['summarization','welcome writing'],array['community support'],array['reading']),
-      ('\${IDENTITY_B}','A delegated community assistant.','I summarize approved assignments.',
+      ('${IDENTITY_B}','A delegated community assistant.','I summarize approved assignments.',
         '{"tone":"clear","style":"structured"}','Research assistant',array['summarization'],array['research'],array['reading']);
     insert into ai_network.ai_identity_capabilities(identity_id,capability_key,is_enabled)
-      values ('\${IDENTITY_A}','text_generation',true),('\${IDENTITY_B}','text_generation',true);
+      values ('${IDENTITY_A}','text_generation',true),('${IDENTITY_B}','text_generation',true);
     insert into ai_network.ai_identity_permissions(identity_id,permission_key,resource_scope,effect,expires_at)
-      values ('\${IDENTITY_A}','task.execute','*','allow',now()+interval '1 day'),
-             ('\${IDENTITY_B}','task.execute','*','allow',now()+interval '1 day');
+      values ('${IDENTITY_A}','task.execute','*','allow',now()+interval '1 day'),
+             ('${IDENTITY_B}','task.execute','*','allow',now()+interval '1 day');
     insert into ai_network.ai_provider_accounts(provider_account_id,owner_user_id,provider_name,status,health_status)
-      values ('\${ACCOUNT}','\${OWNER}','openai','configured','healthy');
+      values ('${ACCOUNT}','${OWNER}','openai','configured','healthy');
     insert into ai_network.ai_provider_models(model_id,provider_name,model_identifier,is_active,text_capability)
-      values ('\${MODEL}','openai','\${MODEL_NAME}',true,true);
+      values ('${MODEL}','openai','${MODEL_NAME}',true,true);
     insert into ai_network.ai_provider_assignments(
       identity_id,provider_account_id,model_id,assignment_status,provider_health_status,assigned_capabilities
     ) values
-      ('\${IDENTITY_A}','\${ACCOUNT}','\${MODEL}','active','healthy',array['text_generation']),
-      ('\${IDENTITY_B}','\${ACCOUNT}','\${MODEL}','active','healthy',array['text_generation']);
+      ('${IDENTITY_A}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation']),
+      ('${IDENTITY_B}','${ACCOUNT}','${MODEL}','active','healthy',array['text_generation']);
 
     grant usage on schema public,ai_network to service_role;
     grant all on all tables in schema public,ai_network to service_role;
@@ -227,7 +227,7 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
           created_by_user_id,delegation_grant_id,delegated_from_identity_id
         ) values (
           $1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7::jsonb,
-          'queued',50,\${scheduledFor},$8,$9,$10,$2::uuid,$11::uuid,$12::uuid
+          'queued',50,${scheduledFor},$8,$9,$10,$2::uuid,$11::uuid,$12::uuid
         )
       `,[
         taskId,OWNER,identityId,title,taskType,actionClass,JSON.stringify(taskPayload),
