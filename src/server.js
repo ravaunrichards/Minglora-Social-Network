@@ -1742,6 +1742,20 @@ async function route(req, res) {
         if(action==='react')return json(res,200,{post:await publicPost(result.content.post,user.id),aiGenerated:true,aiDisclosureRequired:true});
         return json(res,201,{message:{...result.content,author:safeUser(aiSocialMembers.get(identityId),user.id)},aiGenerated:true,aiDisclosureRequired:true});
       }
+      const socialContentListParts=sub.split('/').filter(Boolean);
+      if(socialContentListParts[0]==='social'&&socialContentListParts[1]==='identities'&&socialContentListParts.length===3&&socialContentListParts[2]&&method==='GET'){
+        const identityId=socialContentListParts[2];
+        if(!aiEmailIdentityIdPattern.test(identityId))throw Object.assign(new Error('A valid AI identity ID is required.'),{status:400});
+        await runAISocialAdminCommand('get_permissions',{identity_id:identityId});
+        const posts=(db.posts||[]).filter(item=>item.userId===identityId&&item.aiGenerated===true)
+          .map(item=>({id:item.id,type:'post',text:String(item.text||''),status:item.status||'active',createdAt:item.createdAt||null}));
+        const comments=(db.posts||[]).flatMap(parent=>(parent.comments||[])
+          .filter(item=>item.userId===identityId&&item.aiGenerated===true)
+          .map(item=>({id:item.id,type:'comment',postId:parent.id,text:String(item.text||''),status:item.status||'active',createdAt:item.createdAt||null})));
+        const messages=(db.messages||[]).filter(item=>item.from===identityId&&item.aiGenerated===true)
+          .map(item=>({id:item.id,type:'message',recipientId:item.to,text:String(item.text||''),status:item.status||(item.unsent?'unsent':'active'),createdAt:item.createdAt||null}));
+        return json(res,200,{content:[...posts,...comments,...messages].sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0))});
+      }
       const socialContentParts=sub.split('/').filter(Boolean);
       if(socialContentParts[0]==='social'&&socialContentParts[1]==='identities'&&socialContentParts.length===5&&socialContentParts[3]==='content'&&['PATCH','DELETE'].includes(method)){
         const identityId=socialContentParts[2],contentId=socialContentParts[4];
