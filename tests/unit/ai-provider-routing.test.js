@@ -204,3 +204,25 @@ test('fallback stays disabled when no alternate model is configured', async () =
   }), error => error.code === 'timeout' && error.providerRouting.fallbackUsed === false);
   assert.equal(calls, 3, 'default retry count is bounded to two retries');
 });
+
+
+test('repeated authentication failures do not open the availability circuit or invoke fallback', async () => {
+  const circuitStore = createProviderCircuitStore();
+  const routeConfig = route();
+  let primaryCalls = 0;
+  let fallbackCalls = 0;
+  for (let index = 0; index < 4; index += 1) {
+    await assert.rejects(runWithProviderFallback({
+      routeConfig,
+      circuitStore,
+      operation: async ({ model }) => {
+        if (model === 'backup-model') fallbackCalls += 1;
+        else primaryCalls += 1;
+        throw providerFailure('unauthorized', false);
+      }
+    }), error => error.code === 'unauthorized');
+  }
+  assert.equal(primaryCalls, 4);
+  assert.equal(fallbackCalls, 0);
+  assert.equal(circuitStore.has('openai:primary-model'), false);
+});
