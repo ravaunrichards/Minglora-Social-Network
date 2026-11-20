@@ -117,10 +117,6 @@ export async function generateGeminiTaskOutput({
     throw providerError('provider_adapter_unavailable', 'No approved Gemini task adapter exists for the selected provider route.', 503, { retryable: false });
   }
 
-  const providerSetting = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
-  if (providerSetting && !['google_gemini', 'gemini'].includes(providerSetting)) {
-    throw providerError('provider_not_selected', 'Gemini is not the selected Minglora provider.', 409, { retryable: false });
-  }
   const apiKey = String(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY || '').trim();
   if (!apiKey) throw providerError('missing_credentials', 'Gemini is not configured in the private Minglora worker environment.', 503, { retryable: false });
   if (typeof fetchImpl !== 'function') {
