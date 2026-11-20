@@ -10767,6 +10767,26 @@ server.listen(PORT,'0.0.0.0',async()=>{
   const liveCleanup = await liveSessionCleanupReady;
   console.info('[Minglora LIVE cleanup]', JSON.stringify(liveCleanup));
   startLiveSessionCleanupSweep();
+  const aiTaskWorker = startAITaskWorker();
+  if (aiTaskWorker.enabled) {
+    let shuttingDown = false;
+    const shutdownAITaskWorker = async signal => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      console.info('[Minglora AI worker] Graceful shutdown requested.', { signal });
+      server.close();
+      try {
+        await aiTaskWorker.stop();
+      } catch (error) {
+        console.error('[Minglora AI worker] Shutdown did not complete cleanly.', {
+          message: String(error?.message || error).slice(0, 180)
+        });
+      }
+      process.exit(0);
+    };
+    process.once('SIGTERM', () => { void shutdownAITaskWorker('SIGTERM'); });
+    process.once('SIGINT', () => { void shutdownAITaskWorker('SIGINT'); });
+  }
   console.log(`Minglora listening on port ${PORT}`);
   const persistence = await persistenceHealth();
   const aiReadiness = getAIProviderStatus();
