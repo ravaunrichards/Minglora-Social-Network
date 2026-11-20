@@ -312,8 +312,7 @@ export async function generateAssignedAIBotReply({
   if (typeof fetchImpl !== 'function') {
     throw providerError('adapter_unavailable', 'This server runtime does not provide HTTP fetch.', 503);
   }
-  const moderationBaseUrl = buildEndpoint(env.OPENAI_BASE_URL);
-  const moderationEndpoint = moderationBaseUrl + '/moderations';
+  const moderationEndpoint = 'https://api.openai.com/v1/moderations';
   const configuredTimeout = Number(timeoutMs ?? env.MINGLORA_AI_REQUEST_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
   const requestTimeoutMs = Number.isFinite(configuredTimeout)
     ? Math.min(Math.max(Math.trunc(configuredTimeout), 1000), MAX_TIMEOUT_MS)
