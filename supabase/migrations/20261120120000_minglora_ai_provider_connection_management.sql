@@ -21,7 +21,7 @@ create table if not exists ai_network.ai_provider_health_events (
   note text not null default '' check (length(note) <= 500),
   checked_at timestamptz not null default now(),
   actor_user_id uuid not null references public.profiles(id) on delete restrict,
-  check (not connected or health_status = 'healthy')
+  check (connected = (health_status = 'healthy'))
 );
 
 create index if not exists ai_provider_health_events_account_time_idx
@@ -147,8 +147,8 @@ begin
       raise exception using errcode = '22023', message = 'Provider connected state must be boolean.';
     end if;
     v_connected := coalesce((v_payload->>'connected')::boolean,false);
-    if v_connected and v_health_status <> 'healthy' then
-      raise exception using errcode = '22023', message = 'A connected provider must have healthy health status.';
+    if v_connected <> (v_health_status = 'healthy') then
+      raise exception using errcode = '22023', message = 'Provider connected state and health status must agree.';
     end if;
     if nullif(v_payload->>'model_count','') is not null and (v_payload->>'model_count') !~ '^[0-9]{1,4}$' then
       raise exception using errcode = '22023', message = 'Provider model count must be a non-negative integer.';
@@ -282,7 +282,7 @@ begin
         video_capability,voice_capability,tool_capability,is_active,updated_at
       ) values (
         v_provider_name,v_model_name,v_model_id,v_model_version,
-        array['text']::text[],'{}'::text[],true,false,false,false,false,false,true,now()
+        '{}'::text[],'{}'::text[],false,false,false,false,false,false,true,now()
       )
       on conflict (provider_name,model_identifier,model_version) do update
         set model_name=excluded.model_name,is_active=true,updated_at=now();
