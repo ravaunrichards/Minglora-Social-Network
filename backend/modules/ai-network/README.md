@@ -50,6 +50,7 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - POST /api/ai-network/provider-assignments
 - PATCH /api/ai-network/provider-assignments/:assignmentId/status
 - GET /api/ai-network/tasks
+- GET /api/ai-network/worker-status
 - POST /api/ai-network/tasks
 - PATCH /api/ai-network/tasks/:taskId/approval
 - POST /api/ai-network/tasks/:taskId/cancel
