@@ -2688,9 +2688,6 @@ async function route(req, res) {
         return json(res, result?.reused ? 200 : 201, result || {});
       }
 
-      if (method === 'GET' && sub === 'worker-status') {
-        return json(res, 200, { worker: mingloraAITaskWorker.getStatus() });
-      }
       if (method === 'GET' && sub === 'tasks') {
         const result = await runAITaskCommand('list_tasks');
         return json(res, 200, result || { tasks: [], runtime: null });
