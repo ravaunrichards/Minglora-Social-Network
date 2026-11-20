@@ -2725,6 +2725,19 @@ async function route(req, res) {
         if (accountId && !aiIdentityIdPattern.test(accountId)) {
           throw Object.assign(new Error('A valid provider account ID is required.'), { status: 400 });
         }
+        if (accountId) {
+          const accounts = await runAIProviderCommand('list_provider_accounts');
+          const account = (Array.isArray(accounts) ? accounts : []).find(item => item.provider_account_id === accountId);
+          if (!account || String(account.provider_name || '').toLowerCase() !== provider) {
+            throw Object.assign(new Error('Provider account was not found for this owner or does not match the selected provider.'), { status: 404 });
+          }
+          if (account.account_type !== 'managed') {
+            throw Object.assign(new Error('Only managed provider accounts can be linked to platform environment credentials. User-managed account secrets are not connected to Minglora yet.'), { status: 409 });
+          }
+          if (String(account.status || '').toLowerCase() === 'revoked') {
+            throw Object.assign(new Error('A revoked provider account cannot be probed or reactivated.'), { status: 409 });
+          }
+        }
         const startedAt = Date.now();
         const health = await probeAIProvider(provider, {
           model: String(input.model || '').trim() || undefined
@@ -2816,8 +2829,11 @@ async function route(req, res) {
           if (!account || String(account.provider_name || '').toLowerCase() !== provider) {
             throw Object.assign(new Error('Provider account was not found for this owner or does not match the selected provider.'), { status: 404 });
           }
-          if (['disabled','revoked'].includes(String(account.status || '').toLowerCase())) {
-            throw Object.assign(new Error('Model discovery is blocked for a disabled or revoked provider account.'), { status: 409 });
+          if (account.account_type !== 'managed') {
+            throw Object.assign(new Error('Only managed provider accounts can be linked to platform environment credentials. User-managed account secrets are not connected to Minglora yet.'), { status: 409 });
+          }
+          if (String(account.status || '').toLowerCase() === 'revoked') {
+            throw Object.assign(new Error('Model discovery is blocked for a revoked provider account.'), { status: 409 });
           }
         }
 
