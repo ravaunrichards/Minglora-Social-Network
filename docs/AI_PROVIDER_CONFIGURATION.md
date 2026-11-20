@@ -114,6 +114,29 @@ The provider center now exposes an explicit administrator-triggered inference ve
 
 The check proves only that the selected model returned the fixed response under the current platform credential and account at that time. It does not authorize customer-facing Anthropic/Gemini inference, autonomous workers, social publishing or any external side effect. AI worker execution remains disabled.
 
+
+## Phase 4.6 — assignment-aware AI bot conversation routing
+
+Relational AI bot conversations now resolve the bot's linked AI identity against the signed-in owner's provider assignments. When an identity has any provider assignment, chat does not silently bypass a disabled, restricted, pending or revoked assignment by falling back to the legacy OpenAI route.
+
+An assigned route is usable only when all of the following are true:
+
+- The identity is active and enabled, and its provider assignment is explicitly `active`.
+- The assignment references an active text-capable model from OpenAI, Anthropic or Google Gemini.
+- The owner-scoped managed provider account is `enabled`, `healthy`, and has a health check no older than 15 minutes.
+- The provider still returns the selected model as current; retired/deprecated Anthropic models and shutdown OpenAI models are rejected.
+- The exact assigned model has a successful inference-verification event from the last 15 minutes.
+
+If an identity has no provider assignment, the existing OpenAI bot-chat path remains the compatibility route. If an assignment exists but is not eligible, the conversation fails closed and does not switch to another provider. Cross-provider failover and automatic fallback-model routing are not enabled by this stage.
+
+### Safety and data handling
+
+Assigned bot replies retain the existing daily token budget, idempotent request lifecycle, owner-consented memory filtering, short history window, AI disclosure rules, and no-tools/no-external-actions system instructions. Input and output are both checked using OpenAI Moderation. Consequently, `OPENAI_API_KEY` must be configured in the private Minglora environment even when Anthropic or Gemini is selected for generation. If moderation is unavailable or flags either the input or the generated reply, the generation is blocked or the reply is not saved.
+
+Anthropic and Gemini generation use the shared server-side provider adapters and the exact model ID from the active identity assignment. Credentials are never accepted from the browser. Provider request/retention policies remain subject to the respective provider's terms; Minglora does not claim identical storage controls across providers.
+
+This stage does not enable background workers, automatic model fallback, scheduled activity, or autonomous actions. A provider assignment is only used for a conversation after an administrator has explicitly activated that assignment.
+
 ## Phase 4.4 — model discovery and verified model selection
 ## Phase 4.5 — bounded inference verification
 
