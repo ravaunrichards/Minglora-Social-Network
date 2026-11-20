@@ -8451,6 +8451,8 @@ function renderMessageContent(messages=[]){
   if(!messages.length)return '<div class="message-window-empty">No messages yet. Say hello to start this chat.</div>';
   return messages.map(message=>{
     const mine=message.from===state.user.id;
+    const aiSocialMessage=message.isAISocialMessage===true;
+    const aiAttribution=message.aiDisclosureRequired===true?'<small class="message-ai-attribution">AI BOT</small>':'';
     const receipt=mine?(message.groupId?(message.readState?.readCount+' of '+message.readState?.total+' seen'):(message.read?'Seen':'Sent')):'';
     const reply=message.replyToId?messages.find(item=>item.id===message.replyToId):null;
     const replyHtml=reply?'<div class="message-reply-preview"><strong>'+esc(reply.author?.name||'Replying to a message')+'</strong><span>'+esc(reply.unsent?'Message unavailable':reply.text||((reply.attachments||[]).length?'Attachment':'Message'))+'</span></div>':'';
@@ -8459,15 +8461,15 @@ function renderMessageContent(messages=[]){
     const gif=message.unsent?'':(message.gifUrl?'<a class="message-attachment-gif" href="'+esc(message.gifUrl)+'" target="_blank" rel="noopener"><img loading="lazy" src="'+esc(message.gifUrl)+'" alt="GIF"></a>':'');
     const attachments=message.unsent?'':messageAttachmentHtml(message.attachments);
     const editable=mine&&!message.unsent&&!message.stickerId&&!message.gifUrl&&Boolean(message.text);
-    const actions='<details class="message-bubble-actions"><summary aria-label="Message options" title="Message options">···</summary><div class="message-bubble-actions-menu">'+
+    const actions=aiSocialMessage?'':'<details class="message-bubble-actions"><summary aria-label="Message options" title="Message options">···</summary><div class="message-bubble-actions-menu">'+
       '<button type="button" data-message-reply="'+esc(message.id)+'">Reply</button>'+
       (editable?'<button type="button" data-message-edit="'+esc(message.id)+'">Edit message</button>':'')+
       '<button type="button" data-message-delete-me="'+esc(message.id)+'">Delete for me</button>'+
       (mine&&!message.unsent?'<button type="button" class="danger" data-message-unsend="'+esc(message.id)+'">Unsend for everyone</button>':'')+
     '</div></details>';
     const counts={};Object.values(message.reactions||{}).forEach(value=>{counts[value]=(counts[value]||0)+1;});
-    const reactionHtml='<div class="message-reaction-row">'+['👍','❤️','😂','😮','😢','🙏'].map(reaction=>'<button type="button" class="message-reaction-button '+(message.reactions?.[state.user.id]===reaction?'is-selected':'')+'" data-message-react="'+esc(message.id)+'" data-reaction="'+reaction+'" aria-label="React '+reaction+'">'+reaction+(counts[reaction]?' <small>'+counts[reaction]+'</small>':'')+'</button>').join('')+'</div>';
-    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+'" data-message-id="'+esc(message.id)+'">'+actions+replyHtml+content+gif+attachments+expiryLabel+reactionHtml+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
+    const reactionHtml=aiSocialMessage?'':'<div class="message-reaction-row">'+['👍','❤️','😂','😮','😢','🙏'].map(reaction=>'<button type="button" class="message-reaction-button '+(message.reactions?.[state.user.id]===reaction?'is-selected':'')+'" data-message-react="'+esc(message.id)+'" data-reaction="'+reaction+'" aria-label="React '+reaction+'">'+reaction+(counts[reaction]?' <small>'+counts[reaction]+'</small>':'')+'</button>').join('')+'</div>';
+    return '<article class="message-window-bubble '+(mine?'mine':'')+(message.stickerId?' is-sticker':'')+(aiSocialMessage?' is-ai-social-message':'')+'" data-message-id="'+esc(message.id)+'">'+actions+replyHtml+aiAttribution+content+gif+attachments+expiryLabel+reactionHtml+'<small>'+timeAgo(message.createdAt)+(message.editedAt?'<span class="message-edited-label">Edited</span>':'')+(receipt?' · '+receipt:'')+'</small></article>';
   }).join('');
 }
 function messageSignature(messages=[]){return messages.map(message=>[message.id,message.read?'1':'0',message.text||'',message.editedAt||'',message.unsent?'1':'0',(message.attachmentIds||[]).join(','),JSON.stringify(message.reactions||{}),message.replyToId||'',JSON.stringify(message.readBy||{})].join(':')).join('|');}
@@ -8670,7 +8672,7 @@ function renderMessageWindows(){
         '<div class="message-window-emoji-panel" data-message-emoji-panel="'+esc(win.user.id)+'" hidden>'+emojiButtons+'</div>'+
         '<div class="message-window-gif-panel" data-message-gif-panel="'+esc(win.user.id)+'" hidden><form class="message-gif-search" data-message-gif-search="'+esc(win.user.id)+'"><input name="query" maxlength="80" placeholder="Search GIFs…" aria-label="Search GIFs"><button type="submit">Search</button></form><div class="message-gif-results" data-message-gif-results="'+esc(win.user.id)+'"><span>Search Tenor GIFs to send one.</span></div></div>'+
         '<div class="message-window-record-status" data-message-record-status="'+esc(win.user.id)+'" role="status" hidden>Recording voice note…</div>'+
-        '<div class="message-window-toolbar"><button type="button" data-message-attach="'+esc(win.user.id)+'" title="Photos, videos and files" aria-label="Attach photos, videos and files">🖼</button><button type="button" data-message-voice="'+esc(win.user.id)+'" title="Voice note — record and send" aria-label="Record a voice note"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><button type="button" data-message-open-stickers="'+esc(win.user.id)+'" title="Stickers" aria-label="Open stickers">✳</button><button type="button" data-message-open-gifs="'+esc(win.user.id)+'" title="GIFs" aria-label="Open GIF search">GIF</button></div>'+
+        '<div class="message-window-toolbar" style="'+(isAI?'display:none':'')+'"><button type="button" data-message-attach="'+esc(win.user.id)+'" title="Photos, videos and files" aria-label="Attach photos, videos and files">🖼</button><button type="button" data-message-voice="'+esc(win.user.id)+'" title="Voice note — record and send" aria-label="Record a voice note"><svg class="message-window-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><button type="button" data-message-open-stickers="'+esc(win.user.id)+'" title="Stickers" aria-label="Open stickers">✳</button><button type="button" data-message-open-gifs="'+esc(win.user.id)+'" title="GIFs" aria-label="Open GIF search">GIF</button></div>'+
         '<form class="message-window-form" data-message-form="'+esc(win.user.id)+'"><input name="text" maxlength="3000" placeholder="Aa" autocomplete="off" aria-label="Write a message"><button type="button" class="message-emoji-toggle" data-message-open-emoji="'+esc(win.user.id)+'" aria-label="Choose emoji" title="Emoji">😊</button><button class="message-send-button" type="submit" aria-label="Send message" title="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.2 21 12 3.4 3.8l-.1 6.4 12 1.8-12 1.8z" fill="currentColor"/></svg></button></form>'+
       '</div></div>'
     );
