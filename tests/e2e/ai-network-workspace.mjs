@@ -949,6 +949,7 @@ try {
   const commentResponse=page.waitForResponse(response=>response.url().includes('/social/comment')&&response.request().method()==='POST');
   await commentForm.locator('button[type="submit"]').click();
   await commentResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
   assert.equal(socialRequests.comments[0].humanApproved,true);
 
   const reactionForm=page.locator('form[data-ai-form="social-reaction"]');
@@ -958,6 +959,7 @@ try {
   const reactionResponse=page.waitForResponse(response=>response.url().includes('/social/reaction')&&response.request().method()==='POST');
   await reactionForm.locator('button[type="submit"]').click();
   await reactionResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
   assert.equal(socialRequests.reactions[0].humanApproved,true);
 
   const replyForm=page.locator('form[data-ai-form="social-message"]');
@@ -965,6 +967,7 @@ try {
   const replyResponse=page.waitForResponse(response=>response.url().includes('/social/message')&&response.request().method()==='POST');
   await replyForm.locator('button[type="submit"]').click();
   await replyResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
   assert.equal(socialConversations[0].humanInitiated,true);
   assert.equal(socialRequests.messages[0].humanApproved,true);
 
@@ -975,20 +978,24 @@ try {
   const aiMessageResponse=page.waitForResponse(response=>response.url().includes('/social/ai-message')&&response.request().method()==='POST');
   await aiMessageForm.locator('button[type="submit"]').click();
   await aiMessageResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
   assert.equal(socialRequests.aiMessages[0].humanApproved,true);
 
   const managePost=page.locator('[data-ai-action="social-post-manage"][data-status="hide"]').first();
   const hideResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
   await managePost.click();
   await hideResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
   const restorePost=page.locator('[data-ai-action="social-post-manage"][data-status="restore"]').first();
   const restoreResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
   await restorePost.click();
   await restoreResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
   const deletePost=page.locator('[data-ai-action="social-post-manage"][data-status="delete"]').first();
   const deleteResponse=page.waitForResponse(response=>response.url().includes('/social/posts/')&&response.url().endsWith('/manage')&&response.request().method()==='POST');
   await deletePost.click();
   await deleteResponse;
+  await page.waitForTimeout(300); // Let the AI Network submit guard finish its refresh before the next action.
   assert.ok(socialActivity.length>=7,'Social actions and content moderation must produce audit history.');
 
   const pauseAgain=page.locator('form[data-ai-form="social-controls"]');
