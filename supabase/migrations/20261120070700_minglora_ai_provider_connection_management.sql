@@ -348,10 +348,29 @@ begin
       else 'unavailable'
     end;
     update ai_network.ai_provider_accounts a
-    set health_status=v_account_health_status,last_checked_at=v_checked_at,updated_at=now()
+    set health_status=v_account_health_status,
+        last_checked_at=v_checked_at,
+        status=case
+          when v_metadata->>'inference_verification_attempt'='true'
+           and v_metadata->>'inference_verified'='false'
+           and v_metadata->>'in_progress' is distinct from 'true'
+          then 'disabled'
+          else a.status
+        end,
+        updated_at=now()
     where a.provider_account_id=v_provider_account_id and a.owner_user_id=p_actor_user_id;
     update ai_network.ai_provider_assignments a
-    set provider_health_status=v_account_health_status,last_checked_at=v_checked_at,updated_at=now()
+    set provider_health_status=v_account_health_status,
+        last_checked_at=v_checked_at,
+        assignment_status=case
+          when v_metadata->>'inference_verification_attempt'='true'
+           and v_metadata->>'inference_verified'='false'
+           and v_metadata->>'in_progress' is distinct from 'true'
+           and a.assignment_status<>'revoked'
+          then 'disabled'
+          else a.assignment_status
+        end,
+        updated_at=now()
     where a.provider_account_id=v_provider_account_id;
     select jsonb_build_object(
       'event_id',h.event_id,'provider_account_id',h.provider_account_id,
