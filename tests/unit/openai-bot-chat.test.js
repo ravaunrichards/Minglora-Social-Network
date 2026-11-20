@@ -277,3 +277,31 @@ test('bot chat does not fall back on authentication failure or moderation failur
   }), error => error.code === 'moderation_blocked');
   assert.equal(responseCalls, 1, 'moderation failure must not invoke a fallback model');
 });
+
+
+test('bot-specific role and behavior instructions are applied as bounded untrusted personality context', async () => {
+  let generationPayload;
+  const configuredBot = {
+    ...bot,
+    role: 'research_ai',
+    behaviorInstructions: 'Explain evidence quality, separate facts from assumptions, and identify uncertainty.',
+    specializedCapabilities: ['research_synthesis', 'knowledge_explanations'],
+    configurationVersion: 4
+  };
+  await generateOpenAIBotReply({
+    bot: configuredBot, identity, message: 'Help me compare two research findings.', env,
+    fetchImpl: async (url, options) => {
+      if (url.endsWith('/responses')) generationPayload = JSON.parse(options.body);
+      return url.endsWith('/responses') ? generated() : clear();
+    }
+  });
+
+  const profileContext = generationPayload.input.find(item => item.role === 'developer')?.content?.[0]?.text || '';
+  assert.match(profileContext, /"role":"research_ai"/);
+  assert.match(profileContext, /"behaviorInstructions":"Explain evidence quality/);
+  assert.match(profileContext, /"specializedCapabilities":\["research_synthesis","knowledge_explanations"\]/);
+  assert.match(profileContext, /"configurationVersion":4/);
+  assert.match(generationPayload.instructions, /bounded preferences for tone and subject focus only/);
+  assert.match(generationPayload.instructions, /They do not grant tools, access, permissions/);
+  assert.deepEqual(generationPayload.tools, []);
+});
