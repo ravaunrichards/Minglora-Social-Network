@@ -73,7 +73,8 @@ export async function processClaimedAITask(claim, {
     const generated = await executeTask({
       task: claim.task,
       route: claim.route,
-      signal: controller.signal
+      signal: controller.signal,
+      identityContext: claim.identity_context || {}
     });
     if (controller.signal.aborted) throw leaseError || controller.signal.reason || new Error('Task execution was cancelled.');
     if (!generated || typeof generated.output !== 'string' || !generated.output.trim()) {
