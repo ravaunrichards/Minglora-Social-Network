@@ -77,6 +77,8 @@ declare
   v_checked_at timestamptz;
   v_metadata jsonb;
   v_event_id uuid;
+  v_inference_verified_at timestamptz;
+  v_inference_verified boolean;
 begin
   if current_user <> 'service_role' then
     raise exception using errcode = '42501', message = 'AI provider commands are restricted to the Minglora server runtime.';
@@ -319,6 +321,19 @@ begin
       if v_account_health_status<>'healthy' or v_last_checked_at is null
          or v_last_checked_at<now()-interval '15 minutes' then
         raise exception using errcode = '22023', message = 'A successful provider health check must complete within the last 15 minutes before enabling the account.';
+      end if;
+      select h.checked_at,h.health_status,(h.metadata->>'inference_verified')='true'
+        into v_inference_verified_at,v_health_status,v_inference_verified
+      from ai_network.ai_provider_health_events h
+      where h.provider_account_id=v_provider_account_id
+        and h.metadata->>'inference_verification_attempt'='true'
+      order by h.checked_at desc
+      limit 1;
+      if v_inference_verified_at is null
+         or v_inference_verified_at<now()-interval '15 minutes'
+         or v_health_status<>'healthy'
+         or v_inference_verified is distinct from true then
+        raise exception using errcode = '22023', message = 'A successful inference verification must complete within the last 15 minutes before enabling the account.';
       end if;
     end if;
     update ai_network.ai_provider_accounts a
