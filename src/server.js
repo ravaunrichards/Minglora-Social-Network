@@ -2992,6 +2992,10 @@ async function route(req, res) {
           throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
         }
         const recentEvents = await runAIProviderCommand('list_provider_health', { provider_account_id: accountId });
+        const reservationTimestamp = aiProviderInferenceCooldown.get(accountId) || 0;
+        if (now - reservationTimestamp < cooldownMs) {
+          throw Object.assign(new Error('An inference verification was just attempted for this account. Retry after the 30-second safety interval.'), { status: 429 });
+        }
         const lastInferenceAttempt = (Array.isArray(recentEvents) ? recentEvents : [])
           .find(event => event?.metadata?.inference_verification_attempt === true);
         const lastAttemptAt = Date.parse(lastInferenceAttempt?.checked_at || '');
