@@ -18,7 +18,7 @@ const MODEL_NAME = 'gpt-4.1-mini';
 const PROMPT = 'Prepare a concise welcome note for a new Minglora community member.';
 
 async function createFixture(client) {
-  await client.query(\`
+  await client.query(`
     do $$ begin create role service_role nologin bypassrls;
     exception when duplicate_object then null; end $$;
     do $$ begin create role anon nologin;
@@ -159,7 +159,7 @@ async function createFixture(client) {
 
     grant usage on schema public,ai_network to service_role;
     grant all on all tables in schema public,ai_network to service_role;
-  \`);
+  `);
 }
 
 test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, times out, cancels and records history', {
@@ -220,7 +220,7 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
       tokenBudget=0,costLimit=0,scheduledFor='now()',grantId=null,delegatedFrom=null
     }={}) => {
       const taskId=randomUUID();
-      await client.query(\`
+      await client.query(`
         insert into ai_network.ai_task_queue(
           task_id,owner_user_id,identity_id,task_title,task_type,action_class,task_payload,
           status,priority,scheduled_for,max_attempts,token_budget,cost_limit_usd,
@@ -229,7 +229,7 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
           $1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7::jsonb,
           'queued',50,\${scheduledFor},$8,$9,$10,$2::uuid,$11::uuid,$12::uuid
         )
-      \`,[
+      `,[
         taskId,OWNER,identityId,title,taskType,actionClass,JSON.stringify(taskPayload),
         maxAttempts,tokenBudget,costLimit,grantId,delegatedFrom
       ]);
@@ -300,13 +300,13 @@ test('PostgreSQL 17: authenticated worker claims, routes, completes, retries, ti
     });
 
     const grantId=randomUUID();
-    await client.query(\`
+    await client.query(`
       insert into ai_network.ai_delegation_grants(
         delegation_grant_id,owner_user_id,grantor_identity_id,grantee_identity_id,grant_status,
         expires_at,allowed_task_types,allowed_action_classes,max_token_budget,max_cost_limit_usd
       ) values ($1::uuid,$2::uuid,$3::uuid,$4::uuid,'active',now()+interval '1 hour',
         array['text.generate'],array['content'],10000,0.25)
-    \`,[grantId,OWNER,IDENTITY_A,IDENTITY_B]);
+    `,[grantId,OWNER,IDENTITY_A,IDENTITY_B]);
     const delegatedTaskId=await insertTask({
       identityId:IDENTITY_B,title:'Delegated task for the member identity',
       tokenBudget:1000,costLimit:0.05,grantId,delegatedFrom:IDENTITY_A
