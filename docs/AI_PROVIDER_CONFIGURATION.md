@@ -89,7 +89,7 @@ Provider account references now support these administrative states:
 - disabled — administrator explicitly disabled the account; no inference should route through it.
 - revoked — permanently disabled and cannot be reactivated through this control.
 
-An account cannot be changed to enabled unless its health is healthy and its last successful health check is no more than 15 minutes old. A health check never auto-enables an account.
+A managed account cannot be changed to enabled unless its provider health is healthy, the last successful health check is no more than 15 minutes old, and the latest inference-verification attempt is successful and no more than 15 minutes old. A successful model-list check alone is insufficient. A health or inference check never auto-enables an account.
 
 The admin Provider & Model Assignment Center now exposes provider selection, account selection, connection checks, and account status controls. It still does not expose credentials.
 
@@ -99,7 +99,20 @@ GET /api/ai-network/provider-accounts/:accountId/health returns the recent sanit
 
 The database function remains restricted to the server runtime and continues to reject raw credentials. Supabase's current security guidance recommends keeping elevated database access server-side and explicitly controlling function execution privileges; the new health-event table is RLS-enabled and granted only to service_role. citeturn345135search0turn345135search9
 
-**Deployment boundary:** the Phase 4.3 migration is included in the feature branch but is not applied to the live Supabase project until the PR is reviewed/merged. This avoids schema drift between the deployed application and the migration history. Supabase's migration guidance likewise recommends versioning schema changes and deploying them through the migration workflow. citeturn345135search2
+**Deployment boundary:** the Phase 4.3/4.5 connection and inference-gate migration is included in the feature branch but is not applied to the live Supabase project until the PR is reviewed/merged. This avoids schema drift between the deployed application and the migration history. Supabase's migration guidance likewise recommends versioning schema changes and deploying them through the migration workflow. citeturn345135search2
+
+## Phase 4.5 — bounded inference verification
+
+The provider center now exposes an explicit administrator-triggered inference verification for a managed provider account and a model that has already been synchronized and rechecked against the live provider model list.
+
+- The request accepts only the managed provider-account ID and catalog model ID. Minglora supplies a fixed prompt asking for the exact token `READY`; administrators cannot submit arbitrary prompt text through this route.
+- The model call is bounded to an eight-token output limit and a 20-second request timeout. No tools or external actions are supplied.
+- Minglora accepts only the expected fixed response. Generated text is not returned to the browser or persisted. The result shows verification outcome, latency and normalized token usage only.
+- Both successful and failed attempts are stored as sanitized provider health events. The newest attempt wins: a later failed or in-progress verification blocks enablement even if an earlier attempt succeeded.
+- A 30-second per-account cooldown reduces repeated test calls. This is a manual diagnostic, may consume provider tokens, and does not enable a provider or any AI identity.
+- Enabling a managed account requires both a current healthy provider check and a successful inference-verification event within 15 minutes. It remains a separate explicit administrative action.
+
+The check proves only that the selected model returned the fixed response under the current platform credential and account at that time. It does not authorize customer-facing Anthropic/Gemini inference, autonomous workers, social publishing or any external side effect. AI worker execution remains disabled.
 
 ## Phase 4.4 — model discovery and verified model selection
 
