@@ -10765,9 +10765,13 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         try{peerId=decodeURIComponent(messageReadMatch[1]);}
         catch{return json(res,400,{error:'The conversation member identifier is invalid.'});}
         if(!peerId||peerId===user.id)return json(res,400,{error:'Choose another member to mark this conversation as read.'});
-        const peer=db.users.find(member=>member.id===peerId);
+        const aiIdentityId=aiSocialIdentityFromPeer(peerId);
+        const aiMessage=(db.messages||[]).find(item=>item.aiIdentityId===aiIdentityId&&(item.aiRecipient||item.aiActor));
+        const aiPeerProfile=aiIdentityId?(aiMessage?.aiRecipient||aiMessage?.aiActor):null;
+        const aiPeerOwnerId=String(aiPeerProfile?.ownerUserId||'');
+        const peer=aiIdentityId?aiPeerProfile:db.users.find(member=>member.id===peerId);
         const hasConversation=db.messages.some(item=>(item.from===user.id&&item.to===peerId)||(item.from===peerId&&item.to===user.id));
-        if(!peer||blockedBetween(user.id,peerId)||!hasConversation)return json(res,404,{error:'Conversation not found.'});
+        if(!peer||(aiIdentityId?!aiPeerOwnerId||blockedBetween(user.id,aiPeerOwnerId):blockedBetween(user.id,peerId))||!hasConversation)return json(res,404,{error:'Conversation not found.'});
         const readAt=now();
         let updated=0;
         for(const message of db.messages){
@@ -10778,7 +10782,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           }
         }
         if(updated)await saveStore();
-        if(updated)messengerRealtime?.publish([peerId,user.id],{type:'message:read',conversationId:peerId,userId:user.id});
+        if(updated)messengerRealtime?.publish(aiIdentityId?[user.id]:[peerId,user.id],{type:'message:read',conversationId:peerId,userId:user.id,aiGenerated:Boolean(aiIdentityId),aiIdentityId:aiIdentityId||null});
         return json(res,200,{ok:true,updated,readAt:updated?readAt:null});
       }
       if(method==='POST'&&p==='/api/messages'&&input.groupId){
