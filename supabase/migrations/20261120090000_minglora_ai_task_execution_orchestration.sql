@@ -10,8 +10,9 @@ create table if not exists ai_network.ai_task_workers (
   worker_status text not null default 'active' check (worker_status in ('active','revoked')),
   max_concurrent_tasks integer not null default 1 check (max_concurrent_tasks between 1 and 8),
   max_tasks_per_minute integer not null default 10 check (max_tasks_per_minute between 1 and 60),
-  allowed_providers text[] not null default array['openai']::text[]
-    check (cardinality(allowed_providers) between 1 and 1 and allowed_providers <@ array['openai']::text[]),
+  allowed_providers text[] not null default array['openai','google_gemini']::text[]
+    check (cardinality(allowed_providers) between 1 and 2
+      and allowed_providers <@ array['openai','google_gemini']::text[]),
   created_by_user_id uuid not null references public.profiles(id) on delete restrict,
   expires_at timestamptz not null,
   last_seen_at timestamptz,
@@ -81,7 +82,7 @@ create table if not exists ai_network.ai_task_provider_limits (
   primary key (provider_name,model_identifier)
 );
 insert into ai_network.ai_task_provider_limits(provider_name,model_identifier,max_concurrent_tasks,max_tasks_per_minute,max_tokens_per_minute)
-values ('openai','*',1,1,30000)
+values ('openai','*',1,1,30000), ('google_gemini','*',1,1,30000)
 on conflict (provider_name,model_identifier) do nothing;
 
 alter table ai_network.ai_task_workers enable row level security;
@@ -177,7 +178,10 @@ begin
           and pa.status='configured' and pa.health_status='healthy'
           and a.assignment_status='active' and a.provider_health_status='healthy'
           and m.is_active=true and m.text_capability=true
-          and (lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%')
+          and (
+            lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%'
+            or lower(pa.provider_name) like '%gemini%' or lower(m.provider_name) like '%gemini%'
+          )
           and i.status='active' and i.enabled=true
           and exists (
             select 1 from ai_network.ai_identity_capabilities cap
@@ -225,7 +229,7 @@ begin
       owner_user_id,worker_label,credential_sha256,max_concurrent_tasks,max_tasks_per_minute,
       allowed_providers,created_by_user_id,expires_at
     ) values (
-      p_actor_user_id,v_label,v_hash,v_concurrency,v_rate,array['openai']::text[],p_actor_user_id,v_expiry
+      p_actor_user_id,v_label,v_hash,v_concurrency,v_rate,array['openai','google_gemini']::text[],p_actor_user_id,v_expiry
     ) returning worker_id into v_worker_id;
     select jsonb_build_object(
       'worker_id',w.worker_id,'worker_label',w.worker_label,'worker_status',w.worker_status,
@@ -471,8 +475,11 @@ begin
     from ai_network.ai_task_queue q
     join lateral (
       select a.assignment_id,
-        case when lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%' then 'openai'
-          else lower(m.provider_name) end as provider_name,
+        case
+          when lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%' then 'openai'
+          when lower(pa.provider_name) like '%gemini%' or lower(m.provider_name) like '%gemini%' then 'google_gemini'
+          else null
+        end as provider_name,
         m.model_identifier,
         a.routing_priority
       from ai_network.ai_provider_assignments a
@@ -483,8 +490,13 @@ begin
         and pa.owner_user_id=q.owner_user_id and pa.status='configured' and pa.health_status='healthy'
         and m.is_active=true and m.text_capability=true
         and (cardinality(a.assigned_capabilities)=0 or a.assigned_capabilities && array['text','text_generation']::text[])
-        and ('openai'=any(v_worker.allowed_providers))
-        and (lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%')
+        and (
+          ('openai'=any(v_worker.allowed_providers)
+            and (lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%'))
+          or
+          ('google_gemini'=any(v_worker.allowed_providers)
+            and (lower(pa.provider_name) like '%gemini%' or lower(m.provider_name) like '%gemini%'))
+        )
       order by a.routing_priority asc,a.assigned_at asc
       limit 1
     ) route on true
@@ -542,8 +554,11 @@ begin
     end if;
 
     select a.assignment_id,
-      case when lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%' then 'openai'
-        else lower(m.provider_name) end,
+      case
+        when lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%' then 'openai'
+        when lower(pa.provider_name) like '%gemini%' or lower(m.provider_name) like '%gemini%' then 'google_gemini'
+        else null
+      end,
       m.model_identifier
     into v_assignment_id,v_provider,v_model
     from ai_network.ai_provider_assignments a
@@ -554,9 +569,15 @@ begin
       and pa.status='configured' and pa.health_status='healthy'
       and m.is_active=true and m.text_capability=true
       and (cardinality(a.assigned_capabilities)=0 or a.assigned_capabilities && array['text','text_generation']::text[])
-      and (lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%')
+      and (
+        ('openai'=any(v_worker.allowed_providers)
+          and (lower(pa.provider_name) like '%openai%' or lower(m.provider_name) like '%openai%'))
+        or
+        ('google_gemini'=any(v_worker.allowed_providers)
+          and (lower(pa.provider_name) like '%gemini%' or lower(m.provider_name) like '%gemini%'))
+      )
     order by a.routing_priority asc,a.assigned_at asc limit 1;
-    if v_assignment_id is null or v_provider<>'openai' then
+    if v_assignment_id is null or v_provider not in ('openai','google_gemini') then
       return jsonb_build_object('claimed',false,'reason','provider_route_unavailable');
     end if;
 
