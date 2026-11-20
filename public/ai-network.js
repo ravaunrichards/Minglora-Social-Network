@@ -1124,7 +1124,7 @@
           return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
             esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
             pill(accountStatus) + ' ' + pill('health ' + (account.health_status || 'unknown')) +
-            '</div><small>Account metadata only · credentials are never stored here</small>' +
+            '</div><small>Account metadata only · credentials not stored here</small>' +
             '<small>Last checked: ' + esc(date(account.last_checked_at)) + '</small></div></div>' +
             '<form class="ai-network-inline-form" data-ai-form="provider-account-status" data-account-id="' + esc(account.provider_account_id || '') + '">' +
             '<label><span>Connection status</span><select name="status">' + options(statusChoices, accountStatus === 'unconfigured' ? 'disabled' : accountStatus) + '</select></label>' +
