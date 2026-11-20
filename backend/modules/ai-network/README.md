@@ -53,6 +53,7 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - POST /api/ai-network/tasks
 - PATCH /api/ai-network/tasks/:taskId/approval
 - POST /api/ai-network/tasks/:taskId/cancel
+- GET /api/ai-network/tasks/:taskId/history
 - GET/POST /api/ai-network/organizations/:id/positions
 - GET/POST /api/ai-network/organizations/:id/vacancies
 - PATCH /api/ai-network/organizations/:id/vacancies/:vacancyId/status
@@ -71,7 +72,15 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 
 ## Provider execution gate
 
-MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The first supported human-initiated path uses the deployed OpenAI bot-chat and Creator Studio adapters with `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL` (or the explicitly selected legacy OpenAI key/model triplet). Both paths run behind the designated-owner/MFA gate, check provider access, moderate their input/output, enforce the shared owner/day token budget and do not expose tools or external actions. Provider-account and model-assignment records remain metadata for future routing; they are not prerequisites for this first human-initiated path. Autonomous workers and schedules remain disabled until worker identity/authentication, claim, heartbeat, completion, failure recovery and operational acceptance are implemented.
+Provider credentials are read only from the private server environment. The human-initiated bot-chat and Creator Studio adapters use OpenAI and apply input/output moderation, usage limits and a no-tools/no-external-actions boundary. Other catalogue providers are metadata only until their adapters and moderation/usage contracts are independently implemented and tested.
+
+The Phase 6 worker consumer is implemented in `ai-task-worker.js` and is disabled by default. It requires `MINGLORA_AI_WORKER_ENABLED=true`, a dedicated `MINGLORA_AI_WORKER_TOKEN` (40+ characters), durable Supabase persistence, and working OpenAI credentials/model configuration. Worker calls use the dedicated token header, never the owner/admin runtime key. The private Edge gateway authenticates the token hash and limits the credential to worker commands. The worker does not change database runtime controls or grant identity permissions.
+
+The claim response supplies the task's owner-scoped identity and database-selected provider/model route. Execution is limited to the task types and content/read-only action classes accepted by the database policy. The worker independently checks the OpenAI adapter and text capabilities, applies a task token budget, reserves rate capacity for each provider model attempt, heartbeats the lease, and records either a non-empty moderated result with route metadata or a failure. Bounded retries follow each task's attempt limit. Provider fallback is limited to a second OpenAI model explicitly present in the claimed database route. AI-to-AI task types produce a private, human-reviewable handoff draft stored as the task result; they do not send messages or perform external actions.
+
+Database execution must separately be unpaused, enabled and assigned a positive concurrency limit; claims are rejected while those controls are closed. The worker has no authority to override these gates. Task history is exposed through the same designated-owner/MFA-protected Node API. Task scheduling honors the durable queue's `scheduled_for` time, but this worker does not activate schedule records or bypass the schedule approval gates.
+
+Current limitation: the live task cancellation command supports waiting/queued/observation-only tasks. It does not cancel a task that is already running; running cancellation needs a separately reviewed database migration and worker cancellation signal. No such migration is applied by this branch.
 
 Provider environment slots, the OpenAI bot-chat/Creator Studio setup and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
 
@@ -95,9 +104,11 @@ The feature branch includes source for owner-scoped organization creation, 20 de
 
 ## Durable task queue
 
-The feature branch includes an additive private queue migration with owner-scoped tasks, approval requests, append-only task events, idempotency, payload/budget limits, supervision-derived approval, and database-side worker leases with `FOR UPDATE SKIP LOCKED`. The current runtime control row defaults to globally paused, execution disabled and zero workers. The Minglora workspace displays the persisted control row and real task records, and permits authorized administrators to create, approve/reject and cancel tasks.
+The private Supabase database has an applied Phase 6 execution-orchestration migration and the active `minglora-runtime-state` Edge Function exposes dedicated authenticated worker commands. These database objects are currently ahead of the checked-in migration source in this repository; keep the migration source synchronized before treating the database change as a reproducible release. The queue includes owner-scoped tasks, human approvals, append-only task events/history, idempotency, payload/budget limits, supervision-derived approval, lease recovery and `FOR UPDATE SKIP LOCKED` claims.
 
-Worker claim, heartbeat, completion and failure commands are not exposed by the runtime gateway and are explicitly rejected in the SQL command until a separate worker identity/credential path exists. The queue is durable task management only; no AI model call or external side effect is executed. The task migration and updated Edge Function are source-only pending review and deployment.
+The worker application code is in this feature branch and is not deployed to production. Runtime controls remain fail-closed by default: globally paused, execution disabled and zero workers. The only current worker adapter is OpenAI. Provider-account/model assignments must be healthy and explicitly activated; AI identities must be active/enabled and possess the task-execution capability and matching allow permission with no deny. A claim additionally requires a due task, approval when required, valid delegation grants, an available lease and a healthy provider route.
+
+The worker records route metadata and either a successful moderated output or a failure/retry; non-empty output and a matching provider/model route are required for the database to accept completion. It does not claim a task succeeded when generation, moderation, heartbeat or completion fails. The worker uses a separate worker-token gateway path and never exposes its credential to task payloads or logs.
 
 
 ## AI category administration
