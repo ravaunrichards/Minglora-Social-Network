@@ -4260,7 +4260,7 @@ Deno.serve(async (req: Request) => {
       "get_settings", "list_public_profiles", "get_member_consent",
       "set_member_consent", "set_global_pause", "get_permissions",
       "set_permissions", "authorize", "complete", "record_member_activity",
-      "history"
+      "record_admin_action", "history"
     ];
 
     if (!validUuid(actorUserId)) {
