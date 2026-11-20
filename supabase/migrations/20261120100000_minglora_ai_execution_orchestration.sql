@@ -65,6 +65,7 @@ declare
   v_next_status text;
   v_reason text;
   v_failure_code text;
+  v_attempt_count integer;
   v_retryable boolean;
   v_retry_seconds integer;
   v_estimated_tokens integer;
@@ -393,7 +394,7 @@ begin
     v_reason:=left(trim(coalesce(v_payload->>'failure_reason','Task execution failed.')),1000);
     v_retryable:=coalesce((v_payload->>'retryable')::boolean,false);
     v_retry_seconds:=greatest(5,least(3600,coalesce((v_payload->>'retry_after_seconds')::integer,30)));
-    select q.status,q.attempt_count into v_previous_status,v_row.attempt_count
+    select q.status,q.attempt_count into v_previous_status,v_attempt_count
     from ai_network.ai_task_queue q
     where q.task_id=(v_payload->>'task_id')::uuid
       and q.owner_user_id=p_owner_user_id and q.worker_id=p_worker_id
@@ -405,7 +406,7 @@ begin
     end if;
     select q.max_attempts into v_row.max_attempts
     from ai_network.ai_task_queue q where q.task_id=(v_payload->>'task_id')::uuid and q.owner_user_id=p_owner_user_id;
-    v_next_status:=case when v_retryable and v_row.attempt_count<v_row.max_attempts then 'queued' else 'failed' end;
+    v_next_status:=case when v_retryable and v_attempt_count<v_row.max_attempts then 'queued' else 'failed' end;
     update ai_network.ai_task_queue q
     set status=v_next_status,failure_reason=v_reason,task_result=case
           when jsonb_typeof(v_payload->'failure_result')='object' then v_payload->'failure_result'
