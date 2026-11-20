@@ -92,3 +92,12 @@ test('provider account status control uses PATCH and selected fallback models ar
   assert.match(server, /model\.lifecycle === 'retired' \|\| model\.lifecycle === 'deprecated'/);
   assert.match(server, /model\.lifecycle && model\.lifecycle !== 'active'/);
 });
+
+test('persisted provider checks require a managed account mapped to private platform credentials', () => {
+  const server = read('src/server.js');
+  const ui = read('public/ai-network.js');
+  assert.match(server, /account\.account_type !== 'managed'/);
+  assert.match(server, /User-managed account secrets are not connected to Minglora yet/);
+  assert.match(server, /account\.status \|\| ''\)\.toLowerCase\(\) === 'revoked'/);
+  assert.match(ui, /accounts\.filter\(account => account\.account_type === 'managed'\)/);
+});
