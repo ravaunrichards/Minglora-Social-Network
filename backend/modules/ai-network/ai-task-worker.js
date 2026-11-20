@@ -270,7 +270,13 @@ export function createMingloraAITaskWorker({
     const task = claim?.task;
     if (!task?.task_id || !task?.lease_token) return { status: 'invalid_claim', executed: false };
     const startTime = Number(now());
-    const route = resolveAITaskExecutionRoute(claim.route);
+    let route;
+    try {
+      route = resolveAITaskExecutionRoute(claim.route);
+    } catch (error) {
+      const failure = safeFailure(error);
+      return { ...(await recordFailure(task, failure)), executed: false, taskId: task.task_id };
+    }
     if (!TASK_TYPES.has(text(task.task_type, 80)) ||
         !['read_only', 'content'].includes(text(task.action_class, 40)) ||
         Number(task.cost_limit_usd || 0) !== 0) {
