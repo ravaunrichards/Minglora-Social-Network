@@ -2813,6 +2813,20 @@
         state.identityRegistrySearch = '';
         state.identityRegistryOffset = 0;
       }
+      else if (action === 'social-global-pause') {
+        const pause = button.dataset.paused === 'true';
+        await request('/social/pause', {
+          method:'POST',
+          body:{ global_paused:pause, pause_reason:pause ? 'Paused by the MFA-verified Minglora administrator.' : 'Resumed by the MFA-verified Minglora administrator.' }
+        });
+        await refresh(pause ? 'Global AI social activity paused.' : 'Global AI social activity resumed. Individual permissions and rate limits remain enforced.');
+        return;
+      }
+      else if (action === 'social-history-refresh') {
+        await loadAISocialAdmin();
+        paintSnapshot();
+        return;
+      }
       else if (action === 'reload') return await load();
       else if (action === 'email-provision') {
         if (!id) throw new Error('Choose an AI identity before provisioning email.');
