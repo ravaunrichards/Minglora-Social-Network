@@ -163,6 +163,42 @@ function stripLegacyDemoData(state) {
   return true;
 }
 
+export async function requestSupabaseWorkerState(aiAction, payload = {}) {
+  // Worker calls use a dedicated credential and are intentionally not retried:
+  // an ambiguous claim/complete retry could claim a second task or duplicate work.
+  if (persistenceDriver !== 'supabase') {
+    throw Object.assign(new Error('AI worker execution requires durable Minglora Supabase persistence.'), { status: 503 });
+  }
+  if (!stateApiUrl || !publishableKey) {
+    throw Object.assign(new Error('Minglora worker persistence gateway is not configured.'), { status: 503 });
+  }
+  const workerToken = String(process.env.MINGLORA_AI_WORKER_TOKEN || '').trim();
+  if (workerToken.length < 40) {
+    throw Object.assign(new Error('A dedicated Minglora AI worker credential is required.'), { status: 503 });
+  }
+  const response = await fetch(stateApiUrl, {
+    method: 'POST',
+    headers: {
+      apikey: publishableKey,
+      'x-minglora-worker-token': workerToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      action: 'ai_worker_command',
+      aiAction: String(aiAction || ''),
+      payload: payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {}
+    }),
+    signal: AbortSignal.timeout(15000)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(String(result.error || 'Minglora worker command failed.').slice(0, 240));
+    error.status = response.status;
+    throw error;
+  }
+  return result?.result ?? null;
+}
+
 export async function requestSupabaseState(action, extra = {}) {
   // Local JSON-mode tests and development do not call the hosted Supabase gateway.
   if (persistenceDriver !== 'supabase') return { ok: true, skipped: true };

@@ -9,7 +9,10 @@ const TASK_LABELS = Object.freeze({
   caption_draft: 'three distinct social media caption options',
   title_ideas: 'ten clear, engaging title ideas',
   translation_draft: 'a faithful translation draft that preserves tone and meaning',
-  creator_calendar: 'a realistic, useful creator content calendar'
+  creator_calendar: 'a realistic, useful creator content calendar',
+  content_draft: 'a complete, clearly structured content draft',
+  public_event_support: 'a clear event-support draft, including useful information and attendee guidance',
+  ai_to_ai_message: 'a concise private AI-to-AI task handoff message for human review; do not send or deliver it'
 });
 
 const providerError = (code, message, status = 502, metadata = {}) => Object.assign(new Error(message), {
@@ -56,7 +59,7 @@ const safeProviderFailure = status => {
   return providerError('provider_error', 'OpenAI could not complete the draft request. No provider response body or credential was exposed.', 502, metadata);
 };
 
-async function postOpenAIJson({ fetchImpl, endpoint, apiKey, payload, timeoutMs }) {
+async function postOpenAIJson({ fetchImpl, endpoint, apiKey, payload, timeoutMs, signal }) {
   let response;
   try {
     response = await fetchImpl(endpoint, {
@@ -68,9 +71,12 @@ async function postOpenAIJson({ fetchImpl, endpoint, apiKey, payload, timeoutMs 
       },
       body: JSON.stringify(payload),
       redirect: 'error',
-      signal: AbortSignal.timeout(timeoutMs)
+      signal: signal ? AbortSignal.any([AbortSignal.timeout(timeoutMs), signal]) : AbortSignal.timeout(timeoutMs)
     });
   } catch (error) {
+    if (signal?.aborted) {
+      throw providerError('lease_lost', 'The task execution lease was lost. The provider result will not be recorded as successful.', 409, { retryable: false });
+    }
     const timedOut = error?.name === 'TimeoutError' || error?.name === 'AbortError';
     throw providerError(
       timedOut ? 'timeout' : 'network_error',
@@ -102,7 +108,9 @@ export async function generateOpenAICreatorDraft({
   maxOutputTokens = MAX_OUTPUT_TOKENS,
   circuitStore,
   routingNow,
-  routingSleep
+  routingSleep,
+  signal,
+  beforeProviderRequest
 } = {}) {
   const selectedProvider = String(env.MINGLORA_AI_PROVIDER || '').trim().toLowerCase();
   if (selectedProvider && selectedProvider !== 'openai') {
@@ -147,11 +155,20 @@ export async function generateOpenAICreatorDraft({
     'This output is an AI-generated draft and must be reviewed by a human before any use.'
   ].join(' ');
 
+  if (typeof beforeProviderRequest === 'function') {
+    await beforeProviderRequest({
+      provider: 'openai',
+      model: 'omni-moderation-latest',
+      phase: 'input_moderation',
+      estimatedTokens: Math.max(1, Math.ceil(normalizedBrief.length / 3.2))
+    });
+  }
   const inputModeration = await postOpenAIJson({
     fetchImpl,
     endpoint: moderationEndpoint,
     apiKey,
     timeoutMs: requestTimeoutMs,
+    signal,
     payload: {
       model: 'omni-moderation-latest',
       input: normalizedBrief
@@ -170,12 +187,24 @@ export async function generateOpenAICreatorDraft({
     circuitStore,
     now: routingNow,
     sleep: routingSleep,
-    operation: async ({ model: requestedModel }) => {
+    operation: async ({ model: requestedModel, isFallback, attempt }) => {
+      if (signal?.aborted) throw providerError('lease_lost', 'The task execution lease was lost before provider execution.', 409, { retryable: false });
+      if (typeof beforeProviderRequest === 'function') {
+        await beforeProviderRequest({
+          provider: 'openai',
+          model: requestedModel,
+          phase: 'generation',
+          estimatedTokens: Math.max(1, Math.ceil(normalizedBrief.length / 3.2) + boundedTokens),
+          isFallback,
+          attempt
+        });
+      }
       const generation = await postOpenAIJson({
         fetchImpl,
         endpoint: responsesEndpoint,
         apiKey,
         timeoutMs: requestTimeoutMs,
+        signal,
         payload: {
           model: requestedModel,
           instructions,
@@ -229,11 +258,20 @@ export async function generateOpenAICreatorDraft({
   // Fail closed: no generated output is stored when the moderation service is unavailable.
   let moderation;
   try {
+    if (typeof beforeProviderRequest === 'function') {
+      await beforeProviderRequest({
+        provider: 'openai',
+        model: 'omni-moderation-latest',
+        phase: 'output_moderation',
+        estimatedTokens: Math.max(1, Math.ceil(output.length / 3.2))
+      });
+    }
     moderation = await postOpenAIJson({
       fetchImpl,
       endpoint: moderationEndpoint,
       apiKey,
       timeoutMs: requestTimeoutMs,
+      signal,
       payload: {
         model: 'omni-moderation-latest',
         input: output
