@@ -31,6 +31,11 @@ const PROVIDERS = Object.freeze({
 });
 
 export const SUPPORTED_AI_PROVIDER_ADAPTERS = Object.freeze(Object.keys(PROVIDERS));
+const ALLOWED_PROVIDER_HOSTS = Object.freeze({
+  openai: Object.freeze(['api.openai.com']),
+  anthropic: Object.freeze(['api.anthropic.com']),
+  google_gemini: Object.freeze(['generativelanguage.googleapis.com'])
+});
 
 export class AIProviderAdapterError extends Error {
   constructor(providerId, code, message, httpStatus = null) {
@@ -85,7 +90,8 @@ function getBaseUrl(providerId, provider, env) {
   const candidate = text(env[provider.baseUrlEnv]) || provider.baseUrl;
   try {
     const parsed = new URL(candidate);
-    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash ||
+        !ALLOWED_PROVIDER_HOSTS[providerId]?.includes(parsed.hostname) || (parsed.port && parsed.port !== '443')) {
       throw new Error('unsafe endpoint');
     }
     return parsed.toString().replace(/\/+$/, '');
