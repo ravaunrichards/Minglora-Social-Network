@@ -1116,12 +1116,21 @@
       label:model.provider_name + ' · ' + model.model_name + (model.model_version ? ' · ' + model.model_version : '')
     }));
     const accountRows = accounts.length
-      ? '<div class="ai-network-list">' + accounts.map(account =>
-          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
-          esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
-          pill(account.status || 'unconfigured') + ' ' + pill('health ' + (account.health_status || 'unknown')) +
-          '</div><small>Account metadata only · credentials not stored here</small></div></div></article>'
-        ).join('') + '</div>'
+      ? '<div class="ai-network-list">' + accounts.map(account => {
+          const accountStatus = account.status || 'unconfigured';
+          const statusChoices = accountStatus === 'revoked'
+            ? [{value:'revoked',label:'Revoked'}]
+            : [{value:'disabled',label:'Disabled'},{value:'enabled',label:'Enabled'},{value:'revoked',label:'Revoked'}];
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
+            pill(accountStatus) + ' ' + pill('health ' + (account.health_status || 'unknown')) +
+            '</div><small>Account metadata only · credentials are never stored here</small>' +
+            '<small>Last checked: ' + esc(date(account.last_checked_at)) + '</small></div></div>' +
+            '<form class="ai-network-inline-form" data-ai-form="provider-account-status" data-account-id="' + esc(account.provider_account_id || '') + '">' +
+            '<label><span>Connection status</span><select name="status">' + options(statusChoices, accountStatus === 'unconfigured' ? 'disabled' : accountStatus) + '</select></label>' +
+            '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why is this status changing?"></label>' +
+            '<button class="secondary" type="submit">Save connection status</button></form></article>';
+        }).join('') + '</div>'
       : empty('No provider account references registered.');
     const modelRows = models.length
       ? '<div class="ai-network-list">' + models.map(model =>
@@ -1191,10 +1200,19 @@
         ' · HTTP: ' + esc(providerHealth.httpStatus || 'Not reached') +
         ' · Checked: ' + esc(date(providerHealth.checkedAt)) + '</small></div>'
       : '<p class="ai-network-note">No OpenAI health probe has been run in this session.</p>';
+    const probeProviders = providerCatalogue.filter(provider => provider.healthProbeAvailable && provider.adapterAvailable)
+      .map(provider => ({ value: provider.providerId, label: provider.label || provider.providerId }));
+    const probeAccounts = [{ value:'', label:'Do not persist this probe' }].concat(accounts.map(account => ({
+      value: account.provider_account_id,
+      label: account.provider_name + ' · ' + account.provider_identifier
+    })));
     const providerProbeForm = '<form class="ai-network-form" data-ai-form="provider-health-probe">' +
-      '<div class="ai-network-form-title">OpenAI API connection check</div>' +
-      '<p class="ai-network-note">Runs a read-only model-access check using OPENAI_API_KEY and OPENAI_DEFAULT_MODEL from the private Minglora server environment. No key is entered here, sent by the browser, or returned to the page. It does not generate content or activate AI execution.</p>' +
-      '<button class="secondary" type="submit">Check OpenAI API connection</button></form>';
+      '<div class="ai-network-form-title">Provider connection check</div>' +
+      '<p class="ai-network-note">Runs a read-only model-list request using credentials from the private Minglora server environment. No key is entered here, sent by the browser, or returned. A successful probe can be persisted to a selected provider account; it does not enable execution automatically.</p>' +
+      '<div class="ai-network-form-grid"><label>Provider<select name="provider" required>' + options(probeProviders, probeProviders[0]?.value || '') + '</select></label>' +
+      '<label>Provider account<select name="providerAccountId">' + options(probeAccounts, '') + '</select></label>' +
+      '<label>Model check (optional)<input name="model" maxlength="200" placeholder="Selected model identifier"></label></div>' +
+      '<button class="secondary" type="submit">Check provider connection</button></form>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
       : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
@@ -2183,6 +2201,12 @@
       payload.provider_name = value('providerName').toLowerCase();
       payload.provider_identifier = value('providerIdentifier');
       payload.account_type = value('accountType');
+    } else if (kind === 'provider-account-status') {
+      const accountId = form.dataset.accountId;
+      if (!accountId) throw new Error('Provider account details are missing.');
+      path = '/provider-accounts/' + encodeURIComponent(accountId) + '/status';
+      payload.status = value('status');
+      payload.reason = value('reason');
     } else if (kind === 'provider-model') {
       path = '/provider-models';
       payload.provider_name = value('providerName').toLowerCase();
@@ -2219,7 +2243,9 @@
       payload.items = items;
     } else if (kind === 'provider-health-probe') {
       path = '/provider-health';
-      payload.provider = 'openai';
+      payload.provider = value('provider').toLowerCase();
+      payload.provider_account_id = value('providerAccountId') || undefined;
+      payload.model = value('model') || undefined;
     } else if (kind === 'provider-assignment-status') {
       const assignmentId = form.dataset.assignmentId;
       if (!assignmentId) throw new Error('Provider assignment details are missing.');
