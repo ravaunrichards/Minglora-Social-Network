@@ -31,7 +31,9 @@ test('runtime defaults to paused, disabled and zero workers', () => {
     "values ('primary',true,false,0)",
     'lease_seconds integer not null default 120'
   ]) assert.ok(migration.includes(token), 'Missing fail-closed runtime default: ' + token);
-  assert.ok(!server.includes("'runtime-controls'"));
+  assert.ok(server.includes("sub === 'runtime-controls'"));
+  assert.ok(server.includes("runAIWorkerAdminCommand('set_runtime_controls'"));
+  assert.ok(server.includes("probeOpenAIProvider()"));
   assert.ok(!ui.includes('Enable task execution'));
 });
 
@@ -105,7 +107,7 @@ test('worker execution uses an independent SHA-256 credential gateway while rema
   assert.ok(phase6.includes('execution_route_id'));
   assert.ok(phase6.includes('ai_task_provider_limits'));
   assert.ok(phase6.includes("v_controls.global_paused or not v_controls.execution_enabled"));
-  assert.ok(workerGateway.includes('Authorization'));
+  assert.ok(workerGateway.includes('authorization'));
   assert.ok(workerGateway.includes('minglora_ai_worker_command'));
   assert.ok(workerGateway.includes('claim_next_task'));
   assert.ok(workerGateway.includes('heartbeat_task'));
