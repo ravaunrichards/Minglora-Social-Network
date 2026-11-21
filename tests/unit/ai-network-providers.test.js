@@ -103,25 +103,29 @@ test('OpenAI provider-health endpoint remains behind owner MFA and never accepts
     '!isDesignatedCreatorHubAdmin(user)',
     '!hasActiveReviewerSession(user)',
     "if (method === 'POST' && sub === 'provider-health')",
-    "input.provider !== 'openai'",
+    "!['openai','google_gemini'].includes(input.provider)",
     "Object.keys(input).some(key => key !== 'provider')",
     'await probeOpenAIProvider()',
+    'await probeGeminiProvider()',
     'Credentials must be configured in the private server environment'
   ]) assert.ok(route.includes(token), 'Missing provider health route safety control: ' + token);
 });
 
-test('provider UI offers a secret-free OpenAI connection probe and no browser key input', () => {
+test('provider UI offers a secret-free OpenAI/Gemini connection probe and no browser key input', () => {
   for (const token of [
     'data-ai-form="provider-health-probe"',
     "path = '/provider-health'",
-    "payload.provider = 'openai'",
+    "payload.provider = value('provider')",
     'OPENAI_API_KEY',
-    'Latest OpenAI probe:',
-    'read-only probe',
+    'GEMINI_API_KEY',
+    'Google Gemini Developer API',
+    'Latest ',
+    'read-only model-access check',
     'AI inference and workers remain disabled'
-  ]) assert.ok(ui.includes(token), 'Missing OpenAI probe workspace behavior: ' + token);
+  ]) assert.ok(ui.includes(token), 'Missing AI provider probe workspace behavior: ' + token);
   assert.ok(!ui.includes('name="openaiApiKey"'));
   assert.ok(!ui.includes('name="OPENAI_API_KEY"'));
+  assert.ok(!ui.includes('name="GEMINI_API_KEY"'));
 });
 
 test('Creator Studio generation is owner-MFA protected, calls the moderation adapter and only saves a draft', () => {
@@ -209,12 +213,14 @@ test('owner-control resume and bot enable use a live provider probe, not the per
   const start = server.indexOf("if (p === '/api/ai-network'");
   const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
   const route = server.slice(start, end);
-  assert.ok(route.includes('const providerReady = providerStatus.manualDraftsAvailable === true;'));
+  assert.ok(route.includes('const providerReady = providerStatus.ownerControlsAvailable === true;'));
   assert.ok(route.includes('const verifyManualProviderAccess = async () =>'));
   assert.ok(route.includes("if (input.globalPaused === false) await verifyManualProviderAccess();"));
   assert.ok(route.includes("if (input.status === 'active') await verifyManualProviderAccess();"));
   assert.ok(route.includes("if (method === 'POST' && sub === 'emergency-resume')"));
   assert.ok(route.includes('const providerHealth = await verifyManualProviderAccess();'));
+  assert.ok(route.includes("providerStatus.provider === 'google_gemini'"));
+  assert.ok(route.includes('probeGeminiProvider()'));
   assert.ok(route.includes('autonomousWorkersEnabled: false'));
 });
 
