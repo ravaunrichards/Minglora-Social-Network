@@ -1856,7 +1856,7 @@
       '<div class="ai-network-provider"><div><strong>Provider readiness</strong>' +
       (provider.manualDraftsAvailable ? '' : (provider.note ? '<p>' + esc(provider.note) + '</p>' : '')) + '</div>' +
       pill(provider.manualDraftsAvailable ? 'Owner-initiated adapter configured' : 'Provider not ready', provider.manualDraftsAvailable ? 'success' : 'neutral') + '</div>' +
-      '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Disable AI / Emergency pause</button>' +
+      '<div class="ai-network-safety-actions"><button type="button" class="danger" aria-label="Emergency pause bot and schedule controls" data-ai-action="emergency-pause">Disable AI / Emergency pause</button>' +
       '<button type="button" class="secondary" data-ai-action="emergency-resume">Enable AI / Resume owner controls</button>' +
       '<button type="button" class="secondary" data-ai-action="analytics">View analytics</button></div>' +
       '<p class="ai-network-note">Resume performs a fresh OpenAI model-access check before reopening owner-controlled actions. Bots remain paused until enabled individually. Durable queue workers and autonomous schedules remain disabled; human approval and AI identity disclosure are mandatory.</p>';
