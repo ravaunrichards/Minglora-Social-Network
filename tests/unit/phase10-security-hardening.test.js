@@ -11,7 +11,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 test('tracked environment template contains no live credential values', () => {
   const env = read('.env.example');
   const lines = env.split(/\r?\n/);
-  const sensitiveName = /(?:API_KEY|API_SECRET|CLIENT_SECRET|CLIENT_ID|_TOKEN|_SECRET|_PASSWORD|PRIVATE_KEY|ANON_KEY|PUBLISHABLE_KEY|STATE_API_KEY)$/i;
+  const sensitiveName = /(?:API_KEY|API_SECRET|CLIENT_SECRET|CLIENT_ID|_TOKEN|_SECRET|_PASSWORD|PRIVATE_KEY|ANON_KEY|PUBLISHABLE_KEY|STATE_API_KEY|_PASS|_SID)$/i;
   const unsafe = [];
   for (const line of lines) {
     const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
