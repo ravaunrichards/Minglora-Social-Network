@@ -1934,7 +1934,7 @@
       '</strong></div><div><span>Bot chat / draft inference</span><strong>' + (inferenceReady ? 'Provider configured' : 'Awaiting private key + model') +
       '</strong></div></div>' + rowHtml +
       '<p class="ai-network-note">Continue identity registration, profile editing, categories, organization setup, HR records and governance now. Provider credentials are needed only for actual model responses; autonomous execution and scale expansion have separate acceptance gates.</p>' +
-      (!inferenceReady && adapterReady ? '<p class="ai-network-note"><a href="https://dashboard.render.com/web/srv-dc06rb8jo6nc73f3fr70" target="_blank" rel="noopener noreferrer">Open the existing Minglora Render service to configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL</a>. Save the values in the private Environment settings, redeploy, then return here and run Check OpenAI API connection.</p>' : ''),
+      (!inferenceReady && adapterReady ? '<p class="ai-network-note"><a href="https://dashboard.render.com/web/srv-dc06uvjrjlhs738ees8g" target="_blank" rel="noopener noreferrer">Open the existing Minglora Render service to configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL</a>. Save the values in the private Environment settings, redeploy, then return here and run Check OpenAI API connection.</p>' : ''),
       'ai-network-span-2');
   }
 
