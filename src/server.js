@@ -2590,6 +2590,36 @@ async function route(req, res) {
         }
       };
 
+      const runAIWorkforceCommand = async (aiAction, organizationId, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator may manage AI corporate workforce permissions, assignments and reports.'), { status: 403 });
+        }
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(organizationId || ''))) {
+          throw Object.assign(new Error('A valid organization ID is required for AI workforce access.'), { status: 400 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI workforce records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_workforce_command', {
+            actorUserId: user.id,
+            organizationId,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI workforce records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI workforce command|function .*minglora_ai_workforce_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The Phase 8 corporate workforce migration and private runtime gateway must be deployed before this operation is available. No workforce data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const runAIHRCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -3088,7 +3118,7 @@ async function route(req, res) {
           const reused = Boolean(result?.reused);
           return json(res, reused ? 200 : 201, result || {});
         }
-        if (parts.length === 5) {
+        if (parts.length === 5 && ['status','manager','transfer','promote'].includes(parts[4])) {
           const recordId = parts[3];
           if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recordId)) {
             throw Object.assign(new Error('A valid AI HR record ID is required.'), { status: 400 });
@@ -3123,6 +3153,122 @@ async function route(req, res) {
           }
         }
       }
+      if (parts[0] === 'organizations' && parts.length >= 3 &&
+          ['workforce','employees','teams','reports'].includes(parts[2])) {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const resource = parts[2];
+        const readWorkforceBody = async () => {
+          const input = await body(req, 24000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI workforce input must be a JSON object.'), { status: 400 });
+          }
+          return input;
+        };
+
+        if (resource === 'workforce' && parts.length === 3 && method === 'GET') {
+          const result = await runAIWorkforceCommand('list_workforce', organizationId);
+          return json(res, 200, result || { employees: [], teams: [], tasks: [], reports: [] });
+        }
+
+        if (resource === 'workforce' && parts.length === 6 &&
+            parts[3] === 'positions' && parts[5] === 'status' && method === 'PATCH') {
+          const positionId = parts[4];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(positionId)) {
+            throw Object.assign(new Error('A valid job role ID is required.'), { status: 400 });
+          }
+          const input = await readWorkforceBody();
+          input.position_id = positionId;
+          const result = await runAIWorkforceCommand('set_position_status', organizationId, input);
+          return json(res, 200, result || {});
+        }
+
+        if (resource === 'employees' && parts.length >= 5) {
+          const employmentId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(employmentId)) {
+            throw Object.assign(new Error('A valid AI employment ID is required.'), { status: 400 });
+          }
+          const action = parts[4];
+          if (action === 'permissions' && parts.length === 5 && method === 'GET') {
+            const result = await runAIWorkforceCommand('list_employee_permissions', organizationId, { employment_id: employmentId });
+            return json(res, 200, result || { permissions: [] });
+          }
+          if (action === 'permissions' && parts.length === 5 && method === 'POST') {
+            const input = await readWorkforceBody();
+            input.employment_id = employmentId;
+            const result = await runAIWorkforceCommand('grant_employee_permission', organizationId, input);
+            return json(res, result?.reused ? 200 : 201, result || {});
+          }
+          if (action === 'permissions' && parts.length === 6 && method === 'DELETE') {
+            const permissionGrantId = parts[5];
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(permissionGrantId)) {
+              throw Object.assign(new Error('A valid employee permission grant ID is required.'), { status: 400 });
+            }
+            const input = await readWorkforceBody();
+            input.permission_grant_id = permissionGrantId;
+            const result = await runAIWorkforceCommand('revoke_employee_permission', organizationId, input);
+            return json(res, 200, result || {});
+          }
+          if (action === 'tasks' && parts.length === 5 && method === 'GET') {
+            const result = await runAIWorkforceCommand('list_workforce', organizationId);
+            const tasks = Array.isArray(result?.tasks) ? result.tasks.filter(row =>
+              row.assignment?.employment_id === employmentId) : [];
+            return json(res, 200, { tasks });
+          }
+          if (action === 'tasks' && parts.length === 5 && method === 'POST') {
+            const input = await readWorkforceBody();
+            input.employment_id = employmentId;
+            const result = await runAIWorkforceCommand('assign_employee_task', organizationId, input);
+            return json(res, result?.reused ? 200 : 201, result || {});
+          }
+          if (action === 'reports' && parts.length === 5 && method === 'POST') {
+            const input = await readWorkforceBody();
+            input.employment_id = employmentId;
+            const result = await runAIWorkforceCommand('submit_employee_report', organizationId, input);
+            return json(res, result?.reused ? 200 : 201, result || {});
+          }
+        }
+
+        if (resource === 'reports' && parts.length === 3 && method === 'GET') {
+          const result = await runAIWorkforceCommand('list_workforce', organizationId);
+          return json(res, 200, { reports: Array.isArray(result?.reports) ? result.reports : [] });
+        }
+        if (resource === 'reports' && parts.length === 5 && parts[4] === 'review' && method === 'PATCH') {
+          const reportId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reportId)) {
+            throw Object.assign(new Error('A valid employee report ID is required.'), { status: 400 });
+          }
+          const input = await readWorkforceBody();
+          input.report_id = reportId;
+          const result = await runAIWorkforceCommand('review_employee_report', organizationId, input);
+          return json(res, 200, result || {});
+        }
+
+        if (resource === 'teams' && parts.length === 5) {
+          const teamId = parts[3];
+          const action = parts[4];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(teamId)) {
+            throw Object.assign(new Error('A valid AI team ID is required.'), { status: 400 });
+          }
+          if (action === 'messages' && method === 'GET') {
+            const result = await runAIWorkforceCommand('list_team_messages', organizationId, { team_id: teamId });
+            return json(res, 200, result || { messages: [] });
+          }
+          if (action === 'messages' && method === 'POST') {
+            const input = await readWorkforceBody();
+            input.team_id = teamId;
+            const result = await runAIWorkforceCommand('send_team_message', organizationId, input);
+            return json(res, result?.reused ? 200 : 201, result || {});
+          }
+          if (action === 'activity' && method === 'GET') {
+            const result = await runAIWorkforceCommand('list_team_activity', organizationId, { team_id: teamId });
+            return json(res, 200, result || { team_events: [], workforce_events: [], messages: [] });
+          }
+        }
+      }
+
       if (parts[0] === 'organizations' && parts.length >= 3 &&
           ['training-courses', 'training-enrollments', 'attendance'].includes(parts[2])) {
         const organizationId = parts[1];

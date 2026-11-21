@@ -4965,6 +4965,51 @@ Deno.serve(async (req: Request) => {
     return json(200, { result: data });
   }
 
+  if (action === "ai_workforce_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const organizationId = String(input.organizationId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedWorkforceCommands = [
+      "list_workforce", "list_employee_permissions", "set_position_status",
+      "grant_employee_permission", "revoke_employee_permission",
+      "assign_employee_task", "send_team_message",
+      "submit_employee_report", "review_employee_report",
+      "list_team_messages", "list_team_activity"
+    ];
+
+    if (!validUuid(actorUserId) || !validUuid(organizationId)) {
+      return json(400, { error: "A valid signed-in Minglora administrator and organization are required for AI workforce access." });
+    }
+    if (!supportedWorkforceCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI workforce command." });
+    }
+    const serialized = JSON.stringify(payload);
+    if (new TextEncoder().encode(serialized).byteLength > 24000) {
+      return json(413, { error: "AI workforce request data is too large." });
+    }
+    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
+      return json(400, { error: "Credentials and secrets are not allowed in workforce requests." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_workforce_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_organization_id: organizationId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI workforce request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
   if (action === "load" || action === "health") {
     const { data, error } = await admin
       .from("minglora_runtime_state")

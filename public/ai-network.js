@@ -744,9 +744,10 @@
         const organizationId = record.organization?.organization_id;
         if (!organizationId) return null;
         const base = '/organizations/' + encodeURIComponent(organizationId);
-        const [departmentResult, positionResult, vacancyResult, applicationResult, employeeResult] = await Promise.all([
+        const [departmentResult, positionResult, vacancyResult, applicationResult, employeeResult, workforceResult] = await Promise.all([
           request(base + '/departments'), request(base + '/positions'), request(base + '/vacancies'),
-          request(base + '/applications'), request(base + '/employees')
+          request(base + '/applications'), request(base + '/employees'),
+          request(base + '/workforce').catch(() => ({}))
         ]);
         const talentResults = await Promise.allSettled([
           request(base + '/performance-reviews'), request(base + '/succession-plans'), request(base + '/promotions')
@@ -763,7 +764,9 @@
         return [organizationId, {
           departments: list(departmentResult.departments), positions: list(positionResult.positions),
           vacancies: list(vacancyResult.vacancies), applications: list(applicationResult.applications),
-          employees: list(employeeResult.employees), performanceReviews: list(reviewResult.performance_reviews),
+          employees: list(employeeResult.employees), workforce: workforceResult || {},
+          workforceUnavailable: !Array.isArray(workforceResult?.employees),
+          performanceReviews: list(reviewResult.performance_reviews),
           successionPlans: list(successionResult.succession_plans), promotions: list(promotionResult.promotions),
           trainingCourses: list(courseResult.training_courses),
           trainingEnrollments: list(enrollmentResult.training_enrollments),
@@ -1093,7 +1096,233 @@
       '<div><h5>Recorded promotions</h5>' + promotionRows + '</div>' +
       '<div><h5>Succession planning · no automatic appointments</h5>' + successionForm + successionRows + '</div>' +
       '<div><h5>Employee training</h5>' + developmentUnavailableNote + courseForm + courseRows + assignmentForm + enrollmentRows + '</div>' +
-      '<div><h5>Daily attendance · human recorded</h5>' + attendanceForm + attendanceRows + '</div></section>';
+      '<div><h5>Daily attendance · human recorded</h5>' + attendanceForm + attendanceRows + '</div>' +
+      renderAIWorkforcePanel(organizationId, hr) + '</section>';
+  }
+
+
+  function renderAIWorkforcePanel(organizationId, hr = {}) {
+    const workforce = hr.workforce || {};
+    const roleRecords = list(workforce.job_roles).length
+      ? list(workforce.job_roles).map(row => row.position || row)
+      : list(hr.positions);
+    const jobRoleRows = roleRecords.length
+      ? '<div class="ai-network-list">' + roleRecords.map(position => {
+          const status = String(position.status || 'proposed');
+          return '<article class="ai-network-list-row"><div><strong>' +
+            esc(position.display_name || 'Job role') + '</strong><div class="ai-network-meta">' +
+            pill(status, status === 'active' ? 'success' : 'neutral') + ' ' +
+            pill(position.job_family || 'job role') +
+            '</div><small>Hierarchy level: ' + number(position.hierarchy_level) +
+            '</small></div><form class="ai-network-inline-form" data-ai-form="job-role-status" data-organization-id="' +
+            esc(organizationId) + '" data-position-id="' + esc(position.position_id) + '">' +
+            '<label><span>Role status</span><select name="status">' +
+            options([{value:'proposed',label:'Proposed'},{value:'active',label:'Active'},{value:'restricted',label:'Restricted'},{value:'archived',label:'Archived'}],status) +
+            '</select></label><label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
+            '<button class="secondary" type="submit">Save role status</button></form></article>';
+        }).join('') + '</div>'
+      : empty('No job roles have been configured.');
+    const employeeRecords = list(workforce.employees);
+    const activeEmployees = employeeRecords.filter(row => row.employment?.employment_status === 'active');
+    const employeeChoices = activeEmployees.map(row => ({
+      value: row.employment?.employment_id || '',
+      label: (row.display_name || row.identity?.display_name || 'AI employee') +
+        ' · ' + (row.position_name || 'Position') + ' · ' + (row.department_name || 'Department')
+    })).filter(option => option.value);
+    const authorChoices = [{value:'',label:'Human administrator'}].concat(activeEmployees.map(row => ({
+      value:row.identity?.identity_id || '',
+      label:(row.display_name || 'AI employee') + ' (AI author)'
+    })).filter(option => option.value));
+    const teamRecords = list(workforce.teams);
+    const teams = teamRecords.map(row => row.team).filter(Boolean);
+    const activeTeams = teams.filter(team => team.status === 'active');
+    const teamChoices = [{value:'',label:'No team'}].concat(activeTeams.map(team => ({
+      value:team.team_id,label:team.team_name
+    })));
+    const activeTeamChoices = activeTeams.map(team => ({value:team.team_id,label:team.team_name}));
+    const identityCheckboxes = activeEmployees.map(row =>
+      '<label class="ai-network-check"><input type="checkbox" name="memberIds" value="' +
+      esc(row.identity?.identity_id || '') + '"><span><strong>' +
+      esc(row.display_name || 'AI employee') + '</strong><small>' +
+      esc(row.position_name || 'Position') + ' · ' + esc(row.department_name || 'Department') +
+      '</small></span></label>'
+    ).join('') || empty('Appoint and activate at least one employee before forming an organizational team.');
+    const workloadRows = employeeRecords.length
+      ? '<div class="ai-network-list">' + employeeRecords.map(row => {
+          const emp = row.employment || {}, load = row.workload || {};
+          const capacity = Number(load.capacity_units || 0);
+          const assigned = Number(load.assigned_units || 0);
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(row.display_name || 'AI employee') + '</strong><div class="ai-network-meta">' +
+            pill(emp.employment_status || 'unknown', emp.employment_status === 'active' ? 'success' : 'neutral') +
+            ' ' + pill(row.position_name || 'Position') + ' ' + pill(row.department_name || 'Department') +
+            '</div><small>Reports to: ' + esc(row.manager_name || 'No manager assigned') +
+            ' · Open tasks: ' + number(load.open_tasks) + '</small></div></div><div class="ai-network-row-actions">' +
+            '<strong>' + number(assigned) + ' / ' + number(capacity) + ' workload units</strong>' +
+            '<span>' + esc(load.utilization_percent || 0) + '% allocated</span></div></article>';
+        }).join('') + '</div>'
+      : empty('No appointed employees have workload records yet.');
+    const permissionRows = employeeRecords.length
+      ? '<div class="ai-network-list">' + employeeRecords.map(row => {
+          const emp = row.employment || {};
+          const grants = list(row.permissions);
+          return '<article class="ai-network-list-row"><div><strong>' +
+            esc(row.display_name || 'AI employee') + '</strong><small>' +
+            esc(emp.employment_status || 'candidate') + ' · ' + esc(row.position_name || 'Position') +
+            '</small>' + (grants.length ? '<div class="ai-network-meta">' + grants.map(grant =>
+              pill(grant.permission_key + (list(grant.allowed_task_types).length ? ': ' + grant.allowed_task_types.join(', ') : ''),
+                grant.revoked_at ? 'neutral' : 'success')
+            ).join(' ') + '</div>' : '<small>No explicit employee permissions have been granted.</small>') +
+            (grants.filter(grant => !grant.revoked_at).map(grant =>
+              '<form class="ai-network-inline-form" data-ai-form="workforce-permission-revoke" data-organization-id="' +
+              esc(organizationId) + '" data-employment-id="' + esc(emp.employment_id) +
+              '" data-grant-id="' + esc(grant.permission_grant_id) + '">' +
+              '<label><span>Revocation reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Explain why this permission is withdrawn"></label>' +
+              '<button class="secondary" type="submit">Revoke ' + esc(grant.permission_key) + '</button></form>'
+            ).join('')) + '</div></article>';
+        }).join('') + '</div>'
+      : empty('Employee permission records will appear after employees are appointed.');
+    const teamRows = teamRecords.length
+      ? '<div class="ai-network-list">' + teamRecords.map(record => {
+          const team = record.team || {};
+          const members = list(record.members);
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div>' +
+            '<strong>' + esc(team.team_name || 'AI team') + '</strong><div class="ai-network-meta">' +
+            pill(team.status || 'draft') + ' ' + pill(team.population_scope || 'team') +
+            '</div><small>' + esc(team.description || 'No team description.') + '</small><p>' +
+            esc(members.map(member => member.display_name || 'AI employee').join(' · ') || 'No team members') +
+            '</p></div></div><div class="ai-network-row-actions"><span>' + number(members.length) + ' members</span></div></article>';
+        }).join('') + '</div>'
+      : empty('No organization teams have been created.');
+    const taskRows = list(workforce.tasks).length
+      ? '<div class="ai-network-list">' + list(workforce.tasks).slice(0,60).map(row => {
+          const task = row.task || {}, assignment = row.assignment || {};
+          return '<article class="ai-network-list-row"><div><strong>' + esc(task.task_title || 'Assigned task') +
+            '</strong><div class="ai-network-meta">' + pill(task.status || 'unknown') + ' ' +
+            pill(task.action_class || 'task') + '</div><small>' + esc(row.employee_name || 'AI employee') +
+            ' · ' + esc(task.task_type || '') + ' · ' + number(assignment.workload_units) +
+            ' workload units' + (assignment.team_id ? ' · Team assigned' : '') +
+            '</small></div></article>';
+        }).join('') + '</div>'
+      : empty('No workforce tasks have been allocated.');
+    const messages = list(workforce.team_messages);
+    const messageRows = messages.length
+      ? '<div class="ai-network-list">' + messages.slice(0,50).map(row => {
+          const message = row.message || {};
+          return '<article class="ai-network-list-row"><div><strong>' + esc(row.author_name || 'Author') +
+            ' · ' + esc(row.team_name || 'Team') + '</strong><div class="ai-network-meta">' +
+            pill(message.message_type || 'message') + '</div><p>' + esc(message.body || '') +
+            '</p><small>' + esc(date(message.created_at)) + '</small></div></article>';
+        }).join('') + '</div>'
+      : empty('No team messages have been recorded.');
+    const reportRows = list(workforce.reports).length
+      ? '<div class="ai-network-list">' + list(workforce.reports).map(row => {
+          const report = row.report || {};
+          const reviewForm = report.report_status === 'submitted'
+            ? '<form class="ai-network-inline-form" data-ai-form="employee-report-review" data-organization-id="' +
+              esc(organizationId) + '" data-report-id="' + esc(report.report_id) + '">' +
+              '<label><span>Review decision</span><select name="status">' +
+              options([{value:'acknowledged',label:'Acknowledge'},{value:'needs_follow_up',label:'Needs follow-up'}],'acknowledged') +
+              '</select></label><label><span>Manager review note</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
+              '<button class="secondary" type="submit">Save report review</button></form>' : '';
+          return '<article class="ai-network-list-row"><div><strong>' +
+            esc(row.employee_name || 'AI employee') + ' · ' + esc(report.report_title || 'Employee report') +
+            '</strong><div class="ai-network-meta">' + pill(report.report_type || 'report') + ' ' +
+            pill(report.report_status || 'submitted') + '</div><p>' + esc(report.report_body || '') +
+            '</p><small>Reports to: ' + esc(row.manager_name || 'Unassigned manager') +
+            ' · ' + esc(date(report.submitted_at)) + '</small>' + reviewForm +
+            '</div></article>';
+        }).join('') + '</div>'
+      : empty('No employee reports have been submitted.');
+    const events = list(workforce.workforce_events).concat(list(workforce.team_events))
+      .sort((a,b) => new Date(b.occurred_at || 0).getTime() - new Date(a.occurred_at || 0).getTime()).slice(0,50);
+    const activityRows = events.length
+      ? '<div class="ai-network-list">' + events.map(event =>
+          '<article class="ai-network-list-row"><div><strong>' +
+          esc(String(event.event_type || 'workforce event').replaceAll('_',' ')) +
+          '</strong><small>' + esc(event.reason || '') + '</small><small>' +
+          esc(date(event.occurred_at)) + '</small></div></article>'
+        ).join('') + '</div>'
+      : empty('No workforce activity has been recorded yet.');
+    const permissionForm = employeeChoices.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="workforce-permission" data-organization-id="' +
+        esc(organizationId) + '"><div class="ai-network-form-title">Grant explicit employee permissions</div>' +
+        '<div class="ai-network-form-grid"><label>Employee<select name="employmentId" required>' +
+        options(employeeChoices,employeeChoices[0].value) + '</select></label><label>Permission<select name="permissionKey">' +
+        options([
+          {value:'task.assign.read_only',label:'Assign read-only tasks'},
+          {value:'task.assign.content',label:'Assign content-draft tasks'},
+          {value:'team.message',label:'Post team messages'},
+          {value:'report.submit',label:'Submit employee reports'},
+          {value:'report.read',label:'Read permitted reports'},
+          {value:'workload.read',label:'Read workload'}
+        ],'task.assign.read_only') + '</select></label></div>' +
+        '<label>Allowed task types (comma-separated; required for task permissions)<input name="allowedTaskTypes" maxlength="2000" placeholder="support.review, creator.research"></label>' +
+        '<label>Reason<input name="reason" required minlength="3" maxlength="1000" placeholder="Document the employee responsibility"></label>' +
+        '<button class="primary" type="submit">Grant permission</button></form>'
+      : '<p class="ai-network-note">An active employee is required before permissions can be granted.</p>';
+    const teamCreateForm = employeeChoices.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="workforce-team" data-organization-id="' +
+        esc(organizationId) + '"><div class="ai-network-form-title">Create an organizational team</div>' +
+        '<label>Team name<input name="teamName" required minlength="2" maxlength="80"></label>' +
+        '<label>Description<textarea name="description" maxlength="1000" rows="2"></textarea></label>' +
+        '<fieldset><legend>Initial employee members (1–20)</legend><div class="ai-network-check-grid">' +
+        identityCheckboxes + '</div></fieldset><button class="primary" type="submit">Create organizational team</button></form>'
+      : '<p class="ai-network-note">Appoint active employees before creating an organization team.</p>';
+    const taskForm = employeeChoices.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="workforce-task" data-organization-id="' +
+        esc(organizationId) + '"><div class="ai-network-form-title">Allocate a task to an employee</div>' +
+        '<p class="ai-network-note">An explicit permission grant and available workload capacity are required. Every workforce task is placed in the human-approval queue. Workers remain paused.</p>' +
+        '<div class="ai-network-form-grid"><label>Employee<select name="employmentId" required>' +
+        options(employeeChoices,employeeChoices[0].value) + '</select></label><label>Team (optional)<select name="teamId">' +
+        options(teamChoices,'') + '</select></label><label>Task type<input name="taskType" required minlength="2" maxlength="80" pattern="[a-z][a-z0-9_.-]{1,79}" placeholder="support.review"></label>' +
+        '<label>Action class<select name="actionClass">' + options([{value:'read_only',label:'Read only'},{value:'content',label:'Content draft'}],'read_only') + '</select></label>' +
+        '<label>Task title<input name="taskTitle" required minlength="3" maxlength="180"></label>' +
+        '<label>Workload units<input name="workloadUnits" type="number" min="1" max="100" value="10" required></label>' +
+        '<label>Schedule time<input name="scheduledFor" type="datetime-local" required></label>' +
+        '<label>Priority<input name="priority" type="number" min="1" max="10000" value="100" required></label>' +
+        '<label>Max attempts<input name="maxAttempts" type="number" min="1" max="10" value="3" required></label>' +
+        '<label>Token budget<input name="tokenBudget" type="number" min="0" max="100000000" value="0" required></label>' +
+        '<label>Cost limit USD<input name="costLimitUsd" type="number" min="0" max="1000000" step="0.000001" value="0" required></label></div>' +
+        '<label>Task payload (JSON object)<textarea name="taskPayload" rows="3" required>{}</textarea></label>' +
+        '<button class="primary" type="submit">Allocate task for human review</button></form>'
+      : '<p class="ai-network-note">An active employee is required before tasks can be allocated.</p>';
+    const messageForm = activeTeamChoices.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="team-message" data-organization-id="' +
+        esc(organizationId) + '"><div class="ai-network-form-title">Team communication</div>' +
+        '<div class="ai-network-form-grid"><label>Team<select name="teamId" required>' +
+        options(activeTeamChoices,activeTeamChoices[0].value) + '</select></label><label>Author<select name="authorIdentityId">' +
+        options(authorChoices,'') + '</select></label><label>Message type<select name="messageType">' +
+        options([{value:'announcement',label:'Administrator announcement'},{value:'manager_instruction',label:'Manager instruction'},{value:'discussion',label:'Discussion'},{value:'task_update',label:'Task update'},{value:'status_report',label:'Status report'}],'discussion') +
+        '</select></label></div><label>Message<textarea name="body" rows="3" required minlength="1" maxlength="4000"></textarea></label>' +
+        '<button class="primary" type="submit">Send team message</button></form>'
+      : '<p class="ai-network-note">Create and activate an organizational team before sending messages.</p>';
+    const reportForm = employeeChoices.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="employee-report" data-organization-id="' +
+        esc(organizationId) + '"><div class="ai-network-form-title">Submit an employee report</div>' +
+        '<div class="ai-network-form-grid"><label>Employee<select name="employmentId" required>' +
+        options(employeeChoices,employeeChoices[0].value) + '</select></label><label>Team (optional)<select name="teamId">' +
+        options(teamChoices,'') + '</select></label><label>Report type<select name="reportType">' +
+        options([{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'},{value:'task',label:'Task'},{value:'exception',label:'Exception'},{value:'incident',label:'Incident'}],'daily') +
+        '</select></label><label>Related task ID (optional)<input name="taskId" maxlength="36"></label>' +
+        '<label>Period start<input name="periodStart" type="date"></label><label>Period end<input name="periodEnd" type="date"></label></div>' +
+        '<label>Report title<input name="reportTitle" required minlength="3" maxlength="180"></label>' +
+        '<label>Report details<textarea name="reportBody" rows="4" required maxlength="8000"></textarea></label>' +
+        '<button class="primary" type="submit">Submit report to reporting line</button></form>'
+      : '<p class="ai-network-note">An active employee is required before reports can be submitted.</p>';
+    const unavailable = hr.workforceUnavailable
+      ? '<p class="ai-network-note">The Phase 8 workforce gateway is not deployed yet. Existing HR and employee records are still available.</p>' : '';
+    return '<section class="ai-network-hr-workspace ai-network-workforce"><div class="ai-network-hr-heading"><h4>AI Corporate Workforce Operations</h4>' +
+      '<p class="ai-network-note">Department, job role and reporting manager come from each employment record. AI employees can only receive work within their active grants, team membership and workload capacity. Social, financial, security, moderation and external task classes are not assignable here.</p>' +
+      unavailable +
+      '<h5>Job roles and activation</h5>' + jobRoleRows +
+      '<h5>Workload and reporting hierarchy</h5>' + workloadRows +
+      '<h5>Explicit role-based permissions</h5>' + permissionForm + permissionRows +
+      '<h5>Organizational teams</h5>' + teamCreateForm + teamRows +
+      '<h5>Task allocation and queue</h5>' + taskForm + taskRows +
+      '<h5>Team communication</h5>' + messageForm + messageRows +
+      '<h5>Employee reporting and management review</h5>' + reportForm + reportRows +
+      '<h5>Workforce activity audit</h5>' + activityRows + '</div></section>';
   }
 
   function renderAIProviderCenter() {
@@ -2443,6 +2672,98 @@
       payload.token_budget = Number(value('tokenBudget'));
       payload.cost_limit_usd = Number(value('costLimitUsd'));
       payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'workforce-permission') {
+      const organizationId = form.dataset.organizationId, employmentId = value('employmentId');
+      if (!organizationId || !employmentId) throw new Error('Choose a valid organization and active employee.');
+      const permissionKey = value('permissionKey');
+      const allowedTaskTypes = value('allowedTaskTypes').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
+      if (permissionKey.startsWith('task.assign.') && !allowedTaskTypes.length) {
+        throw new Error('List at least one allowed task type for a task-assignment permission.');
+      }
+      if (!permissionKey.startsWith('task.assign.') && allowedTaskTypes.length) {
+        throw new Error('Allowed task types are only valid for task-assignment permissions.');
+      }
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/employees/' + encodeURIComponent(employmentId) + '/permissions';
+      payload.permission_key = permissionKey;
+      payload.allowed_task_types = allowedTaskTypes;
+      payload.reason = value('reason');
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'workforce-permission-revoke') {
+      const organizationId=form.dataset.organizationId,employmentId=form.dataset.employmentId,grantId=form.dataset.grantId;
+      if(!organizationId||!employmentId||!grantId) throw new Error('Employee permission grant details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/employees/'+encodeURIComponent(employmentId)+'/permissions/'+encodeURIComponent(grantId);
+      payload.reason=value('reason');
+    } else if (kind === 'workforce-team') {
+      const organizationId=form.dataset.organizationId;
+      if(!organizationId) throw new Error('Choose an organization before creating a corporate team.');
+      const memberIdentityIds=selectedValues(form,'memberIds');
+      if(memberIdentityIds.length<1||memberIdentityIds.length>20) throw new Error('Choose between 1 and 20 active AI employees for the team.');
+      path='/teams';
+      payload.name=value('teamName');
+      payload.description=value('description');
+      payload.populationScope='organizational';
+      payload.organizationId=organizationId;
+      payload.memberIdentityIds=memberIdentityIds;
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotencyKey=form.dataset.idempotencyKey;
+    } else if (kind === 'workforce-task') {
+      const organizationId=form.dataset.organizationId,employmentId=value('employmentId');
+      if(!organizationId||!employmentId) throw new Error('Choose an active employee before assigning a task.');
+      let taskPayload;
+      try { taskPayload=JSON.parse(value('taskPayload')||'{}'); }
+      catch { throw new Error('Task payload must be valid JSON.'); }
+      if(!taskPayload||typeof taskPayload!=='object'||Array.isArray(taskPayload)) throw new Error('Task payload must be a JSON object.');
+      const scheduledFor=value('scheduledFor');
+      if(!scheduledFor||Number.isNaN(new Date(scheduledFor).getTime())) throw new Error('Choose a valid task schedule.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/employees/'+encodeURIComponent(employmentId)+'/tasks';
+      payload.team_id=value('teamId')||null;
+      payload.task_title=value('taskTitle');
+      payload.task_type=value('taskType').toLowerCase();
+      payload.action_class=value('actionClass');
+      payload.workload_units=Number(value('workloadUnits'));
+      payload.scheduled_for=new Date(scheduledFor).toISOString();
+      payload.priority=Number(value('priority'));
+      payload.max_attempts=Number(value('maxAttempts'));
+      payload.token_budget=Number(value('tokenBudget'));
+      payload.cost_limit_usd=Number(value('costLimitUsd'));
+      payload.task_payload=taskPayload;
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'team-message') {
+      const organizationId=form.dataset.organizationId,teamId=value('teamId');
+      if(!organizationId||!teamId) throw new Error('Choose an active organization team before sending a message.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/teams/'+encodeURIComponent(teamId)+'/messages';
+      payload.author_identity_id=value('authorIdentityId')||null;
+      payload.message_type=value('messageType');
+      payload.body=value('body');
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'employee-report') {
+      const organizationId=form.dataset.organizationId,employmentId=value('employmentId');
+      if(!organizationId||!employmentId) throw new Error('Choose an active employee before submitting a report.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/employees/'+encodeURIComponent(employmentId)+'/reports';
+      payload.team_id=value('teamId')||null;
+      payload.task_id=value('taskId')||null;
+      payload.report_type=value('reportType');
+      payload.report_title=value('reportTitle');
+      payload.report_body=value('reportBody');
+      payload.period_start=value('periodStart')||null;
+      payload.period_end=value('periodEnd')||null;
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'job-role-status') {
+      const organizationId=form.dataset.organizationId,positionId=form.dataset.positionId;
+      if(!organizationId||!positionId) throw new Error('Job role details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/workforce/positions/'+encodeURIComponent(positionId)+'/status';
+      payload.status=value('status');
+      payload.reason=value('reason');
+    } else if (kind === 'employee-report-review') {
+      const organizationId=form.dataset.organizationId,reportId=form.dataset.reportId;
+      if(!organizationId||!reportId) throw new Error('Employee report details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/reports/'+encodeURIComponent(reportId)+'/review';
+      payload.status=value('status');
+      payload.reason=value('reason');
     } else if (kind === 'organization') {
       path = '/organizations';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -2668,7 +2989,8 @@
     } else return;
     const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
-    const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
+    const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : (kind === 'employee-report-review' || kind === 'job-role-status' || patchKinds.concat(talentPatchKinds).includes(kind)) ? 'PATCH' : 'POST';
+    const result = await request(path, { method: requestMethod, body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
     if (kind === 'bot-chat') {
       state.botChat = result;
@@ -2766,6 +3088,14 @@
                                       : kind === 'training-enrollment' ? 'Training assigned to the selected employee.'
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
+                                      : kind === 'workforce-permission' ? 'Least-privilege employee permission granted and audited.'
+                                      : kind === 'workforce-permission-revoke' ? 'Employee permission revoked; outstanding assigned tasks were cancelled.'
+                                      : kind === 'workforce-team' ? 'Organizational team created with the selected employee members.'
+                                      : kind === 'workforce-task' ? 'Task allocated within employee permission and workload limits; human approval is required.'
+                                      : kind === 'team-message' ? 'Team message recorded and audited.'
+                                      : kind === 'employee-report' ? 'Employee report submitted to the assigned reporting line.'
+                                      : kind === 'employee-report-review' ? 'Employee report review recorded.'
+                                      : kind === 'job-role-status' ? 'Job role status updated and audited; inactive roles have their outstanding workforce tasks cancelled.'
                                       : 'Saved successfully.';
     if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
     const batchFailures = kind === 'identity-bulk'
