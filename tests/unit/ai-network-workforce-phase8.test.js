@@ -134,7 +134,8 @@ test('server workforce endpoints are administrator-only and use Supabase runtime
   assert.match(route, /isModerator\(user, req\)/);
   assert.match(route, /requestSupabaseState\('ai_workforce_command'/);
   assert.match(route, /set_position_status/);
-  assert.ok(route.includes('/workforce/positions/'));
+  assert.match(route, /parts\[3\] === 'positions'/);
+  assert.match(route, /parts\[5\] === 'status'/);
   for (const path of [
     "'workforce'","'employees'","'permissions'","'tasks'","'teams'","'messages'","'reports'"
   ]) assert.ok(route.includes(path), 'Missing workforce resource route: ' + path);
