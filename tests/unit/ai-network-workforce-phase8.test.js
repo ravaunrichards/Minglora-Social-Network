@@ -12,6 +12,8 @@ const hr = read('supabase/migrations/20261114022047_minglora_ai_hr_recruitment_a
 const teams = read('supabase/migrations/20261114142000_minglora_ai_teams_and_delegation.sql');
 const migration = read('supabase/migrations/20261120221000_minglora_ai_corporate_workforce_phase8.sql');
 const taskSafeguards = read('supabase/migrations/20261121032200_minglora_ai_corporate_workforce_task_queue_safeguards.sql');
+const reportActivity = read('supabase/migrations/20261121032600_minglora_ai_workforce_report_review_activity_links.sql');
+const roleManagement = read('supabase/migrations/20261121032800_minglora_ai_workforce_job_role_status_management.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -101,14 +103,14 @@ test('employee reports preserve manager hierarchy and require authorized submiss
   assert.match(migration, /report\.submit/);
   assert.match(migration, /submit_employee_report/);
   assert.match(migration, /review_employee_report/);
-  assert.match(migration, /set_position_status/);
-  assert.match(migration, /job_role_status_changed/);
-  assert.match(migration, /'job_roles',coalesce/);
+  assert.match(roleManagement, /set_position_status/);
+  assert.match(roleManagement, /job_role_status_changed/);
+  assert.match(roleManagement, /'job_roles',coalesce/);
   assert.match(migration, /reviewed_by_user_id/);
   assert.match(migration, /Employee report stored for the assigned reporting manager/);
   assert.match(migration, /employee_report_reviewed/);
-  assert.match(migration, /returning r\.employment_id,r\.team_id,r\.task_id/);
-  assert.match(migration, /employment_id,team_id,task_id,report_id,event_type,reason/);
+  assert.match(reportActivity, /returning r\.employment_id,r\.team_id,r\.task_id/);
+  assert.match(reportActivity, /employment_id,team_id,task_id,report_id,event_type,reason/);
 });
 
 test('Edge Function explicitly allowlists and forwards workforce commands', () => {
