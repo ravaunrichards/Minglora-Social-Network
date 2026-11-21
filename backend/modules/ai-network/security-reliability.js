@@ -208,4 +208,19 @@ export function createAIOperationalMonitor({ now = Date.now, maxLatencySamples =
   return Object.freeze({ recordResponse, recordUnexpectedError, snapshot });
 }
 
+const SAFE_ERROR_CODES = new Set([
+  'provider_error', 'timeout', 'network_error', 'invalid_response', 'invalid_endpoint',
+  'missing_credentials', 'missing_model', 'provider_not_selected', 'identity_unlinked',
+  'invalid_message', 'moderation_blocked', 'moderation_unavailable', 'unauthorized',
+  'forbidden', 'model_unavailable', 'rate_limited', 'routing_unavailable', 'circuit_open',
+  'budget_exceeded', 'invalid_json', 'invalid_request', 'request_in_progress',
+  'idempotency_conflict', 'not_found', 'conflict', 'unavailable'
+]);
+
+export function sanitizeAIErrorCode(value) {
+  return typeof value === 'string' && SAFE_ERROR_CODES.has(value)
+    ? value
+    : 'unhandled_error';
+}
+
 export const AI_REQUEST_RATE_LIMITS = DEFAULT_POLICIES;
