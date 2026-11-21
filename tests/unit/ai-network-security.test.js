@@ -9,9 +9,31 @@ import {
   createAIOperationalMonitor,
   sanitizeAIErrorCode
 } from '../../backend/modules/ai-network/security-reliability.js';
+import { createAIBot, getAICommandCenter } from '../../backend/modules/ai-network/service.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+test('AI bot service data is owner-scoped and cannot be listed by another account', () => {
+  const db = {};
+  const bot = createAIBot(db, 'owner-a', {
+    name: 'Owner Scoped Assistant',
+    purpose: 'Prepare carefully reviewed learning materials for the account owner.',
+    tone: 'friendly',
+    expertise: 'Learning support',
+    traits: ['helpful', 'curious'],
+    languages: ['en', 'ht'],
+    primaryLanguage: 'en',
+    capabilities: ['draft_content']
+  });
+  const ownerView = getAICommandCenter(db, 'owner-a');
+  const otherView = getAICommandCenter(db, 'owner-b');
+  assert.ok(ownerView.bots.some(item => item.id === bot.id));
+  assert.deepEqual(otherView.bots, []);
+  assert.equal(otherView.performance.botCount, 0);
+  assert.ok(db.aiBotAudit.some(event => event.ownerId === 'owner-a' && event.targetId === bot.id));
+  assert.equal(db.aiBotAudit.some(event => event.ownerId === 'owner-b' && event.targetId === bot.id), false);
+});
 
 test('AI operational error logging uses a strict safe-code allowlist', () => {
   assert.equal(sanitizeAIErrorCode('provider_error'), 'provider_error');
