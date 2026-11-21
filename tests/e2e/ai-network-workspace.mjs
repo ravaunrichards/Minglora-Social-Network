@@ -108,6 +108,56 @@ const snapshot = {
   safeguards: { globalPaused: true }
 };
 const taskRuntime = { global_paused: true, execution_enabled: false, max_concurrent_workers: 0, lease_seconds: 120 };
+
+const runningTaskId = '44444444-4444-4444-8444-444444444444';
+const failedTaskId = '55555555-5555-4555-8555-555555555555';
+const browserTasks = [
+  {
+    task_id: runningTaskId, identity_id: ownerIdentityId,
+    task_title: 'Running task stop browser fixture', task_type: 'support.review',
+    action_class: 'read_only', autonomy_mode: 'supervised',
+    status: 'running', priority: 10, scheduled_for: '2026-11-21T05:00:00.000Z',
+    attempt_count: 1, max_attempts: 3, requires_approval: false,
+    approved_at: null, worker_id: 'browser-worker-01',
+    lease_token: 'disposable-browser-lease', lease_expires_at: '2026-11-21T05:02:00.000Z',
+    failure_reason: ''
+  },
+  {
+    task_id: failedTaskId, identity_id: ownerIdentityId,
+    task_title: 'Failed task retry browser fixture', task_type: 'support.review',
+    action_class: 'read_only', autonomy_mode: 'supervised',
+    status: 'failed', priority: 20, scheduled_for: '2026-11-21T05:00:00.000Z',
+    attempt_count: 2, max_attempts: 3, requires_approval: true,
+    approved_at: null, worker_id: null, lease_token: null, lease_expires_at: null,
+    failure_reason: 'Disposable fixture: simulated transient provider failure.'
+  }
+];
+const taskEventsById = new Map([
+  [runningTaskId, [{
+    event_id: randomUUID(), task_id: runningTaskId, actor_type: 'worker',
+    event_type: 'task_started', previous_status: 'queued', new_status: 'running',
+    worker_id: 'browser-worker-01', reason: 'Disposable browser worker claimed the task.',
+    metadata: { fixture: true }, occurred_at: '2026-11-21T04:00:00.000Z'
+  }]],
+  [failedTaskId, [{
+    event_id: randomUUID(), task_id: failedTaskId, actor_type: 'worker',
+    event_type: 'task_failed', previous_status: 'running', new_status: 'failed',
+    worker_id: 'browser-worker-01', reason: 'Simulated transient provider failure.',
+    metadata: { fixture: true, attempt_count: 2 }, occurred_at: '2026-11-21T04:01:00.000Z'
+  }]]
+]);
+const taskControlRequests = { stops: [], retries: [], eventReads: [] };
+function recordTaskEvent(task, eventType, previousStatus, newStatus, reason, metadata = {}) {
+  const events = taskEventsById.get(task.task_id) || [];
+  events.push({
+    event_id: randomUUID(), task_id: task.task_id,
+    actor_type: 'human_user', actor_user_id: 'ai-network-browser-qa-member',
+    event_type: eventType, previous_status: previousStatus, new_status: newStatus,
+    reason, metadata: structuredClone(metadata), occurred_at: new Date().toISOString()
+  });
+  taskEventsById.set(task.task_id, events);
+}
+
 const departmentTemplates = Array.from({ length: 20 }, (_, index) => ({
   template_key: 'department_' + (index + 1), display_name: 'Department ' + (index + 1)
 }));
@@ -288,7 +338,62 @@ function aiApiResponse(req, url, body) {
   if (method === 'GET' && pathname === '/provider-accounts') return { provider_accounts: [] };
   if (method === 'GET' && pathname === '/provider-models') return { provider_models: [] };
   if (method === 'GET' && pathname === '/provider-assignments') return { assignments: [] };
-  if (method === 'GET' && pathname === '/tasks') return { tasks: [], runtime: taskRuntime };
+  if (method === 'GET' && pathname === '/tasks') return { tasks: structuredClone(browserTasks), runtime: taskRuntime };
+  const taskEventsPath = pathname.match(/^\/tasks\/([0-9a-f-]+)\/events$/i);
+  if (method === 'GET' && taskEventsPath) {
+    taskControlRequests.eventReads.push(taskEventsPath[1]);
+    const task = browserTasks.find(item => item.task_id === taskEventsPath[1]);
+    if (!task) return { error: 'Fixture task not found.' };
+    return { task_id: task.task_id, events: structuredClone(taskEventsById.get(task.task_id) || []) };
+  }
+  const taskCancelPath = pathname.match(/^\/tasks\/([0-9a-f-]+)\/cancel$/i);
+  if (method === 'POST' && taskCancelPath) {
+    const task = browserTasks.find(item => item.task_id === taskCancelPath[1]);
+    if (!task) return { error: 'Fixture task not found.' };
+    const previousStatus = task.status;
+    taskControlRequests.stops.push({ task_id: task.task_id, body: structuredClone(body), previous_status: previousStatus });
+    if (!['pending_approval','queued','observation_only','running'].includes(task.status)) {
+      return { error: 'Fixture task is not cancellable.' };
+    }
+    task.status = 'cancelled';
+    task.worker_id = null;
+    task.lease_token = null;
+    task.lease_expires_at = null;
+    task.finished_at = new Date().toISOString();
+    recordTaskEvent(task, 'task_cancelled', previousStatus, 'cancelled', body.reason || 'Stopped in browser test.', {
+      lease_revoked: previousStatus === 'running'
+    });
+    return { task: structuredClone(task), cancelled: true };
+  }
+  const taskRetryPath = pathname.match(/^\/tasks\/([0-9a-f-]+)\/retry$/i);
+  if (method === 'POST' && taskRetryPath) {
+    const task = browserTasks.find(item => item.task_id === taskRetryPath[1]);
+    if (!task) return { error: 'Fixture task not found.' };
+    const previousStatus = task.status;
+    taskControlRequests.retries.push({ task_id: task.task_id, body: structuredClone(body), previous_status: previousStatus });
+    if (task.status !== 'failed') return { error: 'Only failed fixture tasks can be retried.' };
+    if (String(body.reason || '').trim().length < 3) return { error: 'Retry reason is required.' };
+    const maxAttempts = Number(body.maxAttempts);
+    if (!Number.isInteger(maxAttempts) || maxAttempts <= task.attempt_count || maxAttempts > 10) {
+      return { error: 'Maximum attempts must exceed attempts already recorded.' };
+    }
+    task.status = task.requires_approval ? 'pending_approval' : 'queued';
+    task.max_attempts = maxAttempts;
+    task.worker_id = null;
+    task.lease_token = null;
+    task.lease_expires_at = null;
+    task.started_at = null;
+    task.finished_at = null;
+    task.failure_reason = '';
+    recordTaskEvent(task, 'task_retry_requested', previousStatus, task.status, body.reason, {
+      attempt_count: task.attempt_count, max_attempts: maxAttempts,
+      requires_approval: task.requires_approval, execution_started: false
+    });
+    return {
+      task: structuredClone(task), queued: task.status === 'queued',
+      approval_required: task.status === 'pending_approval', execution_started: false
+    };
+  }
   if (method === 'GET' && pathname === '/organizations') return { organizations: [] };
   if (method === 'GET' && pathname === '/department-templates') return { templates: departmentTemplates };
   if (method === 'GET' && pathname === '/position-templates') return { templates: positionTemplates };
@@ -764,6 +869,61 @@ try {
   assert.equal(savedGroups.length, 1);
   assert.equal(savedGroups[0].filters.genders[0], 'female');
 
+  // Running-task Stop must hit the existing cancellation endpoint and clear the active lease.
+  await page.locator('form[data-ai-form="task-cancel"][data-task-id="' + runningTaskId + '"] [name="reason"]')
+    .fill('Stop the disposable running fixture task.');
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('form[data-ai-form="task-cancel"][data-task-id="' + runningTaskId + '"] button[type="submit"]').click();
+  await page.getByText('Task cancellation recorded; any running lease has been revoked.').waitFor({ state:'visible' });
+  await page.waitForTimeout(250);
+  assert.equal(taskControlRequests.stops.length, 1, 'Stop must submit one task cancellation request.');
+  assert.equal(taskControlRequests.stops[0].task_id, runningTaskId);
+  assert.equal(taskControlRequests.stops[0].previous_status, 'running');
+  assert.equal(taskControlRequests.stops[0].body.reason, 'Stop the disposable running fixture task.');
+  assert.equal(browserTasks.find(task => task.task_id === runningTaskId).status, 'cancelled',
+    'Stopping a running fixture must persist the cancelled status.');
+  assert.equal(browserTasks.find(task => task.task_id === runningTaskId).worker_id, null,
+    'Stopping a running fixture must revoke the worker lease.');
+  assert.equal(browserTasks.find(task => task.task_id === runningTaskId).lease_token, null);
+
+  // Retry must re-queue a failed task without resetting its attempt history or bypassing approval.
+  const retryForm = page.locator('form[data-ai-form="task-retry"][data-task-id="' + failedTaskId + '"]');
+  await retryForm.locator('[name="reason"]').fill('Retry after the transient provider outage.');
+  await retryForm.locator('[name="maxAttempts"]').fill('4');
+  await retryForm.locator('button[type="submit"]').click();
+  await page.getByText(/Failed task re-queued\. The database preserved attempt history and re-requested human approval where required; execution has not started\./)
+    .waitFor({ state:'visible' });
+  await page.waitForTimeout(250);
+  assert.equal(taskControlRequests.retries.length, 1, 'Retry must submit one task retry request.');
+  assert.equal(taskControlRequests.retries[0].task_id, failedTaskId);
+  assert.deepEqual(taskControlRequests.retries[0].body, {
+    reason: 'Retry after the transient provider outage.', maxAttempts: 4
+  });
+  const retriedTask = browserTasks.find(task => task.task_id === failedTaskId);
+  assert.equal(retriedTask.status, 'pending_approval',
+    'Retry must re-request human approval where the persisted task policy requires it.');
+  assert.equal(retriedTask.attempt_count, 2, 'Retry must preserve the previously recorded attempt count.');
+  assert.equal(retriedTask.max_attempts, 4);
+  assert.equal(retriedTask.worker_id, null, 'Retry must not claim or start a worker.');
+  assert.ok(taskEventsById.get(failedTaskId).some(event =>
+    event.event_type === 'task_retry_requested' && event.metadata.execution_started === false));
+
+  // View Logs must request the owner-scoped event endpoint and render the returned events.
+  await page.locator('[data-ai-action="task-logs"][data-id="' + runningTaskId + '"]').click();
+  await page.getByText('Task audit log · Running task stop browser fixture').waitFor({ state:'visible' });
+  await page.getByText('task started').waitFor({ state:'visible' });
+  await page.getByText('task cancelled').waitFor({ state:'visible' });
+  await page.getByText('Stop the disposable running fixture task.').waitFor({ state:'visible' });
+  assert.ok(taskControlRequests.eventReads.includes(runningTaskId),
+    'View Logs must call the owner-scoped task event endpoint.');
+  await page.locator('[data-ai-action="task-logs-close"]').click();
+  await page.waitForTimeout(250);
+  await page.locator('[data-ai-action="task-logs"][data-id="' + failedTaskId + '"]').click();
+  await page.getByText('task retry requested').waitFor({ state:'visible' });
+  await page.getByText('Retry after the transient provider outage.').waitFor({ state:'visible' });
+  assert.ok(taskControlRequests.eventReads.includes(failedTaskId),
+    'The second task log view must call the task-specific event endpoint.');
+
   const viewports = [
     { name: 'compact-phone', width: 320, height: 740 },
     { name: 'standard-phone', width: 390, height: 844 },
@@ -816,6 +976,9 @@ try {
     memoryEntryUpdates: memoryRequests.updates.length,
     memoryEntryDeletes: memoryRequests.deletes.length,
     savedDiscoveryGroups: savedGroups.length,
+    taskStopRequests: taskControlRequests.stops.length,
+    taskRetryRequests: taskControlRequests.retries.length,
+    taskLogReads: taskControlRequests.eventReads.length,
     viewportsChecked: viewports.length,
     screenshotsCaptured: screenshots,
     externalApiRequests: externalApiRequests.length,
