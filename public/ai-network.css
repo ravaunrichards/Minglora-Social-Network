@@ -156,3 +156,15 @@
 .ai-network-chat-message small{color:var(--muted,#69778d);font-size:.72rem}
 .ai-network-bot-chat .ai-network-form{margin-top:2px}
 @media(max-width:760px){.ai-network-bot-chat-heading{align-items:center}.ai-network-chat-thread{max-height:48vh;padding:8px}.ai-network-chat-message{max-width:100%}}
+
+
+/* Phase 9 operational feedback and audit-log presentation. */
+.ai-network-busy{display:flex;align-items:center;gap:9px;padding:10px 13px;border:1px solid var(--line,#dce3ee);border-radius:11px;background:var(--surface-soft,#f5f8fd);color:var(--muted,#69778d);font-size:12px;font-weight:800}
+.ai-network-busy[hidden]{display:none}
+.ai-network-operational-meta{color:var(--muted,#69778d);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.ai-network-operational-error{color:#a5263c;font-weight:800}
+.ai-network-task-log{display:grid;gap:11px;margin-top:14px;padding:14px;border:1px solid var(--line,#dce3ee);border-radius:14px;background:var(--surface-soft,#f8faff)}
+.ai-network-task-log-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ai-network-task-log-heading h4{margin:0;font-size:14px}
+.ai-network-task-log .ai-network-list-row{background:var(--card,#fff)}
+.ai-network-analytics{scroll-margin-top:24px}
