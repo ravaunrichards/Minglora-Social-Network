@@ -3118,7 +3118,7 @@ async function route(req, res) {
           const reused = Boolean(result?.reused);
           return json(res, reused ? 200 : 201, result || {});
         }
-        if (parts.length === 5) {
+        if (parts.length === 5 && ['status','manager','transfer','promote'].includes(parts[4])) {
           const recordId = parts[3];
           if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recordId)) {
             throw Object.assign(new Error('A valid AI HR record ID is required.'), { status: 400 });
@@ -3191,7 +3191,7 @@ async function route(req, res) {
           }
           if (action === 'permissions' && parts.length === 6 && method === 'DELETE') {
             const permissionGrantId = parts[5];
-            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(permissionGrantId)) {
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(permissionGrantId)) {
               throw Object.assign(new Error('A valid employee permission grant ID is required.'), { status: 400 });
             }
             const input = await readWorkforceBody();
