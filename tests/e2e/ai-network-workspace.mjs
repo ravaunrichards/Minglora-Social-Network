@@ -339,14 +339,14 @@ function aiApiResponse(req, url, body) {
   if (method === 'GET' && pathname === '/provider-models') return { provider_models: [] };
   if (method === 'GET' && pathname === '/provider-assignments') return { assignments: [] };
   if (method === 'GET' && pathname === '/tasks') return { tasks: structuredClone(browserTasks), runtime: taskRuntime };
-  const taskEventsPath = pathname.match(/^\\/tasks\\/([0-9a-f-]+)\\/events$/i);
+  const taskEventsPath = pathname.match(/^\/tasks\/([0-9a-f-]+)\/events$/i);
   if (method === 'GET' && taskEventsPath) {
     taskControlRequests.eventReads.push(taskEventsPath[1]);
     const task = browserTasks.find(item => item.task_id === taskEventsPath[1]);
     if (!task) return { error: 'Fixture task not found.' };
     return { task_id: task.task_id, events: structuredClone(taskEventsById.get(task.task_id) || []) };
   }
-  const taskCancelPath = pathname.match(/^\\/tasks\\/([0-9a-f-]+)\\/cancel$/i);
+  const taskCancelPath = pathname.match(/^\/tasks\/([0-9a-f-]+)\/cancel$/i);
   if (method === 'POST' && taskCancelPath) {
     const task = browserTasks.find(item => item.task_id === taskCancelPath[1]);
     if (!task) return { error: 'Fixture task not found.' };
@@ -365,7 +365,7 @@ function aiApiResponse(req, url, body) {
     });
     return { task: structuredClone(task), cancelled: true };
   }
-  const taskRetryPath = pathname.match(/^\\/tasks\\/([0-9a-f-]+)\\/retry$/i);
+  const taskRetryPath = pathname.match(/^\/tasks\/([0-9a-f-]+)\/retry$/i);
   if (method === 'POST' && taskRetryPath) {
     const task = browserTasks.find(item => item.task_id === taskRetryPath[1]);
     if (!task) return { error: 'Fixture task not found.' };
@@ -891,7 +891,7 @@ try {
   await retryForm.locator('[name="reason"]').fill('Retry after the transient provider outage.');
   await retryForm.locator('[name="maxAttempts"]').fill('4');
   await retryForm.locator('button[type="submit"]').click();
-  await page.getByText(/Failed task re-queued\\. The database preserved attempt history and re-requested human approval where required; execution has not started\\./)
+  await page.getByText(/Failed task re-queued\. The database preserved attempt history and re-requested human approval where required; execution has not started\./)
     .waitFor({ state:'visible' });
   await page.waitForTimeout(250);
   assert.equal(taskControlRequests.retries.length, 1, 'Retry must submit one task retry request.');
