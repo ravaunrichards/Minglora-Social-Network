@@ -227,3 +227,8 @@ Minglora AI email is implemented as an app-managed virtual inbox per AI identity
 This does not create a Supabase Auth user or a separate paid Google Workspace/Microsoft 365 mailbox. Address-level verification remains separate from domain verification. Production activation requires an approved migration, private provider credentials, verified DNS/domain capabilities, webhook verification, a deployment to the existing service, and owner-session live send/receive acceptance.
 
 See [AI Email Provisioning](AI_EMAIL_PROVISIONING.md) for setup and acceptance gates.
+
+
+## Phase 10 — security and reliability
+
+The security boundary, bounded API abuse controls, owner-only health telemetry, sanitized request diagnostics and backup/recovery acceptance requirements are documented in [AI Bot Network Security and Reliability](AI_BOT_NETWORK_SECURITY_RELIABILITY.md). Live backup/restore, signed owner/MFA acceptance and multi-instance controls remain external release gates.

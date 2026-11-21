@@ -54,6 +54,7 @@ import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISett
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { createAIRequestSecurityGuard, createAIOperationalMonitor, classifyAIRequestRoute, sanitizeAIErrorCode } from '../backend/modules/ai-network/security-reliability.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -64,6 +65,8 @@ let openAIProviderHealthState = null;
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
 const activeAIBotChatOwners = new Set();
+const aiRequestSecurityGuard = createAIRequestSecurityGuard();
+const aiOperationalMonitor = createAIOperationalMonitor();
 if (process.env.NODE_ENV === 'production' &&
     (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
   throw new Error('Production startup requires SESSION_SECRET to contain at least 32 characters.');
@@ -1528,6 +1531,17 @@ async function route(req, res) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
   if (p === '/api/ai-network/email/webhook') {
+    const webhookLimit = aiRequestSecurityGuard.check({
+      clientAddress: req.socket?.remoteAddress || 'unknown',
+      pathname: p,
+      method
+    });
+    if (!webhookLimit.allowed) {
+      return json(res, 429, {
+        error: 'Webhook request rate exceeded.',
+        retryAfterSeconds: webhookLimit.retryAfterSeconds
+      }, { 'Retry-After': String(webhookLimit.retryAfterSeconds) });
+    }
     if (method !== 'POST') return json(res, 405, { error: 'Method not allowed.' });
     if (!isSupabasePersistence()) return json(res, 503, { error: 'Minglora email persistence is unavailable.' });
     try {
@@ -1590,7 +1604,10 @@ async function route(req, res) {
     } catch (error) {
       const status = Number(error?.status) || 503;
       console.error('[Minglora AI email webhook] Processing failed.', {
-        status, message: String(error?.message || 'Provider webhook processing failed.').slice(0, 180)
+        requestId: req.aiRequestId || null,
+        status,
+        errorCode: sanitizeAIErrorCode(error?.code),
+        occurredAt: new Date().toISOString()
       });
       return json(res, status, { error: String(error?.message || 'Email webhook processing failed.').slice(0, 220) });
     }
@@ -1598,8 +1615,26 @@ async function route(req, res) {
 
       if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
     const user = sessionUser(req);
+    const rateLimit = aiRequestSecurityGuard.check({
+      actorId: user?.id || null,
+      clientAddress: req.socket?.remoteAddress || 'unknown',
+      pathname: p,
+      method
+    });
+    if (!rateLimit.allowed) {
+      return json(res, 429, {
+        error: 'Too many AI Network requests. Wait briefly and try again.',
+        retryAfterSeconds: rateLimit.retryAfterSeconds
+      }, { 'Retry-After': String(rateLimit.retryAfterSeconds) });
+    }
     try {
       requireAuth(user);
+      if (user?.isAI === true || user?.aiAccount === true) {
+        throw Object.assign(
+          new Error('AI identities cannot authenticate to the human administration API.'),
+          { status: 403 }
+        );
+      }
       if (!isDesignatedCreatorHubAdmin(user) || !isModerator(user, req) || !hasActiveReviewerSession(user)) {
         throw Object.assign(
           new Error('The Minglora AI Network is available only to the designated administrator with a verified MFA session.'),
@@ -1629,6 +1664,40 @@ async function route(req, res) {
           openAIEntry.healthStatus = healthStatus;
           openAIEntry.lastCheckedAt = health.checkedAt || null;
         }
+      }
+      if (method === 'GET' && p === '/api/ai-network/health') {
+        const persistence = await persistenceHealth();
+        const authConfigured = AUTH_PROVIDER === 'legacy' || supabaseAuthConfigured();
+        const ready = persistence.ready === true && authConfigured;
+        const memory = process.memoryUsage();
+        return json(res, ready ? 200 : 503, {
+          ok: ready,
+          service: 'minglora-ai-network',
+          checkedAt: now(),
+          uptimeSeconds: Math.floor(process.uptime()),
+          components: {
+            authentication: { configured: authConfigured, provider: AUTH_PROVIDER },
+            persistence: {
+              ready: persistence.ready === true,
+              durable: persistence.durable === true,
+              driver: persistence.driver || null
+            },
+            provider: {
+              provider: providerStatus.provider,
+              configured: providerStatus.configured === true,
+              adapterAvailable: providerStatus.adapterAvailable === true,
+              connected: providerStatus.connected === true,
+              healthStatus: providerStatus.providerHealth?.healthStatus || 'unknown',
+              lastCheckedAt: providerStatus.providerHealth?.checkedAt || null
+            }
+          },
+          process: {
+            rssBytes: Math.max(0, Math.trunc(Number(memory.rss) || 0)),
+            heapUsedBytes: Math.max(0, Math.trunc(Number(memory.heapUsed) || 0)),
+            externalBytes: Math.max(0, Math.trunc(Number(memory.external) || 0))
+          },
+          api: aiOperationalMonitor.snapshot()
+        });
       }
       const providerReady = providerStatus.manualDraftsAvailable === true;
       const verifyManualProviderAccess = async () => {
@@ -11024,7 +11093,58 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
 }
 
-const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
+const server=http.createServer((req,res)=>{
+  let pathname = '';
+  try { pathname = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname; }
+  catch { pathname = ''; }
+  const isAIApiRequest = pathname === '/api/ai-network' || pathname.startsWith('/api/ai-network/');
+  if (!isAIApiRequest) {
+    route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));
+    return;
+  }
+
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
+  const routeGroup = classifyAIRequestRoute(pathname, req.method);
+  req.aiRequestId = requestId;
+  res.setHeader('X-Minglora-Request-ID', requestId);
+  res.once('finish',()=>{
+    aiOperationalMonitor.recordResponse({
+      routeGroup,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startedAt
+    });
+    if (res.statusCode >= 500) {
+      console.error(JSON.stringify({
+        level: 'error',
+        component: 'ai-network',
+        event: 'http_server_error',
+        requestId,
+        routeGroup,
+        method: String(req.method || 'UNKNOWN').slice(0, 12),
+        statusCode: res.statusCode,
+        occurredAt: new Date().toISOString()
+      }));
+    }
+  });
+
+  route(req,res).catch(error=>{
+    aiOperationalMonitor.recordUnexpectedError();
+    const errorCode = sanitizeAIErrorCode(error?.code);
+    console.error(JSON.stringify({
+      level: 'error',
+      component: 'ai-network',
+      event: 'request_unhandled',
+      requestId,
+      routeGroup,
+      method: String(req.method || 'UNKNOWN').slice(0, 12),
+      errorCode,
+      occurredAt: new Date().toISOString()
+    }));
+    if (!res.headersSent) json(res,500,{error:'Unexpected server error.',requestId});
+    else res.end();
+  });
+});
 const messengerRealtime=createMessengerRealtimeHub({
   WebSocketServer,WebSocket,
   getUserFromRequest:req=>sessionUser(req),
