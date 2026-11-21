@@ -53,15 +53,17 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
+import { probeGeminiProvider } from '../backend/modules/ai-network/gemini-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
+import { generateGeminiBotReply } from '../backend/modules/ai-network/gemini-bot-chat.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
-let openAIProviderHealthState = null;
+let aiProviderHealthState = null;
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
 const activeAIBotChatOwners = new Set();
@@ -1612,8 +1614,8 @@ async function route(req, res) {
       }
       ensureAICollections(db);
       const providerStatus = getAIProviderStatus();
-      if (openAIProviderHealthState) {
-        const health = openAIProviderHealthState;
+      if (aiProviderHealthState) {
+        const health = aiProviderHealthState;
         const connected = health.connected === true;
         const healthStatus = health.healthStatus || (connected ? 'healthy' : 'unknown');
         providerStatus.connected = connected;
@@ -1627,26 +1629,28 @@ async function route(req, res) {
           checkedAt: health.checkedAt || null,
           note: health.note || ''
         };
-        const openAIEntry = (providerStatus.providerCatalogue || []).find(entry => entry.providerId === 'openai');
-        if (openAIEntry) {
-          openAIEntry.connected = connected;
-          openAIEntry.healthStatus = healthStatus;
-          openAIEntry.lastCheckedAt = health.checkedAt || null;
+        const healthEntry = (providerStatus.providerCatalogue || []).find(entry => entry.providerId === health.providerId);
+        if (healthEntry) {
+          healthEntry.connected = connected;
+          healthEntry.healthStatus = healthStatus;
+          healthEntry.lastCheckedAt = health.checkedAt || null;
         }
       }
-      const providerReady = providerStatus.manualDraftsAvailable === true;
+      const providerReady = providerStatus.ownerControlsAvailable === true;
       const verifyManualProviderAccess = async () => {
-        if (!providerStatus.manualDraftsAvailable) {
-          throw Object.assign(
-            new Error('OpenAI owner-initiated AI features need OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'),
-            { status: 503 }
-          );
+        if (!providerStatus.botChatAvailable) {
+          const requirement = providerStatus.provider === 'google_gemini'
+            ? 'Google Gemini owner-initiated AI chat needs GEMINI_API_KEY (or GOOGLE_AI_API_KEY) and GEMINI_DEFAULT_MODEL in the private Minglora server environment.'
+            : 'OpenAI owner-initiated AI chat needs OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.';
+          throw Object.assign(new Error(requirement), { status: 503 });
         }
-        const health = await probeOpenAIProvider();
-        openAIProviderHealthState = health;
+        const health = providerStatus.provider === 'google_gemini'
+          ? await probeGeminiProvider()
+          : await probeOpenAIProvider();
+        aiProviderHealthState = health;
         if (!health.connected) {
           throw Object.assign(
-            new Error('OpenAI provider check failed (' + health.status + '): ' + health.note),
+            new Error((providerStatus.provider === 'google_gemini' ? 'Gemini' : 'OpenAI') + ' provider check failed (' + health.status + '): ' + health.note),
             { status: 503 }
           );
         }
@@ -3022,14 +3026,19 @@ async function route(req, res) {
       if (method === 'POST' && sub === 'provider-health') {
         const input = await body(req, 4000);
         if (!input || typeof input !== 'object' || Array.isArray(input) ||
-            input.provider !== 'openai' || Object.keys(input).some(key => key !== 'provider')) {
+            !['openai','google_gemini'].includes(input.provider) || Object.keys(input).some(key => key !== 'provider')) {
           throw Object.assign(
-            new Error('The read-only provider probe currently accepts only provider=openai. Credentials must be configured in the private server environment, never in the request body.'),
+            new Error('The read-only provider probe accepts only provider=openai or provider=google_gemini. Credentials must be configured in the private server environment, never in the request body.'),
             { status: 400 }
           );
         }
-        const health = await probeOpenAIProvider();
-        openAIProviderHealthState = health;
+        const health = input.provider === 'google_gemini'
+          ? await probeGeminiProvider()
+          : await probeOpenAIProvider();
+        if (health.providerId !== input.provider) {
+          throw Object.assign(new Error('The requested provider probe did not match the returned provider identity.'), { status: 502 });
+        }
+        aiProviderHealthState = health;
         return json(res, 200, health);
       }
 
@@ -3564,16 +3573,25 @@ async function route(req, res) {
           try {
             const currentProviderStatus = getAIProviderStatus();
             if (!currentProviderStatus.botChatAvailable) {
-              throw Object.assign(new Error('AI bot chat is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.'), { status: 503 });
+              const providerRequirement = currentProviderStatus.provider === 'google_gemini'
+                ? 'Set GEMINI_API_KEY (or GOOGLE_AI_API_KEY) and GEMINI_DEFAULT_MODEL in the private Minglora server environment.'
+                : 'Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment.';
+              throw Object.assign(new Error('AI bot chat is not configured. ' + providerRequirement), { status: 503 });
             }
-            const providerHealth = await probeOpenAIProvider();
+            const providerHealth = currentProviderStatus.provider === 'google_gemini'
+              ? await probeGeminiProvider()
+              : await probeOpenAIProvider();
+            aiProviderHealthState = providerHealth;
             if (!providerHealth.connected) {
-              throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+              throw Object.assign(new Error((currentProviderStatus.provider === 'google_gemini' ? 'Gemini' : 'OpenAI') + ' provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
             }
-            const generated = await generateOpenAIBotReply({
+            const generationOptions = {
               bot: chatBase.bot, identity: verifiedIdentity.identity, message: input.message,
               history, memoryContext, env: process.env, maxOutputTokens: allowedOutputTokens
-            });
+            };
+            const generated = currentProviderStatus.provider === 'google_gemini'
+              ? await generateGeminiBotReply(generationOptions)
+              : await generateOpenAIBotReply(generationOptions);
             let saved;
             if (relationalPersistence) {
               const completed = await runAIBotChatCommand('complete_request', {
@@ -11230,8 +11248,10 @@ server.listen(PORT,'0.0.0.0',async()=>{
     aiManualDraftsAvailable: Boolean(aiReadiness.manualDraftsAvailable),
     aiExecutionEnabled: Boolean(aiReadiness.executionEnabled)
   }));
-  void probeOpenAIProvider().then(providerHealth => {
-    openAIProviderHealthState = providerHealth;
+  const initialAIProvider = aiReadiness.provider === 'google_gemini' ? 'google_gemini' : 'openai';
+  const initialAIProbe = initialAIProvider === 'google_gemini' ? probeGeminiProvider() : probeOpenAIProvider();
+  void initialAIProbe.then(providerHealth => {
+    aiProviderHealthState = providerHealth;
     console.info('[Minglora AI provider verification]', JSON.stringify({
       provider: providerHealth.providerId,
       status: providerHealth.status,
