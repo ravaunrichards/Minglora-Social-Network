@@ -103,5 +103,5 @@ test('global AI identity ceiling is database-enforced, private and visible in th
   assert.ok(ui.includes('global ceiling of 100,000'));
   assert.ok(ui.includes('Global AI identity capacity'));
   assert.ok(ui.includes('state.identityCapacity?.capacity_reached'));
-  assert.ok(ui.includes('100 identities per batch'));
+  assert.ok(ui.includes('up to 100 per batch'));
 });
