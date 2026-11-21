@@ -6,11 +6,19 @@ import { fileURLToPath } from 'node:url';
 import {
   classifyAIRequestRoute,
   createAIRequestSecurityGuard,
-  createAIOperationalMonitor
+  createAIOperationalMonitor,
+  sanitizeAIErrorCode
 } from '../../backend/modules/ai-network/security-reliability.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+test('AI operational error logging uses a strict safe-code allowlist', () => {
+  assert.equal(sanitizeAIErrorCode('provider_error'), 'provider_error');
+  assert.equal(sanitizeAIErrorCode('timeout'), 'timeout');
+  assert.equal(sanitizeAIErrorCode('sk-proj-secret-material-that-must-not-be-logged'), 'unhandled_error');
+  assert.equal(sanitizeAIErrorCode('arbitrary-database-error-text'), 'unhandled_error');
+});
 
 test('AI Network route classification assigns specific abuse policies', () => {
   assert.equal(classifyAIRequestRoute('/api/ai-network', 'GET'), 'read');
