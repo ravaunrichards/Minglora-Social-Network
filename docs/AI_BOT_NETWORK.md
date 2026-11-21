@@ -238,3 +238,8 @@ See [AI Email Provisioning](AI_EMAIL_PROVISIONING.md) for setup and acceptance g
 - The current `main` dashboard supports provider metadata registration and a read-only OpenAI health probe. Generic provider connect/disconnect and provider enable/disable operations remain unavailable; keys are not accepted in the browser.
 - Process restart and push-based live status are not supported by the current runtime. The dashboard reports the latest fetched status and refreshes after successful actions; it does not claim a push-based real-time feed.
 - Server authorization remains the existing designated-administrator, moderator and active-MFA gate. Unsupported operations are described as unavailable rather than represented by nonfunctional controls.
+
+
+## Phase 10 — security and reliability
+
+The security boundary, bounded API abuse controls, owner-only health telemetry, sanitized request diagnostics and backup/recovery acceptance requirements are documented in [AI Bot Network Security and Reliability](AI_BOT_NETWORK_SECURITY_RELIABILITY.md). Live backup/restore, production owner/MFA acceptance and multi-instance controls remain external release gates.
