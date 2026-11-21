@@ -63,6 +63,17 @@ test('OpenAI manual draft status is not shown as a persistent readiness message'
   assert.ok(moduleSource.includes('manualDraftsAvailable'));
 });
 
+test('AI identity registry supports Select All and one-confirmation bulk human-reviewed approval', () => {
+  assert.ok(ui.includes('data-ai-select-all'));
+  assert.ok(ui.includes('data-ai-selected-count'));
+  assert.ok(ui.includes('Select All on this page'));
+  assert.ok(ui.includes("], 'approved')"));
+  assert.ok(ui.includes("status === 'approved' && !window.confirm"));
+  assert.ok(ui.includes('This will not approve queued tasks or start workers.'));
+  assert.ok(ui.includes('onIdentitySelectionChange'));
+  assert.ok(server.includes("sub === 'identities/bulk-status'"));
+});
+
 test('AI Network workspace exposes a live setup checklist and separates provider gates from identity work', () => {
   assert.ok(ui.includes('function renderAICentreReadiness(snapshot)'));
   assert.ok(ui.includes('AI Centre Readiness'));
