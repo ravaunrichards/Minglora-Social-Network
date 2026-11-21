@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261118075901_minglora_ai_durable_identity_batches.sql');
+const capacityMigration = read('supabase/migrations/20261121154746_minglora_ai_identity_capacity_100k.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -76,4 +77,29 @@ test('identity bulk UI requires unique row keys and exposes persisted failed-row
   assert.ok(ui.includes("/identities/batches/' + encodeURIComponent(batchId) + '/retry"));
   assert.match(ui, /saves failed row data privately in Supabase/);
   assert.match(ui, /Successful row payloads are cleared from the retry store/);
+});
+
+
+test('global AI identity ceiling is database-enforced, private and visible in the Bot Centre', () => {
+  assert.match(capacityMigration, /create table if not exists ai_network\\.ai_identity_capacity_limits/i);
+  assert.match(capacityMigration, /maximum_identities between 1 and 100000/i);
+  assert.match(capacityMigration, /values \\('global', 100000\\)/i);
+  assert.match(capacityMigration, /for update/i);
+  assert.match(capacityMigration, /before insert on ai_network\\.ai_identities/i);
+  assert.match(capacityMigration, /new\\.idempotency_key[\\s\\S]*return new/i);
+  assert.match(capacityMigration, /errcode = '54000'/i);
+  assert.match(capacityMigration, /security invoker[\\s\\S]*set search_path = ''/i);
+  assert.match(capacityMigration, /alter table ai_network\\.ai_identity_capacity_limits enable row level security/i);
+  assert.match(capacityMigration, /revoke all on table ai_network\\.ai_identity_capacity_limits from public, anon, authenticated, service_role/i);
+  assert.match(capacityMigration, /grant select, update on table ai_network\\.ai_identity_capacity_limits to service_role/i);
+  assert.match(capacityMigration, /minglora_ai_identity_capacity_status\\(uuid\\)/i);
+  assert.match(runtime, /"ai_identity_capacity_status"/);
+  assert.match(runtime, /admin\\.rpc\\("minglora_ai_identity_capacity_status"/);
+  assert.match(server, /runAIIdentityCapacityStatus/);
+  assert.match(server, /sub === 'identity-capacity'/);
+  assert.match(ui, /identityCapacity/);
+  assert.match(ui, /global ceiling of 100,000/);
+  assert.match(ui, /Global AI identity capacity/);
+  assert.match(ui, /state\\.identityCapacity\\?\\.capacity_reached/);
+  assert.match(ui, /100 identities per batch/);
 });
