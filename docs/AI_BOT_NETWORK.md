@@ -227,3 +227,14 @@ Minglora AI email is implemented as an app-managed virtual inbox per AI identity
 This does not create a Supabase Auth user or a separate paid Google Workspace/Microsoft 365 mailbox. Address-level verification remains separate from domain verification. Production activation requires an approved migration, private provider credentials, verified DNS/domain capabilities, webhook verification, a deployment to the existing service, and owner-session live send/receive acceptance.
 
 See [AI Email Provisioning](AI_EMAIL_PROVISIONING.md) for setup and acceptance gates.
+
+
+## Phase 9 — operational dashboard controls (source implementation)
+
+- The Bot Personality Laboratory supports editing the persisted Bot Lab configuration (display name, purpose, tone, traits, expertise, languages and allowed capabilities) through an owner/MFA-protected `PATCH /api/ai-network/bots/:id` endpoint.
+- Removing a Bot Lab configuration is an audited soft delete via `DELETE /api/ai-network/bots/:id`. It removes the configuration from the active Bot Lab list while retaining the canonical AI identity, conversations and audit history. Canonical identity lifecycle suspension/retirement remains a separate, explicit operation in the identity registry; this is not a hard-delete of the identity.
+- The administrative command center displays the latest persisted Bot Lab audit events and the timestamp of the latest server snapshot. Analytics remain sourced from recorded events only.
+- The current `main` dashboard supports task creation, approval/rejection and cancellation of waiting tasks. Starting, stopping a running task and retrying failed tasks remain unavailable until the authenticated worker runtime and lease lifecycle are deployed.
+- The current `main` dashboard supports provider metadata registration and a read-only OpenAI health probe. Generic provider connect/disconnect and provider enable/disable operations remain unavailable; keys are not accepted in the browser.
+- Process restart and push-based live status are not supported by the current runtime. The dashboard reports the latest fetched status and refreshes after successful actions; it does not claim a push-based real-time feed.
+- Server authorization remains the existing designated-administrator, moderator and active-MFA gate. Unsupported operations are described as unavailable rather than represented by nonfunctional controls.

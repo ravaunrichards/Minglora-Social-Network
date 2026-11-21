@@ -242,6 +242,71 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: req
   return bot;
 }
 
+export function updateAIBotDetails(db, ownerId, botId, input = {}, { now = new Date() } = {}) {
+  ensureAICollections(db);
+  const bot = ownerRows(db.aiBots, ownerId).find(row => row.id === botId && !row.deletedAt);
+  if (!bot) throw fail(404, 'AI bot not found.');
+  if (bot.status === 'archived') throw fail(409, 'Archived AI bots cannot be edited. Restore or create a new bot configuration.');
+
+  const name = text(input.name === undefined ? bot.name : input.name, 40);
+  const purpose = text(input.purpose === undefined ? bot.purpose : input.purpose, 280);
+  const tone = text(input.tone === undefined ? bot.tone : input.tone, 24).toLowerCase();
+  const expertise = text(input.expertise === undefined ? bot.expertise : input.expertise, 180);
+  if (name.length < 2) throw fail(400, 'Give this AI bot a name with at least two characters.');
+  if (purpose.length < 20) throw fail(400, 'Describe this bot’s purpose in at least 20 characters.');
+  if (!BOT_TONES.has(tone)) throw fail(400, 'Choose a supported personality tone.');
+
+  const rawTraits = input.traits === undefined ? bot.traits : input.traits;
+  if (!Array.isArray(rawTraits)) throw fail(400, 'Choose two to five personality traits.');
+  const traits = [...new Set(rawTraits.map(value => text(value, 24).toLowerCase()))];
+  if (traits.length < 2 || traits.length > 5 || traits.some(value => !BOT_TRAITS.has(value))) {
+    throw fail(400, 'Choose two to five valid, distinct personality traits.');
+  }
+
+  const languages = canonicalLanguages(input.languages === undefined ? bot.languages : input.languages);
+  const primaryLanguage = canonicalLanguages([input.primaryLanguage === undefined ? bot.primaryLanguage : input.primaryLanguage])[0];
+  if (!languages.includes(primaryLanguage)) throw fail(400, 'The primary language must be enabled for this bot.');
+
+  const rawCapabilities = input.capabilities === undefined ? bot.capabilities : input.capabilities;
+  if (!Array.isArray(rawCapabilities)) throw fail(400, 'Choose one or more supported AI bot capabilities.');
+  const capabilities = [...new Set(rawCapabilities.map(value => text(value, 50)))];
+  if (!capabilities.length || capabilities.some(value => !AI_BOT_CAPABILITIES.includes(value))) {
+    throw fail(400, 'One or more requested bot capabilities are not allowed.');
+  }
+
+  const existing = ownerRows(db.aiBots, ownerId).filter(row =>
+    row.id !== botId && !row.deletedAt && row.status !== 'archived'
+  );
+  if (existing.some(row => String(row.name || '').toLowerCase() === name.toLowerCase())) {
+    throw fail(409, 'You already have an AI bot with this name.');
+  }
+  const candidate = { purpose, tone, traits, expertise };
+  if (existing.some(row => row.personalitySignature === botSignature(candidate))) {
+    throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone or trait combination.');
+  }
+
+  Object.assign(bot, { name, purpose, tone, traits, expertise, languages, primaryLanguage, capabilities });
+  bot.personalitySignature = botSignature(bot);
+  bot.updatedAt = nowIso(now);
+  audit(db, ownerId, ownerId, 'bot_updated', 'bot', bot.id, now);
+  return bot;
+}
+
+export function deleteAIBot(db, ownerId, botId, { reason = '', now = new Date() } = {}) {
+  ensureAICollections(db);
+  const bot = ownerRows(db.aiBots, ownerId).find(row => row.id === botId);
+  if (!bot) throw fail(404, 'AI bot not found.');
+  if (bot.deletedAt) return { bot, deleted: true, reused: true, softDeleted: true };
+
+  bot.status = 'archived';
+  bot.deletedAt = nowIso(now);
+  bot.deletedByUserId = ownerId;
+  bot.deletionReason = text(reason, 500) || 'Removed by the designated Minglora administrator.';
+  bot.updatedAt = nowIso(now);
+  audit(db, ownerId, ownerId, 'bot_soft_deleted', 'bot', bot.id, now);
+  return { bot, deleted: true, reused: false, softDeleted: true };
+}
+
 export function updateAIBotStatus(db, ownerId, botId, status, { providerConfigured = false, now = new Date() } = {}) {
   const bot = ownerRows((ensureAICollections(db), db.aiBots), ownerId).find(row => row.id === botId);
   if (!bot) throw fail(404, 'AI bot not found.');
@@ -804,8 +869,10 @@ export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
 
 export function getAIPerformanceSummary(db, ownerId) {
   ensureAICollections(db);
-  const bots = ownerRows(db.aiBots, ownerId);
-  const botIds = new Set(bots.map(bot => bot.id));
+  const allBots = ownerRows(db.aiBots, ownerId);
+  const bots = allBots.filter(bot => !bot.deletedAt);
+  // Soft-deleting a Bot Lab configuration must not erase its historical run analytics.
+  const botIds = new Set(allBots.map(bot => bot.id));
   const runs = ownerRows(db.aiBotRuns, ownerId).filter(run => botIds.has(run.botId));
   const tokenUse = runs.reduce((sum, run) => sum + Math.max(0, Number(run.totalTokens) || 0), 0);
   const creatorDraftTokenUse = ownerRows(db.aiBotCreatorJobs, ownerId)
@@ -840,7 +907,12 @@ export function getAICommandCenter(db, ownerId, { providerStatus = getAIProvider
     settings,
     providerStatus,
     performance: getAIPerformanceSummary(db, ownerId),
-    bots: ownerRows(db.aiBots, ownerId),
+    bots: ownerRows(db.aiBots, ownerId).filter(bot => !bot.deletedAt),
+    auditLog: ownerRows(db.aiBotAudit, ownerId)
+      .slice()
+      .sort((a, b) => Date.parse(b.occurredAt || 0) - Date.parse(a.occurredAt || 0))
+      .slice(0, 100),
+    statusFetchedAt: nowIso(),
     teams: ownerRows(db.aiBotTeams, ownerId),
     schedules: ownerRows(db.aiBotSchedules, ownerId),
     approvals: ownerRows(db.aiBotApprovals, ownerId).filter(item => item.status === 'pending_human_review'),

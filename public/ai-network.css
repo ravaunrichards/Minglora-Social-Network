@@ -76,6 +76,7 @@
 .ai-network-command-grid strong{color:var(--ink,#162338);font-size:11px;overflow-wrap:anywhere}
 .ai-network-footer{padding:5px 2px;color:var(--muted,#69778d);font-size:10px;text-align:center}
 .ai-network-loading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:200px;color:var(--muted,#69778d)}
+.ai-network-working{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:0 0 12px;border:1px solid var(--line,#dce3ee);border-radius:12px;background:var(--surface-soft,#f5f8fd);color:var(--ink,#162338);font-size:13px;line-height:1.4}
 .ai-network-spinner{width:20px;height:20px;border:2px solid var(--line,#dce3ee);border-top-color:var(--blue,#1769e0);border-radius:50%;animation:ai-network-spin .8s linear infinite}
 @keyframes ai-network-spin{to{transform:rotate(360deg)}}
 @media(max-width:900px){.ai-network-grid{grid-template-columns:1fr}.ai-network-span-2{grid-column:auto}.ai-network-quick-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-command-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
