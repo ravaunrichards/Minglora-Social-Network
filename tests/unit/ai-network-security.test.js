@@ -177,10 +177,10 @@ test('unexpected AI API errors include correlation IDs and omit raw diagnostics'
 
 test('security runbook distinguishes source controls from unverified live backups', () => {
   const runbook = read('docs/AI_BOT_NETWORK_SECURITY_RELIABILITY.md');
-  assert.ok(runbook.includes('Process-local abuse guard'));
+  assert.ok(runbook.includes('process-local abuse guard'));
   assert.ok(runbook.includes('AI identities cannot authenticate'));
   assert.ok(runbook.includes('service_role'));
   assert.ok(runbook.includes('Backup and restore acceptance remains open'));
   assert.ok(runbook.includes('global_paused=true'));
-  assert.ok(runbook.includes('Do not restore directly over the active production project'));
+  assert.ok(runbook.includes('never over the active production project'));
 });
