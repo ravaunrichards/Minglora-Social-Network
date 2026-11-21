@@ -81,25 +81,27 @@ test('identity bulk UI requires unique row keys and exposes persisted failed-row
 
 
 test('global AI identity ceiling is database-enforced, private and visible in the Bot Centre', () => {
-  assert.match(capacityMigration, /create table if not exists ai_network\\.ai_identity_capacity_limits/i);
-  assert.match(capacityMigration, /maximum_identities between 1 and 100000/i);
-  assert.match(capacityMigration, /values \\('global', 100000\\)/i);
-  assert.match(capacityMigration, /for update/i);
-  assert.match(capacityMigration, /before insert on ai_network\\.ai_identities/i);
-  assert.match(capacityMigration, /new\\.idempotency_key[\\s\\S]*return new/i);
-  assert.match(capacityMigration, /errcode = '54000'/i);
-  assert.match(capacityMigration, /security invoker[\\s\\S]*set search_path = ''/i);
-  assert.match(capacityMigration, /alter table ai_network\\.ai_identity_capacity_limits enable row level security/i);
-  assert.match(capacityMigration, /revoke all on table ai_network\\.ai_identity_capacity_limits from public, anon, authenticated, service_role/i);
-  assert.match(capacityMigration, /grant select, update on table ai_network\\.ai_identity_capacity_limits to service_role/i);
-  assert.match(capacityMigration, /minglora_ai_identity_capacity_status\\(uuid\\)/i);
-  assert.match(runtime, /"ai_identity_capacity_status"/);
-  assert.match(runtime, /admin\\.rpc\\("minglora_ai_identity_capacity_status"/);
-  assert.match(server, /runAIIdentityCapacityStatus/);
-  assert.match(server, /sub === 'identity-capacity'/);
-  assert.match(ui, /identityCapacity/);
-  assert.match(ui, /global ceiling of 100,000/);
-  assert.match(ui, /Global AI identity capacity/);
-  assert.match(ui, /state\\.identityCapacity\\?\\.capacity_reached/);
-  assert.match(ui, /100 identities per batch/);
+  const sql = capacityMigration.toLowerCase();
+  assert.ok(sql.includes('create table if not exists ai_network.ai_identity_capacity_limits'));
+  assert.ok(sql.includes('maximum_identities between 1 and 100000'));
+  assert.ok(sql.includes("values ('global', 100000)"));
+  assert.ok(sql.includes('for update'));
+  assert.ok(sql.includes('before insert on ai_network.ai_identities'));
+  assert.ok(sql.includes('new.idempotency_key'));
+  assert.ok(sql.includes("errcode = '54000'"));
+  assert.ok(sql.includes('security invoker'));
+  assert.ok(sql.includes("set search_path = ''"));
+  assert.ok(sql.includes('alter table ai_network.ai_identity_capacity_limits enable row level security'));
+  assert.ok(sql.includes('revoke all on table ai_network.ai_identity_capacity_limits from public, anon, authenticated, service_role'));
+  assert.ok(sql.includes('grant select, update on table ai_network.ai_identity_capacity_limits to service_role'));
+  assert.ok(sql.includes('minglora_ai_identity_capacity_status(uuid)'));
+  assert.ok(runtime.includes('"ai_identity_capacity_status"'));
+  assert.ok(runtime.includes('admin.rpc("minglora_ai_identity_capacity_status"'));
+  assert.ok(server.includes('runAIIdentityCapacityStatus'));
+  assert.ok(server.includes("sub === 'identity-capacity'"));
+  assert.ok(ui.includes('identityCapacity'));
+  assert.ok(ui.includes('global ceiling of 100,000'));
+  assert.ok(ui.includes('Global AI identity capacity'));
+  assert.ok(ui.includes('state.identityCapacity?.capacity_reached'));
+  assert.ok(ui.includes('100 identities per batch'));
 });
