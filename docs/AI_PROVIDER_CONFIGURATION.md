@@ -3,7 +3,7 @@
 **Scope:** Minglora Social Network AI Bot Network only.  
 **Configuration template:** .env.example  
 **Credential storage:** private server environment / approved secrets manager only.  
-**Current runtime status:** a moderated OpenAI adapter for owner-initiated AI bot conversations and Creator Studio drafts is implemented and deployed. It remains unavailable in production until a real private API key/model passes the live provider probe and inference acceptance.
+**Current runtime status:** the OpenAI adapter supports owner-initiated AI bot conversations and Creator Studio drafts. The Google Gemini adapter supports owner-initiated AI bot conversations only. Production chat remains unavailable until the selected provider's private API key/model passes its live health probe and the first real inference test.
 
 ## ChatGPT guest versus OpenAI API
 
@@ -13,7 +13,7 @@ For Minglora server-side OpenAI inference, use the separate **OpenAI Platform AP
 
 ## Provider catalogue
 
-The provider inventory covers the following integration families. These are configuration targets, not claims that the adapters or accounts are already connected.
+The provider inventory covers the following integration families. OpenAI and Google Gemini have owner-initiated bot-chat adapters; the other entries remain configuration candidates only. Catalogue presence never means an account is connected or an adapter is active.
 
 | Family | Provider IDs |
 |---|---|
@@ -44,11 +44,11 @@ The OpenAI catalogue entry includes server-side adapters for **human-initiated, 
 
 The Bot Personality Lab conversation route is also implemented: `GET /api/ai-network/bots/:botId/conversation` and `POST /api/ai-network/bots/:botId/chat`. It uses the private `OPENAI_API_KEY` and `OPENAI_DEFAULT_MODEL`, performs a fresh model-access probe, moderates the user input and generated output, calls Responses with `store:false` and no tools, and records the exchange and measured token usage in the owner-scoped relational conversation store. It is an explicit human request, not an autonomous worker. For this first chat path, provider-account metadata rows and model-assignment rows are not prerequisites; the private key/model and successful probe are.
 
-The OpenAI entry also advertises a **read-only model-access health probe**. The designated-admin-only `POST /api/ai-network/provider-health` endpoint reads the key and model from the private server environment and calls OpenAI's model retrieval endpoint. It accepts only the provider identifier in the request body; it rejects browser-supplied credential fields. A successful probe confirms that the configured API key can retrieve the selected model, but it does **not** verify text generation, moderation, cost metering, routing, or worker execution. The result is not persisted as a connected state; a fresh probe is required to confirm current provider health.
+The provider workspace offers a designated-admin-only, read-only `POST /api/ai-network/provider-health` probe for either `openai` or `google_gemini`. The request accepts only the provider identifier; browser-supplied credentials or extra fields are rejected. OpenAI checks the configured model endpoint using `OPENAI_API_KEY`; Gemini checks `/v1beta/models/{model}` using the `x-goog-api-key` header. A successful probe confirms model access only. It does **not** prove a real generation response, moderation behavior, exact billing, assignment activation, or worker execution. Probe results are process-local observations, not a persisted Connect switch; a fresh check is required when enabling owner-controlled bot use.
 
 ## Phase 4.7 — controlled fallback-model routing and provider recovery
 
-The optional fallback route is deliberately narrow. Set both `MINGLORA_AI_FALLBACK_PROVIDER=openai` and `MINGLORA_AI_FALLBACK_MODEL=<a second model available to the same OpenAI project>`, or leave both variables blank. The fallback uses the same private OpenAI API key and base URL as the primary model. It does not use provider-account metadata as a credential source. A configured Anthropic, Gemini, OpenRouter or other catalogue entry is rejected as a fallback until that provider has a tested inference adapter, moderation contract, usage accounting and failure policy.
+Fallback routing is optional and remains on the **same provider** as the primary model so a request never silently switches credential sets or safety behavior. For OpenAI, set `MINGLORA_AI_FALLBACK_PROVIDER=openai` and a distinct `MINGLORA_AI_FALLBACK_MODEL`; for Gemini, use `MINGLORA_AI_FALLBACK_PROVIDER=google_gemini` and a distinct Gemini model accessible to the same API key. Leave both values blank to disable fallback. Cross-provider fallback is rejected.
 
 Bot chat and Creator Studio apply retries only to generation calls. The retry ceiling is two retries (three total attempts) and can be lowered with `MINGLORA_AI_MAX_RETRIES=0` or `1`. Network errors, timeouts, HTTP 408/425/429, 5xx responses and incomplete/invalid generated responses are eligible for bounded retry. A model-unavailable response (404) skips retries and tries the configured fallback model immediately. Authentication (401), permission (403), configuration, input validation and moderation failures do not trigger model fallback. The fallback never runs before input moderation, and generated output is still moderated after the selected model returns. If moderation is unavailable or flags the output, no bot reply or Creator Studio draft is saved.
 
@@ -60,11 +60,15 @@ The existing read-only provider-health endpoint probes the configured primary mo
 
 See the [Phase 4.7 fallback and recovery runbook](AI_PROVIDER_FALLBACK_RECOVERY.md) for the operator checklist and failure matrix.
 
-Owner-control behavior: the Resume action performs a fresh OpenAI model-access probe before clearing the owner's global pause. Enabling a bot for owner-initiated use also performs a fresh probe and remains subject to the global pause. This changes only owner-controlled AI availability; it does not start durable queue workers or autonomous schedules. Schedule activation stays unavailable until the separate worker claim/lease/heartbeat/completion runtime is deployed and accepted. Pause, resume and bot status controls call their server routes; provider failure is returned as an actionable API error rather than silently marking the provider connected.
+Owner-control behavior: Resume and bot enable perform a fresh health probe against the selected supported provider before reopening owner-controlled chat. Bot status remains subject to the owner's global pause. This affects only human-initiated chat; it does not start durable queue workers or autonomous schedules. Schedule activation remains unavailable until the separate worker claim/lease/heartbeat/completion runtime is deployed and accepted. Pause, resume and bot status controls call real server routes; provider failures are returned as actionable API errors rather than marking a provider connected without evidence.
 
-The provider helper reports only credential-variable presence and adapter/probe availability; it never returns secret values. OpenAI's adapter is implemented, but provider connection remains false and inference stays unavailable until private credentials and model access pass a live probe. Worker execution remains disabled independently.
+**OpenAI capabilities:** owner-initiated bot conversations and Creator Studio draft generation. Both use the private server API key, token budgets and the OpenAI moderation endpoint before a reply or draft is saved.
 
-The existing generic MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL, and MINGLORA_AI_API_KEY triplet is retained for backwards compatibility. The generic triplet is not proof of a working adapter. Provider-specific variables are prepared for future adapters and do not independently unpause workers.
+**Google Gemini capabilities:** owner-initiated bot conversations only. The adapter uses the Gemini `generateContent` API with server-only `GEMINI_API_KEY` (or `GOOGLE_AI_API_KEY`) and `GEMINI_DEFAULT_MODEL`. It supplies a fixed system instruction, conversation history, and Gemini safety settings for harassment, hate speech, sexually explicit and dangerous content. Requests or candidates blocked by Gemini safety filters are not saved; incomplete candidates are not saved. Token usage is taken from Gemini `usageMetadata`. The adapter has no tools and cannot publish, message third parties, spend money or modify accounts. Creator Studio remains OpenAI-only. Provider safety filters are not equivalent to OpenAI's moderation endpoint and should be evaluated with real acceptance prompts before general rollout.
+
+The provider helper reports only credential-variable presence and adapter/probe availability; it never returns secret values. A successful model-access probe is a prerequisite but not proof that a generation will succeed. The first owner-initiated conversation remains the actual inference acceptance check. Autonomous worker execution, schedule starts and unattended posting remain disabled independently.
+
+The generic `MINGLORA_AI_PROVIDER`, `MINGLORA_AI_MODEL`, and `MINGLORA_AI_API_KEY` triplet is retained for backwards compatibility. For Gemini, explicitly set `MINGLORA_AI_PROVIDER=google_gemini` to select it when OpenAI credentials are also configured.
 
 ## Environment groups
 
@@ -82,9 +86,9 @@ The existing generic MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL, and MINGLORA_AI_AP
 
 ### Language and multimodal providers
 
-- OpenAI: OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_ORGANIZATION_ID, OPENAI_PROJECT_ID, OPENAI_DEFAULT_MODEL
+- OpenAI owner chat and Creator Studio drafts: OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_ORGANIZATION_ID, OPENAI_PROJECT_ID, OPENAI_DEFAULT_MODEL
+- Google Gemini owner chat: set MINGLORA_AI_PROVIDER=google_gemini, then GEMINI_API_KEY (or GOOGLE_AI_API_KEY), GEMINI_DEFAULT_MODEL, and optionally GEMINI_BASE_URL. Default API base: https://generativelanguage.googleapis.com/v1beta. Creator Studio generation is not yet supported on Gemini.
 - Anthropic: ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL, ANTHROPIC_DEFAULT_MODEL
-- Google Gemini: GEMINI_API_KEY or GOOGLE_AI_API_KEY, plus optional base URL/model
 - xAI, Mistral, Cohere, Groq, Together AI, Fireworks AI, DeepSeek, OpenRouter, Perplexity, Hugging Face and Replicate: each has a dedicated API token and optional model/endpoint fields.
 - Azure OpenAI: API key, endpoint, API version and deployment name are all required.
 - AWS Bedrock: region plus a supported AWS credential chain (environment key pair, profile or web-identity token); prefer IAM roles instead of long-lived access keys.
