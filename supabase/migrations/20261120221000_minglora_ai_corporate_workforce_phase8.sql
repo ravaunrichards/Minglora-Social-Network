@@ -905,13 +905,28 @@ begin
     if v_employment_id is null
        or v_report_type not in ('daily','weekly','task','exception','incident')
        or length(v_title)<3 or length(v_body)<1 or length(v_body)>8000
-       or v_idempotency_key !~ '^.{8,160}
+       or v_idempotency_key !~ '^.{8,160}$' then
+      raise exception using errcode='22023', message='A valid employee, report type, title, report body and idempotency key are required.';
+    end if;
+    select * into v_employee from ai_network.ai_employment_records e
+    where e.organization_id=p_organization_id and e.employment_id=v_employment_id
+      and e.employment_status='active';
+    if not found then
+      raise exception using errcode='42501', message='Only an active employee may submit a workforce report.';
+    end if;
+    if v_identity_id is not null and v_identity_id<>v_employee.identity_id then
+      raise exception using errcode='42501', message='The report identity does not match the selected employee.';
+    end if;
+    v_identity_id:=v_employee.identity_id;
+    if not exists(
       select 1 from ai_network.ai_identities i
-      where i.identity_id=v_identity_id and i.owner_user_id=v_owner and i.status='active' and i.enabled=true
+      where i.identity_id=v_identity_id and i.owner_user_id=v_owner
+        and i.status='active' and i.enabled=true
     ) or not exists(
       select 1 from ai_network.ai_employee_permission_grants g
       where g.owner_user_id=v_owner and g.organization_id=p_organization_id
-        and g.employment_id=v_employment_id and g.permission_key='report.submit' and g.revoked_at is null
+        and g.employment_id=v_employment_id and g.permission_key='report.submit'
+        and g.revoked_at is null
     ) then
       raise exception using errcode='42501', message='Employee must be active and hold an explicit report.submit permission.';
     end if;
@@ -920,13 +935,16 @@ begin
       join ai_network.ai_teams t on t.owner_user_id=m.owner_user_id and t.team_id=m.team_id
       where m.owner_user_id=v_owner and m.team_id=v_team_id and m.identity_id=v_identity_id
         and m.membership_status='active' and t.organization_id=p_organization_id and t.status='active'
-    ) then raise exception using errcode='42501', message='Employee report team must be active and include the employee.'; end if;
+    ) then
+      raise exception using errcode='42501', message='Employee report team must be active and include the employee.';
+    end if;
     if v_task_id is not null and not exists(
       select 1 from ai_network.ai_employee_task_assignments a
-      join ai_network.ai_task_queue q on q.owner_user_id=a.owner_user_id and q.task_id=a.task_id
-      where a.owner_user_id=v_owner and a.task_id=v_task_id and a.employment_id=v_employment_id
-        and a.organization_id=p_organization_id
-    ) then raise exception using errcode='42501', message='Report task must be assigned to this employee in the same organization.'; end if;
+      where a.owner_user_id=v_owner and a.task_id=v_task_id
+        and a.employment_id=v_employment_id and a.organization_id=p_organization_id
+    ) then
+      raise exception using errcode='42501', message='Report task must be assigned to this employee in the same organization.';
+    end if;
     select r.report_id into v_report_id from ai_network.ai_employee_reports r
     where r.owner_user_id=v_owner and r.idempotency_key=v_idempotency_key;
     if v_report_id is not null then
