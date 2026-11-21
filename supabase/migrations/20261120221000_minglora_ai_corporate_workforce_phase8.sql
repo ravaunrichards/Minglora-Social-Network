@@ -874,15 +874,160 @@ begin
     v_title:=left(trim(coalesce(v_payload->>'report_title','')),180);
     v_body:=trim(coalesce(v_payload->>'report_body',''));
     v_idempotency_key:=trim(coalesce(v_payload->>'idempotency_key',''));
-    if v_employment_id is null or v_identity_id is null
+    if v_employment_id is null
        or v_report_type not in ('daily','weekly','task','exception','incident')
        or length(v_title)<3 or length(v_body)<1 or length(v_body)>8000
-       or v_idempotency_key !~ '^.{8,160}$' then
+       or v_idempotency_key !~ '^.{8,160}
+      select 1 from ai_network.ai_identities i
+      where i.identity_id=v_identity_id and i.owner_user_id=v_owner and i.status='active' and i.enabled=true
+    ) or not exists(
+      select 1 from ai_network.ai_employee_permission_grants g
+      where g.owner_user_id=v_owner and g.organization_id=p_organization_id
+        and g.employment_id=v_employment_id and g.permission_key='report.submit' and g.revoked_at is null
+    ) then
+      raise exception using errcode='42501', message='Employee must be active and hold an explicit report.submit permission.';
+    end if;
+    if v_team_id is not null and not exists(
+      select 1 from ai_network.ai_team_memberships m
+      join ai_network.ai_teams t on t.owner_user_id=m.owner_user_id and t.team_id=m.team_id
+      where m.owner_user_id=v_owner and m.team_id=v_team_id and m.identity_id=v_identity_id
+        and m.membership_status='active' and t.organization_id=p_organization_id and t.status='active'
+    ) then raise exception using errcode='42501', message='Employee report team must be active and include the employee.'; end if;
+    if v_task_id is not null and not exists(
+      select 1 from ai_network.ai_employee_task_assignments a
+      join ai_network.ai_task_queue q on q.owner_user_id=a.owner_user_id and q.task_id=a.task_id
+      where a.owner_user_id=v_owner and a.task_id=v_task_id and a.employment_id=v_employment_id
+        and a.organization_id=p_organization_id
+    ) then raise exception using errcode='42501', message='Report task must be assigned to this employee in the same organization.'; end if;
+    select r.report_id into v_report_id from ai_network.ai_employee_reports r
+    where r.owner_user_id=v_owner and r.idempotency_key=v_idempotency_key;
+    if v_report_id is not null then
+      if not exists(select 1 from ai_network.ai_employee_reports r
+        where r.owner_user_id=v_owner and r.report_id=v_report_id
+          and r.employment_id=v_employment_id and r.report_type=v_report_type
+          and r.report_title=v_title and r.report_body=v_body
+          and r.team_id is not distinct from v_team_id
+          and r.task_id is not distinct from v_task_id) then
+        raise exception using errcode='23505', message='Report idempotency key was reused for different report details.';
+      end if;
+      return jsonb_build_object('report_id',v_report_id,'reused',true);
+    end if;
+    insert into ai_network.ai_employee_reports(
+      owner_user_id,organization_id,employment_id,manager_employment_id,team_id,task_id,
+      report_type,report_title,report_body,period_start,period_end,idempotency_key
+    ) values (
+      v_owner,p_organization_id,v_employment_id,v_employee.manager_employment_id,v_team_id,v_task_id,
+      v_report_type,v_title,v_body,nullif(v_payload->>'period_start','')::date,
+      nullif(v_payload->>'period_end','')::date,v_idempotency_key
+    ) returning report_id into v_report_id;
+    insert into ai_network.ai_workforce_events(
+      owner_user_id,organization_id,actor_type,actor_identity_id,employment_id,team_id,task_id,report_id,event_type,reason
+    ) values (
+      v_owner,p_organization_id,'ai_identity',v_identity_id,v_employment_id,v_team_id,v_task_id,
+      v_report_id,'employee_report_submitted','Employee report stored for the assigned reporting manager.'
+    );
+    return jsonb_build_object('report_id',v_report_id,'reused',false);
+  end if;
+
+  if v_action='review_employee_report' then
+    v_report_id:=nullif(v_payload->>'report_id','')::uuid;
+    v_status:=lower(coalesce(v_payload->>'status',''));
+    v_reason:=left(trim(coalesce(v_payload->>'reason','')),1000);
+    if v_report_id is null or v_status not in ('acknowledged','needs_follow_up') or length(v_reason)<3 then
+      raise exception using errcode='22023', message='A report, valid review status and review reason are required.';
+    end if;
+    update ai_network.ai_employee_reports r
+    set report_status=v_status,reviewed_by_user_id=v_owner,reviewed_at=now(),review_reason=v_reason
+    where r.owner_user_id=v_owner and r.organization_id=p_organization_id
+      and r.report_id=v_report_id and r.report_status='submitted'
+    returning r.employment_id into v_employment_id;
+    if not found then raise exception using errcode='P0002', message='Submitted employee report was not found.'; end if;
+    insert into ai_network.ai_workforce_events(
+      owner_user_id,organization_id,actor_type,actor_user_id,employment_id,report_id,event_type,reason
+    ) values (
+      v_owner,p_organization_id,'human_user',v_owner,v_employment_id,v_report_id,
+      'employee_report_reviewed',v_reason
+    );
+    return jsonb_build_object('report_id',v_report_id,'status',v_status);
+  end if;
+
+  if v_action='list_team_messages' then
+    v_team_id:=nullif(v_payload->>'team_id','')::uuid;
+    if v_team_id is null or not exists(select 1 from ai_network.ai_teams t
+      where t.owner_user_id=v_owner and t.team_id=v_team_id and t.organization_id=p_organization_id) then
+      raise exception using errcode='P0002', message='Organization team was not found.';
+    end if;
+    return jsonb_build_object('messages',coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'message',to_jsonb(m),
+        'author_name',case when m.author_type='human_user' then coalesce(h.display_name,h.username,'Minglora administrator')
+          else coalesce(n.display_name,n.full_name,n.username,'AI employee') end
+      ) order by m.created_at desc)
+      from (select * from ai_network.ai_team_messages x
+        where x.owner_user_id=v_owner and x.team_id=v_team_id and x.message_status='visible'
+        order by x.created_at desc limit 100) m
+      left join public.profiles h on h.id=m.author_user_id
+      left join ai_network.ai_names n on n.identity_id=m.author_identity_id
+    ),'[]'::jsonb));
+  end if;
+
+  if v_action='list_team_activity' then
+    v_team_id:=nullif(v_payload->>'team_id','')::uuid;
+    if v_team_id is null or not exists(select 1 from ai_network.ai_teams t
+      where t.owner_user_id=v_owner and t.team_id=v_team_id and t.organization_id=p_organization_id) then
+      raise exception using errcode='P0002', message='Organization team was not found.';
+    end if;
+    return jsonb_build_object(
+      'team_events',coalesce((select jsonb_agg(to_jsonb(e) order by e.occurred_at desc)
+        from ai_network.ai_team_events e where e.owner_user_id=v_owner and e.team_id=v_team_id),'[]'::jsonb),
+      'workforce_events',coalesce((select jsonb_agg(to_jsonb(e) order by e.occurred_at desc)
+        from ai_network.ai_workforce_events e where e.owner_user_id=v_owner and e.team_id=v_team_id),'[]'::jsonb),
+      'messages',coalesce((select jsonb_agg(to_jsonb(m) order by m.created_at desc)
+        from ai_network.ai_team_messages m where m.owner_user_id=v_owner and m.team_id=v_team_id),'[]'::jsonb)
+    );
+  end if;
+
+  raise exception using errcode='22023', message='Unsupported Minglora AI workforce command.';
+end;
+$function$;
+
+revoke all on function public.minglora_ai_workforce_command(text,uuid,uuid,jsonb) from public, anon, authenticated;
+grant execute on function public.minglora_ai_workforce_command(text,uuid,uuid,jsonb) to service_role;
+revoke all on function ai_network.cancel_workforce_assignments(uuid,uuid,uuid,text) from public, anon, authenticated;
+grant execute on function ai_network.cancel_workforce_assignments(uuid,uuid,uuid,text) to service_role;
+revoke all on function ai_network.cancel_workforce_assignments_on_employment_change() from public, anon, authenticated;
+revoke all on function ai_network.cancel_workforce_assignments_on_membership_change() from public, anon, authenticated;
+revoke all on function ai_network.cancel_workforce_assignments_on_team_change() from public, anon, authenticated;
+revoke all on function ai_network.enforce_workforce_task_authority() from public, anon, authenticated;
+grant execute on function ai_network.cancel_workforce_assignments_on_employment_change() to service_role;
+grant execute on function ai_network.cancel_workforce_assignments_on_membership_change() to service_role;
+grant execute on function ai_network.cancel_workforce_assignments_on_team_change() to service_role;
+grant execute on function ai_network.enforce_workforce_task_authority() to service_role;
+
+comment on table ai_network.ai_employee_permission_grants is
+  'Explicit, owner-scoped least-privilege grants for AI employees; absence of a grant means denied.';
+comment on table ai_network.ai_employee_task_assignments is
+  'Links durable approved tasks to an active employment record and reserves a bounded workload allocation.';
+comment on table ai_network.ai_team_messages is
+  'Private, auditable workforce communication; AI-authored messages require active membership and an explicit grant.';
+comment on table ai_network.ai_employee_reports is
+  'Employee-authored structured reports routed to the assigned reporting manager.';
+comment on table ai_network.ai_workforce_events is
+  'Append-only audit ledger for employee permissions, assignments, communication and reports.';
+comment on function public.minglora_ai_workforce_command(text,uuid,uuid,jsonb) is
+  'Owner-scoped corporate workforce commands. Called only by the authenticated Minglora server runtime; all AI work remains human approval gated.';
+ then
       raise exception using errcode='22023', message='A valid employee, report type, title, report body and idempotency key are required.';
     end if;
     select * into v_employee from ai_network.ai_employment_records e
     where e.organization_id=p_organization_id and e.employment_id=v_employment_id
-      and e.identity_id=v_identity_id and e.employment_status='active';
+      and e.employment_status='active';
+    if found then
+      if v_identity_id is not null and v_identity_id<>v_employee.identity_id then
+        raise exception using errcode='42501', message='The report identity does not match the selected employee.';
+      end if;
+      v_identity_id:=v_employee.identity_id;
+    end if;
     if not found or not exists(
       select 1 from ai_network.ai_identities i
       where i.identity_id=v_identity_id and i.owner_user_id=v_owner and i.status='active' and i.enabled=true
