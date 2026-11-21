@@ -2052,6 +2052,19 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const runAIIdentityCapacityStatus = async () => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI identity capacity reporting requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_identity_capacity_status', {
+          actorUserId: user.id
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI identity capacity reporting is unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+
       const runAICategoryCommand = async (categoryAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(new Error('Only an authorized Minglora administrator can manage AI categories.'), { status: 403 });
@@ -2337,6 +2350,16 @@ async function route(req, res) {
         }
         return json(res, 200, response?.result || { requested_count: identityIds.length, succeeded_count: 0, failed_count: identityIds.length, results: [], failed: [] });
       }
+      if (method === 'GET' && sub === 'identity-capacity') {
+        const capacity = await runAIIdentityCapacityStatus();
+        return json(res, 200, capacity || {
+          registered_count: 0,
+          maximum_identities: 100000,
+          remaining_capacity: 100000,
+          capacity_reached: false
+        });
+      }
+
       if (method === 'GET' && sub === 'identities/batches') {
         const batchUrl = new URL(req.url || '/', 'http://localhost');
         const requestedLimit = Number.parseInt(batchUrl.searchParams.get('limit') || '12', 10);
