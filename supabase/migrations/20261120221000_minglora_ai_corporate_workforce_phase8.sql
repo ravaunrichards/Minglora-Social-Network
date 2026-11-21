@@ -230,12 +230,12 @@ begin
       and (p_team_id is null or a.team_id=p_team_id)
       and (p_permission_grant_id is null or a.permission_grant_id=p_permission_grant_id)
       and q.status in ('pending_approval','queued','running')
-    returning q.owner_user_id,q.task_id,a.organization_id,a.employment_id,a.team_id
+    returning q.owner_user_id,q.task_id
   )
   insert into ai_network.ai_task_events(
     owner_user_id,task_id,actor_type,event_type,previous_status,new_status,reason
   )
-  select c.owner_user_id,c.task_id,'system','workforce_authority_revoked','running','cancelled',
+  select c.owner_user_id,c.task_id,'system','workforce_authority_revoked',null,'cancelled',
     left(coalesce(nullif(trim(p_reason),''),'Workforce authority is no longer active.'),1000)
   from changed c;
 
