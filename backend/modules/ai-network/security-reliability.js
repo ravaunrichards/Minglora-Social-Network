@@ -61,7 +61,14 @@ export function createAIRequestSecurityGuard({
         expiresAt: at + policy.windowMs,
         count: 1
       };
-      if (!buckets.has(key) && buckets.size >= capacity) prune(at);
+      if (!buckets.has(key) && buckets.size >= capacity) {
+        prune(at);
+        while (buckets.size >= capacity) {
+          const oldest = buckets.keys().next().value;
+          if (oldest === undefined) break;
+          buckets.delete(oldest);
+        }
+      }
       buckets.delete(key);
       buckets.set(key, bucket);
       return { allowed: true };
