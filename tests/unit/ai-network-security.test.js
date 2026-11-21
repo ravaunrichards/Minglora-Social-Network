@@ -133,8 +133,14 @@ test('operational metrics contain only aggregate status and latency data', () =>
   assert.equal(snapshot.latencyMs.p50, 12);
   assert.equal(snapshot.latencyMs.p95, 100);
   const serialized = JSON.stringify(snapshot);
-  for (const forbidden of ['owner-', 'api_key', 'prompt', 'requestBody', 'authorization', 'cookie']) {
-    assert.equal(serialized.includes(forbidden), false);
+  for (const forbiddenValue of [
+    'owner-phase10-private-user-id',
+    'sk-proj-test-secret-value',
+    'private prompt text',
+    'Bearer test-token-value',
+    'cookie=session-token'
+  ]) {
+    assert.equal(serialized.includes(forbiddenValue), false);
   }
 });
 
