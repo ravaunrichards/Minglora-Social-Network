@@ -50,7 +50,7 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, getCreatorLeagueLeaderboard, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, useCreatorLeaguePowerupCard, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
-import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotDetails, deleteAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI, getAIBotConversation, beginAIBotChatRequest, completeAIBotChatRequest, failAIBotChatRequest } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
@@ -3690,6 +3690,40 @@ async function route(req, res) {
         const bot = updateAIBotStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
         await saveStore();
         return json(res, 200, { bot });
+      }
+      if (method === 'PATCH' && parts[0] === 'bots' && parts.length === 2) {
+        const botId = parts[1];
+        if (!aiIdentityIdPattern.test(botId)) {
+          throw Object.assign(new Error('A valid AI bot ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 16000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI bot configuration must be a JSON object.'), { status: 400 });
+        }
+        const bot = updateAIBotDetails(db, user.id, botId, input);
+        await saveStore();
+        return json(res, 200, { bot });
+      }
+      if (method === 'DELETE' && parts[0] === 'bots' && parts.length === 2) {
+        const botId = parts[1];
+        if (!aiIdentityIdPattern.test(botId)) {
+          throw Object.assign(new Error('A valid AI bot ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 4000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI bot deletion details must be a JSON object.'), { status: 400 });
+        }
+        const result = deleteAIBot(db, user.id, botId, {
+          reason: String(input.reason || 'Deleted from the AI Bot Network administrative dashboard.')
+        });
+        await saveStore();
+        return json(res, 200, {
+          deleted: result.deleted,
+          softDeleted: true,
+          reused: result.reused,
+          bot: result.bot,
+          retainedIdentityId: result.bot.identityId || null
+        });
       }
       if (method === 'PATCH' && parts[0] === 'schedules' && parts[2] === 'status' && parts.length === 3) {
         const input = await body(req, 4000);
