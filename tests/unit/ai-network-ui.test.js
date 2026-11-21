@@ -26,7 +26,7 @@ test('Minglora AI Network is a restorable first-party destination, separate from
   assert.ok(html.includes('Minglora AI Network'));
   assert.ok(html.includes('href="https://www.meta.ai/"'));
   assert.ok(html.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
-  assert.ok(html.includes('/ai-network.js?v=20261118-ai-centre-readiness-1'));
+  assert.ok(html.includes('/ai-network.js?v=20261121-ai-bot-centre-controls-live-1'));
 });
 
 test('Minglora main menu includes a separate AI Network route', () => {
@@ -48,7 +48,7 @@ test('AI Network script and styles are precached with matching asset versions', 
   assert.equal(menuAsset, 'minglora-menu.js?v=20261115-ai-admin-only-1');
   assert.ok(sw.includes('/' + appAsset));
   assert.ok(sw.includes('/' + menuAsset));
-  assert.ok(sw.includes('/ai-network.js?v=20261118-ai-centre-readiness-1'));
+  assert.ok(sw.includes('/ai-network.js?v=20261121-ai-bot-centre-controls-live-1'));
   assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
   assert.ok(html.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
   assert.ok(sw.includes('/minglora-menu.js?v=20261115-ai-admin-only-1'));
@@ -68,10 +68,28 @@ test('AI Network workspace exposes a live setup checklist and separates provider
   assert.ok(ui.includes('AI Centre Readiness'));
   assert.ok(ui.includes('without configuring a model provider.'));
   assert.ok(ui.includes('No provider account row or browser key entry is required'));
-  assert.ok(ui.includes('https://dashboard.render.com/web/srv-dbphq63rjlhs73fviegg'));
+  assert.ok(ui.includes('https://dashboard.render.com/web/srv-dc06uvjrjlhs738ees8g'));
   assert.ok(ui.includes('Save the values in the private Environment settings'));
   assert.ok(ui.includes('Global pause: '));
   assert.ok(ui.includes('This does not block identity, profile or organization setup.'));
+});
+
+test('AI Bot Centre reflects live owner chat, blocks unavailable schedule activation and wires every control', () => {
+  assert.ok(ui.includes('Owner-initiated bot chat is available for linked bots.'));
+  assert.ok(ui.includes('Owner-initiated bot chat is waiting for a healthy provider.'));
+  assert.ok(ui.includes('Activation locked: the autonomous worker runtime is not deployed.'));
+  const schedules = ui.slice(ui.indexOf('function renderSchedules('), ui.indexOf('function renderApprovals('));
+  assert.ok(schedules.includes('data-status="paused"'));
+  assert.ok(schedules.includes('data-status="cancelled"'));
+  assert.ok(!schedules.includes('data-status="active"'), 'paused schedules must not offer a nonfunctional Activate button');
+  const renderedActions = [...new Set([...ui.matchAll(/data-ai-action=["']([^"']+)["']/g)].map(match => match[1]))];
+  const handledActions = new Set([...ui.matchAll(/action === ["']([^"']+)["']/g)].map(match => match[1]));
+  for (const action of renderedActions) assert.ok(handledActions.has(action), 'Missing click handler for ' + action);
+  const renderedForms = [...new Set([...ui.matchAll(/data-ai-form=["']([^"']+)["']/g)].map(match => match[1]))];
+  const handledForms = new Set([...ui.matchAll(/kind === ["']([^"']+)["']/g)].map(match => match[1]));
+  for (const kind of renderedForms) assert.ok(handledForms.has(kind), 'Missing submit handler for ' + kind);
+  assert.ok(ui.includes("path = '/bots/' + encodeURIComponent(botId) + '/chat'"));
+  assert.ok(server.includes("parts[2] === 'chat'"));
 });
 
 test('AI Network workspace exposes all ten recommendations and true measured/empty states', () => {
@@ -237,7 +255,7 @@ test('AI schedule APIs and UI preserve identity linkage, idempotency and approva
   assert.ok(ui.includes("data.getAll('scheduleWeekdays').map(value => Number(value))"));
   assert.ok(ui.includes("data-ai-action=\"schedule-status\""));
   assert.ok(ui.includes("action === 'schedule-status'"));
-  assert.ok(ui.includes("draft tasks to the owner approval queue"));
+  assert.ok(ui.includes('Activation locked: the autonomous worker runtime is not deployed.'));
 });
 
 

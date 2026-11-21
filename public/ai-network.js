@@ -1731,12 +1731,12 @@
           const scheduleId = schedule.scheduleId || schedule.schedule_id || schedule.id;
           const status = String(schedule.status || 'paused');
           const actions = ['active','paused','error'].includes(status)
-            ? '<div class="ai-network-row-actions">' +
-              (status === 'active'
-                ? '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="paused">Pause</button>'
-                : '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="active">Activate</button>') +
-              '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="cancelled">Cancel</button></div>'
-            : '';
+        ? '<div class="ai-network-row-actions">' +
+          (status === 'active'
+            ? '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="paused">Pause</button>'
+            : '<span class="ai-network-note" role="status">Activation locked: the autonomous worker runtime is not deployed. This schedule remains paused.</span>') +
+          '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="cancelled">Cancel</button></div>'
+        : '';
           return '<article class="ai-network-list-row"><div><strong>' + esc(String(schedule.taskType || 'scheduled task').replaceAll('_', ' ')) + '</strong><p>' +
             esc(bot?.name || 'Assigned bot') + ' · ' + esc(schedule.cadence) + ' · ' + esc(schedule.timezone) + '</p><small>Next planned time: ' + esc(date(schedule.runAt)) +
             (schedule.runCount ? ' · Runs: ' + number(schedule.runCount) : '') +
@@ -1767,7 +1767,7 @@
       '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="6"><span>Saturday</span></label>' +
       '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="0"><span>Sunday</span></label>' +
       '</div></fieldset>' +
-      '<p class="ai-network-note">Schedules are saved paused. When enabled, they add draft tasks to the owner approval queue; they do not execute AI workers or publish/send content.</p>' +
+      '<p class="ai-network-note">Schedules are saved paused. Pause and cancel controls are available. Activation stays locked until a separately authenticated worker runtime, task claims, heartbeat, completion and failure recovery are deployed and accepted. Saving a schedule does not run a bot.</p>' +
       '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Save paused schedule</button></form>';
   }
 
@@ -1934,7 +1934,7 @@
       '</strong></div><div><span>Bot chat / draft inference</span><strong>' + (inferenceReady ? 'Provider configured' : 'Awaiting private key + model') +
       '</strong></div></div>' + rowHtml +
       '<p class="ai-network-note">Continue identity registration, profile editing, categories, organization setup, HR records and governance now. Provider credentials are needed only for actual model responses; autonomous execution and scale expansion have separate acceptance gates.</p>' +
-      (!inferenceReady && adapterReady ? '<p class="ai-network-note"><a href="https://dashboard.render.com/web/srv-dbphq63rjlhs73fviegg" target="_blank" rel="noopener noreferrer">Open the existing Minglora Render service to configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL</a>. Save the values in the private Environment settings, redeploy, then return here and run Check OpenAI API connection.</p>' : ''),
+      (!inferenceReady && adapterReady ? '<p class="ai-network-note"><a href="https://dashboard.render.com/web/srv-dc06uvjrjlhs738ees8g" target="_blank" rel="noopener noreferrer">Open the existing Minglora Render service to configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL</a>. Save the values in the private Environment settings, redeploy, then return here and run Check OpenAI API connection.</p>' : ''),
       'ai-network-span-2');
   }
 
@@ -2139,7 +2139,11 @@
         '<p class="ai-network-note">Security controls are enforced on the server; they cannot be switched off from this screen.</p>') +
       card('AI Friendship & Companionship', '08 · OPTIONAL COMPANION', '<p>Companionship is off by default. A companion must be clearly identified as AI and can be withdrawn at any time.</p>' +
         '<div class="ai-network-consent-state">' + pill(settings.companionOptIn ? 'Opted in' : 'Opted out', settings.companionOptIn ? 'success' : 'neutral') +
-        '<span>Retention preference: 30 days. Conversation runtime is not enabled yet.</span></div>' +
+        '<span>Retention preference: 30 days. ' +
+          (state.snapshot?.providerStatus?.botChatAvailable
+            ? 'Owner-initiated bot chat is available for linked bots. Companion-initiated contact remains off.'
+            : 'Owner-initiated bot chat is waiting for a healthy provider. Companion-initiated contact remains off.') +
+          '</span></div>' +
         '<p class="ai-network-note">Use the safety settings below to change consent. No companion will start contacting you automatically.</p>') +
       card('AI Community Events', '09 · COMMUNITY', '<p>Prepare transparent AI-hosted sessions. Event drafts do not send invitations; participation remains opt-in.</p>' +
         renderEvents(events) + '<form class="ai-network-form" data-ai-form="event"><div class="ai-network-form-title">Draft an AI community event</div>' +
