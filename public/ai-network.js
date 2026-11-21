@@ -1424,17 +1424,19 @@
     const providerHealth = state.providerHealth;
     const providerProbeResult = providerHealth
       ? '<div class="ai-network-alert ai-network-alert--' + (providerHealth.connected ? 'success' : 'warning') + '" role="status">' +
-        '<strong>Latest OpenAI probe: ' + esc(providerHealth.status || 'unknown') + '</strong> ' +
+        '<strong>Latest ' + esc(providerHealth.providerId === 'google_gemini' ? 'Google Gemini' : 'OpenAI') + ' probe: ' + esc(providerHealth.status || 'unknown') + '</strong> ' +
         pill(providerHealth.connected ? 'Model access verified' : 'Not connected', providerHealth.connected ? 'success' : 'warning') +
         '<p>' + esc(providerHealth.note || 'No probe result was returned.') + '</p>' +
         '<small>Model: ' + esc(providerHealth.model || 'Not configured') +
         ' · HTTP: ' + esc(providerHealth.httpStatus || 'Not reached') +
         ' · Checked: ' + esc(date(providerHealth.checkedAt)) + '</small></div>'
-      : '<p class="ai-network-note">No OpenAI health probe has been run in this session.</p>';
+      : '<p class="ai-network-note">No provider health probe has been run in this session.</p>';
+    const defaultProbeProvider = state.snapshot?.providerStatus?.provider === 'google_gemini' ? 'google_gemini' : 'openai';
     const providerProbeForm = '<form class="ai-network-form" data-ai-form="provider-health-probe">' +
-      '<div class="ai-network-form-title">OpenAI API connection check</div>' +
-      '<p class="ai-network-note">Runs a read-only model-access check using OPENAI_API_KEY and OPENAI_DEFAULT_MODEL from the private Minglora server environment. No key is entered here, sent by the browser, or returned to the page. It does not generate content or activate AI execution.</p>' +
-      '<button class="secondary" type="submit">Check OpenAI API connection</button></form>';
+      '<div class="ai-network-form-title">AI provider connection check</div>' +
+      '<label>Provider<select name="provider">' + options([{value:'openai',label:'OpenAI Platform API'},{value:'google_gemini',label:'Google Gemini Developer API'}], defaultProbeProvider) + '</select></label>' +
+      '<p class="ai-network-note">Runs a read-only model-access check with the selected provider’s private server credentials and configured model. OpenAI uses OPENAI_API_KEY and OPENAI_DEFAULT_MODEL. Gemini uses GEMINI_API_KEY (or GOOGLE_AI_API_KEY) and GEMINI_DEFAULT_MODEL. No key is entered here, sent by the browser, or returned to the page. The probe does not generate content or activate workers.</p>' +
+      '<button class="secondary" type="submit">Check selected provider connection</button></form>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
       : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
@@ -1866,14 +1868,16 @@
     const provider = snapshot.providerStatus || {};
     const catalogue = list(provider.providerCatalogue);
     const openAI = catalogue.find(item => item.providerId === 'openai') || {};
+    const gemini = catalogue.find(item => item.providerId === 'google_gemini') || {};
     const categories = list(state.identityCategories);
     const departments = list(state.departmentTemplates);
     const positions = list(state.positionTemplates);
     const identities = list(state.identityRegistry?.identities);
     const identityReady = categories.some(item => item.is_active !== false);
     const organizationReady = departments.length > 0 && positions.length > 0;
-    const adapterReady = openAI.adapterAvailable === true && openAI.healthProbeAvailable === true;
-    const inferenceReady = provider.botChatAvailable === true && provider.manualDraftsAvailable === true;
+    const adapterReady = (openAI.adapterAvailable === true && openAI.healthProbeAvailable === true) ||
+      (gemini.adapterAvailable === true && gemini.healthProbeAvailable === true);
+    const inferenceReady = provider.botChatAvailable === true;
     const globalPaused = snapshot.safeguards?.globalPaused !== false;
     const rows = [
       {
@@ -1897,10 +1901,12 @@
         state: inferenceReady ? 'Provider ready' : (adapterReady ? 'Private provider setup required' : 'Provider adapter needs review'),
         kind: inferenceReady ? 'success' : 'warning',
         detail: inferenceReady
-          ? 'OpenAI credentials and model are configured. The chat and draft routes still perform a fresh provider check and moderation.'
+          ? provider.provider === 'google_gemini'
+            ? 'Google Gemini credentials and model are configured. Owner-initiated bot chat uses Gemini API safety filters and a fresh provider check. Creator Studio draft generation remains OpenAI-only.'
+            : 'OpenAI credentials and model are configured. Owner-initiated bot chat and Creator Studio drafts perform a fresh provider check and moderation before generating.'
           : adapterReady
-            ? 'The moderated OpenAI bot-chat and Creator Studio adapters are already in the deployed code. Add OPENAI_API_KEY and OPENAI_DEFAULT_MODEL to the private Render environment, then run the read-only connection probe. No provider account row or browser key entry is required for this first human-initiated path.'
-            : 'The first supported live path is OpenAI. Its adapter and read-only health probe must be present before provider setup can be accepted.'
+            ? 'The OpenAI and Google Gemini owner-initiated bot-chat adapters are in the server code. To use Gemini, add GEMINI_API_KEY (or GOOGLE_AI_API_KEY) and GEMINI_DEFAULT_MODEL to the private Render environment, then run the Gemini read-only connection probe. To use OpenAI, add OPENAI_API_KEY and OPENAI_DEFAULT_MODEL. No browser key entry or provider-account row is required for human-initiated chat.'
+            : 'A supported provider adapter and read-only health probe must be present before bot chat can be enabled.'
       },
       {
         title: 'Autonomous workers and schedules',
@@ -2727,7 +2733,7 @@
       payload.items = items;
     } else if (kind === 'provider-health-probe') {
       path = '/provider-health';
-      payload.provider = 'openai';
+      payload.provider = value('provider');
     } else if (kind === 'provider-assignment-status') {
       const assignmentId = form.dataset.assignmentId;
       if (!assignmentId) throw new Error('Provider assignment details are missing.');
