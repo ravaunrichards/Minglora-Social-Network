@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', taskEvents: [], selectedTaskLogId: '', taskLogError: '', operationalLastUpdated: '', operationalStatusError: '', operationalPollTimer: null, operationalPolling: false, categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '', socialSettings: null, socialHistory: [], socialHistoryIdentity: '', socialContent: [], socialError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCapacity: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', taskEvents: [], selectedTaskLogId: '', taskLogError: '', operationalLastUpdated: '', operationalStatusError: '', operationalPollTimer: null, operationalPolling: false, categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '', socialSettings: null, socialHistory: [], socialHistoryIdentity: '', socialContent: [], socialError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -327,6 +327,22 @@
     const pageSize = Math.max(1, Number(registry?.limit || 100));
     const pageOffset = Math.max(0, Number(registry?.offset ?? state.identityRegistryOffset ?? 0));
     const totalIdentities = Math.max(0, Number(registry?.total || 0));
+    const capacityMaximum = Math.max(1, Number(state.identityCapacity?.maximum_identities || 100000));
+    const capacityRegisteredValue = Number(state.identityCapacity?.registered_count);
+    const capacityRegistered = Number.isFinite(capacityRegisteredValue) ? capacityRegisteredValue : null;
+    const capacityRemaining = capacityRegistered === null
+      ? null
+      : Math.max(0, Number(state.identityCapacity?.remaining_capacity ?? capacityMaximum - capacityRegistered));
+    const capacitySummary = '<div class="ai-network-capacity" role="status"><div><strong>Global AI identity capacity</strong>' +
+      (capacityRegistered === null
+        ? '<span>' + number(capacityMaximum) + ' identity ceiling</span>'
+        : '<span>' + number(capacityRegistered) + ' / ' + number(capacityMaximum) + ' registered</span>') +
+      '</div>' +
+      (capacityRegistered === null
+        ? '<small>Capacity meter unavailable. The database still enforces the 100,000-identity ceiling.</small>'
+        : '<progress max="' + capacityMaximum + '" value="' + Math.min(capacityRegistered, capacityMaximum) + '" aria-label="Global AI identity capacity"></progress><small>' +
+          number(capacityRemaining) + ' registration slots remaining across Minglora</small>') +
+      '<small>Imports are limited to 100 identities per batch. New records start disabled and do not trigger model calls.</small></div>';
     const firstIdentity = totalIdentities ? pageOffset + 1 : 0;
     const lastIdentity = Math.min(pageOffset + pageSize, totalIdentities);
     const searchForm = '<form class="ai-network-inline-form ai-network-identity-search" data-ai-form="identity-search">' +
@@ -411,17 +427,17 @@
         }).join('') + '</section>'
       : '<p class="ai-network-note">No identity import batches have been recorded yet. Failed rows from future imports will remain available here for safe retry after refresh.</p>';
     const bulkForm = '<form class="ai-network-form" data-ai-form="identity-bulk">' +
-      '<div class="ai-network-form-title">Bulk import AI identities (1–100 per batch)</div>' +
-      '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Give every row its own stable idempotency_key. The import has a separate batch key, saves failed row data privately in Supabase, and lets you retry only failures after refresh. Successful row payloads are cleared from the retry store. ' +
+      '<div class="ai-network-form-title">Bulk import AI identities (up to 100 per batch)</div>' +
+      '<p class="ai-network-note">Minglora enforces a global ceiling of 100,000 registered AI identities. Each request stays limited to 100 records so imports remain bounded, retryable and auditable; submit additional batches to grow the registry. Each row needs a unique idempotency_key. Failed row data is held privately for retry, and successful row payloads are cleared. New identities start in the created, disabled state; registration does not activate workers, send email or call an AI provider. ' +
       (state.adminAccess ? 'Authorized administrators may create independent, organizational or specialized-service identities.' : 'Member batches may contain independent AI identities only.') + '</p>' +
       '<label>Identity batch JSON<textarea name="items" required rows="8" maxlength="180000" spellcheck="false" placeholder=\'[{"population":"independent","category_key":"ai_friends","idempotency_key":"import-row-000001","name":{"first_name":"Ava","last_name":"Morgan","username":"ava_morgan_01"},"profile":{"gender":"female"}}]\'></textarea></label>' +
-      '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Import identity batch</button>' +
+      '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID || state.identityCapacity?.capacity_reached ? 'disabled' : '') + '>Import identity batch</button>' +
       '</form>';
     return card('AI Identity & Profile Registry', 'RELATIONAL IDENTITY FOUNDATION',
       '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
-      warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
+      warning + '<div class="ai-network-quick-stats"><div><span>Your registered identities</span><strong>' +
       (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
-      '</strong></div></div>' + renderAIEmailCenter() + searchForm + pagination + renderAIIdentityRows(registry) + pagination + form + bulkForm + batchHistory + bulkProfileForm, 'ai-network-span-2');
+      '</strong></div></div>' + capacitySummary + renderAIEmailCenter() + searchForm + pagination + renderAIIdentityRows(registry) + pagination + form + bulkForm + batchHistory + bulkProfileForm, 'ai-network-span-2');
   }
 
   async function loadAIEmailCenter(identityId = state.emailIdentityId) {
@@ -542,6 +558,7 @@
         request('/categories')
       ]);
       state.identityRegistry = registry;
+      state.identityCapacity = await request('/identity-capacity').catch(() => null);
       state.identityRegistryOffset = Math.max(0, Number(registry?.offset || 0));
       state.identityCategories = list(categoryResult.categories);
       try {
@@ -562,6 +579,7 @@
       }
     } catch (error) {
       state.identityRegistry = null;
+      state.identityCapacity = null;
       state.identityCategories = [];
       state.identityBatches = [];
       state.identityBatchError = '';
