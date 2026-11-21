@@ -18,6 +18,7 @@ test('provider catalogue has unique IDs and includes ChatGPT guest plus independ
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(ids.includes('chatgpt_guest'));
   assert.ok(ids.includes('openai'));
+  assert.ok(ids.includes('google_gemini'));
 });
 
 test('transactional email providers are catalogued with their required environment keys', () => {
@@ -38,11 +39,13 @@ test('the provider registry returns safe readiness for every catalogued model an
   assert.equal(inventory.find(item => item.providerId === 'openai').credentialsPresent, true);
   assert.equal(inventory.find(item => item.providerId === 'openai').healthProbeAvailable, true);
   assert.equal(inventory.find(item => item.providerId === 'openai').adapterAvailable, true);
+  assert.equal(inventory.find(item => item.providerId === 'google_gemini').healthProbeAvailable, true);
+  assert.equal(inventory.find(item => item.providerId === 'google_gemini').adapterAvailable, true);
   assert.equal(inventory.find(item => item.providerId === 'anthropic').healthProbeAvailable, false);
   assert.equal(inventory.find(item => item.providerId === 'resend').credentialsPresent, true);
   assert.equal(inventory.find(item => item.providerId === 'chatgpt_guest').serverSelectable, false);
   assert.ok(inventory.every(item => item.connected === false && item.executionEnabled === false));
-  assert.ok(inventory.filter(item => item.providerId !== 'openai').every(item => item.adapterAvailable === false));
+  assert.ok(inventory.filter(item => !['openai','google_gemini'].includes(item.providerId)).every(item => item.adapterAvailable === false));
   const serialized = JSON.stringify(inventory);
   assert.equal(serialized.includes('private-openai-test-key'), false);
   assert.equal(serialized.includes('private-resend-test-key'), false);
@@ -108,8 +111,38 @@ test('legacy generic provider status contract remains unchanged and execution st
   assert.equal(providerSpecificOnly.credentialsPresent, true);
   assert.equal(providerSpecificOnly.providerCredentialStatus.adapterAvailable, true);
   assert.equal(providerSpecificOnly.manualDraftsAvailable, true);
+  assert.equal(providerSpecificOnly.botChatAvailable, true);
+  assert.equal(providerSpecificOnly.ownerControlsAvailable, true);
+  assert.equal(providerSpecificOnly.creatorStudioAvailable, true);
   assert.equal(providerSpecificOnly.executionEnabled, false);
   assert.equal(JSON.stringify(providerSpecificOnly).includes('test-specific-secret'), false);
+});
+
+
+test('Gemini enables owner-initiated bot chat without enabling Creator Studio or autonomous execution', () => {
+  const status = getAIProviderStatus({
+    MINGLORA_AI_PROVIDER: 'google_gemini',
+    GEMINI_API_KEY: 'private-gemini-test-key',
+    GEMINI_DEFAULT_MODEL: 'gemini-test-model'
+  });
+  assert.equal(status.configured, true);
+  assert.equal(status.provider, 'google_gemini');
+  assert.equal(status.model, 'gemini-test-model');
+  assert.equal(status.providerCredentialStatus.adapterAvailable, true);
+  assert.equal(status.botChatAvailable, true);
+  assert.equal(status.ownerControlsAvailable, true);
+  assert.equal(status.manualDraftsAvailable, false);
+  assert.equal(status.creatorStudioAvailable, false);
+  assert.equal(status.executionEnabled, false);
+  assert.equal(status.connected, false);
+  assert.equal(JSON.stringify(status).includes('private-gemini-test-key'), false);
+
+  const missingModel = getAIProviderStatus({
+    MINGLORA_AI_PROVIDER: 'google_gemini',
+    GEMINI_API_KEY: 'private-gemini-test-key'
+  });
+  assert.equal(missingModel.configured, false);
+  assert.equal(missingModel.botChatAvailable, false);
 });
 
 test('all provider credential environment variables have blank placeholders in .env.example', () => {
