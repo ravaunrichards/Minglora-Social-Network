@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261118075901_minglora_ai_durable_identity_batches.sql');
 const capacityMigration = read('supabase/migrations/20261121154746_minglora_ai_identity_capacity_100k.sql');
+const capacityCounterMigration = read('supabase/migrations/20261121160039_minglora_ai_identity_capacity_counter_100k.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -104,4 +105,15 @@ test('global AI identity ceiling is database-enforced, private and visible in th
   assert.ok(ui.includes('Global AI identity capacity'));
   assert.ok(ui.includes('state.identityCapacity?.capacity_reached'));
   assert.ok(ui.includes('up to 100 per batch'));
+
+  const counterSql = capacityCounterMigration.toLowerCase();
+  assert.ok(counterSql.includes('add column if not exists registered_count bigint not null default 0'));
+  assert.ok(counterSql.includes('registered_count=registered_count+1'));
+  assert.ok(counterSql.includes('registered_count=greatest(registered_count-1,0)'));
+  assert.ok(counterSql.includes('after insert on ai_network.ai_identities'));
+  assert.ok(counterSql.includes('before delete on ai_network.ai_identities'));
+  assert.ok(counterSql.includes('after delete on ai_network.ai_identities'));
+  assert.ok(counterSql.includes('select c.maximum_identities, c.registered_count'));
+  assert.ok(counterSql.includes('security invoker'));
+  assert.ok(counterSql.includes("set search_path = ''"));
 });
