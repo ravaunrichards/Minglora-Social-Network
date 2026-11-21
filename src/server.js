@@ -3173,6 +3173,18 @@ async function route(req, res) {
           return json(res, 200, result || { employees: [], teams: [], tasks: [], reports: [] });
         }
 
+        if (resource === 'workforce' && parts.length === 6 &&
+            parts[3] === 'positions' && parts[5] === 'status' && method === 'PATCH') {
+          const positionId = parts[4];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(positionId)) {
+            throw Object.assign(new Error('A valid job role ID is required.'), { status: 400 });
+          }
+          const input = await readWorkforceBody();
+          input.position_id = positionId;
+          const result = await runAIWorkforceCommand('set_position_status', organizationId, input);
+          return json(res, 200, result || {});
+        }
+
         if (resource === 'employees' && parts.length >= 5) {
           const employmentId = parts[3];
           if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(employmentId)) {
