@@ -1431,7 +1431,7 @@
         ' · HTTP: ' + esc(providerHealth.httpStatus || 'Not reached') +
         ' · Checked: ' + esc(date(providerHealth.checkedAt)) + '</small></div>'
       : '<p class="ai-network-note">No provider health probe has been run in this session.</p>';
-    const defaultProbeProvider = state.snapshot?.providerStatus?.provider === 'google_gemini' ? 'google_gemini' : 'openai';
+    const defaultProbeProvider = state.snapshot?.providerStatus?.provider === 'openai' ? 'openai' : 'google_gemini';
     const providerProbeForm = '<form class="ai-network-form" data-ai-form="provider-health-probe">' +
       '<div class="ai-network-form-title">AI provider connection check</div>' +
       '<label>Provider<select name="provider">' + options([{value:'openai',label:'OpenAI Platform API'},{value:'google_gemini',label:'Google Gemini Developer API'}], defaultProbeProvider) + '</select></label>' +
