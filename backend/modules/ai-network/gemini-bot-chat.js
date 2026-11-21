@@ -275,7 +275,7 @@ export async function generateGeminiBotReply({
           ...metadata, retryable: true
         });
       }
-      return { ...generation, _mingloraOutput: output, _mingloraRequestId: result.requestId };
+      return { ...generation, usage, _mingloraOutput: output, _mingloraRequestId: result.requestId };
     }
   });
 
