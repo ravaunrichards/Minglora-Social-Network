@@ -65,22 +65,67 @@
 
   function renderBotRows(bots) {
     if (!bots.length) return empty('No AI bots created yet. Create your first clearly labelled AI assistant below.');
-    return '<div class="ai-network-list">' + bots.map(bot =>
-      '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
-      esc(bot.name) + '</strong><div class="ai-network-meta">' + pill('AI BOT', 'ai') + ' ' + pill(bot.status, bot.status === 'active' ? 'success' : 'neutral') +
-      '</div><p>' + esc(bot.purpose) + '</p><small>' + esc(bot.tone) + ' · ' + esc(list(bot.languages).join(', ')) + ' · ' + esc(list(bot.traits).join(', ')) + '</small></div></div>' +
-      '<div class="ai-network-row-actions">' +
-      (bot.status !== 'archived' && bot.identityLinkStatus === 'linked'
-        ? '<button type="button" class="secondary" data-ai-action="bot-chat-open" data-id="' + esc(bot.id) + '">Chat</button>'
-        : '') +
-      (bot.status === 'active'
-        ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause</button>'
-        : bot.status !== 'archived'
-          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Enables owner-initiated, moderated use only; autonomous workers remain off">Enable for owner use</button>'
+    const tones = [
+      {value:'friendly',label:'Friendly'},{value:'professional',label:'Professional'},
+      {value:'educational',label:'Educational'},{value:'creative',label:'Creative'},
+      {value:'calm',label:'Calm'},{value:'energetic',label:'Energetic'},
+      {value:'concise',label:'Concise'},{value:'supportive',label:'Supportive'}
+    ];
+    const traits = ['helpful','curious','calm','energetic','analytical','empathetic','creative','precise','playful','patient','direct'];
+    const capabilities = [
+      {value:'draft_content',label:'Draft content'},
+      {value:'summarize_public_content',label:'Summarize public content'},
+      {value:'translate_user_provided_content',label:'Translate user content'},
+      {value:'suggest_replies',label:'Suggest replies'},
+      {value:'organize_creator_tasks',label:'Organize creator tasks'},
+      {value:'prepare_event_material',label:'Prepare event material'}
+    ];
+    return '<div class="ai-network-list">' + bots.map(bot => {
+      const traitChecks = traits.map(trait =>
+        '<label class="ai-network-check"><input type="checkbox" name="traits" value="' + trait + '"' +
+        (list(bot.traits).includes(trait) ? ' checked' : '') + '><span>' + trait + '</span></label>'
+      ).join('');
+      const capabilityChecks = capabilities.map(item =>
+        '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.value + '"' +
+        (list(bot.capabilities).includes(item.value) ? ' checked' : '') + '><span>' + item.label + '</span></label>'
+      ).join('');
+      const editor = bot.status !== 'archived'
+        ? '<details class="ai-network-profile-editor" data-ai-bot-editor><summary>Bot configuration</summary>' +
+          '<form class="ai-network-form" data-ai-form="bot-edit" data-bot-id="' + esc(bot.id) + '">' +
+          '<label>Display name<input name="name" required minlength="2" maxlength="40" value="' + esc(bot.name) + '"></label>' +
+          '<label>Purpose<textarea name="purpose" required minlength="20" maxlength="280" rows="3">' + esc(bot.purpose) + '</textarea></label>' +
+          '<div class="ai-network-form-grid"><label>Personality tone<select name="tone">' + options(tones, bot.tone) + '</select></label>' +
+          '<label>Expertise<input name="expertise" maxlength="180" value="' + esc(bot.expertise || '') + '"></label>' +
+          '<label>Languages<input name="languages" value="' + esc(list(bot.languages).join(', ')) + '" required></label>' +
+          '<label>Primary language<input name="primaryLanguage" value="' + esc(bot.primaryLanguage || 'en') + '" maxlength="35" required></label></div>' +
+          '<fieldset><legend>Personality traits (choose 2–5)</legend><div class="ai-network-check-grid">' + traitChecks + '</div></fieldset>' +
+          '<fieldset><legend>Allowed capabilities</legend><div class="ai-network-check-grid">' + capabilityChecks + '</div></fieldset>' +
+          '<button class="primary" type="submit">Save AI configuration</button></form></details>'
+        : '<p class="ai-network-note">Archived bots are read-only. Create a new bot configuration to resume this role.</p>';
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
+        esc(bot.name) + '</strong><div class="ai-network-meta">' + pill('AI BOT', 'ai') + ' ' +
+        pill(bot.status, bot.status === 'active' ? 'success' : 'neutral') + '</div><p>' + esc(bot.purpose) +
+        '</p><small>' + esc(bot.tone) + ' · ' + esc(list(bot.languages).join(', ')) + ' · ' +
+        esc(list(bot.traits).join(', ')) + '</small>' + editor + '</div></div>' +
+        '<div class="ai-network-row-actions">' +
+        (bot.status !== 'archived' && bot.identityLinkStatus === 'linked'
+          ? '<button type="button" class="secondary" data-ai-action="bot-chat-open" data-id="' + esc(bot.id) + '">Chat</button>'
           : '') +
-      (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
-      '</div></article>'
-    ).join('') + '</div>';
+        (bot.status !== 'archived'
+          ? '<button type="button" class="secondary" data-ai-action="bot-edit-open" data-id="' + esc(bot.id) + '">Edit AI</button>'
+          : '') +
+        (bot.status === 'active'
+          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause AI</button>'
+          : bot.status !== 'archived'
+            ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Rechecks provider access; enables owner-initiated, moderated use only"> ' +
+              (bot.status === 'paused' ? 'Resume AI' : 'Enable AI') + '</button>'
+            : '') +
+        (bot.status !== 'archived'
+          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive AI</button>'
+          : '') +
+        '<button type="button" class="danger" data-ai-action="bot-delete" data-id="' + esc(bot.id) + '">Delete bot</button>' +
+        '</div></article>';
+    }).join('') + '</div>';
   }
 
   function renderAIBotChat() {
@@ -1548,7 +1593,7 @@
       '<div><span>Shown queued</span><strong>' + number(queued) + '</strong></div>' +
       '<div><span>Shown running leases</span><strong>' + number(running) + '</strong></div></div>' +
       createForm + '<div><h4>Task history</h4>' + taskRows + '</div>' +
-      '<p class="ai-network-note">Safety state is read from the persisted runtime-control row. Worker execution stays paused and disabled by default. Tasks are stored and approvals are audited, but no task executes until a separate verified worker, provider adapter and secrets integration are deployed.</p>',
+      '<p class="ai-network-note">Safety state is read from the persisted runtime-control row. Supported now: create, approve, reject and cancel waiting tasks. Start, stop-running and retry are unavailable until a separate authenticated worker with lease, heartbeat and recovery support is deployed. No task executes from this dashboard while that runtime is absent.</p>',
       'ai-network-span-2');
   }
 
@@ -1818,17 +1863,32 @@
       '<p class="ai-network-note">These settings apply to your own Minglora AI experience. Platform-wide execution controls are available only in the administrative workspace.</p>';
   }
 
-  function renderAdminGlobalControls(settings, provider) {
+  function renderAdminGlobalControls(settings, provider, snapshot) {
+    const auditRows = list(snapshot?.auditLog).slice(0, 50);
+    const auditLog = auditRows.length
+      ? '<div class="ai-network-list">' + auditRows.map(item =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+          esc(String(item.action || 'AI operation').replaceAll('_', ' ')) + '</strong><small>' +
+          esc(item.targetType || 'network') + ' · ' + esc(item.targetId || '') +
+          '</small><small>' + esc(date(item.occurredAt)) + ' · ' + esc(item.source || 'Minglora AI Network') +
+          '</small></div></div></article>'
+        ).join('') + '</div>'
+      : empty('No Bot Lab operational audit actions have been recorded yet.');
     return '<div class="ai-network-command-grid"><div><span>Provider</span><strong>' + esc(provider.provider || 'Not configured') + '</strong></div>' +
       '<div><span>Model</span><strong>' + esc(provider.model || '—') + '</strong></div>' +
       '<div><span>Global state</span><strong>' + esc(settings.globalPaused ? 'Paused' : 'Enabled') + '</strong></div>' +
-      '<div><span>Autonomous workers</span><strong>Disabled · separate runtime required</strong></div></div>' +
+      '<div><span>Autonomous workers</span><strong>Disabled · separate runtime required</strong></div>' +
+      '<div><span>Snapshot last fetched</span><strong>' + esc(date(snapshot?.statusFetchedAt)) + '</strong></div></div>' +
       '<div class="ai-network-provider"><div><strong>Provider readiness</strong>' +
       (provider.manualDraftsAvailable ? '' : (provider.note ? '<p>' + esc(provider.note) + '</p>' : '')) + '</div>' +
       pill(provider.manualDraftsAvailable ? 'Owner-initiated adapter configured' : 'Provider not ready', provider.manualDraftsAvailable ? 'success' : 'neutral') + '</div>' +
       '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Emergency pause bot and schedule controls</button>' +
       '<button type="button" class="secondary" data-ai-action="emergency-resume">Resume owner controls</button></div>' +
-      '<p class="ai-network-note">Resume performs a fresh OpenAI model-access check before reopening owner-controlled actions. Bots remain paused until enabled individually. Durable queue workers and autonomous schedules remain disabled; human approval and AI identity disclosure are mandatory.</p>';
+      '<p class="ai-network-note">Resume performs a fresh OpenAI model-access check before reopening owner-controlled actions. Bots remain paused until enabled individually. Durable queue workers and autonomous schedules remain disabled; human approval and AI identity disclosure are mandatory.</p>' +
+      '<details class="ai-network-audit-log"><summary>View Bot Lab operational logs (' + number(auditRows.length) + ' recent entries)</summary>' + auditLog +
+      '<p class="ai-network-note">These are persisted Bot Lab audit events only. Durable task-worker and provider connection logs are not exposed because those runtimes are not deployed on main.</p></details>' +
+      '<div class="ai-network-alert ai-network-alert--warning" role="status"><strong>Unavailable operations</strong>' +
+      '<p>Process restart is not supported by the current bot runtime. Provider connect/disconnect controls are not available here; the dashboard can only run the configured OpenAI read-only health probe. Task start, stop-running and retry are unavailable until the separately authenticated worker runtime is deployed. Status is refreshed when this dashboard reloads or an action completes; no push-based live event feed is configured.</p></div>';
   }
 
   function renderAICentreReadiness(snapshot) {
@@ -2115,7 +2175,7 @@
       card('My AI Safety Preferences', 'PERSONAL SETTINGS', renderSettings(settings), 'ai-network-span-2') +
       (state.adminAccess ? card('Central Bot Command Center', 'ADMIN · COMMAND CENTER',
         '<p>Platform-wide AI operations, owner approval decisions, provider readiness and global safety controls.</p>' +
-        renderApprovals(approvals) + renderAdminGlobalControls(settings,provider), 'ai-network-span-2') : '') +
+        renderApprovals(approvals) + renderAdminGlobalControls(settings,provider,snapshot), 'ai-network-span-2') : '') +
       '</div><footer class="ai-network-footer">Minglora AI Network · Owner-controlled · AI identities disclosed · Human approval required</footer></section>';
   }
 
@@ -2277,6 +2337,20 @@
       payload.message = message;
       payload.requestId = form.dataset.requestId;
       if (form.dataset.conversationId) payload.conversationId = form.dataset.conversationId;
+    } else if (kind === 'bot-edit') {
+      const botId = form.dataset.botId || '';
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(botId)) {
+        throw new Error('A valid AI bot ID is required for editing.');
+      }
+      path = '/bots/' + encodeURIComponent(botId);
+      payload.name = value('name');
+      payload.purpose = value('purpose');
+      payload.tone = value('tone');
+      payload.expertise = value('expertise');
+      payload.traits = selectedValues(form, 'traits');
+      payload.languages = value('languages').split(',').map(item => item.trim()).filter(Boolean);
+      payload.primaryLanguage = value('primaryLanguage');
+      payload.capabilities = selectedValues(form, 'capabilities');
     } else if (kind === 'memory-settings') {
       const identityId = form.dataset.identityId || '';
       if (!identityId) throw new Error('Choose an AI identity before updating its memory settings.');
@@ -2987,7 +3061,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','bot-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : (kind === 'employee-report-review' || kind === 'job-role-status' || patchKinds.concat(talentPatchKinds).includes(kind)) ? 'PATCH' : 'POST';
     const result = await request(path, { method: requestMethod, body: payload });
@@ -3023,7 +3097,9 @@
     }
     if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-course','training-enrollment','attendance','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
-    let message = kind === 'memory-edit'
+    let message = kind === 'bot-edit'
+      ? 'AI Bot Lab configuration updated and audit logged.'
+      : kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
       : kind === 'memory-settings'
       ? 'AI memory consent and retention settings saved for this identity. Existing entries were cleared when memory was disabled.'
@@ -3286,6 +3362,26 @@
         await loadAIDiscovery(state.discoveryFilters);
       }
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'bot-edit-open') {
+        const row = button.closest('.ai-network-list-row');
+        const editor = row?.querySelector('[data-ai-bot-editor]');
+        if (!editor) throw new Error('The AI bot configuration editor is unavailable.');
+        editor.open = true;
+        editor.querySelector('[name="name"]')?.focus();
+        return;
+      }
+      else if (action === 'bot-delete') {
+        if (!id) throw new Error('Choose a valid AI bot to delete.');
+        if (!window.confirm('Delete this Bot Lab configuration? The linked Minglora AI identity, conversations and audit history are retained. The canonical identity can be separately suspended or retired in the AI Identity Registry.')) return;
+        const result = await request('/bots/' + encodeURIComponent(id), {
+          method:'DELETE',
+          body:{ reason:'Deleted by the designated Minglora administrator from the AI Network dashboard.' }
+        });
+        await refresh(result.softDeleted
+          ? 'Bot Lab configuration deleted from the active bot list. The linked AI identity and historical records were retained.'
+          : 'AI bot deletion completed.');
+        return;
+      }
       else if (action === 'bot-chat-open') {
         const result = await request('/bots/' + encodeURIComponent(id) + '/conversation');
         state.botChat = result;
