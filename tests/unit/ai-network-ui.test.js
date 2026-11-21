@@ -255,7 +255,7 @@ test('AI schedule APIs and UI preserve identity linkage, idempotency and approva
   assert.ok(ui.includes("data.getAll('scheduleWeekdays').map(value => Number(value))"));
   assert.ok(ui.includes("data-ai-action=\"schedule-status\""));
   assert.ok(ui.includes("action === 'schedule-status'"));
-  assert.ok(ui.includes("draft tasks to the owner approval queue"));
+  assert.ok(ui.includes('Activation locked: the autonomous worker runtime is not deployed.'));
 });
 
 
