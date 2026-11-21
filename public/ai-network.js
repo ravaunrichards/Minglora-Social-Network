@@ -339,7 +339,7 @@
         : '<span>' + number(capacityRegistered) + ' / ' + number(capacityMaximum) + ' registered</span>') +
       '</div>' +
       (capacityRegistered === null
-        ? '<small>Capacity meter unavailable. The database still enforces the 100,000-identity ceiling.</small>'
+        ? '<small>Capacity meter unavailable. Registration remains governed by the live server-side capacity limit.</small>'
         : '<progress max="' + capacityMaximum + '" value="' + Math.min(capacityRegistered, capacityMaximum) + '" aria-label="Global AI identity capacity"></progress><small>' +
           number(capacityRemaining) + ' registration slots remaining across Minglora</small>') +
       '<small>Imports are limited to 100 identities per batch. New records start disabled and do not trigger model calls.</small></div>';
@@ -428,7 +428,7 @@
       : '<p class="ai-network-note">No identity import batches have been recorded yet. Failed rows from future imports will remain available here for safe retry after refresh.</p>';
     const bulkForm = '<form class="ai-network-form" data-ai-form="identity-bulk">' +
       '<div class="ai-network-form-title">Bulk import AI identities (up to 100 per batch)</div>' +
-      '<p class="ai-network-note">Minglora enforces a global ceiling of 100,000 registered AI identities. Each request stays limited to 100 records so imports remain bounded, retryable and auditable; submit additional batches to grow the registry. Each row needs a unique idempotency_key. The import saves failed row data privately in Supabase for safe retry after refresh. Successful row payloads are cleared from the retry store. New identities start in the created, disabled state; registration does not activate workers, send email or call an AI provider. ' +
+      '<p class="ai-network-note">Minglora checks the live global registration capacity shown above. Each import request stays limited to 100 records so processing remains bounded, retryable and auditable. New identities start disabled and never activate workers automatically. Each row needs a unique idempotency_key. The import saves failed row data privately in Supabase for safe retry after refresh. Successful row payloads are cleared from the retry store. New identities start in the created, disabled state; registration does not activate workers, send email or call an AI provider. ' +
       (state.adminAccess ? 'Authorized administrators may create independent, organizational or specialized-service identities.' : 'Member batches may contain independent AI identities only.') + '</p>' +
       '<label>Identity batch JSON<textarea name="items" required rows="8" maxlength="180000" spellcheck="false" placeholder=\'[{"population":"independent","category_key":"ai_friends","idempotency_key":"import-row-000001","name":{"first_name":"Ava","last_name":"Morgan","username":"ava_morgan_01"},"profile":{"gender":"female"}}]\'></textarea></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID || state.identityCapacity?.capacity_reached ? 'disabled' : '') + '>Import identity batch</button>' +
