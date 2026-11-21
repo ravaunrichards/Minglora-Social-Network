@@ -117,7 +117,7 @@
         (bot.status === 'active'
           ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause AI</button>'
           : bot.status !== 'archived'
-            ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Rechecks provider access; enables owner-initiated, moderated use only"> ' +
+            ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Enable for owner use after provider access verification; autonomous workers remain off"> ' +
               (bot.status === 'paused' ? 'Resume AI' : 'Enable AI') + '</button>'
             : '') +
         (bot.status !== 'archived'
@@ -3061,7 +3061,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','bot-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','bot-edit','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : (kind === 'employee-report-review' || kind === 'job-role-status' || patchKinds.concat(talentPatchKinds).includes(kind)) ? 'PATCH' : 'POST';
     const result = await request(path, { method: requestMethod, body: payload });
