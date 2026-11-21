@@ -534,6 +534,34 @@ begin
         join ai_network.ai_names n on n.identity_id=e.identity_id
         where a.owner_user_id=v_owner and a.organization_id=p_organization_id
       ),'[]'::jsonb),
+      'team_messages',coalesce((
+        select jsonb_agg(x.entry order by x.created_at desc)
+        from (
+          select jsonb_build_object(
+            'message',to_jsonb(m),'team_name',t.team_name,
+            'author_name',case when m.author_type='human_user'
+              then coalesce(h.display_name,h.username,'Minglora administrator')
+              else coalesce(n.display_name,n.full_name,n.username,'AI employee') end
+          ) as entry,m.created_at
+          from ai_network.ai_team_messages m
+          join ai_network.ai_teams t on t.owner_user_id=m.owner_user_id and t.team_id=m.team_id
+          left join public.profiles h on h.id=m.author_user_id
+          left join ai_network.ai_names n on n.identity_id=m.author_identity_id
+          where m.owner_user_id=v_owner and m.organization_id=p_organization_id and m.message_status='visible'
+          order by m.created_at desc limit 100
+        ) x
+      ),'[]'::jsonb),
+      'team_events',coalesce((
+        select jsonb_agg(to_jsonb(te) order by te.occurred_at desc)
+        from ai_network.ai_team_events te
+        join ai_network.ai_teams t on t.owner_user_id=te.owner_user_id and t.team_id=te.team_id
+        where te.owner_user_id=v_owner and t.organization_id=p_organization_id
+      ),'[]'::jsonb),
+      'workforce_events',coalesce((
+        select jsonb_agg(to_jsonb(we) order by we.occurred_at desc)
+        from ai_network.ai_workforce_events we
+        where we.owner_user_id=v_owner and we.organization_id=p_organization_id
+      ),'[]'::jsonb),
       'reports',coalesce((
         select jsonb_agg(x.entry order by x.submitted_at desc)
         from (
