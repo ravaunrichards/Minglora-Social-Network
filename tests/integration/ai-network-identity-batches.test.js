@@ -274,8 +274,8 @@ test('PostgreSQL 17: durable identity batches isolate failures, replay safely an
       from ai_network.ai_identity_capacity_limits c
       where c.capacity_key='global'
     `);
-    assert.equal(counterMatchesCanonicalTable.rows[0].registered_count,5);
-    assert.equal(counterMatchesCanonicalTable.rows[0].actual_count,5);
+    assert.equal(Number(counterMatchesCanonicalTable.rows[0].registered_count),5);
+    assert.equal(Number(counterMatchesCanonicalTable.rows[0].actual_count),5);
 
     await client.query(
       'delete from ai_network.ai_identities where owner_user_id=$1 and idempotency_key=$2',
