@@ -104,7 +104,7 @@ test('employee reports preserve manager hierarchy and require authorized submiss
   assert.match(migration, /reviewed_by_user_id/);
   assert.match(migration, /Employee report stored for the assigned reporting manager/);
   assert.match(migration, /employee_report_reviewed/);
-  assert.match(migration, /returning r\\.employment_id,r\\.team_id,r\\.task_id/);
+  assert.match(migration, /returning r\.employment_id,r\.team_id,r\.task_id/);
   assert.match(migration, /employment_id,team_id,task_id,report_id,event_type,reason/);
 });
 
