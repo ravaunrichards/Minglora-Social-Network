@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '', socialSettings: null, socialHistory: [], socialHistoryIdentity: '', socialContent: [], socialError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', identityBatches: [], identityBatchError: '', identityRegistrySearch: '', identityRegistryOffset: 0, adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, selectedBotChatId: '', botChat: null, botChatError: '', aiTasks: [], taskRuntime: null, taskError: '', taskEvents: [], selectedTaskLogId: '', taskLogError: '', operationalLastUpdated: '', operationalStatusError: '', operationalPollTimer: null, operationalPolling: false, categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', emailStatus: null, emailMailboxes: [], emailMessages: [], emailUnreadCount: 0, emailIdentityId: '', emailMailboxId: '', emailError: '', socialSettings: null, socialHistory: [], socialHistoryIdentity: '', socialContent: [], socialError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -694,6 +694,17 @@
       state.taskRuntime = null;
       state.taskError = error.message || 'AI task queue is unavailable.';
     }
+  }
+
+  async function loadAITaskEvents(taskId) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(taskId || ''))) {
+      throw new Error('Choose a valid AI task before viewing its logs.');
+    }
+    state.taskLogError = '';
+    const result = await request('/tasks/' + encodeURIComponent(taskId) + '/events');
+    state.taskEvents = list(result.events);
+    state.selectedTaskLogId = taskId;
+    return result;
   }
 
   async function loadAIProviderRegistry() {
@@ -1471,7 +1482,7 @@
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
       '<div><h4>Model catalogue</h4>' + modelRows + modelForm + '</div></div>' +
       assignmentForm + bulkAssignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
-      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access.</p>',
+      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access. Connect/disconnect and provider enable/disable controls are not implemented; the OpenAI check is read-only and does not persist a connected state.</p>',
       'ai-network-span-2');
   }
 
@@ -1496,7 +1507,7 @@
       ? '<div class="ai-network-list">' + tasks.map(task => {
           const status = task.status || 'unknown';
           const awaitingApproval = status === 'pending_approval';
-          const canCancel = ['pending_approval','queued','observation_only'].includes(status);
+          const canCancel = ['pending_approval','queued','observation_only','running'].includes(status);
           const identity = identityOptions.find(item => item.value === task.identity_id);
           const action = task.action_class || 'other';
           return '<article class="ai-network-list-row ai-network-task-row"><div class="ai-network-list-main"><div><strong>' +
@@ -1513,12 +1524,31 @@
               '<label><span>Decision</span><select name="status">' + options([{value:'approved',label:'Approve'},{value:'rejected',label:'Reject'}], 'approved') + '</select></label>' +
               '<label><span>Review reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Explain the decision"></label>' +
               '<button class="secondary" type="submit">Save decision</button></form>' : '') +
-            (canCancel ? '<form class="ai-network-inline-form ai-network-task-action" data-ai-form="task-cancel" data-task-id="' + esc(task.task_id) + '">' +
-              '<label><span>Cancellation reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why cancel this task?"></label>' +
-              '<button class="secondary" type="submit">Cancel task</button></form>' : '') +
+            (canCancel ? '<form class="ai-network-inline-form ai-network-task-action" data-ai-form="task-cancel" data-task-id="' + esc(task.task_id) + '" data-task-status="' + esc(status) + '">' +
+              '<label><span>' + (status === 'running' ? 'Stop reason' : 'Cancellation reason') + '</span><input name="reason" required minlength="3" maxlength="1000" placeholder="' + (status === 'running' ? 'Why stop this running task?' : 'Why cancel this task?') + '"></label>' +
+              '<button class="secondary" type="submit">' + (status === 'running' ? 'Stop running task' : 'Cancel task') + '</button></form>' : '') +
+            (status === 'failed' ? '<form class="ai-network-inline-form ai-network-task-action" data-ai-form="task-retry" data-task-id="' + esc(task.task_id) + '">' +
+              '<label><span>Retry reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Explain why this failed task should be re-queued"></label>' +
+              '<label><span>Maximum attempts</span><input name="maxAttempts" type="number" min="' + Math.max(1, Number(task.attempt_count || 0) + 1) + '" max="10" value="' + Math.min(10, Math.max(Number(task.max_attempts || 1), Number(task.attempt_count || 0) + 1)) + '" required></label>' +
+              '<button class="secondary" type="submit">Retry / re-queue</button></form>' : '') +
+            '<div class="ai-network-row-actions"><button type="button" class="secondary" data-ai-action="task-logs" data-id="' + esc(task.task_id) + '">View logs</button></div>' +
             '</article>';
         }).join('') + '</div>'
       : empty('No AI tasks are recorded for this account.');
+    const selectedTask = tasks.find(task => task.task_id === state.selectedTaskLogId) || null;
+    const taskLogPanel = state.selectedTaskLogId
+      ? '<section class="ai-network-task-log" aria-label="AI task audit log"><div class="ai-network-task-log-heading"><h4>Task audit log' +
+        (selectedTask ? ' · ' + esc(selectedTask.task_title || 'AI task') : '') +
+        '</h4><button type="button" class="secondary" data-ai-action="task-logs-close">Close logs</button></div>' +
+        (state.taskLogError ? '<div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(state.taskLogError) + '</div>' :
+          (state.taskEvents.length ? '<div class="ai-network-list">' + state.taskEvents.map(event =>
+            '<article class="ai-network-list-row"><div><strong>' + esc(String(event.event_type || 'task event').replaceAll('_',' ')) + '</strong>' +
+            '<div class="ai-network-meta">' + pill(event.new_status || 'unknown') + ' ' + pill(event.actor_type || 'system') + '</div>' +
+            '<small>' + esc(date(event.occurred_at)) + (event.worker_id ? ' · Worker ' + esc(event.worker_id) : '') + '</small>' +
+            (event.reason ? '<p>' + esc(event.reason) + '</p>' : '') +
+            (event.metadata && Object.keys(event.metadata).length ? '<small>Metadata: ' + esc(JSON.stringify(event.metadata)) + '</small>' : '') +
+            '</div></article>').join('') + '</div>' : empty('No audit events have been recorded for this task.'))) +
+        '</section>' : '';
     const createForm = identityOptions.length
       ? '<form class="ai-network-form ai-network-task-form" data-ai-form="task-create">' +
         '<div class="ai-network-form-title">Add a durable AI task</div>' +
@@ -1547,8 +1577,8 @@
       '<div><span>Shown pending approval</span><strong>' + number(pending) + '</strong></div>' +
       '<div><span>Shown queued</span><strong>' + number(queued) + '</strong></div>' +
       '<div><span>Shown running leases</span><strong>' + number(running) + '</strong></div></div>' +
-      createForm + '<div><h4>Task history</h4>' + taskRows + '</div>' +
-      '<p class="ai-network-note">Safety state is read from the persisted runtime-control row. Worker execution stays paused and disabled by default. Tasks are stored and approvals are audited, but no task executes until a separate verified worker, provider adapter and secrets integration are deployed.</p>',
+      createForm + '<div><h4>Task history</h4>' + taskRows + '</div>' + taskLogPanel +
+      '<p class="ai-network-note">Safety state is read from the persisted runtime-control row. Stop revokes a running task lease. Retry only re-queues a failed task and re-requests human approval where required; it never starts execution. Start/execute is unavailable until a separately authenticated worker, provider adapter and private credentials are deployed.</p>',
       'ai-network-span-2');
   }
 
@@ -1826,8 +1856,9 @@
       '<div class="ai-network-provider"><div><strong>Provider readiness</strong>' +
       (provider.manualDraftsAvailable ? '' : (provider.note ? '<p>' + esc(provider.note) + '</p>' : '')) + '</div>' +
       pill(provider.manualDraftsAvailable ? 'Owner-initiated adapter configured' : 'Provider not ready', provider.manualDraftsAvailable ? 'success' : 'neutral') + '</div>' +
-      '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Emergency pause bot and schedule controls</button>' +
-      '<button type="button" class="secondary" data-ai-action="emergency-resume">Resume owner controls</button></div>' +
+      '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Disable AI / Emergency pause</button>' +
+      '<button type="button" class="secondary" data-ai-action="emergency-resume">Enable AI / Resume owner controls</button>' +
+      '<button type="button" class="secondary" data-ai-action="analytics">View analytics</button></div>' +
       '<p class="ai-network-note">Resume performs a fresh OpenAI model-access check before reopening owner-controlled actions. Bots remain paused until enabled individually. Durable queue workers and autonomous schedules remain disabled; human approval and AI identity disclosure are mandatory.</p>';
   }
 
@@ -2042,6 +2073,10 @@
       '</div></header>' +
       (state.notice ? '<div class="ai-network-alert ai-network-alert--' + esc(state.noticeType || 'success') + '" role="status">' + esc(state.notice) + '</div>' : '') +
       (state.error ? '<div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(state.error) + '</div>' : '') +
+      '<div class="ai-network-busy" data-ai-busy-indicator role="status" hidden>Saving changes…</div>' +
+      '<div class="ai-network-operational-meta" role="status">' +
+      (state.operationalStatusError ? '<span class="ai-network-operational-error">Live refresh unavailable: ' + esc(state.operationalStatusError) + '</span>' : 'Operational status refreshes every 15 seconds while this page is visible.') +
+      ' · Last synchronized: ' + esc(state.operationalLastUpdated ? date(state.operationalLastUpdated) : 'Loading') + '</div>' +
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div>' +
       (state.adminAccess ? '<div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div>' : '') +
       '<div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
@@ -2056,7 +2091,9 @@
       (state.adminAccess ? renderAITaskQueueCenter() : '') +
       (state.adminAccess ? renderAIOrganizationCenter() : '') +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks. Every Bot Lab creation is also registered as an individually addressable, private AI identity in Minglora.</p>' +
-        renderBotRows(bots) + renderAIBotChat() + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
+        renderBotRows(bots) + renderAIBotChat() +
+        '<p class="ai-network-note">Edit an AI through its linked profile in the AI Identity Registry. Bots are request-driven, not persistent processes, so Restart is not an available operation. Permanent Delete is not offered because identity, task and audit history are retained; use Archive to retire a bot safely.</p>' +
+        '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
         '<div class="ai-network-form-grid"><label>AI first name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
         '<label>AI last name<input name="lastName" required maxlength="80" autocomplete="off"></label>' +
         '<label>Middle name (optional)<input name="middleName" maxlength="80" autocomplete="off"></label>' +
@@ -2085,7 +2122,7 @@
         '<button class="primary" type="submit" ' + (!botCategoryOptions.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create AI bot and relational identity</button></form>', 'ai-network-span-2') +
       card('Bot Teams', '02 · TEAM WORK', '<p>Coordinate your own specialist bots with human-reviewed plans and separate identities.</p>' + renderTeams(teams,bots)) +
       card('Smart Activity Scheduling', '03 · SCHEDULING', '<p>Plan content support by time zone and cadence. Every new schedule is paused until execution is verified.</p>' + renderSchedules(schedules,bots)) +
-      card('Bot Performance Center', '04 · PERFORMANCE', renderPerformance(performance)) +
+      card('Bot Performance Center', '04 · PERFORMANCE', renderPerformance(performance), 'ai-network-analytics') +
       card('Multilingual Intelligence', '05 · LANGUAGES', '<p>Set preferred languages and opt-in translation. Original text stays available.</p>' + renderLanguages(settings)) +
       card('AI Creator Studio', '06 · CREATOR', '<p>Create structured draft requests. No content is generated or published while the provider is disabled.</p>' +
         renderCreatorJobs(creatorJobs) + '<form class="ai-network-form" data-ai-form="creator"><div class="ai-network-form-title">Start a Creator Studio draft</div>' +
@@ -2119,9 +2156,63 @@
       '</div><footer class="ai-network-footer">Minglora AI Network · Owner-controlled · AI identities disclosed · Human approval required</footer></section>';
   }
 
+  function syncBusyIndicator() {
+    const page = root()?.querySelector('.ai-network-page');
+    if (!page) return;
+    page.setAttribute('aria-busy', state.busy ? 'true' : 'false');
+    const indicator = page.querySelector('[data-ai-busy-indicator]');
+    if (indicator) {
+      indicator.hidden = !state.busy;
+      indicator.textContent = state.busy ? 'Saving changes…' : '';
+    }
+  }
+
+  function stopOperationalPolling() {
+    if (state.operationalPollTimer) {
+      window.clearInterval(state.operationalPollTimer);
+      state.operationalPollTimer = null;
+    }
+  }
+
+  async function refreshOperationalStatus() {
+    const page = root()?.querySelector('.ai-network-page');
+    if (!page) {
+      stopOperationalPolling();
+      return;
+    }
+    if (document.visibilityState === 'hidden' || state.busy || state.operationalPolling) return;
+    state.operationalPolling = true;
+    try {
+      const [snapshot, taskQueue] = await Promise.all([request(), request('/tasks')]);
+      state.snapshot = snapshot;
+      state.aiTasks = list(taskQueue.tasks);
+      state.taskRuntime = taskQueue.runtime || null;
+      state.taskError = '';
+      state.operationalStatusError = '';
+      state.operationalLastUpdated = new Date().toISOString();
+      if (state.selectedTaskLogId) {
+        try { await loadAITaskEvents(state.selectedTaskLogId); }
+        catch (error) { state.taskLogError = error.message || 'AI task logs could not be refreshed.'; }
+      }
+    } catch (error) {
+      state.operationalStatusError = error.message || 'The live operational status could not be refreshed.';
+    } finally {
+      state.operationalPolling = false;
+      if (root()?.querySelector('.ai-network-page')) paintSnapshot();
+    }
+  }
+
+  function startOperationalPolling() {
+    if (state.operationalPollTimer) return;
+    state.operationalPollTimer = window.setInterval(refreshOperationalStatus, 15000);
+  }
+
   function paintSnapshot() {
     const host = root();
-    if (host) host.innerHTML = renderSnapshot(state.snapshot);
+    if (host) {
+      host.innerHTML = renderSnapshot(state.snapshot);
+      syncBusyIndicator();
+    }
   }
 
   async function requireDesignatedAdminAccess() {
@@ -2160,7 +2251,9 @@
       await loadAITaskQueue();
       await loadAIOrganizationRegistry();
       await loadAIDelegations();
+      state.operationalLastUpdated = new Date().toISOString();
       paintSnapshot();
+      startOperationalPolling();
     } catch (error) {
       state.error = error.message;
       host.innerHTML = '<section class="ai-network-page"><div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(error.message) + '</div>' +
@@ -2181,7 +2274,9 @@
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
     await loadAIDelegations();
+    state.operationalLastUpdated = new Date().toISOString();
     paintSnapshot();
+    startOperationalPolling();
   }
 
   async function submit(form) {
@@ -2581,8 +2676,16 @@
     } else if (kind === 'task-cancel') {
       const taskId = form.dataset.taskId;
       if (!taskId) throw new Error('Task details are missing.');
+      if (form.dataset.taskStatus === 'running' &&
+          !window.confirm('Stop this running task? Its worker lease will be revoked; no new execution will start.')) return;
       path = '/tasks/' + encodeURIComponent(taskId) + '/cancel';
       payload.reason = value('reason');
+    } else if (kind === 'task-retry') {
+      const taskId = form.dataset.taskId;
+      if (!taskId) throw new Error('Task details are missing.');
+      path = '/tasks/' + encodeURIComponent(taskId) + '/retry';
+      payload.reason = value('reason');
+      payload.maxAttempts = Number(value('maxAttempts'));
     } else if (kind === 'provider-account') {
       path = '/provider-accounts';
       payload.provider_name = value('providerName').toLowerCase();
@@ -3045,7 +3148,9 @@
       : kind === 'task-approval'
         ? 'Task approval decision recorded.'
         : kind === 'task-cancel'
-          ? 'Task cancellation recorded.'
+          ? 'Task cancellation recorded; any running lease has been revoked.'
+          : kind === 'task-retry'
+            ? 'Failed task re-queued. The database preserved attempt history and re-requested human approval where required; execution has not started.'
           : kind === 'provider-account'
       ? 'Provider account reference saved as unconfigured; no credentials were stored.'
       : kind === 'provider-model'
@@ -3124,12 +3229,14 @@
     if (state.busy) return;
     state.busy = true;
     try {
+      syncBusyIndicator();
       await submit(form);
     } catch (error) {
       state.error = error.message;
       paintSnapshot();
     } finally {
       state.busy = false;
+      syncBusyIndicator();
     }
   };
 
@@ -3138,8 +3245,29 @@
     if (!button || button.disabled || state.busy) return;
     const action = button.dataset.aiAction, id = button.dataset.id;
     state.busy = true;
+    syncBusyIndicator();
     try {
-      if (action === 'identity-page') {
+      if (action === 'task-logs') {
+        if (!id) throw new Error('Choose a task before viewing its logs.');
+        await loadAITaskEvents(id);
+        setNotice('Task audit events loaded from the owner-scoped event log.');
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'task-logs-close') {
+        state.selectedTaskLogId = '';
+        state.taskEvents = [];
+        state.taskLogError = '';
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'analytics') {
+        const panel = document.querySelector('.ai-network-analytics');
+        if (!panel) throw new Error('The performance analytics panel is not available in this view.');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      else if (action === 'identity-page') {
         const offset = Number(button.dataset.offset);
         if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Choose a valid AI identity registry page.');
         state.identityRegistryOffset = offset;
@@ -3330,6 +3458,7 @@
       }
     } finally {
       state.busy = false;
+      syncBusyIndicator();
     }
   };
 
