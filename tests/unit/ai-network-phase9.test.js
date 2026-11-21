@@ -7,7 +7,8 @@ import {
   createAIBot,
   updateAIBotDetails,
   deleteAIBot,
-  getAICommandCenter
+  getAICommandCenter,
+  getAIPerformanceSummary
 } from '../../backend/modules/ai-network/service.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -90,6 +91,27 @@ test('Phase 9 bot removal is an audited soft delete and preserves linked identit
   assert.equal(repeated.reused, true);
   const snapshot = getAICommandCenter(db, ownerId);
   assert.equal(snapshot.bots.some(item => item.id === bot.id), false);
+});
+
+test('Phase 9 soft-deleted bots disappear from active counts but retain historical analytics', () => {
+  const db = {};
+  const bot = createBot(db);
+  db.aiBotRuns = [{
+    id: 'phase9-run-1',
+    ownerId,
+    botId: bot.id,
+    status: 'completed',
+    totalTokens: 42
+  }];
+
+  deleteAIBot(db, ownerId, bot.id, { reason: 'Remove the active Bot Lab configuration.' });
+  const performance = getAIPerformanceSummary(db, ownerId);
+
+  assert.equal(performance.botCount, 0);
+  assert.equal(performance.activeBots, 0);
+  assert.equal(performance.measuredRunCount, 1);
+  assert.equal(performance.completedRuns, 1);
+  assert.equal(performance.totalTokensUsed, 42);
 });
 
 test('Phase 9 administrative dashboard exposes real audit logs and marks unsupported operations unavailable', () => {
