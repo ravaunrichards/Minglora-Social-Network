@@ -1103,6 +1103,25 @@
 
   function renderAIWorkforcePanel(organizationId, hr = {}) {
     const workforce = hr.workforce || {};
+    const roleRecords = list(workforce.job_roles).length
+      ? list(workforce.job_roles).map(row => row.position || row)
+      : list(hr.positions);
+    const jobRoleRows = roleRecords.length
+      ? '<div class="ai-network-list">' + roleRecords.map(position => {
+          const status = String(position.status || 'proposed');
+          return '<article class="ai-network-list-row"><div><strong>' +
+            esc(position.display_name || 'Job role') + '</strong><div class="ai-network-meta">' +
+            pill(status, status === 'active' ? 'success' : 'neutral') + ' ' +
+            pill(position.job_family || 'job role') +
+            '</div><small>Hierarchy level: ' + number(position.hierarchy_level) +
+            '</small></div><form class="ai-network-inline-form" data-ai-form="job-role-status" data-organization-id="' +
+            esc(organizationId) + '" data-position-id="' + esc(position.position_id) + '">' +
+            '<label><span>Role status</span><select name="status">' +
+            options([{value:'proposed',label:'Proposed'},{value:'active',label:'Active'},{value:'restricted',label:'Restricted'},{value:'archived',label:'Archived'}],status) +
+            '</select></label><label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
+            '<button class="secondary" type="submit">Save role status</button></form></article>';
+        }).join('') + '</div>'
+      : empty('No job roles have been configured.');
     const employeeRecords = list(workforce.employees);
     const activeEmployees = employeeRecords.filter(row => row.employment?.employment_status === 'active');
     const employeeChoices = activeEmployees.map(row => ({
@@ -1296,6 +1315,7 @@
     return '<section class="ai-network-hr-workspace ai-network-workforce"><div class="ai-network-hr-heading"><h4>AI Corporate Workforce Operations</h4>' +
       '<p class="ai-network-note">Department, job role and reporting manager come from each employment record. AI employees can only receive work within their active grants, team membership and workload capacity. Social, financial, security, moderation and external task classes are not assignable here.</p>' +
       unavailable +
+      '<h5>Job roles and activation</h5>' + jobRoleRows +
       '<h5>Workload and reporting hierarchy</h5>' + workloadRows +
       '<h5>Explicit role-based permissions</h5>' + permissionForm + permissionRows +
       '<h5>Organizational teams</h5>' + teamCreateForm + teamRows +
@@ -2732,6 +2752,12 @@
       payload.period_end=value('periodEnd')||null;
       form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
       payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'job-role-status') {
+      const organizationId=form.dataset.organizationId,positionId=form.dataset.positionId;
+      if(!organizationId||!positionId) throw new Error('Job role details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/workforce/positions/'+encodeURIComponent(positionId)+'/status';
+      payload.status=value('status');
+      payload.reason=value('reason');
     } else if (kind === 'employee-report-review') {
       const organizationId=form.dataset.organizationId,reportId=form.dataset.reportId;
       if(!organizationId||!reportId) throw new Error('Employee report details are missing.');
@@ -2963,7 +2989,7 @@
     } else return;
     const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
-    const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : (kind === 'employee-report-review' || patchKinds.concat(talentPatchKinds).includes(kind)) ? 'PATCH' : 'POST';
+    const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : (kind === 'employee-report-review' || kind === 'job-role-status' || patchKinds.concat(talentPatchKinds).includes(kind)) ? 'PATCH' : 'POST';
     const result = await request(path, { method: requestMethod, body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
     if (kind === 'bot-chat') {
@@ -3069,6 +3095,7 @@
                                       : kind === 'team-message' ? 'Team message recorded and audited.'
                                       : kind === 'employee-report' ? 'Employee report submitted to the assigned reporting line.'
                                       : kind === 'employee-report-review' ? 'Employee report review recorded.'
+                                      : kind === 'job-role-status' ? 'Job role status updated and audited; inactive roles have their outstanding workforce tasks cancelled.'
                                       : 'Saved successfully.';
     if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
     const batchFailures = kind === 'identity-bulk'
