@@ -42,6 +42,33 @@ test('routing requires a supported adapter and a complete, distinct fallback con
   assert.equal(resolveProviderRoute({ primaryProvider: 'openai', primaryModel: 'primary-model', env: {} }).fallbackModel, null);
 });
 
+
+test('Gemini supports a same-provider fallback but rejects cross-provider fallback', () => {
+  const gemini = resolveProviderRoute({
+    primaryProvider: 'google_gemini',
+    primaryModel: 'gemini-primary',
+    env: {
+      MINGLORA_AI_FALLBACK_PROVIDER: 'google_gemini',
+      MINGLORA_AI_FALLBACK_MODEL: 'gemini-backup'
+    }
+  });
+  assert.equal(gemini.primaryProvider, 'google_gemini');
+  assert.equal(gemini.fallbackProvider, 'google_gemini');
+  assert.equal(gemini.fallbackModel, 'gemini-backup');
+
+  assert.throws(
+    () => resolveProviderRoute({
+      primaryProvider: 'google_gemini',
+      primaryModel: 'gemini-primary',
+      env: {
+        MINGLORA_AI_FALLBACK_PROVIDER: 'openai',
+        MINGLORA_AI_FALLBACK_MODEL: 'gpt-backup'
+      }
+    }),
+    error => error.code === 'fallback_adapter_unavailable'
+  );
+});
+
 test('transient primary failures receive bounded retries and can recover without fallback', async () => {
   const calls = [];
   const result = await runWithProviderFallback({
