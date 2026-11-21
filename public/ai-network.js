@@ -2652,6 +2652,92 @@
       payload.token_budget = Number(value('tokenBudget'));
       payload.cost_limit_usd = Number(value('costLimitUsd'));
       payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'workforce-permission') {
+      const organizationId = form.dataset.organizationId, employmentId = value('employmentId');
+      if (!organizationId || !employmentId) throw new Error('Choose a valid organization and active employee.');
+      const permissionKey = value('permissionKey');
+      const allowedTaskTypes = value('allowedTaskTypes').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
+      if (permissionKey.startsWith('task.assign.') && !allowedTaskTypes.length) {
+        throw new Error('List at least one allowed task type for a task-assignment permission.');
+      }
+      if (!permissionKey.startsWith('task.assign.') && allowedTaskTypes.length) {
+        throw new Error('Allowed task types are only valid for task-assignment permissions.');
+      }
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/employees/' + encodeURIComponent(employmentId) + '/permissions';
+      payload.permission_key = permissionKey;
+      payload.allowed_task_types = allowedTaskTypes;
+      payload.reason = value('reason');
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'workforce-permission-revoke') {
+      const organizationId=form.dataset.organizationId,employmentId=form.dataset.employmentId,grantId=form.dataset.grantId;
+      if(!organizationId||!employmentId||!grantId) throw new Error('Employee permission grant details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/employees/'+encodeURIComponent(employmentId)+'/permissions/'+encodeURIComponent(grantId);
+      payload.reason=value('reason');
+    } else if (kind === 'workforce-team') {
+      const organizationId=form.dataset.organizationId;
+      if(!organizationId) throw new Error('Choose an organization before creating a corporate team.');
+      const memberIdentityIds=selectedValues(form,'memberIds');
+      if(memberIdentityIds.length<1||memberIdentityIds.length>20) throw new Error('Choose between 1 and 20 active AI employees for the team.');
+      path='/teams';
+      payload.name=value('teamName');
+      payload.description=value('description');
+      payload.populationScope='organizational';
+      payload.organizationId=organizationId;
+      payload.memberIdentityIds=memberIdentityIds;
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotencyKey=form.dataset.idempotencyKey;
+    } else if (kind === 'workforce-task') {
+      const organizationId=form.dataset.organizationId,employmentId=value('employmentId');
+      if(!organizationId||!employmentId) throw new Error('Choose an active employee before assigning a task.');
+      let taskPayload;
+      try { taskPayload=JSON.parse(value('taskPayload')||'{}'); }
+      catch { throw new Error('Task payload must be valid JSON.'); }
+      if(!taskPayload||typeof taskPayload!=='object'||Array.isArray(taskPayload)) throw new Error('Task payload must be a JSON object.');
+      const scheduledFor=value('scheduledFor');
+      if(!scheduledFor||Number.isNaN(new Date(scheduledFor).getTime())) throw new Error('Choose a valid task schedule.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/employees/'+encodeURIComponent(employmentId)+'/tasks';
+      payload.team_id=value('teamId')||null;
+      payload.task_title=value('taskTitle');
+      payload.task_type=value('taskType').toLowerCase();
+      payload.action_class=value('actionClass');
+      payload.workload_units=Number(value('workloadUnits'));
+      payload.scheduled_for=new Date(scheduledFor).toISOString();
+      payload.priority=Number(value('priority'));
+      payload.max_attempts=Number(value('maxAttempts'));
+      payload.token_budget=Number(value('tokenBudget'));
+      payload.cost_limit_usd=Number(value('costLimitUsd'));
+      payload.task_payload=taskPayload;
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'team-message') {
+      const organizationId=form.dataset.organizationId,teamId=value('teamId');
+      if(!organizationId||!teamId) throw new Error('Choose an active organization team before sending a message.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/teams/'+encodeURIComponent(teamId)+'/messages';
+      payload.author_identity_id=value('authorIdentityId')||null;
+      payload.message_type=value('messageType');
+      payload.body=value('body');
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'employee-report') {
+      const organizationId=form.dataset.organizationId,employmentId=value('employmentId');
+      if(!organizationId||!employmentId) throw new Error('Choose an active employee before submitting a report.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/employees/'+encodeURIComponent(employmentId)+'/reports';
+      payload.team_id=value('teamId')||null;
+      payload.task_id=value('taskId')||null;
+      payload.report_type=value('reportType');
+      payload.report_title=value('reportTitle');
+      payload.report_body=value('reportBody');
+      payload.period_start=value('periodStart')||null;
+      payload.period_end=value('periodEnd')||null;
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'employee-report-review') {
+      const organizationId=form.dataset.organizationId,reportId=form.dataset.reportId;
+      if(!organizationId||!reportId) throw new Error('Employee report details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/reports/'+encodeURIComponent(reportId)+'/review';
+      payload.status=value('status');
+      payload.reason=value('reason');
     } else if (kind === 'organization') {
       path = '/organizations';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -2875,9 +2961,10 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','employee-report-review'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
-    const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
+    const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST';
+    const result = await request(path, { method: requestMethod, body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
     if (kind === 'bot-chat') {
       state.botChat = result;
@@ -2975,6 +3062,13 @@
                                       : kind === 'training-enrollment' ? 'Training assigned to the selected employee.'
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
+                                      : kind === 'workforce-permission' ? 'Least-privilege employee permission granted and audited.'
+                                      : kind === 'workforce-permission-revoke' ? 'Employee permission revoked; outstanding assigned tasks were cancelled.'
+                                      : kind === 'workforce-team' ? 'Organizational team created with the selected employee members.'
+                                      : kind === 'workforce-task' ? 'Task allocated within employee permission and workload limits; human approval is required.'
+                                      : kind === 'team-message' ? 'Team message recorded and audited.'
+                                      : kind === 'employee-report' ? 'Employee report submitted to the assigned reporting line.'
+                                      : kind === 'employee-report-review' ? 'Employee report review recorded.'
                                       : 'Saved successfully.';
     if (kind === 'email-send') message = 'Email accepted by Resend and recorded in the AI mailbox.';
     const batchFailures = kind === 'identity-bulk'
