@@ -89,20 +89,28 @@ export function getAIProviderStatus(env = process.env) {
   const legacyModel = text(env.MINGLORA_AI_MODEL, 120);
   const openAIKeyPresent = Boolean(text(env.OPENAI_API_KEY, 4096) ||
     (configuredProvider === 'openai' && text(env.MINGLORA_AI_API_KEY, 4096)));
-  const openAIModel = text(env.OPENAI_DEFAULT_MODEL, 120) ||
-    (configuredProvider === 'openai' ? legacyModel : '');
-  const provider = configuredProvider || (openAIKeyPresent ? 'openai' : '');
-  const model = provider === 'openai' ? openAIModel : legacyModel;
-  const legacyConfigured = Boolean(configuredProvider && legacyModel && text(env.MINGLORA_AI_API_KEY, 4096));
-  const openAIConfigured = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel);
-  const configured = legacyConfigured || openAIConfigured;
+  const geminiKeyPresent = Boolean(text(env.GEMINI_API_KEY, 4096) || text(env.GOOGLE_AI_API_KEY, 4096));
+  const provider = configuredProvider || (openAIKeyPresent ? 'openai' : geminiKeyPresent ? 'google_gemini' : '');
+  const model = provider === 'openai'
+    ? text(env.OPENAI_DEFAULT_MODEL, 120) || (configuredProvider === 'openai' ? legacyModel : '')
+    : provider === 'google_gemini'
+      ? text(env.GEMINI_DEFAULT_MODEL, 120) || (configuredProvider === 'google_gemini' ? legacyModel : '')
+      : legacyModel;
+  const legacyConfigured = provider === 'openai' && Boolean(legacyModel && text(env.MINGLORA_AI_API_KEY, 4096));
+  const credentialsConfigured = provider === 'openai'
+    ? openAIKeyPresent
+    : provider === 'google_gemini'
+      ? geminiKeyPresent
+      : false;
+  const configured = Boolean(provider && model && (credentialsConfigured || legacyConfigured));
   const providerCredentialStatus = provider
     ? getAIProviderCredentialStatus(provider, env)
     : null;
   const credentialsPresent = configured || Boolean(providerCredentialStatus?.credentialsPresent);
   const adapterAvailable = Boolean(providerCredentialStatus?.adapterAvailable);
-  const manualDraftsAvailable = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel) && adapterAvailable;
-  const botChatAvailable = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel) && adapterAvailable;
+  const botChatAvailable = configured && adapterAvailable &&
+    (provider === 'openai' || provider === 'google_gemini');
+  const manualDraftsAvailable = provider === 'openai' && configured && adapterAvailable;
   return {
     configured,
     provider: configured ? provider : 'not_configured',
@@ -113,16 +121,20 @@ export function getAIProviderStatus(env = process.env) {
     adapterAvailable,
     manualDraftsAvailable,
     botChatAvailable,
+    ownerControlsAvailable: botChatAvailable,
+    creatorStudioAvailable: manualDraftsAvailable,
     connected: false,
     executionEnabled: false,
-    note: manualDraftsAvailable
+    note: botChatAvailable && provider === 'openai'
       ? 'OpenAI moderated, owner-initiated bot conversations and Creator Studio draft generation are available for explicit human requests. They use private server credentials, moderation and token budgets; autonomous workers, schedules and publishing remain disabled.'
-      : configured
-        ? 'Provider credentials are present, but the selected provider does not have an accepted human-initiated Minglora generation adapter.'
-        : providerCredentialStatus?.credentialsPresent
-          ? 'Selected provider credentials are present, but a usable model and approved generation adapter are not both configured.'
-          : providerCredentialStatus?.note
-            || 'No AI provider is configured. Minglora will not invent AI responses or simulate completed runs.'
+      : botChatAvailable && provider === 'google_gemini'
+        ? 'Google Gemini safety-filtered, owner-initiated bot conversations are available for explicit human requests. Creator Studio generation remains OpenAI-only; autonomous workers, schedules and publishing remain disabled.'
+        : configured
+          ? 'Provider credentials are present, but the selected provider does not have an accepted human-initiated Minglora generation adapter.'
+          : providerCredentialStatus?.credentialsPresent
+            ? 'Selected provider credentials are present, but a usable model and approved generation adapter are not both configured.'
+            : providerCredentialStatus?.note
+              || 'No AI provider is configured. Minglora will not invent AI responses or simulate completed runs.'
   };
 }
 
