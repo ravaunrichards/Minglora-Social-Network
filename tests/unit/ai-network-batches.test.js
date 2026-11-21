@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261118075901_minglora_ai_durable_identity_batches.sql');
+const capacityMigration = read('supabase/migrations/20261121154746_minglora_ai_identity_capacity_100k.sql');
+const capacityCounterMigration = read('supabase/migrations/20261121160039_minglora_ai_identity_capacity_counter_100k.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -76,4 +78,42 @@ test('identity bulk UI requires unique row keys and exposes persisted failed-row
   assert.ok(ui.includes("/identities/batches/' + encodeURIComponent(batchId) + '/retry"));
   assert.match(ui, /saves failed row data privately in Supabase/);
   assert.match(ui, /Successful row payloads are cleared from the retry store/);
+});
+
+
+test('global AI identity ceiling is database-enforced, private and visible in the Bot Centre', () => {
+  const sql = capacityMigration.toLowerCase();
+  assert.ok(sql.includes('create table if not exists ai_network.ai_identity_capacity_limits'));
+  assert.ok(sql.includes('maximum_identities between 1 and 100000'));
+  assert.ok(sql.includes("values ('global', 100000)"));
+  assert.ok(sql.includes('for update'));
+  assert.ok(sql.includes('before insert on ai_network.ai_identities'));
+  assert.ok(sql.includes('new.idempotency_key'));
+  assert.ok(sql.includes("errcode = '54000'"));
+  assert.ok(sql.includes('security invoker'));
+  assert.ok(sql.includes("set search_path = ''"));
+  assert.ok(sql.includes('alter table ai_network.ai_identity_capacity_limits enable row level security'));
+  assert.ok(sql.includes('revoke all on table ai_network.ai_identity_capacity_limits from public, anon, authenticated, service_role'));
+  assert.ok(sql.includes('grant select, update on table ai_network.ai_identity_capacity_limits to service_role'));
+  assert.ok(sql.includes('minglora_ai_identity_capacity_status(uuid)'));
+  assert.ok(runtime.includes('"ai_identity_capacity_status"'));
+  assert.ok(runtime.includes('admin.rpc("minglora_ai_identity_capacity_status"'));
+  assert.ok(server.includes('runAIIdentityCapacityStatus'));
+  assert.ok(server.includes("sub === 'identity-capacity'"));
+  assert.ok(ui.includes('identityCapacity'));
+  assert.ok(ui.includes('global ceiling of 100,000'));
+  assert.ok(ui.includes('Global AI identity capacity'));
+  assert.ok(ui.includes('state.identityCapacity?.capacity_reached'));
+  assert.ok(ui.includes('up to 100 per batch'));
+
+  const counterSql = capacityCounterMigration.toLowerCase();
+  assert.ok(counterSql.includes('add column if not exists registered_count bigint not null default 0'));
+  assert.ok(counterSql.includes('registered_count=registered_count+1'));
+  assert.ok(counterSql.includes('registered_count=greatest(registered_count-1,0)'));
+  assert.ok(counterSql.includes('after insert on ai_network.ai_identities'));
+  assert.ok(counterSql.includes('before delete on ai_network.ai_identities'));
+  assert.ok(counterSql.includes('after delete on ai_network.ai_identities'));
+  assert.ok(counterSql.includes('select c.maximum_identities, c.registered_count'));
+  assert.ok(counterSql.includes('security invoker'));
+  assert.ok(counterSql.includes("set search_path = ''"));
 });

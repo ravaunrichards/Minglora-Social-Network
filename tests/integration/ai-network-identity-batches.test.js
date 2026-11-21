@@ -7,6 +7,14 @@ const migrationSql = readFileSync(
   new URL('../../supabase/migrations/20261118075901_minglora_ai_durable_identity_batches.sql', import.meta.url),
   'utf8'
 );
+const capacityMigrationSql = readFileSync(
+  new URL('../../supabase/migrations/20261121154746_minglora_ai_identity_capacity_100k.sql', import.meta.url),
+  'utf8'
+);
+const capacityCounterMigrationSql = readFileSync(
+  new URL('../../supabase/migrations/20261121160039_minglora_ai_identity_capacity_counter_100k.sql', import.meta.url),
+  'utf8'
+);
 const databaseUrl = process.env.AI_NETWORK_TEST_DATABASE_URL;
 
 test('PostgreSQL 17: durable identity batches isolate failures, replay safely and retry only failed rows', {
@@ -52,6 +60,7 @@ test('PostgreSQL 17: durable identity batches isolate failures, replay safely an
       values ('batch-row-fail-0001') on conflict do nothing;
       grant usage on schema public,ai_network to service_role;
       grant select,insert,update on public.profiles,public.ai_identity_batch_test_failures,ai_network.ai_identities to service_role;
+      grant delete on ai_network.ai_identities to service_role;
       grant delete on public.ai_identity_batch_test_failures to service_role;
       create or replace function public.minglora_ai_identity_command(
         p_action text,p_actor_user_id uuid,p_payload jsonb
@@ -79,6 +88,8 @@ test('PostgreSQL 17: durable identity batches isolate failures, replay safely an
     `);
 
     await client.query(migrationSql);
+    await client.query(capacityMigrationSql);
+    await client.query(capacityCounterMigrationSql);
 
     const owner = '11111111-1111-4111-8111-111111111111';
     const otherOwner = '22222222-2222-4222-8222-222222222222';
@@ -189,6 +200,119 @@ test('PostgreSQL 17: durable identity batches isolate failures, replay safely an
     assert.equal(noOpRetry.rows[0].result.failed_count,0);
     const events = await client.query('select count(*)::int as count from ai_network.ai_identity_batch_events where batch_id=$1',[first.batch_id]);
     assert.equal(events.rows[0].count,4,'Creation, both retries and the no-op retry must be auditable.');
+
+    // Lower the global ceiling only inside this disposable PostgreSQL test database.
+    // The live project keeps its configured 100,000 ceiling and receives no fixtures.
+    await client.query(
+      "update ai_network.ai_identity_capacity_limits set maximum_identities=4 where capacity_key='global'"
+    );
+    await client.query(
+      'insert into ai_network.ai_identities(owner_user_id,idempotency_key) values($1,$2)',
+      [owner,'capacity-final-allowed-0001']
+    );
+    await assert.rejects(
+      client.query(
+        'insert into ai_network.ai_identities(owner_user_id,idempotency_key) values($1,$2)',
+        [otherOwner,'capacity-final-blocked-0001']
+      ),
+      error => error.code === '54000'
+    );
+    const capacityAtLimit = await client.query(
+      'select public.minglora_ai_identity_capacity_status($1::uuid) as result',
+      [owner]
+    );
+    assert.equal(capacityAtLimit.rows[0].result.registered_count,4);
+    assert.equal(capacityAtLimit.rows[0].result.maximum_identities,4);
+    assert.equal(capacityAtLimit.rows[0].result.remaining_capacity,0);
+    assert.equal(capacityAtLimit.rows[0].result.capacity_reached,true);
+
+    // The capacity row lock must serialize two concurrent writers at the final slot.
+    await client.query(
+      "update ai_network.ai_identity_capacity_limits set maximum_identities=5 where capacity_key='global'"
+    );
+    await client.query('begin');
+    await client.query(
+      'insert into ai_network.ai_identities(owner_user_id,idempotency_key) values($1,$2)',
+      [owner,'capacity-concurrent-final-0001']
+    );
+
+    const competingClient = new Client({ connectionString: databaseUrl });
+    await competingClient.connect();
+    try {
+      await competingClient.query('set role service_role');
+      let competingSettled = false;
+      const competingInsert = competingClient.query(
+        'insert into ai_network.ai_identities(owner_user_id,idempotency_key) values($1,$2)',
+        [otherOwner,'capacity-concurrent-overflow-0001']
+      ).then(
+        () => { competingSettled = true; return { inserted: true }; },
+        error => { competingSettled = true; return { error }; }
+      );
+
+      await new Promise(resolve => setTimeout(resolve,100));
+      assert.equal(competingSettled,false,'The second writer must wait for the global capacity lock.');
+      await client.query('commit');
+
+      const competingResult = await competingInsert;
+      assert.equal(competingResult.error?.code,'54000','Only one writer may consume the final registry slot.');
+    } finally {
+      await competingClient.query('reset role').catch(() => {});
+      await competingClient.end();
+    }
+
+    const capacityAfterRace = await client.query(
+      'select public.minglora_ai_identity_capacity_status($1::uuid) as result',
+      [owner]
+    );
+    assert.equal(capacityAfterRace.rows[0].result.registered_count,5);
+    assert.equal(capacityAfterRace.rows[0].result.maximum_identities,5);
+    assert.equal(capacityAfterRace.rows[0].result.capacity_reached,true);
+
+    const counterMatchesCanonicalTable = await client.query(`
+      select
+        c.registered_count,
+        (select count(*)::bigint from ai_network.ai_identities) as actual_count
+      from ai_network.ai_identity_capacity_limits c
+      where c.capacity_key='global'
+    `);
+    assert.equal(Number(counterMatchesCanonicalTable.rows[0].registered_count),5);
+    assert.equal(Number(counterMatchesCanonicalTable.rows[0].actual_count),5);
+
+    await client.query(
+      'delete from ai_network.ai_identities where owner_user_id=$1 and idempotency_key=$2',
+      [owner,'capacity-concurrent-final-0001']
+    );
+    const afterDelete = await client.query(
+      'select public.minglora_ai_identity_capacity_status($1::uuid) as result',
+      [owner]
+    );
+    assert.equal(afterDelete.rows[0].result.registered_count,4,'Deleting an identity must free one registration slot.');
+    assert.equal(afterDelete.rows[0].result.remaining_capacity,1);
+    await client.query(
+      'insert into ai_network.ai_identities(owner_user_id,idempotency_key) values($1,$2)',
+      [owner,'capacity-delete-refill-0001']
+    );
+    const afterRefill = await client.query(
+      'select public.minglora_ai_identity_capacity_status($1::uuid) as result',
+      [owner]
+    );
+    assert.equal(afterRefill.rows[0].result.registered_count,5);
+    assert.equal(afterRefill.rows[0].result.capacity_reached,true);
+
+    await client.query('reset role');
+    await client.query('set role anon');
+    await assert.rejects(
+      client.query('select * from ai_network.ai_identity_capacity_limits'),
+      error => error.code === '42501'
+    );
+    await client.query('reset role');
+    await client.query('set role authenticated');
+    await assert.rejects(
+      client.query('select public.minglora_ai_identity_capacity_status($1::uuid)',[owner]),
+      error => error.code === '42501'
+    );
+    await client.query('reset role');
+    await client.query('set role service_role');
   } finally {
     await client.query('reset role').catch(() => {});
     await client.end();
