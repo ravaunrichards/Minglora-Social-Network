@@ -2558,6 +2558,69 @@ async function route(req, res) {
         }
       };
 
+
+      const requireAITaskAdmin = () => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage the AI task queue.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI task records require Minglora Supabase persistence.'), { status: 503 });
+        }
+      };
+
+      const runAITaskEventsCommand = async taskId => {
+        requireAITaskAdmin();
+        try {
+          const response = await requestSupabaseState('ai_task_events', {
+            actorUserId: user.id,
+            taskId
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI task logs are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result || { task_id: taskId, events: [] };
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|function .*minglora_ai_task_events.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI task event-log migration and runtime gateway must be deployed before logs are available. No task data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      const runAITaskRetryCommand = async (taskId, input = {}) => {
+        requireAITaskAdmin();
+        try {
+          const response = await requestSupabaseState('ai_task_retry', {
+            actorUserId: user.id,
+            taskId,
+            reason: String(input.reason || '').trim(),
+            maxAttempts: input.maxAttempts === undefined || input.maxAttempts === null || input.maxAttempts === ''
+              ? null
+              : Number(input.maxAttempts)
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI task retry is unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|function .*minglora_ai_task_retry.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI task retry migration and runtime gateway must be deployed before retry is available. No task data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const runAIProviderCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2896,6 +2959,34 @@ async function route(req, res) {
         const result = await runAITaskCommand('create_task', input);
         return json(res, result?.reused ? 200 : 201, result || {});
       }
+
+      if (parts[0] === 'tasks' && parts.length === 3 && method === 'GET' && parts[2] === 'events') {
+        const taskId = parts[1];
+        if (!aiIdentityIdPattern.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required to view task logs.'), { status: 400 });
+        }
+        const result = await runAITaskEventsCommand(taskId);
+        return json(res, 200, result || { task_id: taskId, events: [] });
+      }
+      if (parts[0] === 'tasks' && parts.length === 3 && method === 'POST' && parts[2] === 'retry') {
+        const taskId = parts[1];
+        if (!aiIdentityIdPattern.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required to retry a task.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            String(input.reason || '').trim().length < 3 ||
+            String(input.reason || '').trim().length > 1000) {
+          throw Object.assign(new Error('A retry reason between 3 and 1000 characters is required.'), { status: 400 });
+        }
+        if (input.maxAttempts !== undefined && input.maxAttempts !== null &&
+            (!Number.isSafeInteger(Number(input.maxAttempts)) || Number(input.maxAttempts) < 1 || Number(input.maxAttempts) > 10)) {
+          throw Object.assign(new Error('Maximum task attempts must be a whole number between 1 and 10.'), { status: 400 });
+        }
+        const result = await runAITaskRetryCommand(taskId, input);
+        return json(res, 200, result || {});
+      }
+
       if (parts[0] === 'tasks' && parts.length === 3 && method === 'PATCH' && parts[2] === 'approval') {
         const taskId = parts[1];
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
