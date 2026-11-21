@@ -14,10 +14,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const ownerId = 'owner-phase9-test';
 
-function createBot(db, name = 'Phase Nine Assistant') {
+function createBot(db, name = 'Phase Nine Assistant', purpose = 'Help the owner prepare clear, reviewed creator support materials.') {
   return createAIBot(db, ownerId, {
     name,
-    purpose: 'Help the owner prepare clear, reviewed creator support materials.',
+    purpose,
     tone: 'friendly',
     expertise: 'Creator support',
     traits: ['helpful', 'curious'],
@@ -53,7 +53,7 @@ test('Phase 9 bot edit persists validated configuration and records an audit eve
 test('Phase 9 bot edit rejects invalid traits, unsupported capabilities and duplicate names', () => {
   const db = {};
   const first = createBot(db, 'First Assistant');
-  createBot(db, 'Second Assistant');
+  createBot(db, 'Second Assistant', 'Help the owner plan safer, more inclusive community discussions.');
 
   assert.throws(
     () => updateAIBotDetails(db, ownerId, first.id, { traits: ['helpful'] }),
