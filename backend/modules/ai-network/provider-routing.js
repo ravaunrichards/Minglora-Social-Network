@@ -20,14 +20,14 @@ function readRetryCount(value) {
 }
 
 /**
- * Resolves the only currently supported safe route. The production catalogue
- * contains other providers, but they remain non-routable until an adapter and
- * its authentication, moderation and usage contracts are independently tested.
+ * Resolves a safe route for providers with an implemented adapter, provider
+ * health probe, safety contract and usage accounting. Fallbacks must stay on
+ * the same provider so requests never silently change credentials or policy.
  */
 export function resolveProviderRoute({ primaryProvider = 'openai', primaryModel, env = process.env } = {}) {
   const primary = normalize(primaryProvider);
   const model = String(primaryModel ?? '').trim();
-  if (primary !== 'openai') {
+  if (!['openai', 'google_gemini'].includes(primary)) {
     throw routeError('provider_adapter_unavailable', 'The selected primary provider does not have an approved Minglora inference adapter.', 503);
   }
   if (!MODEL_ID_PATTERN.test(model)) {
@@ -43,10 +43,10 @@ export function resolveProviderRoute({ primaryProvider = 'openai', primaryModel,
       503
     );
   }
-  if (fallbackProvider && fallbackProvider !== 'openai') {
+  if (fallbackProvider && fallbackProvider !== primary) {
     throw routeError(
       'fallback_adapter_unavailable',
-      'The configured fallback provider has no approved Minglora inference adapter. Only an alternate OpenAI model can currently be used as fallback.',
+      'A fallback must use the same provider and credential set as the selected primary provider.',
       503
     );
   }
