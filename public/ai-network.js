@@ -59,6 +59,31 @@
     state.error = '';
   }
 
+  function setOperationalLoading(active, message = 'Working…') {
+    const host = root();
+    if (!host) return;
+    const existing = host.querySelector('[data-ai-operational-loading]');
+    if (!active) {
+      existing?.remove();
+      host.removeAttribute('aria-busy');
+      return;
+    }
+    const page = host.querySelector('.ai-network-page');
+    if (!page) return;
+    const indicator = existing || document.createElement('div');
+    indicator.className = 'ai-network-working';
+    indicator.dataset.aiOperationalLoading = 'true';
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-live', 'polite');
+    if (!existing) {
+      indicator.innerHTML = '<span class="ai-network-spinner" aria-hidden="true"></span><strong></strong>';
+      page.prepend(indicator);
+    }
+    const label = indicator.querySelector('strong');
+    if (label) label.textContent = message;
+    host.setAttribute('aria-busy', 'true');
+  }
+
   function selectedValues(form, name) {
     return [...form.querySelectorAll('input[name="' + name + '"]:checked')].map(input => input.value);
   }
@@ -3199,6 +3224,9 @@
     event.preventDefault();
     if (state.busy) return;
     state.busy = true;
+    setOperationalLoading(true, form.dataset.aiForm === 'bot-edit'
+      ? 'Saving AI bot configuration…'
+      : 'Saving AI Network changes…');
     try {
       await submit(form);
     } catch (error) {
@@ -3206,6 +3234,7 @@
       paintSnapshot();
     } finally {
       state.busy = false;
+      setOperationalLoading(false);
     }
   };
 
@@ -3214,6 +3243,16 @@
     if (!button || button.disabled || state.busy) return;
     const action = button.dataset.aiAction, id = button.dataset.id;
     state.busy = true;
+    if (!['bot-edit-open','identity-page','identity-search-clear'].includes(action)) {
+      const loadingMessage = action === 'emergency-pause'
+        ? 'Pausing AI bot and schedule controls…'
+        : action === 'emergency-resume'
+          ? 'Checking provider access and resuming owner controls…'
+          : action === 'bot-delete'
+            ? 'Removing Bot Lab configuration…'
+            : 'Applying AI Network action…';
+      setOperationalLoading(true, loadingMessage);
+    }
     try {
       if (action === 'identity-page') {
         const offset = Number(button.dataset.offset);
@@ -3426,6 +3465,7 @@
       }
     } finally {
       state.busy = false;
+      setOperationalLoading(false);
     }
   };
 
@@ -3435,6 +3475,7 @@
       : null;
     if (!select || state.busy) return;
     state.busy = true;
+    setOperationalLoading(true, 'Loading AI memory…');
     try {
       await loadAIMemory(select.value);
       paintSnapshot();
@@ -3443,6 +3484,7 @@
       paintSnapshot();
     } finally {
       state.busy = false;
+      setOperationalLoading(false);
     }
   };
 
@@ -3452,6 +3494,7 @@
       : null;
     if (!select || state.busy) return;
     state.busy = true;
+    setOperationalLoading(true, 'Loading AI mailbox…');
     try {
       await loadAIEmailCenter(select.value);
       paintSnapshot();
@@ -3460,6 +3503,7 @@
       paintSnapshot();
     } finally {
       state.busy = false;
+      setOperationalLoading(false);
     }
   };
 
