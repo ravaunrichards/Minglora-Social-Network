@@ -2848,13 +2848,6 @@ async function route(req, res) {
           member_ids: memberIds,
           idempotency_key: idempotencyKey
         });
-        if (scope === 'organizational' && result?.team?.team_id) {
-          await runAIWorkforceCommand('set_team_scope', input.organizationId, {
-            team_id: result.team.team_id,
-            department_id: input.departmentId || null,
-            team_kind: input.teamKind || 'operational'
-          });
-        }
         return json(res, 201, result || {});
       }
       if (parts[0] === 'teams' && parts.length === 3 && parts[2] === 'members' && method === 'POST') {
