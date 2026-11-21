@@ -58,11 +58,13 @@ test('health and readiness endpoints are present and readiness checks persistenc
   assert.match(ready, /supabaseAuthConfigured\(\)/);
 });
 
-test('login abuse throttle has a bounded threshold and expiry', () => {
+test('login abuse throttle retains five attempts per 15-minute window and a hard key bound', () => {
   const server = read('src/server.js');
+  const limiter = read('src/security/fixed-window-limiter.js');
   assert.match(server, /function checkLoginRateLimit/);
-  assert.match(server, /entry\.count<5/);
-  assert.match(server, /15\*60\*1000/);
+  assert.match(server, /createFixedWindowLimiter\(\{limit:5,windowMs:15\*60\*1000,maxKeys:20_000\}\)/);
+  assert.match(limiter, /while \(entries\.size >= maxKeys\)/);
+  assert.match(limiter, /entry\.count < limit/);
 });
 
 test('provider status exposes credential presence but never echoes a secret value', () => {

@@ -6,7 +6,7 @@
 - Session-cookie decoding and signature validation reject malformed values; session records carry user-agent and timestamps, and Supabase access/refresh tokens are encrypted in application state at rest.
 - Members can list active sessions, revoke a single device session, or log out other devices.
 - Supabase password recovery, authenticated password changes, email-change verification requests, TOTP authenticator enrollment/challenge/verification/removal and MFA-aware sign-in are wired through the server.
-- Login failures are throttled (five failed attempts per email/IP key per 15 minutes in the current single-process runtime).
+- Login failures are throttled (five failed attempts per normalized email/IP key per 15 minutes) by a bounded in-process limiter capped at 20,000 keys. The cap prevents unbounded memory growth but is not a distributed limiter; keep one API instance and retain Supabase Auth throttling until a shared limiter is deployed.
 - Unsafe API requests reject cross-site Fetch Metadata and validate a supplied browser `Origin` against `APP_ORIGIN` or the effective request origin.
 - API and static responses include baseline content-type, frame, referrer and camera/microphone permissions headers.
 - Passwords are never returned in public account objects; local development passwords use salted scrypt hashes, while Supabase Auth owns production passwords.
