@@ -54,7 +54,7 @@ import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISett
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { generateOpenAIBotReply } from '../backend/modules/ai-network/openai-bot-chat.js';
-import { createAIRequestSecurityGuard, createAIOperationalMonitor, classifyAIRequestRoute } from '../backend/modules/ai-network/security-reliability.js';
+import { createAIRequestSecurityGuard, createAIOperationalMonitor, classifyAIRequestRoute, sanitizeAIErrorCode } from '../backend/modules/ai-network/security-reliability.js';
 import { getAIEmailConfig, inspectResendDomain, sendResendEmail, retrieveResendInboundEmail, verifyResendWebhook, normalizeAIEmailAddress } from '../backend/modules/ai-network/email-service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
@@ -1604,7 +1604,10 @@ async function route(req, res) {
     } catch (error) {
       const status = Number(error?.status) || 503;
       console.error('[Minglora AI email webhook] Processing failed.', {
-        status, message: String(error?.message || 'Provider webhook processing failed.').slice(0, 180)
+        requestId: req.aiRequestId || null,
+        status,
+        errorCode: sanitizeAIErrorCode(error?.code),
+        occurredAt: new Date().toISOString()
       });
       return json(res, status, { error: String(error?.message || 'Email webhook processing failed.').slice(0, 220) });
     }
@@ -11103,6 +11106,7 @@ const server=http.createServer((req,res)=>{
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
   const routeGroup = classifyAIRequestRoute(pathname, req.method);
+  req.aiRequestId = requestId;
   res.setHeader('X-Minglora-Request-ID', requestId);
   res.once('finish',()=>{
     aiOperationalMonitor.recordResponse({
@@ -11126,8 +11130,7 @@ const server=http.createServer((req,res)=>{
 
   route(req,res).catch(error=>{
     aiOperationalMonitor.recordUnexpectedError();
-    const rawCode = typeof error?.code === 'string' ? error.code : 'unhandled_error';
-    const errorCode = /^[A-Za-z0-9_.-]{1,64}$/.test(rawCode) ? rawCode : 'unhandled_error';
+    const errorCode = sanitizeAIErrorCode(error?.code);
     console.error(JSON.stringify({
       level: 'error',
       component: 'ai-network',
