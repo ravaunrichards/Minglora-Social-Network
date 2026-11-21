@@ -11024,7 +11024,26 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});
 }
 
-const server=http.createServer((req,res)=>{route(req,res).catch(()=>json(res,500,{error:'Unexpected server error.'}));});
+const server=http.createServer((req,res)=>{
+  const requestId=crypto.randomUUID();
+  res.setHeader('X-Request-Id',requestId);
+  route(req,res).catch(error=>{
+    const rawCode=String(error?.code||'').replace(/[^A-Za-z0-9_.:-]/g,'').slice(0,64);
+    // Emit only metadata: never log request bodies, query strings, cookies,
+    // authorization headers, provider response bodies, prompts or raw errors.
+    console.error('[Minglora API error]',JSON.stringify({
+      event:'request_unhandled_error',
+      requestId,
+      method:String(req.method||'').slice(0,12),
+      status:500,
+      errorType:String(error?.name||'Error').slice(0,64),
+      errorCode:rawCode||null,
+      occurredAt:now()
+    }));
+    if(res.headersSent){res.destroy();return;}
+    json(res,500,{error:'Unexpected server error.',requestId});
+  });
+});
 const messengerRealtime=createMessengerRealtimeHub({
   WebSocketServer,WebSocket,
   getUserFromRequest:req=>sessionUser(req),
