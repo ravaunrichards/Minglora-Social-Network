@@ -1,0 +1,29 @@
+name: Minglora AI Network CI
+
+on:
+  push:
+    branches:
+      - feat/ai-network-operational-dashboard-phase9
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Node test suite and repository checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Check repository invariants
+        run: npm run check:repo
