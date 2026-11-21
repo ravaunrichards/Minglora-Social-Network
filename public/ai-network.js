@@ -1140,6 +1140,11 @@
       value:team.team_id,label:team.team_name
     })));
     const activeTeamChoices = activeTeams.map(team => ({value:team.team_id,label:team.team_name}));
+    const departmentChoices = [{value:'',label:'Organization-wide'}].concat(
+      list(hr.departments).map(row => row.department).filter(Boolean).map(department => ({
+        value:department.department_id,label:department.display_name
+      }))
+    );
     const identityCheckboxes = activeEmployees.map(row =>
       '<label class="ai-network-check"><input type="checkbox" name="memberIds" value="' +
       esc(row.identity?.identity_id || '') + '"><span><strong>' +
@@ -1266,6 +1271,10 @@
         esc(organizationId) + '"><div class="ai-network-form-title">Create an organizational team</div>' +
         '<label>Team name<input name="teamName" required minlength="2" maxlength="80"></label>' +
         '<label>Description<textarea name="description" maxlength="1000" rows="2"></textarea></label>' +
+        '<div class="ai-network-form-grid"><label>Department scope<select name="departmentId">' +
+        options(departmentChoices,'') + '</select></label><label>Organizational unit type<select name="teamKind">' +
+        options([{value:'operational',label:'Operational team'},{value:'management',label:'Management team'},{value:'specialized',label:'Specialized operational unit'},{value:'project',label:'Project team'}],'operational') +
+        '</select></label></div><p class="ai-network-note">Management teams are restricted to active employees in management or supervisory job families.</p>' +
         '<fieldset><legend>Initial employee members (1–20)</legend><div class="ai-network-check-grid">' +
         identityCheckboxes + '</div></fieldset><button class="primary" type="submit">Create organizational team</button></form>'
       : '<p class="ai-network-note">Appoint active employees before creating an organization team.</p>';
@@ -2704,6 +2713,8 @@
       payload.description=value('description');
       payload.populationScope='organizational';
       payload.organizationId=organizationId;
+      payload.departmentId=value('departmentId')||null;
+      payload.teamKind=value('teamKind')||'operational';
       payload.memberIdentityIds=memberIdentityIds;
       form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
       payload.idempotencyKey=form.dataset.idempotencyKey;
