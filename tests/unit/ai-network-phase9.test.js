@@ -106,6 +106,6 @@ test('Phase 9 administrative dashboard exposes real audit logs and marks unsuppo
   assert.ok(ui.includes('View Bot Lab operational logs'));
   assert.ok(ui.includes('Process restart is not supported'));
   assert.ok(ui.includes('Start, stop-running and retry are unavailable'));
-  assert.ok(ui.includes('no push-based real-time event feed'));
+  assert.ok(ui.includes('no push-based live event feed is configured'));
   assert.ok(service.includes('auditLog: ownerRows(db.aiBotAudit, ownerId)'));
 });
