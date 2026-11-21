@@ -4990,7 +4990,7 @@ Deno.serve(async (req: Request) => {
     if (new TextEncoder().encode(serialized).byteLength > 24000) {
       return json(413, { error: "AI workforce request data is too large." });
     }
-    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\\s*:/i.test(serialized)) {
+    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
       return json(400, { error: "Credentials and secrets are not allowed in workforce requests." });
     }
 
