@@ -190,9 +190,10 @@ revoke all on ai_network.ai_employee_permission_grants,
   ai_network.ai_employee_task_assignments, ai_network.ai_team_messages,
   ai_network.ai_employee_reports, ai_network.ai_workforce_events
   from public, anon, authenticated;
-grant select, insert, update, delete on ai_network.ai_employee_permission_grants,
-  ai_network.ai_employee_task_assignments, ai_network.ai_team_messages,
-  ai_network.ai_employee_reports, ai_network.ai_workforce_events to service_role;
+grant select, insert, update on ai_network.ai_employee_permission_grants,
+  ai_network.ai_employee_reports to service_role;
+grant select, insert on ai_network.ai_employee_task_assignments,
+  ai_network.ai_team_messages, ai_network.ai_workforce_events to service_role;
 grant usage on schema ai_network to service_role;
 
 -- Invalidating an employee, team membership, team, or permission grant also
@@ -534,18 +535,21 @@ begin
         where a.owner_user_id=v_owner and a.organization_id=p_organization_id
       ),'[]'::jsonb),
       'reports',coalesce((
-        select jsonb_agg(jsonb_build_object(
-          'report',to_jsonb(r),
-          'employee_name',coalesce(n.display_name,n.full_name,n.username,'AI employee'),
-          'manager_name',coalesce(mn.display_name,mn.full_name,mn.username,'')
-        ) order by r.submitted_at desc)
-        from ai_network.ai_employee_reports r
-        join ai_network.ai_employment_records e on e.organization_id=r.organization_id and e.employment_id=r.employment_id
-        join ai_network.ai_names n on n.identity_id=e.identity_id
-        left join ai_network.ai_employment_records me on me.organization_id=r.organization_id and me.employment_id=r.manager_employment_id
-        left join ai_network.ai_names mn on mn.identity_id=me.identity_id
-        where r.owner_user_id=v_owner and r.organization_id=p_organization_id
-        order by r.submitted_at desc limit 100
+        select jsonb_agg(x.entry order by x.submitted_at desc)
+        from (
+          select jsonb_build_object(
+            'report',to_jsonb(r),
+            'employee_name',coalesce(n.display_name,n.full_name,n.username,'AI employee'),
+            'manager_name',coalesce(mn.display_name,mn.full_name,mn.username,'')
+          ) as entry,r.submitted_at
+          from ai_network.ai_employee_reports r
+          join ai_network.ai_employment_records e on e.organization_id=r.organization_id and e.employment_id=r.employment_id
+          join ai_network.ai_names n on n.identity_id=e.identity_id
+          left join ai_network.ai_employment_records me on me.organization_id=r.organization_id and me.employment_id=r.manager_employment_id
+          left join ai_network.ai_names mn on mn.identity_id=me.identity_id
+          where r.owner_user_id=v_owner and r.organization_id=p_organization_id
+          order by r.submitted_at desc limit 100
+        ) x
       ),'[]'::jsonb)
     );
   end if;
@@ -563,8 +567,8 @@ begin
     if jsonb_typeof(coalesce(v_payload->'allowed_task_types','[]'::jsonb))<>'array' then
       raise exception using errcode='22023', message='Allowed task types must be a JSON array.';
     end if;
-    select coalesce(array_agg(lower(trim(x))),array[]::text[]) into v_allowed_types
-    from jsonb_array_elements_text(coalesce(v_payload->'allowed_task_types','[]'::jsonb)) x;
+    select coalesce(array_agg(lower(trim(q.task_type))),array[]::text[]) into v_allowed_types
+    from jsonb_array_elements_text(coalesce(v_payload->'allowed_task_types','[]'::jsonb)) as q(task_type);
     if v_permission_key in ('task.assign.read_only','task.assign.content') then
       if cardinality(v_allowed_types)<1 or cardinality(v_allowed_types)>50
          or exists(select 1 from unnest(v_allowed_types) x where x !~ '^[a-z][a-z0-9_.-]{1,79}$') then
@@ -975,6 +979,10 @@ revoke all on function ai_network.cancel_workforce_assignments_on_employment_cha
 revoke all on function ai_network.cancel_workforce_assignments_on_membership_change() from public, anon, authenticated;
 revoke all on function ai_network.cancel_workforce_assignments_on_team_change() from public, anon, authenticated;
 revoke all on function ai_network.enforce_workforce_task_authority() from public, anon, authenticated;
+grant execute on function ai_network.cancel_workforce_assignments_on_employment_change() to service_role;
+grant execute on function ai_network.cancel_workforce_assignments_on_membership_change() to service_role;
+grant execute on function ai_network.cancel_workforce_assignments_on_team_change() to service_role;
+grant execute on function ai_network.enforce_workforce_task_authority() to service_role;
 
 comment on table ai_network.ai_employee_permission_grants is
   'Explicit, owner-scoped least-privilege grants for AI employees; absence of a grant means denied.';
