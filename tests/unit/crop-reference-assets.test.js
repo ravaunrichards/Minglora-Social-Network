@@ -181,7 +181,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v362-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v363-self-updating-1/);
   const appAsset='/app.js?v=20261118-live-cohost-panel-separation-1';
   assert.ok(html.includes(appAsset),'HTML loads the current LIVE app bundle');
   assert.ok(serviceWorker.includes("'"+appAsset+"'"),'service worker precaches the same LIVE app bundle');
