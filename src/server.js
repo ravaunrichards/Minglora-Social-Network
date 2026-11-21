@@ -9,6 +9,7 @@ import { DEFAULT_EXPERIENCE_SETTINGS, validateExperienceSettingsPatch } from './
 import { buildAISocialMember, performAISocialAction, validateAISocialConsent } from '../backend/modules/ai-network/social-integration.js';
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
+import { createFixedWindowLimiter } from './security/fixed-window-limiter.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
@@ -492,11 +493,14 @@ function hasActiveBrandMfaSession(user,req){
   const session=req?sessionFromRequest(req):null;
   return Boolean(session&&session.userId===user.id&&session.mfaVerified===true);
 }
-const loginFailures=new Map();
-function loginRateLimitKey(req,email){const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();return crypto.createHash('sha256').update(ip+'|'+email).digest('hex');}
-function checkLoginRateLimit(req,email){const key=loginRateLimitKey(req,email),entry=loginFailures.get(key);if(!entry)return {allowed:true,key};if(entry.resetAt<Date.now()){loginFailures.delete(key);return {allowed:true,key};}return {allowed:entry.count<5,key,retryAfterMs:Math.max(0,entry.resetAt-Date.now())};}
-function recordLoginFailure(key){const current=loginFailures.get(key);if(!current||current.resetAt<Date.now())loginFailures.set(key,{count:1,resetAt:Date.now()+15*60*1000});else current.count++;}
-function clearLoginFailures(key){loginFailures.delete(key);}
+// Five failed attempts per email/IP key per 15 minutes. The bounded map prevents
+// attacker-controlled unique email/IP pairs from growing process memory forever.
+// This remains process-local and must not be treated as a distributed limiter.
+const loginFailures=createFixedWindowLimiter({limit:5,windowMs:15*60*1000,maxKeys:20_000});
+function loginRateLimitKey(req,email){const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();return crypto.createHash('sha256').update(ip+'|'+String(email||'').trim().toLowerCase()).digest('hex');}
+function checkLoginRateLimit(req,email){return loginFailures.check(loginRateLimitKey(req,email));}
+function recordLoginFailure(key){loginFailures.recordFailure(key);}
+function clearLoginFailures(key){loginFailures.clear(key);}
 function tokenAal(accessToken){try{const segment=String(accessToken).split('.')[1];const claims=JSON.parse(Buffer.from(segment,'base64url').toString('utf8'));return claims.aal||'aal1';}catch{return 'aal1';}}
 function isSameOriginApiWrite(req) {
   if (String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') return false;
