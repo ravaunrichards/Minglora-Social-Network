@@ -4973,7 +4973,7 @@ Deno.serve(async (req: Request) => {
       ? input.payload
       : {};
     const supportedWorkforceCommands = [
-      "list_workforce", "list_employee_permissions", "set_position_status", "set_team_scope",
+      "list_workforce", "list_employee_permissions", "set_position_status",
       "grant_employee_permission", "revoke_employee_permission",
       "assign_employee_task", "send_team_message",
       "submit_employee_report", "review_employee_report",
