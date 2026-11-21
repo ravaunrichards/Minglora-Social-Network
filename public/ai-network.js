@@ -2961,9 +2961,9 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','employee-report-review'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
-    const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST';
+    const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : (kind === 'employee-report-review' || patchKinds.concat(talentPatchKinds).includes(kind)) ? 'PATCH' : 'POST';
     const result = await request(path, { method: requestMethod, body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
     if (kind === 'bot-chat') {
