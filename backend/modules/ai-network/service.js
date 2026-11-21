@@ -869,8 +869,10 @@ export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
 
 export function getAIPerformanceSummary(db, ownerId) {
   ensureAICollections(db);
-  const bots = ownerRows(db.aiBots, ownerId).filter(bot => !bot.deletedAt);
-  const botIds = new Set(bots.map(bot => bot.id));
+  const allBots = ownerRows(db.aiBots, ownerId);
+  const bots = allBots.filter(bot => !bot.deletedAt);
+  // Soft-deleting a Bot Lab configuration must not erase its historical run analytics.
+  const botIds = new Set(allBots.map(bot => bot.id));
   const runs = ownerRows(db.aiBotRuns, ownerId).filter(run => botIds.has(run.botId));
   const tokenUse = runs.reduce((sum, run) => sum + Math.max(0, Number(run.totalTokens) || 0), 0);
   const creatorDraftTokenUse = ownerRows(db.aiBotCreatorJobs, ownerId)
