@@ -83,7 +83,7 @@ test('AI workspace exposes profile editing without changing emails, provider ass
   assert.match(ui, /name="languages"/);
   assert.match(ui, /name="existingLocations"/);
   assert.match(ui, /payload\.languages = languages/);
-  assert.match(ui, /'identity-edit'\]/);
+  assert.match(ui, /'identity-edit','bot-config'\]/);
   assert.match(ui, /AI identity profile and name details updated/);
   assert.match(ui, /Email identity records, provider assignments, AI status and permissions are not changed/);
 });

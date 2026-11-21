@@ -63,24 +63,101 @@
     return [...form.querySelectorAll('input[name="' + name + '"]:checked')].map(input => input.value);
   }
 
+  const BOT_ROLE_OPTIONS = [
+    {value:'general_ai_member',label:'General AI member'},
+    {value:'social_ai_personality',label:'Social AI personality'},
+    {value:'business_ai_employee',label:'Business AI employee'},
+    {value:'corporate_ai_department',label:'Corporate AI department'},
+    {value:'management_ai',label:'Management AI'},
+    {value:'specialized_professional_ai',label:'Specialized professional AI'},
+    {value:'customer_service_ai',label:'Customer service AI'},
+    {value:'creative_ai',label:'Creative AI'},
+    {value:'research_ai',label:'Research AI'},
+    {value:'administrative_ai',label:'Administrative AI'}
+  ];
+  const BOT_TONE_OPTIONS = [
+    {value:'friendly',label:'Friendly'},{value:'professional',label:'Professional'},
+    {value:'educational',label:'Educational'},{value:'creative',label:'Creative'},
+    {value:'calm',label:'Calm'},{value:'energetic',label:'Energetic'},
+    {value:'concise',label:'Concise'},{value:'supportive',label:'Supportive'}
+  ];
+  const BOT_TRAIT_OPTIONS = ['helpful','curious','calm','energetic','analytical','empathetic','creative','precise','playful','patient','direct'];
+  const BOT_CAPABILITY_OPTIONS = [
+    {id:'draft_content',label:'Draft content'},
+    {id:'summarize_public_content',label:'Summarize public content'},
+    {id:'translate_user_provided_content',label:'Translate my content'},
+    {id:'suggest_replies',label:'Suggest replies'},
+    {id:'organize_creator_tasks',label:'Organize creator tasks'},
+    {id:'prepare_event_material',label:'Prepare event material'}
+  ];
+  const BOT_SPECIALIZATION_OPTIONS = [
+    {id:'community_engagement',label:'Community engagement'},
+    {id:'business_analysis',label:'Business analysis'},
+    {id:'department_coordination',label:'Department coordination'},
+    {id:'management_planning',label:'Management planning'},
+    {id:'professional_explanations',label:'Professional explanations'},
+    {id:'customer_support_guidance',label:'Customer support guidance'},
+    {id:'creative_ideation',label:'Creative ideation'},
+    {id:'research_synthesis',label:'Research synthesis'},
+    {id:'administrative_organization',label:'Administrative organization'},
+    {id:'knowledge_explanations',label:'Knowledge explanations'}
+  ];
+
+  function renderBotConfigurationForm(bot) {
+    const selectedTraits = new Set(list(bot.traits));
+    const selectedCapabilities = new Set(list(bot.capabilities));
+    const selectedSpecializations = new Set(list(bot.specializedCapabilities));
+    const active = !['archived','retired'].includes(bot.status);
+    return active
+      ? '<details class="ai-network-profile-editor ai-network-bot-config"><summary>Edit personality, role and permissions</summary>' +
+        '<form class="ai-network-form" data-ai-form="bot-config" data-id="' + esc(bot.id) + '">' +
+        '<div class="ai-network-form-grid"><label>Display name<input name="name" value="' + esc(bot.name) + '" required minlength="2" maxlength="40"></label>' +
+        '<label>AI role<select name="role">' + options(BOT_ROLE_OPTIONS, bot.role || 'general_ai_member') + '</select></label></div>' +
+        '<label>Purpose<textarea name="purpose" required minlength="20" maxlength="280" rows="3">' + esc(bot.purpose) + '</textarea></label>' +
+        '<div class="ai-network-form-grid"><label>Personality tone<select name="tone">' + options(BOT_TONE_OPTIONS, bot.tone || 'friendly') + '</select></label>' +
+        '<label>Expertise<input name="expertise" value="' + esc(bot.expertise || '') + '" maxlength="180"></label>' +
+        '<label>Languages<input name="languages" value="' + esc(list(bot.languages).join(', ')) + '" required placeholder="en, es, fr, ht"></label>' +
+        '<label>Primary language<input name="primaryLanguage" value="' + esc(bot.primaryLanguage || 'en') + '" required maxlength="35"></label></div>' +
+        '<fieldset><legend>Personality traits · choose two to five</legend><div class="ai-network-check-grid">' +
+        BOT_TRAIT_OPTIONS.map(trait => '<label class="ai-network-check"><input type="checkbox" name="traits" value="' + trait + '"' + (selectedTraits.has(trait) ? ' checked' : '') + '><span>' + trait + '</span></label>').join('') +
+        '</div></fieldset><fieldset><legend>Allowed task capabilities</legend><div class="ai-network-check-grid">' +
+        BOT_CAPABILITY_OPTIONS.map(item => '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.id + '"' + (selectedCapabilities.has(item.id) ? ' checked' : '') + '><span>' + item.label + '</span></label>').join('') +
+        '</div></fieldset><fieldset><legend>Specialized capability profile</legend><div class="ai-network-check-grid">' +
+        BOT_SPECIALIZATION_OPTIONS.map(item => '<label class="ai-network-check"><input type="checkbox" name="specializedCapabilities" value="' + item.id + '"' + (selectedSpecializations.has(item.id) ? ' checked' : '') + '><span>' + item.label + '</span></label>').join('') +
+        '</div></fieldset><label>Independent behavior instructions<textarea name="behaviorInstructions" maxlength="4000" rows="4" placeholder="Describe response style, workflow preferences and subject focus. These instructions cannot grant permissions or override platform safeguards.">' +
+        esc(bot.behaviorInstructions || '') + '</textarea></label>' +
+        '<p class="ai-network-note">Configuration version ' + number(bot.configurationVersion || 1) + '. Changes are saved to this AI identity only and synchronized to its relational profile. Behavior instructions are untrusted preferences, not system permissions.</p>' +
+        '<button class="primary" type="submit">Save this AI configuration</button></form></details>'
+      : '';
+  }
+
   function renderBotRows(bots) {
     if (!bots.length) return empty('No AI bots created yet. Create your first clearly labelled AI assistant below.');
-    return '<div class="ai-network-list">' + bots.map(bot =>
-      '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
-      esc(bot.name) + '</strong><div class="ai-network-meta">' + pill('AI BOT', 'ai') + ' ' + pill(bot.status, bot.status === 'active' ? 'success' : 'neutral') +
-      '</div><p>' + esc(bot.purpose) + '</p><small>' + esc(bot.tone) + ' · ' + esc(list(bot.languages).join(', ')) + ' · ' + esc(list(bot.traits).join(', ')) + '</small></div></div>' +
-      '<div class="ai-network-row-actions">' +
-      (bot.status !== 'archived' && bot.identityLinkStatus === 'linked'
-        ? '<button type="button" class="secondary" data-ai-action="bot-chat-open" data-id="' + esc(bot.id) + '">Chat</button>'
-        : '') +
-      (bot.status === 'active'
-        ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause</button>'
-        : bot.status !== 'archived'
-          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Enables owner-initiated, moderated use only; autonomous workers remain off">Enable for owner use</button>'
+    return '<div class="ai-network-list">' + bots.map(bot => {
+      const terminal = ['archived','retired'].includes(bot.status);
+      const role = BOT_ROLE_OPTIONS.find(item => item.value === bot.role)?.label || 'General AI member';
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
+        esc(bot.name) + '</strong><div class="ai-network-meta">' + pill('AI BOT', 'ai') + ' ' + pill(bot.status, bot.status === 'active' ? 'success' : 'neutral') +
+        ' ' + pill(role) + '</div><p>' + esc(bot.purpose) + '</p><small>' + esc(bot.tone) + ' · ' + esc(list(bot.languages).join(', ')) + ' · ' + esc(list(bot.traits).join(', ')) +
+        ' · Config v' + number(bot.configurationVersion || 1) + '</small></div></div>' +
+        '<div class="ai-network-row-actions">' +
+        (!terminal && bot.identityLinkStatus === 'linked'
+          ? '<button type="button" class="secondary" data-ai-action="bot-chat-open" data-id="' + esc(bot.id) + '">Chat</button>'
           : '') +
-      (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
-      '</div></article>'
-    ).join('') + '</div>';
+        (bot.status === 'active'
+          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause</button>'
+          : bot.status === 'paused'
+            ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Resume this approved identity for owner-initiated moderated use">Resume</button>'
+            : !terminal
+              ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" title="Requires identity approval and a healthy server-side provider">Enable for owner use</button>'
+              : '') +
+        (bot.status === 'archived'
+          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="retired">Retire permanently</button>'
+          : !terminal
+            ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>'
+            : '') +
+        '</div>' + renderBotConfigurationForm(bot) + '</article>';
+    }).join('') + '</div>';
   }
 
   function renderAIBotChat() {
@@ -2064,6 +2141,7 @@
         (botCategoryOptions.length ? options(botCategoryOptions, botDefaultCategory) : '<option value="">Categories unavailable</option>') + '</select></label></div>' +
         '<label>Display name<input name="name" required minlength="2" maxlength="40" placeholder="Community Guide"></label>' +
         (!botCategoryOptions.length ? '<p class="ai-network-note">Load an available AI category before creating a Bot Lab identity.</p>' : '') +
+        '<label>AI role<select name="role">' + options(BOT_ROLE_OPTIONS, 'general_ai_member') + '</select></label>' +
         '<label>Purpose<textarea name="purpose" required minlength="20" maxlength="280" rows="3" placeholder="Describe the exact kind of help this AI bot should provide."></textarea></label>' +
         '<div class="ai-network-form-grid"><label>Personality tone<select name="tone">' + options([
           {value:'friendly',label:'Friendly'},{value:'professional',label:'Professional'},{value:'educational',label:'Educational'},
@@ -2071,7 +2149,7 @@
           {value:'concise',label:'Concise'},{value:'supportive',label:'Supportive'}
         ], 'friendly') + '</select></label><label>Expertise<input name="expertise" maxlength="180" placeholder="Creator education"></label></div>' +
         '<fieldset><legend>Choose two to five personality traits</legend><div class="ai-network-check-grid">' +
-        ['helpful','curious','calm','energetic','analytical','empathetic','creative','precise','playful','patient','direct'].map((trait,index) =>
+        BOT_TRAIT_OPTIONS.map((trait,index) =>
           '<label class="ai-network-check"><input type="checkbox" name="traits" value="' + trait + '"' + (index < 2 ? ' checked' : '') + '><span>' + trait + '</span></label>'
         ).join('') + '</div></fieldset>' +
         '<label>Languages<input name="languages" value="en, ht" placeholder="en, es, fr, ht"></label>' +
@@ -2081,7 +2159,9 @@
           {id:'translate_user_provided_content',label:'Translate my content'},{id:'suggest_replies',label:'Suggest replies'},
           {id:'organize_creator_tasks',label:'Organize creator tasks'},{id:'prepare_event_material',label:'Prepare event material'}].map((item,index) =>
           '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.id + '"' + (index === 0 ? ' checked' : '') + '><span>' + item.label + '</span></label>'
-        ).join('') + '</div></fieldset><p class="ai-network-note">The AI identity is created in the relational registry with separate first and last names. It starts private and the bot remains a draft requiring human review.</p>' +
+        ).join('') + '</div></fieldset><fieldset><legend>Specialized capabilities</legend><div class="ai-network-check-grid">' +
+        BOT_SPECIALIZATION_OPTIONS.map(item => '<label class="ai-network-check"><input type="checkbox" name="specializedCapabilities" value="' + item.id + '"><span>' + item.label + '</span></label>').join('') +
+        '</div></fieldset><label>Independent behavior instructions<textarea name="behaviorInstructions" maxlength="4000" rows="3" placeholder="Set style and workflow preferences. These instructions cannot grant permissions or override safeguards."></textarea></label><p class="ai-network-note">The AI identity is created in the relational registry with separate first and last names. It starts private and the bot remains a draft requiring human review.</p>' +
         '<button class="primary" type="submit" ' + (!botCategoryOptions.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create AI bot and relational identity</button></form>', 'ai-network-span-2') +
       card('Bot Teams', '02 · TEAM WORK', '<p>Coordinate your own specialist bots with human-reviewed plans and separate identities.</p>' + renderTeams(teams,bots)) +
       card('Smart Activity Scheduling', '03 · SCHEDULING', '<p>Plan content support by time zone and cadence. Every new schedule is paused until execution is verified.</p>' + renderSchedules(schedules,bots)) +
@@ -2938,6 +3018,24 @@
       payload.languages = value('languages').split(',').map(item => item.trim()).filter(Boolean);
       payload.primaryLanguage = value('primaryLanguage');
       payload.capabilities = selectedValues(form, 'capabilities');
+      payload.role = value('role') || 'general_ai_member';
+      payload.behaviorInstructions = value('behaviorInstructions');
+      payload.specializedCapabilities = selectedValues(form, 'specializedCapabilities');
+    } else if (kind === 'bot-config') {
+      const botId = form.dataset.id || '';
+      if (!botId) throw new Error('Select one AI identity before editing its configuration.');
+      path = '/bots/' + encodeURIComponent(botId) + '/configuration';
+      payload.name = value('name');
+      payload.role = value('role');
+      payload.purpose = value('purpose');
+      payload.tone = value('tone');
+      payload.expertise = value('expertise');
+      payload.traits = selectedValues(form, 'traits');
+      payload.languages = value('languages').split(',').map(item => item.trim()).filter(Boolean);
+      payload.primaryLanguage = value('primaryLanguage');
+      payload.capabilities = selectedValues(form, 'capabilities');
+      payload.specializedCapabilities = selectedValues(form, 'specializedCapabilities');
+      payload.behaviorInstructions = value('behaviorInstructions');
     } else if (kind === 'team') {
       path = '/teams';
       payload.name = value('name');
@@ -2987,7 +3085,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','bot-config'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const requestMethod = kind === 'workforce-permission-revoke' ? 'DELETE' : (kind === 'employee-report-review' || kind === 'job-role-status' || patchKinds.concat(talentPatchKinds).includes(kind)) ? 'PATCH' : 'POST';
     const result = await request(path, { method: requestMethod, body: payload });
@@ -3033,6 +3131,8 @@
       ? 'AI category ' + (categoryActionLabels[result.action] || 'changes saved') + ' and an audit event recorded.'
       : kind === 'bot'
         ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
+      : kind === 'bot-config'
+        ? 'AI personality configuration saved as version ' + number(result.bot?.configurationVersion || 1) + ' and synchronized to its relational identity.'
       : kind === 'team'
         ? 'AI team saved to the private relational registry. Memberships are owner-scoped and coordination remains human-reviewed.'
       : kind === 'delegation-create'
@@ -3297,7 +3397,14 @@
         state.selectedBotChatId = '';
         state.botChatError = '';
       }
-      else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
+      else if (action === 'bot-status') {
+        const nextStatus = button.dataset.status || '';
+        if (['archived','retired'].includes(nextStatus) &&
+            !window.confirm(nextStatus === 'retired'
+              ? 'Permanently retire this AI identity? It cannot be resumed.'
+              : 'Archive this AI identity? It will no longer be available for use.')) return;
+        await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:nextStatus } });
+      }
       else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
       else if (action === 'creator-generate') {

@@ -26,7 +26,7 @@ test('Minglora AI Network is a restorable first-party destination, separate from
   assert.ok(html.includes('Minglora AI Network'));
   assert.ok(html.includes('href="https://www.meta.ai/"'));
   assert.ok(html.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
-  assert.ok(html.includes('/ai-network.js?v=20261118-ai-centre-readiness-1'));
+  assert.ok(html.includes('/ai-network.js?v=20261120-ai-personality-config-1'));
 });
 
 test('Minglora main menu includes a separate AI Network route', () => {
@@ -48,7 +48,7 @@ test('AI Network script and styles are precached with matching asset versions', 
   assert.equal(menuAsset, 'minglora-menu.js?v=20261115-ai-admin-only-1');
   assert.ok(sw.includes('/' + appAsset));
   assert.ok(sw.includes('/' + menuAsset));
-  assert.ok(sw.includes('/ai-network.js?v=20261118-ai-centre-readiness-1'));
+  assert.ok(sw.includes('/ai-network.js?v=20261120-ai-personality-config-1'));
   assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
   assert.ok(html.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
   assert.ok(sw.includes('/minglora-menu.js?v=20261115-ai-admin-only-1'));
@@ -298,4 +298,34 @@ test('AI profile and provider bulk operations use existing owner-scoped and mode
   assert.ok(runtime.includes('ai_identity_profile_update'));
   assert.ok(runtime.includes('ai_provider_command'));
   assert.ok(!/name=['"](?:apiKey|providerApiKey|MINGLORA_AI_API_KEY)['"]/.test(ui));
+});
+
+
+test('Phase 5 exposes owner-isolated personality configuration, profile synchronization and lifecycle controls', () => {
+  const chat = read('backend/modules/ai-network/openai-bot-chat.js');
+  for (const role of [
+    'general_ai_member','social_ai_personality','business_ai_employee','corporate_ai_department',
+    'management_ai','specialized_professional_ai','customer_service_ai','creative_ai',
+    'research_ai','administrative_ai'
+  ]) {
+    assert.ok(moduleSource.includes("'" + role + "'"), role);
+    assert.ok(ui.includes(role), 'Bot Lab UI role ' + role);
+  }
+  assert.ok(moduleSource.includes('export function updateAIBotConfiguration'));
+  assert.ok(moduleSource.includes('configurationVersion'));
+  assert.ok(moduleSource.includes('configurationHistory'));
+  assert.ok(moduleSource.includes('AI_BOT_SPECIALIZED_CAPABILITIES'));
+  assert.ok(server.includes("method === 'PATCH' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'configuration'"));
+  assert.ok(server.includes('item.ownerId === user.id && item.id === parts[1]'));
+  assert.ok(server.includes('syncAIBotIdentityProfile'));
+  assert.ok(server.includes("requestSupabaseState('ai_identity_profile_update'"));
+  assert.ok(server.includes('syncAIBotIdentityStatus'));
+  assert.ok(server.includes("requestSupabaseState('ai_identity_status_command'"));
+  assert.ok(server.includes('Approve this AI identity in the Identity Registry before activating it.'));
+  assert.ok(ui.includes('data-ai-form="bot-config"'));
+  assert.ok(ui.includes('name="behaviorInstructions"'));
+  assert.ok(ui.includes('name="specializedCapabilities"'));
+  assert.ok(ui.includes('data-status="retired"'));
+  assert.ok(chat.includes('behaviorInstructions'));
+  assert.ok(chat.includes('They do not grant tools, access, permissions'));
 });
