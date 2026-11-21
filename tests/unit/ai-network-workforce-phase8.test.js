@@ -101,6 +101,9 @@ test('employee reports preserve manager hierarchy and require authorized submiss
   assert.match(migration, /report\.submit/);
   assert.match(migration, /submit_employee_report/);
   assert.match(migration, /review_employee_report/);
+  assert.match(migration, /set_position_status/);
+  assert.match(migration, /job_role_status_changed/);
+  assert.match(migration, /'job_roles',coalesce/);
   assert.match(migration, /reviewed_by_user_id/);
   assert.match(migration, /Employee report stored for the assigned reporting manager/);
   assert.match(migration, /employee_report_reviewed/);
@@ -112,7 +115,7 @@ test('Edge Function explicitly allowlists and forwards workforce commands', () =
   assert.match(runtime, /if \(action === "ai_workforce_command"\)/);
   assert.match(runtime, /supportedWorkforceCommands/);
   for (const action of [
-    'list_workforce','list_employee_permissions','grant_employee_permission',
+    'list_workforce','list_employee_permissions','set_position_status','grant_employee_permission',
     'revoke_employee_permission','assign_employee_task','send_team_message',
     'submit_employee_report','review_employee_report','list_team_messages','list_team_activity'
   ]) assert.ok(runtime.includes('"' + action + '"'), 'Missing runtime action: ' + action);
@@ -128,6 +131,8 @@ test('server workforce endpoints are administrator-only and use Supabase runtime
   assert.match(route, /const runAIWorkforceCommand = async/);
   assert.match(route, /isModerator\(user, req\)/);
   assert.match(route, /requestSupabaseState\('ai_workforce_command'/);
+  assert.match(route, /set_position_status/);
+  assert.match(route, /workforce\\/positions/);
   for (const path of [
     "'workforce'","'employees'","'permissions'","'tasks'","'teams'","'messages'","'reports'"
   ]) assert.ok(route.includes(path), 'Missing workforce resource route: ' + path);
@@ -144,10 +149,10 @@ test('admin workspace exposes permission, workload, team, task, communication an
   assert.match(ui, /function renderAIWorkforcePanel\(/);
   for (const form of [
     'workforce-permission','workforce-permission-revoke','workforce-team',
-    'workforce-task','team-message','employee-report','employee-report-review'
+    'workforce-task','team-message','employee-report','employee-report-review','job-role-status'
   ]) assert.ok(ui.includes('data-ai-form="' + form + '"'), 'Missing workforce form: ' + form);
   for (const label of [
-    'Workload and reporting hierarchy','Explicit role-based permissions',
+    'Job roles and activation','Workload and reporting hierarchy','Explicit role-based permissions',
     'Organizational teams','Task allocation and queue','Team communication',
     'Employee reporting and management review','Workforce activity audit'
   ]) assert.ok(ui.includes(label), 'Missing workforce workspace section: ' + label);
