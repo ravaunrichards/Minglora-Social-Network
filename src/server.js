@@ -1618,7 +1618,7 @@ async function route(req, res) {
         const health = aiProviderHealthState;
         const connected = health.connected === true;
         const healthStatus = health.healthStatus || (connected ? 'healthy' : 'unknown');
-        providerStatus.connected = connected;
+        providerStatus.connected = health.providerId === providerStatus.provider && connected;
         providerStatus.providerHealth = {
           providerId: health.providerId || 'openai',
           status: health.status || 'unknown',
