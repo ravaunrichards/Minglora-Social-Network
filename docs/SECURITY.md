@@ -43,7 +43,7 @@ Set `NODE_ENV=production`, `APP_ORIGIN` to the canonical browser origin when kno
 
 ### Additional hardening in this phase
 
-- The tracked `.env.example` template is being changed to remove live/project-specific key values and use blank fields or placeholders. Because earlier Git commits remain in repository history, this does not revoke or erase any previously published credential.
+- The tracked `.env.example` template now uses blank values or placeholders for credentials and project-specific values; the PayPal example mode is sandbox. This was merged in PR #561. Template cleanup does not remove values from earlier Git history or revoke any credential that may have been exposed there; provider-side credential review and rotation remain separate operational steps.
 - The central HTTP exception handler now emits a structured, redacted error event and an `X-Request-Id`. It deliberately omits request bodies, query strings, cookies, authorization headers, provider response bodies, prompts and stack traces from the application log.
 - Unit tests assert the credential-template hygiene, AI owner/MFA boundary, production auth requirements, health endpoints, login throttle invariants and provider-secret non-disclosure.
 
@@ -69,4 +69,4 @@ At the time of this check, Supabase reported the primary task runtime as `global
 
 ### Pull request state
 
-The source/template hardening is proposed in [PR #561](https://github.com/ravaunrichards/Minglora-Social-Network/pull/561). It is not merged or deployed as part of this assessment. Do not treat the new error-log correlation code or environment-template cleanup as live until the PR checks pass, it is reviewed/merged, and Render deploys the resulting commit.
+The source/template hardening was merged in [PR #561](https://github.com/ravaunrichards/Minglora-Social-Network/pull/561). The bounded login-limiter memory fix was merged in [PR #562](https://github.com/ravaunrichards/Minglora-Social-Network/pull/562). The deployed commit is `15918e145898b42f43ca4a2fc9f0c5a56048cda5`; Render reports deployment `dep-dc0i7uvb9u1s73bj5vng` as `live` and its `deploy_ended` event as `succeeded`. Startup logs confirm the server listening on port 10000, Supabase auth configured, durable Supabase persistence ready, LiveKit connected, and the OpenAI provider probe healthy (HTTP 200). AI execution remains disabled. The repository CI run recorded 1,472 passing tests. Public HTTP GET verification of `/api/health` and `/api/ready` could not be completed from this audit environment because the service hostname did not resolve; this is not an endpoint acceptance result.
