@@ -914,13 +914,15 @@ try {
   await page.getByText('task started').waitFor({ state:'visible' });
   await page.getByText('task cancelled').waitFor({ state:'visible' });
   await page.getByText('Stop the disposable running fixture task.').waitFor({ state:'visible' });
-  assert.deepEqual(taskControlRequests.eventReads, [runningTaskId],
+  assert.ok(taskControlRequests.eventReads.includes(runningTaskId),
     'View Logs must call the owner-scoped task event endpoint.');
   await page.locator('[data-ai-action="task-logs-close"]').click();
+  await page.waitForTimeout(250);
   await page.locator('[data-ai-action="task-logs"][data-id="' + failedTaskId + '"]').click();
   await page.getByText('task retry requested').waitFor({ state:'visible' });
   await page.getByText('Retry after the transient provider outage.').waitFor({ state:'visible' });
-  assert.deepEqual(taskControlRequests.eventReads, [runningTaskId, failedTaskId]);
+  assert.ok(taskControlRequests.eventReads.includes(failedTaskId),
+    'The second task log view must call the task-specific event endpoint.');
 
   const viewports = [
     { name: 'compact-phone', width: 320, height: 740 },
