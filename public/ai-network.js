@@ -124,17 +124,19 @@
   function renderAIIdentityRows(registry) {
     const identities = list(registry?.identities);
     if (!identities.length) return empty(state.identityRegistrySearch ? 'No AI identity records match this search.' : 'No AI identities are registered in the relational database yet.');
-    const bulkToolbar = '<div class="ai-network-inline-form ai-network-identity-bulk" role="group" aria-label="Bulk AI identity lifecycle management">' +
+    const bulkToolbar = '<div class="ai-network-inline-form ai-network-identity-bulk" role="group" aria-label="Bulk AI identity approval and lifecycle management">' +
+      '<label class="ai-network-select-all"><input type="checkbox" data-ai-select-all aria-label="Select all identities on this page"><span>Select All on this page</span></label>' +
+      '<strong data-ai-selected-count aria-live="polite">0 selected</strong>' +
       '<label><span>Bulk lifecycle status</span><select data-ai-bulk-status>' +
       options([
-        {value:'under_review',label:'Under review'},{value:'approved',label:'Approved'},
+        {value:'approved',label:'Approve (human reviewed)'},{value:'under_review',label:'Under review'},
         {value:'active',label:'Active / reactivate'},{value:'restricted',label:'Restricted'},
         {value:'suspended',label:'Suspended'},{value:'archived',label:'Archived'},
         {value:'retired',label:'Retired'}
-      ], 'suspended') + '</select></label>' +
+      ], 'approved') + '</select></label>' +
       '<label><span>Reason (optional)</span><input data-ai-bulk-reason maxlength="500" placeholder="Reason for this lifecycle change"></label>' +
       '<button type="button" class="secondary" data-ai-action="identity-bulk-status">Apply to selected identities</button>' +
-      '<small>Select identities below · up to 100 per batch · every result is audited</small></div>';
+      '<small>Select all applies to the identities currently shown on this page · up to 100 per batch · each decision is audited</small></div>';
     return bulkToolbar + '<div class="ai-network-list">' + identities.map(record => {
       const identity = record.identity || {};
       const name = record.name || {};
@@ -3408,6 +3410,7 @@
         const reason = document.querySelector('[data-ai-bulk-reason]')?.value || '';
         if (!identityIds.length || identityIds.length > 100) throw new Error('Select between 1 and 100 AI identities.');
         if (!status) throw new Error('Choose a bulk lifecycle status.');
+        if (status === 'approved' && !window.confirm('Approve ' + identityIds.length + ' selected AI identities after human review? Each permitted approval will be recorded and audited. This will not approve queued tasks or start workers.')) return;
         if (['archived','retired'].includes(status) && !window.confirm('Apply ' + status + ' to ' + identityIds.length + ' selected AI identities? Every permitted transition is audited; incompatible transitions will be reported without changing those records.')) return;
         const result = await request('/identities/bulk-status', {
           method:'POST', body:{ identity_ids:identityIds, status, reason }
@@ -3501,6 +3504,24 @@
     }
   };
 
+  const onIdentitySelectionChange = event => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    const master = target.closest('[data-ai-select-all]');
+    const item = target.closest('[data-ai-identity-select]');
+    if (!master && !item) return;
+    const items = [...document.querySelectorAll('[data-ai-identity-select]')];
+    if (master) items.forEach(input => { input.checked = master.checked; });
+    const selected = items.filter(input => input.checked).length;
+    const count = document.querySelector('[data-ai-selected-count]');
+    if (count) count.textContent = selected + ' selected';
+    const selectAll = document.querySelector('[data-ai-select-all]');
+    if (selectAll) {
+      selectAll.checked = items.length > 0 && selected === items.length;
+      selectAll.indeterminate = selected > 0 && selected < items.length;
+    }
+  };
+
   const onEmailIdentityChange = async event => {
     const select = event.target instanceof Element
       ? event.target.closest('select[data-ai-email-identity]')
@@ -3524,6 +3545,7 @@
     document.addEventListener('click', onClick);
     document.addEventListener('change', onMemoryIdentityChange);
     document.addEventListener('change', onEmailIdentityChange);
+    document.addEventListener('change', onIdentitySelectionChange);
   }
   window.MingloraAINetwork = { render: load, refresh: () => refresh(), request };
 })();
