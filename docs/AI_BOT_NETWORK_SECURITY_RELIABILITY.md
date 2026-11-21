@@ -12,7 +12,7 @@
 
 ## 2. API abuse controls and validation
 
-The AI API uses bounded process-local fixed-window limits, keyed by a SHA-256 digest of the authenticated principal or, for unauthenticated calls, the socket peer address. Forwarded client-IP headers are not trusted by this limiter.
+The AI API uses a process-local abuse guard with bounded fixed-window limits, keyed by a SHA-256 digest of the authenticated principal or, for unauthenticated calls, the socket peer address. Forwarded client-IP headers are not trusted by this limiter.
 
 | Request class | Limit |
 |---|---:|
