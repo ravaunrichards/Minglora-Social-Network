@@ -554,6 +554,22 @@ begin
     );
   end if;
 
+  if v_action='list_employee_permissions' then
+    v_employment_id:=nullif(v_payload->>'employment_id','')::uuid;
+    if v_employment_id is null or not exists(
+      select 1 from ai_network.ai_employment_records e
+      where e.organization_id=p_organization_id and e.employment_id=v_employment_id
+    ) then
+      raise exception using errcode='P0002', message='Organization employee record was not found.';
+    end if;
+    return jsonb_build_object('permissions',coalesce((
+      select jsonb_agg(to_jsonb(g) order by g.created_at desc)
+      from ai_network.ai_employee_permission_grants g
+      where g.owner_user_id=v_owner and g.organization_id=p_organization_id
+        and g.employment_id=v_employment_id
+    ),'[]'::jsonb));
+  end if;
+
   if v_action='grant_employee_permission' then
     if coalesce(v_payload->>'employment_id','') !~* '^[0-9a-f-]{36}$'
        or coalesce(v_payload->>'idempotency_key','') !~ '^.{8,160}$' then
@@ -891,7 +907,17 @@ begin
     ) then raise exception using errcode='42501', message='Report task must be assigned to this employee in the same organization.'; end if;
     select r.report_id into v_report_id from ai_network.ai_employee_reports r
     where r.owner_user_id=v_owner and r.idempotency_key=v_idempotency_key;
-    if v_report_id is not null then return jsonb_build_object('report_id',v_report_id,'reused',true); end if;
+    if v_report_id is not null then
+      if not exists(select 1 from ai_network.ai_employee_reports r
+        where r.owner_user_id=v_owner and r.report_id=v_report_id
+          and r.employment_id=v_employment_id and r.report_type=v_report_type
+          and r.report_title=v_title and r.report_body=v_body
+          and r.team_id is not distinct from v_team_id
+          and r.task_id is not distinct from v_task_id) then
+        raise exception using errcode='23505', message='Report idempotency key was reused for different report details.';
+      end if;
+      return jsonb_build_object('report_id',v_report_id,'reused',true);
+    end if;
     insert into ai_network.ai_employee_reports(
       owner_user_id,organization_id,employment_id,manager_employment_id,team_id,task_id,
       report_type,report_title,report_body,period_start,period_end,idempotency_key
