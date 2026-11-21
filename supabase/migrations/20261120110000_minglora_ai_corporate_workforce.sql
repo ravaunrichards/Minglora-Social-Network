@@ -86,6 +86,11 @@ create index if not exists ai_employee_permission_owner_org_idx
   on ai_network.ai_employee_permission_grants(owner_user_id,organization_id,created_at desc);
 create index if not exists ai_employee_permission_employment_idx
   on ai_network.ai_employee_permission_grants(organization_id,employment_id,revoked_at,permission_key);
+create index if not exists ai_employee_permission_granted_by_idx
+  on ai_network.ai_employee_permission_grants(granted_by_user_id);
+create index if not exists ai_employee_permission_revoked_by_idx
+  on ai_network.ai_employee_permission_grants(revoked_by_user_id)
+  where revoked_by_user_id is not null;
 
 create table if not exists ai_network.ai_workforce_task_assignments (
   assignment_id uuid primary key default gen_random_uuid(),
@@ -153,6 +158,14 @@ create table if not exists ai_network.ai_team_messages (
 );
 create index if not exists ai_team_messages_org_team_time_idx
   on ai_network.ai_team_messages(organization_id,team_id,created_at desc);
+create index if not exists ai_team_messages_owner_team_time_idx
+  on ai_network.ai_team_messages(owner_user_id,team_id,created_at desc);
+create index if not exists ai_team_messages_sender_user_idx
+  on ai_network.ai_team_messages(sender_user_id)
+  where sender_user_id is not null;
+create index if not exists ai_team_messages_sender_identity_idx
+  on ai_network.ai_team_messages(sender_identity_id)
+  where sender_identity_id is not null;
 create index if not exists ai_team_messages_sender_employment_idx
   on ai_network.ai_team_messages(organization_id,sender_employment_id,created_at desc);
 
@@ -201,6 +214,12 @@ create index if not exists ai_employee_reports_employment_time_idx
 create index if not exists ai_employee_reports_team_time_idx
   on ai_network.ai_employee_reports(owner_user_id,team_id,submitted_at desc)
   where team_id is not null;
+create index if not exists ai_employee_reports_owner_task_idx
+  on ai_network.ai_employee_reports(owner_user_id,task_id)
+  where task_id is not null;
+create index if not exists ai_employee_reports_reviewer_idx
+  on ai_network.ai_employee_reports(reviewed_by_user_id)
+  where reviewed_by_user_id is not null;
 
 create table if not exists ai_network.ai_workforce_events (
   workforce_event_id uuid primary key default gen_random_uuid(),
@@ -242,6 +261,14 @@ create table if not exists ai_network.ai_workforce_events (
 );
 create index if not exists ai_workforce_events_org_time_idx
   on ai_network.ai_workforce_events(organization_id,occurred_at desc);
+create index if not exists ai_workforce_events_owner_time_idx
+  on ai_network.ai_workforce_events(owner_user_id,occurred_at desc);
+create index if not exists ai_workforce_events_actor_user_idx
+  on ai_network.ai_workforce_events(actor_user_id)
+  where actor_user_id is not null;
+create index if not exists ai_workforce_events_actor_identity_idx
+  on ai_network.ai_workforce_events(actor_identity_id)
+  where actor_identity_id is not null;
 create index if not exists ai_workforce_events_employment_time_idx
   on ai_network.ai_workforce_events(organization_id,employment_id,occurred_at desc);
 create index if not exists ai_workforce_events_team_time_idx
@@ -346,6 +373,8 @@ declare
   v_task ai_network.ai_task_queue%rowtype;
   v_assignment ai_network.ai_workforce_task_assignments%rowtype;
   v_grant ai_network.ai_employee_permission_grants%rowtype;
+  v_message ai_network.ai_team_messages%rowtype;
+  v_report ai_network.ai_employee_reports%rowtype;
   v_result jsonb;
   v_rows jsonb;
 begin
@@ -954,25 +983,22 @@ begin
       v_employee:=null;
       v_actor_type:='human_user';
     end if;
-    if exists(select 1 from ai_network.ai_team_messages m
-      where m.owner_user_id=p_actor_user_id and m.team_id=v_team_id and m.idempotency_key=v_idempotency_key) then
-      select to_jsonb(m) into v_result from ai_network.ai_team_messages m
-      where m.owner_user_id=p_actor_user_id and m.team_id=v_team_id and m.idempotency_key=v_idempotency_key;
-      return jsonb_build_object('message',v_result,'reused',true);
-    end if;
+    select m.* into v_message from ai_network.ai_team_messages m
+    where m.owner_user_id=p_actor_user_id and m.team_id=v_team_id and m.idempotency_key=v_idempotency_key;
+    if found then return jsonb_build_object('message',to_jsonb(v_message),'reused',true); end if;
     if v_sender_identity_id is null then
       insert into ai_network.ai_team_messages(
         owner_user_id,organization_id,team_id,sender_user_id,message_type,body,idempotency_key
       ) values (
         p_actor_user_id,p_organization_id,v_team_id,p_actor_user_id,v_message_type,v_message_body,v_idempotency_key
-      ) returning * into v_result;
+      ) returning * into v_message;
     else
       insert into ai_network.ai_team_messages(
         owner_user_id,organization_id,team_id,sender_employment_id,sender_identity_id,message_type,body,idempotency_key
       ) values (
         p_actor_user_id,p_organization_id,v_team_id,v_employee.employment_id,v_sender_identity_id,
         v_message_type,v_message_body,v_idempotency_key
-      ) returning * into v_result;
+      ) returning * into v_message;
     end if;
     insert into ai_network.ai_workforce_events(
       owner_user_id,organization_id,event_type,actor_type,actor_user_id,actor_employment_id,
@@ -983,9 +1009,9 @@ begin
       case when v_actor_type='ai_employee' then v_employee.employment_id else null end,
       v_sender_identity_id,v_employee.employment_id,v_team_id,
       'Internal team communication recorded.',
-      jsonb_build_object('message_type',v_message_type,'message_id',v_result->>'message_id')
+      jsonb_build_object('message_type',v_message_type,'message_id',v_message.message_id)
     );
-    return jsonb_build_object('message',v_result,'reused',false);
+    return jsonb_build_object('message',to_jsonb(v_message),'reused',false);
   end if;
 
   if v_action='submit_employee_report' then
@@ -1034,26 +1060,26 @@ begin
         and a.employment_id=v_employment_id and a.task_id=v_task_id) then
       raise exception using errcode='42501',message='Related task must belong to this employee and organization.';
     end if;
-    select r.* into v_result from ai_network.ai_employee_reports r
+    select r.* into v_report from ai_network.ai_employee_reports r
     where r.owner_user_id=p_actor_user_id and r.idempotency_key=v_idempotency_key;
-    if found then return jsonb_build_object('report',to_jsonb(v_result),'reused',true); end if;
+    if found then return jsonb_build_object('report',to_jsonb(v_report),'reused',true); end if;
     insert into ai_network.ai_employee_reports(
       owner_user_id,organization_id,employment_id,team_id,task_id,report_type,report_title,report_body,
       period_start,period_end,report_status,idempotency_key
     ) values (
       p_actor_user_id,p_organization_id,v_employment_id,v_team_id,v_task_id,v_report_type,
       v_report_title,v_report_body,v_period_start,v_period_end,'submitted',v_idempotency_key
-    ) returning * into v_result;
+    ) returning * into v_report;
     insert into ai_network.ai_workforce_events(
       owner_user_id,organization_id,event_type,actor_type,actor_employment_id,actor_identity_id,
       employment_id,team_id,report_id,reason,metadata
     ) values (
       p_actor_user_id,p_organization_id,'employee_report_submitted','ai_employee',
-      v_employment_id,v_employee.identity_id,v_employment_id,v_team_id,v_result.report_id,
+      v_employment_id,v_employee.identity_id,v_employment_id,v_team_id,v_report.report_id,
       'Employee report submitted to its administrative reporting line.',
       jsonb_build_object('report_type',v_report_type,'report_title',v_report_title)
     );
-    return jsonb_build_object('report',to_jsonb(v_result),'reused',false);
+    return jsonb_build_object('report',to_jsonb(v_report),'reused',false);
   end if;
 
   if v_action='review_employee_report' then
@@ -1066,7 +1092,7 @@ begin
     if v_status not in ('acknowledged','needs_follow_up') or length(v_reason)<3 then
       raise exception using errcode='22023',message='Choose a report review decision and provide a reason.';
     end if;
-    select r.* into v_result from ai_network.ai_employee_reports r
+    select r.* into v_report from ai_network.ai_employee_reports r
     where r.owner_user_id=p_actor_user_id and r.organization_id=p_organization_id
       and r.report_id=v_report_id and r.report_status='submitted' for update;
     if not found then raise exception using errcode='P0002',message='Submitted employee report not found.';
@@ -1075,15 +1101,15 @@ begin
     set report_status=v_status,reviewed_by_user_id=p_actor_user_id,reviewed_at=now(),
       review_reason=v_reason,updated_at=now()
     where r.report_id=v_report_id and r.owner_user_id=p_actor_user_id
-    returning * into v_result;
+    returning * into v_report;
     insert into ai_network.ai_workforce_events(
       owner_user_id,organization_id,event_type,actor_type,actor_user_id,
       employment_id,team_id,report_id,reason,metadata
     ) values (
       p_actor_user_id,p_organization_id,'employee_report_reviewed','human_user',p_actor_user_id,
-      v_result.employment_id,v_result.team_id,v_report_id,v_reason,jsonb_build_object('review_status',v_status)
+      v_report.employment_id,v_report.team_id,v_report_id,v_reason,jsonb_build_object('review_status',v_status)
     );
-    return jsonb_build_object('report',to_jsonb(v_result));
+    return jsonb_build_object('report',to_jsonb(v_report));
   end if;
 
   if v_action='list_team_messages' then
@@ -1116,10 +1142,9 @@ begin
       raise exception using errcode='22023',message='A valid team ID is required.';
     end if;
     v_team_id:=(v_payload->>'team_id')::uuid;
-    if not exists(select 1 from ai_network.ai_teams t
-      where t.owner_user_id=p_actor_user_id and t.team_id=v_team_id and t.organization_id=p_organization_id) then
-      raise exception using errcode='P0002',message='Team not found in this organization.';
-    end if;
+    select t.* into v_team from ai_network.ai_teams t
+    where t.owner_user_id=p_actor_user_id and t.team_id=v_team_id and t.organization_id=p_organization_id;
+    if not found then raise exception using errcode='P0002',message='Team not found in this organization.'; end if;
     select coalesce(jsonb_agg(to_jsonb(ev) order by ev.occurred_at desc),'[]'::jsonb)
     into v_rows from (
       select * from ai_network.ai_team_events
