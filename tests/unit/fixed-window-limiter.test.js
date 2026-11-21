@@ -34,7 +34,7 @@ test('successful sign-in clearing removes the failed-attempt bucket', () => {
 });
 
 test('hard-bounds attacker-controlled unique keys with least-recently-used eviction', () => {
-  const limiter = createFixedWindowLimiter({ limit: 5, windowMs: 1_000, maxKeys: 2 });
+  const limiter = createFixedWindowLimiter({ limit: 1, windowMs: 1_000, maxKeys: 2 });
   limiter.recordFailure('first');
   limiter.recordFailure('second');
   limiter.check('first'); // Touch first; second is now the least recently used.
