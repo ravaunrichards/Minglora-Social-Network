@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
     "internal_activity_feed", "admin_finance_command",
     "admin_finance_attachment_prepare", "admin_finance_attachment_complete", "admin_finance_attachment_download",
     "admin_rbac_command", "admin_brand_command", "admin_brand_upload_prepare", "admin_brand_upload_complete", "admin_brand_asset_url", "brand_public_manifest", "admin_users_list", "admin_user_set_ban", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_bot_chat_command", "ai_social_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_email_command", "ai_identity_batch_command", "ai_identity_media_access", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_hr_development_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_task_retry", "ai_task_events", "ai_bot_chat_command", "ai_social_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -4647,6 +4647,56 @@ Deno.serve(async (req: Request) => {
         : code === "23505" || code === "55000" ? 409
           : code === "54000" ? 429 : 400;
       return json(status, { error: String(error.message || "Minglora AI bot conversation request failed.").slice(0, 240) });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_task_events") {
+    const actorUserId = String(input.actorUserId || "");
+    const taskId = String(input.taskId || "");
+    if (!validUuid(actorUserId) || !validUuid(taskId)) {
+      return json(400, { error: "A valid administrator and AI task are required to view task logs." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_task_events", {
+      p_actor_user_id: actorUserId,
+      p_task_id: taskId,
+      p_limit: 100
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : 400;
+      return json(status, { error: String(error.message || "Minglora AI task logs could not be loaded.").slice(0, 240) });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_task_retry") {
+    const actorUserId = String(input.actorUserId || "");
+    const taskId = String(input.taskId || "");
+    const reason = String(input.reason || "").trim();
+    const rawMaxAttempts = input.maxAttempts;
+    const maxAttempts = rawMaxAttempts === undefined || rawMaxAttempts === null || rawMaxAttempts === ""
+      ? null
+      : Number(rawMaxAttempts);
+    if (!validUuid(actorUserId) || !validUuid(taskId)) {
+      return json(400, { error: "A valid administrator and AI task are required to retry a task." });
+    }
+    if (reason.length < 3 || reason.length > 1000) {
+      return json(400, { error: "A retry reason between 3 and 1000 characters is required." });
+    }
+    if (maxAttempts !== null && (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 10)) {
+      return json(400, { error: "Maximum task attempts must be a whole number between 1 and 10." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_task_retry", {
+      p_actor_user_id: actorUserId,
+      p_task_id: taskId,
+      p_reason: reason,
+      p_max_attempts: maxAttempts
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "55000" ? 409 : 400;
+      return json(status, { error: String(error.message || "Minglora AI task retry failed.").slice(0, 240) });
     }
     return json(200, { result: data });
   }
